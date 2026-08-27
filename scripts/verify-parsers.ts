@@ -2594,6 +2594,47 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
   }
 }
 
+console.log('\n=== Runtime asset URLs survive a base path ===');
+
+{
+  // On GitHub Pages the app is served from /<repo>/, so a root-absolute
+  // fetch('/quran/uthmani.json') resolves against the domain root and 404s.
+  // This is invisible in development, where the base IS '/', and it took down
+  // the whole verse pipeline on the deployed site while the app otherwise
+  // looked healthy. Vite rewrites asset URLs it can see — index.html, CSS,
+  // new URL(..., import.meta.url) — but a string passed to fetch() is opaque
+  // to it, so anything under public/ fetched at runtime must be prefixed with
+  // import.meta.env.BASE_URL.
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      return entry.isDirectory() ? walk(full) : full.endsWith('.ts') || full.endsWith('.tsx') ? [full] : [];
+    });
+
+  const offenders: string[] = [];
+  for (const file of walk(join(process.cwd(), 'src'))) {
+    const source = readFileSync(file, 'utf8');
+    source.split('\n').forEach((line, index) => {
+      // fetch('/…') or new URL('/…') — a leading slash that is not '//' (a
+      // protocol-relative URL, which is a different thing and not a bug here).
+      if (/(?:fetch|new URL)\(\s*['"`]\/(?!\/)/.test(line)) {
+        offenders.push(`${file.split(/[\\/]/).slice(-2).join('/')}:${index + 1}`);
+      }
+    });
+  }
+
+  expect(
+    'no root-absolute runtime fetch in src/ (use import.meta.env.BASE_URL)',
+    offenders.length === 0,
+    offenders.length ? `— found: ${offenders.join(', ')}` : '',
+  );
+
+  // And the muṣḥaf loaders specifically, since they are the ones that broke.
+  const quranSource = readFileSync(join(process.cwd(), 'src', 'quran', 'quranIndex.ts'), 'utf8');
+  expect('the muṣḥaf loader is base-prefixed', quranSource.includes('${ASSETS}quran/uthmani.json'));
+  expect('the translation loader is base-prefixed', quranSource.includes('${ASSETS}quran/khattab.json'));
+}
+
 console.log('\n=== The deployed proxy (proxy/worker.js) ===');
 
 {

@@ -407,11 +407,26 @@ export class QuranEnglish {
   }
 }
 
+/**
+ * Where the bundled muṣḥaf assets are served from.
+ *
+ * `BASE_URL` and not a root-absolute `/quran/...`: on GitHub Pages the app is
+ * served from `/<repo>/`, and a leading slash resolves against the domain root
+ * instead — so the fetch 404s and the whole verse pipeline fails with the app
+ * otherwise looking healthy. Vite substitutes this at build time and it is
+ * simply `/` in development, so both environments use one path.
+ *
+ * Vite rewrites asset URLs it can see — in `index.html`, in CSS, in `new
+ * URL(..., import.meta.url)` — but a string handed to `fetch()` is opaque to
+ * it. Anything under public/ fetched at runtime has to be prefixed here.
+ */
+const ASSETS = import.meta.env.BASE_URL;
+
 let cachedEnglish: Promise<QuranEnglish> | null = null;
 
 export function loadQuranEnglish(): Promise<QuranEnglish> {
   cachedEnglish ??= (async () => {
-    const response = await fetch('/quran/khattab.json');
+    const response = await fetch(`${ASSETS}quran/khattab.json`);
     if (!response.ok) {
       throw new Error(`Could not load the bundled translation (HTTP ${response.status}).`);
     }
@@ -430,7 +445,7 @@ let cached: Promise<QuranIndex> | null = null;
  */
 export function loadQuranIndex(): Promise<QuranIndex> {
   cached ??= (async () => {
-    const response = await fetch('/quran/uthmani.json');
+    const response = await fetch(`${ASSETS}quran/uthmani.json`);
     if (!response.ok) {
       throw new Error(`Could not load the bundled Qurʾān text (HTTP ${response.status}).`);
     }
