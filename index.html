@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  The document is LTR. The app's chrome, cards, settings and help text are all
+  English; only the reading surface is Arabic, and it sets dir="rtl" on its own
+  blocks. Having the root be RTL was the source of the direction leak: every
+  English container inherited it, which is why English sentences read backwards
+  and terminal punctuation jumped to the start of the line.
+-->
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>مكتبة — Shamela Reader</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

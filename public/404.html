@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ḥāshiya</title>
+    <script>
+      // A safety net, not a router.
+      //
+      // The app uses a hash router (src/app/router.ts), so every route is
+      // /<base>/#/settings and the server only ever needs to serve one
+      // index.html — deep links already work on GitHub Pages with no rewrite
+      // rules and no redirect dance.
+      //
+      // This exists for the other case: a mistyped or stale path under the
+      // app's base, which Pages would otherwise answer with its own 404. The
+      // base is derived from this file's own location rather than hard-coded,
+      // so it is correct whatever the repository is called.
+      var base = location.pathname.replace(/\/404\.html$/, '/');
+      location.replace(base + location.hash);
+    </script>
+  </head>
+  <body>
+    <p>
+      Redirecting to <a id="home" href="./">the library</a>…
+    </p>
+  </body>
+</html>

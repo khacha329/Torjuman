@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-27",
+  "entries": [
+    {
+      "shamelaId": 9260,
+      "title": "شرح رياض الصالحين",
+      "titleEn": "Ibn ʿUthaymīn's commentary on Riyāḍ aṣ-Ṣāliḥīn",
+      "author": "محمد بن صالح بن محمد العثيمين (ت ١٤٢١هـ)",
+      "role": "reading",
+      "category": "شروح الحديث",
+      "group": "Texts to study",
+      "approxPages": 3784,
+      "description": "The primary text this app was built around. Six volumes of accessible commentary on an-Nawawī’s collection.",
+      "recommended": true
+    },
+    {
+      "shamelaId": 21812,
+      "title": "شرح الأربعين النووية",
+      "titleEn": "Ibn ʿUthaymīn's commentary on the Forty Ḥadīth",
+      "author": "محمد بن صالح بن محمد العثيمين (ت ١٤٢١هـ)",
+      "role": "reading",
+      "category": "شروح الحديث",
+      "group": "Texts to study",
+      "approxPages": 403,
+      "description": "Short, self-contained, and the same author and register as the sharḥ above — the sensible place to start.",
+      "recommended": true
+    },
+    {
+      "shamelaId": 147927,
+      "title": "الأربعون النووية (مع زيادات ابن رجب رحمهما الله)",
+      "titleEn": "An-Nawawī's Forty, with Ibn Rajab's additions",
+      "author": "محيي الدين النووي (٦٣١ - ٦٧٦ هـ) وابن رجب الحنبلي (٧٣٦ - ٧٩٥ هـ)",
+      "role": "reading",
+      "category": "كتب السنة",
+      "group": "Texts to study",
+      "approxPages": 67,
+      "description": "The matn on its own, without commentary. Small, and useful to read beside any of the sharḥs.",
+      "recommended": true
+    },
+    {
+      "shamelaId": 11244,
+      "title": "شرح الأربعين النووية في الأحاديث الصحيحة النبوية",
+      "titleEn": "Ibn Daqīq al-ʿĪd on the Forty Ḥadīth",
+      "author": "تقي الدين أبو الفتح محمد بن علي بن وهب بن مطيع القشيري، المعروف بابن دقيق العيد (ت ٧٠٢هـ)",
+      "role": "reading",
+      "category": "شروح الحديث",
+      "group": "Texts to study",
+      "approxPages": 129,
+      "description": "A classical, considerably terser commentary on the same forty. Good for contrast with Ibn ʿUthaymīn.",
+      "recommended": false
+    },
+    {
+      "shamelaId": 12145,
+      "title": "المصباح المنير في غريب الشرح الكبير",
+      "titleEn": "Al-Miṣbāḥ al-Munīr — al-Fayyūmī",
+      "author": "أحمد بن محمد بن علي الفيومي ثم الحموي، أبو العباس (ت نحو ٧٧٠ هـ)",
+      "role": "dictionary",
+      "category": "الغريب والمعاجم",
+      "group": "Dictionaries",
+      "approxPages": 3532,
+      "description": "Concise and oriented to the vocabulary of fiqh and ḥadīth, which is the register of these texts. Looked up by root, entirely offline.",
+      "recommended": true
+    },
+    {
+      "shamelaId": 1673,
+      "title": "فتح الباري بشرح البخاري",
+      "titleEn": "Fatḥ al-Bārī — Ibn Ḥajar",
+      "author": "أحمد بن علي بن حجر العسقلاني (٧٧٣ - ٨٥٢ هـ)",
+      "role": "reference",
+      "category": "شروح الحديث",
+      "group": "Reference for Explain",
+      "approxPages": 7996,
+      "description": "The standard commentary on al-Bukhārī. Large; imported to be searched and cited by Explain rather than read through.",
+      "recommended": false
+    },
+    {
+      "shamelaId": 1711,
+      "title": "المنهاج شرح صحيح مسلم بن الحجاج",
+      "titleEn": "An-Nawawī on Ṣaḥīḥ Muslim",
+      "author": "أبو زكريا محيي الدين يحيى بن شرف النووي (ت ٦٧٦هـ)",
+      "role": "reference",
+      "category": "شروح الحديث",
+      "group": "Reference for Explain",
+      "approxPages": 4086,
+      "description": "The companion reference to Fatḥ al-Bārī, and by the author of Riyāḍ aṣ-Ṣāliḥīn itself.",
+      "recommended": false
+    }
+  ]
+}

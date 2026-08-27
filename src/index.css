@@ -1,0 +1,305 @@
+@import 'tailwindcss';
+
+/* Fonts are served from public/fonts, not a CDN — once a book is imported the
+   app must work with no network at all, and a webfont fetched from Google would
+   break that on the tablet. */
+
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Amiri-400-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+10E60-10E7E, U+1EE00-1EEFF;
+}
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Amiri-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2074, U+20AC;
+}
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Amiri-700-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+10E60-10E7E, U+1EE00-1EEFF;
+}
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Amiri-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2074, U+20AC;
+}
+
+@font-face {
+  font-family: 'Scheherazade New';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ScheherazadeNew-400-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+10E60-10E7E, U+1EE00-1EEFF;
+}
+@font-face {
+  font-family: 'Scheherazade New';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ScheherazadeNew-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2074, U+20AC;
+}
+@font-face {
+  font-family: 'Scheherazade New';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/ScheherazadeNew-700-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08FF, U+FB50-FDFF,
+    U+FE70-FEFF, U+10E60-10E7E, U+1EE00-1EEFF;
+}
+@font-face {
+  font-family: 'Scheherazade New';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/ScheherazadeNew-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2074, U+20AC;
+}
+
+@theme {
+  --color-parchment: #fbf9f4;
+  --color-ink: #23201b;
+  --color-muted: #7a7268;
+  --color-rule: #e5ded1;
+  --color-accent: #7c5c2e;
+  --color-verse: #1c5c52;
+  --color-matn: #f4efe3;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Arabic reading surface -------------------------------------------------- */
+
+.arabic {
+  font-feature-settings: 'kern', 'liga', 'calt';
+  text-rendering: optimizeLegibility;
+  /* Harakāt sit high above the baseline and Arabic descenders sit low; without
+     generous leading the marks of one line collide with the line above. */
+  line-height: var(--reader-line-height, 2.1);
+}
+
+/* Native selection, deliberately. Browser bidi selection is mature and a custom
+   implementation would handle RTL worse — and on Android the selection is never
+   cleared, so its own highlight is what the user sees. */
+.reader-surface ::selection {
+  background: color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+
+/* Selectability is opt-in, not opt-out.
+   Anything that is not text the user might quote is unselectable, so aiming at
+   a control never starts a selection — which on Android would summon the system
+   action bar over the top of the app. Reserved for Arabic block text and card
+   bodies, which explicitly opt back in. */
+.no-select,
+button,
+[role='button'],
+[role='toolbar'],
+[role='menu'],
+header,
+nav,
+label,
+select,
+summary {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The surfaces that are meant to be selectable. */
+[data-block-id],
+.selectable,
+input,
+textarea,
+pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Bidi discipline -------------------------------------------------------- */
+
+/* Backstop for English containers. This does not replace <bdi> — inline runs
+   still need per-run isolation — but it stops direction leaking across sibling
+   elements. */
+.ltr-isolate {
+  unicode-bidi: isolate;
+  text-align: left;
+}
+
+/* An Arabic run embedded in English. It is already inside a <bdi>, which does
+   the isolating; this only gives it a face that can carry harakāt at the
+   smaller size English body text runs at. */
+.arabic-inline {
+  font-family: 'Amiri', 'Scheherazade New', serif;
+  font-size: 1.08em;
+  line-height: 1.7;
+}
+
+.card-scroll {
+  scrollbar-width: thin;
+}
+
+/* Cards entering and leaving the Visible scope.
+   The debounce in ReaderScreen is what stops the panel strobing on a fast
+   scroll; this is the second half — a card that arrives fades in rather than
+   appearing fully formed, and one that leaves is held mounted for the length
+   of its exit before being dropped (see useAnimatedList.ts). Both are
+   suppressed by the reduced-motion rule at the foot of this file. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-entering {
+  animation: card-in 160ms ease-out;
+}
+
+.card-leaving {
+  animation: card-in 180ms ease-in reverse forwards;
+  pointer-events: none;
+}
+
+/* The selection rail.
+   Its width is reserved in the reader layout, so this only ever sits in the
+   gutter that was already empty — it never overlaps the Arabic column. The
+   `user-select` rule matters more than it looks: without it, a tap that lands
+   on the rail alters the very selection every action is about to read. */
+.selection-rail {
+  user-select: none;
+  -webkit-user-select: none;
+  animation: rail-in 140ms ease-out;
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Scrollable body of an anchored popover or bottom sheet.
+   `overscroll-behavior: contain` is the important line: without it, once this
+   reaches its end the browser hands the remaining scroll to the reader behind,
+   which then scrolls — constant on a touchscreen, and previously enough to
+   dismiss the panel out from under the reader. */
+.panel-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0.75rem;
+}
+
+/* Entity affordance ------------------------------------------------------ */
+
+/* Background only. No border, no padding, no icon — so it cannot shift the
+   Arabic baseline or change the column's measure, and it does not compete with
+   the block-type styling already applied to quran and hadith_matn blocks.
+   box-decoration-break keeps the tint intact when a run wraps to a new line. */
+.entity-tint {
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+/* Each quotation resolves in its own isolate.
+   Mirroring in RTL is applied per the bidi algorithm using a character's
+   *resolved* direction, so two identical delimiters render differently only
+   when direction resolves differently at the two positions — which is what
+   produced one mirrored and one unmirrored opening bracket. Isolating the span
+   makes every quotation an identical context.
+
+   Applied ONLY when a segment covers its entity whole. Where a mark boundary
+   subdivides an entity, isolating each piece separately would put one
+   quotation into several isolates and change how it resolves — the opposite of
+   the intent. */
+.entity-isolate {
+  unicode-bidi: isolate;
+}
+
+/* Reading marks --------------------------------------------------------- */
+
+/* Skip: what will be passed over. A warm background, kept light — the entity
+   tint is a cool green and the two must stay distinguishable when a verse sits
+   inside a skipped paragraph, and Arabic with harakāt is unforgiving of low
+   contrast. The margin band carries the real signal, so this can stay faint. */
+.mark-skip {
+  background-color: color-mix(in srgb, #d9a441 22%, transparent);
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Read: what will be covered. A separate channel from skip entirely, so the
+   two render simultaneously and stay individually legible — an underlined
+   sentence inside a highlighted paragraph is the primary case. Underline
+   rather than background, offset clear of the descenders that Arabic
+   letterforms drop below the baseline. */
+.mark-read {
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.35em;
+  text-decoration-skip-ink: none;
+}
+
+.entity-quran {
+  background-color: color-mix(in srgb, var(--color-verse) 9%, transparent);
+}
+.entity-quran:hover {
+  background-color: color-mix(in srgb, var(--color-verse) 16%, transparent);
+}
+
+.entity-hadith {
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.entity-hadith:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

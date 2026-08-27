@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+# Pages serves a project site from https://<owner>.github.io/<repo>/, so every
+# asset URL has to carry /<repo>/. vite.config.ts derives that from
+# GITHUB_REPOSITORY rather than hard-coding it, which means this workflow keeps
+# working if the repository is renamed.
+
+on:
+  push:
+    branches: [main]
+  # So a failed deploy can be retried without an empty commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. `cancel-in-progress: false` because cancelling a
+# half-finished deploy is how a site ends up serving a partial build.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` is `tsc -b && vite build`, so this is the typecheck gate
+      # as well as the build.
+      #
+      # `npm run verify` is deliberately NOT run here. It reads real Shamela
+      # pages from fixtures/ and real QUL resources from qul/, and neither is in
+      # this repository — they are book and third-party data, and this repo is
+      # public. Verification stays a local gate, run before pushing, where those
+      # files exist.
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

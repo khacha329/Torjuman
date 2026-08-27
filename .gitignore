@@ -1,0 +1,35 @@
+node_modules/
+dist/
+.verify/
+*.local
+.DS_Store
+
+# --- Never commit -----------------------------------------------------------
+# API keys live in this browser's localStorage and are deliberately absent from
+# AppSettings, so no export and no file here has ever carried one. These
+# patterns exist so that stays true by accident as well as by design.
+.env
+.env.*
+*.pem
+*.key
+
+# --- Book and third-party data ----------------------------------------------
+# This repository is public, and none of the following is needed to build or
+# run the app.
+#
+# fixtures/  real fetched pages from shamela.ws, kept so the parsers can be
+#            verified against markup rather than against a guess. Copyrighted
+#            book text.
+# qul/       resources downloaded from the Qurʾān Universal Library, under
+#            their own licence terms.
+#
+# `npm run verify` reads both and so only runs where they are present, which is
+# a local checkout. The deploy workflow runs `npm run build` instead.
+fixtures/
+qul/
+
+# --- Personal work ----------------------------------------------------------
+# The glossary is authored terminology, not source. Delete these two lines if
+# you would rather version it.
+glossary-sources/
+glossary-import.json
