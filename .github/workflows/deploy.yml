@@ -33,6 +33,27 @@ jobs:
           node-version: 22
           cache: npm
 
+      # A .gitignore pattern that names a top-level directory without a leading
+      # slash matches at every level, so `qul/` silently excluded `src/qul/`
+      # too. That surfaced as sixteen TS2307/TS7006 errors that looked like a
+      # code problem rather than a missing directory. This says what actually
+      # happened, before the compiler gets a chance to be cryptic about it.
+      - name: Check the source tree arrived intact
+        run: |
+          missing=0
+          for dir in app catalog components dictionary ingest lib library \
+                     platform qul quran retrieval shamela translation ui; do
+            if [ ! -d "src/$dir" ]; then
+              echo "::error::src/$dir is missing from the repository."
+              missing=1
+            fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "::error::Some source directories were not committed. Check .gitignore — a pattern like 'qul/' matches at every level and will exclude src/qul/ as well. Anchor it as '/qul/'."
+            exit 1
+          fi
+          echo "All source directories present."
+
       - run: npm ci
 
       # `npm run build` is `tsc -b && vite build`, so this is the typecheck gate

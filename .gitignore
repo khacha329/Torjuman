@@ -1,6 +1,13 @@
+# Leading slashes are load-bearing here. A pattern with a separator only at the
+# END — `qul/` — has no separator at its beginning or middle, so git matches it
+# at ANY level: it ignores the data folder at the root AND `src/qul/`, the five
+# source modules behind the QUL feature. That happened, and it surfaced as
+# sixteen unrelated-looking TS2307/TS7006 errors in CI rather than as "your
+# source is missing". Anchor anything that names a top-level directory.
+
 node_modules/
-dist/
-.verify/
+/dist/
+/.verify/
 *.local
 .DS_Store
 
@@ -17,19 +24,19 @@ dist/
 # This repository is public, and none of the following is needed to build or
 # run the app.
 #
-# fixtures/  real fetched pages from shamela.ws, kept so the parsers can be
-#            verified against markup rather than against a guess. Copyrighted
-#            book text.
-# qul/       resources downloaded from the Qurʾān Universal Library, under
-#            their own licence terms.
+# /fixtures/  real fetched pages from shamela.ws, kept so the parsers can be
+#             verified against markup rather than against a guess. Copyrighted
+#             book text.
+# /qul/       resources downloaded from the Qurʾān Universal Library, under
+#             their own licence terms. NOT src/qul/, which is source code.
 #
 # `npm run verify` reads both and so only runs where they are present, which is
-# a local checkout. The deploy workflow runs `npm run build` instead.
-fixtures/
-qul/
+# a local checkout. The deploy workflow runs `npm run build`.
+/fixtures/
+/qul/
 
 # --- Personal work ----------------------------------------------------------
 # The glossary is authored terminology, not source. Delete these two lines if
 # you would rather version it.
-glossary-sources/
-glossary-import.json
+/glossary-sources/
+/glossary-import.json
