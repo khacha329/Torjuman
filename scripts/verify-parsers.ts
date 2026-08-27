@@ -2594,6 +2594,122 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
   }
 }
 
+console.log('\n=== The deployed proxy (proxy/worker.js) ===');
+
+{
+  // The path prefixes live in three files that must agree: vite.config.ts for
+  // the dev server, proxy/worker.js for the deployed app, and PROXIED_ORIGINS
+  // in WebHttpClient.ts for the client that talks to both. Drift between them
+  // is invisible until an import fails on the tablet only, which is the worst
+  // place to discover it. So the Worker is exercised here against a stubbed
+  // upstream, and its routing table is compared against the client's.
+  const workerModule = await import('../proxy/worker.js');
+  const proxyWorker = workerModule.default as {
+    fetch(request: Request, env: Record<string, string>): Promise<Response>;
+  };
+
+  const ALLOWED = 'https://khacha329.github.io';
+  const env = { ALLOWED_ORIGINS: ALLOWED };
+  const PROXY = 'https://hashiya-proxy.test.workers.dev';
+
+  let sent: { target: string; headers: Record<string, string> } | null = null;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (target: string, init: RequestInit) => {
+    sent = {
+      target: String(target),
+      headers: Object.fromEntries(new Headers(init.headers).entries()),
+    };
+    return new Response('<html>مرحبا</html>', {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Set-Cookie': 'sess=leak' },
+    });
+  }) as typeof globalThis.fetch;
+
+  const call = (path: string, headers: Record<string, string> = { Origin: ALLOWED }, method = 'GET') =>
+    proxyWorker.fetch(new Request(PROXY + path, { method, headers }), env);
+
+  try {
+    // Every proxy-only upstream the client knows about must have a route, or
+    // that host is unreachable in the deployed app.
+    const { PROXIED_ORIGINS } = (await import('../src/platform/http/WebHttpClient')) as unknown as {
+      PROXIED_ORIGINS: [string, string, boolean][];
+    };
+    for (const [origin, prefix, needsProxy] of PROXIED_ORIGINS) {
+      if (!needsProxy && origin !== 'https://api.quran.com') continue;
+      const response = await call(`${prefix}/probe`);
+      if (origin === 'https://api.sunnah.com') {
+        // Deliberately absent: enabling it would route a sunnah.com API key
+        // through the Worker. See the comment in proxy/worker.js.
+        check(`${prefix} is off by default (API key never transits)`, response.status, 404);
+      } else {
+        check(`${prefix} reaches ${origin}`, sent?.target, `${origin}/probe`);
+      }
+    }
+
+    let response = await call('/shamela/book/12106');
+    check('the upstream content type survives', response.headers.get('Content-Type'), 'text/html; charset=utf-8');
+    check('CORS echoes the caller', response.headers.get('Access-Control-Allow-Origin'), ALLOWED);
+    check('Vary: Origin, so a shared cache cannot cross the streams', response.headers.get('Vary'), 'Origin');
+    check('an upstream Set-Cookie is not passed back', response.headers.get('Set-Cookie'), null);
+
+    // A search term is percent-encoded Arabic. Re-encoding it here would be a
+    // silent corruption of exactly the kind the lossless-text rule forbids.
+    await call('/dorar/dorar_hadith_search?q=%D8%A7%D9%84%D8%A5%D8%AE%D9%84%D8%A7%D8%B5&page=2');
+    check(
+      'percent-encoded Arabic and the query string pass verbatim',
+      sent?.target,
+      'https://dorar.net/dorar_hadith_search?q=%D8%A7%D9%84%D8%A5%D8%AE%D9%84%D8%A7%D8%B5&page=2',
+    );
+
+    await call('/shamela/book/1', {
+      Origin: ALLOWED,
+      Cookie: 'session=secret',
+      Authorization: 'Bearer secret',
+    });
+    expect('shamela is given a browser User-Agent', Boolean(sent?.headers['user-agent']?.startsWith('Mozilla/5.0')));
+    check('Cookie is never forwarded', sent?.headers.cookie, undefined);
+    check('Authorization is never forwarded', sent?.headers.authorization, undefined);
+
+    await call('/dorar/x');
+    check('dorar is given the Referer it demands', sent?.headers.referer, 'https://dorar.net/');
+
+    response = await call('/shamela/book/1', { Origin: 'https://evil.example' });
+    check('an unlisted origin is refused', response.status, 403);
+    // Without this the misconfiguration shows up as an opaque browser CORS
+    // error with the explanation in a body the page may not read.
+    check(
+      'and can still read the reason',
+      response.headers.get('Access-Control-Allow-Origin'),
+      'https://evil.example',
+    );
+
+    response = await call('/shamela/book/1', {});
+    check('a request with no Origin is refused', response.status, 403);
+
+    // https://user.github.io/Torjuman/ is the site; its ORIGIN has no path.
+    response = await call('/shamela/book/1', { Origin: `${ALLOWED}/Torjuman` });
+    check('an origin written with a path does not match', response.status, 403);
+
+    response = await call('/shamela/book/1', { Origin: ALLOWED }, 'OPTIONS');
+    check('preflight is answered', response.status, 204);
+    response = await call('/shamela/book/1', { Origin: ALLOWED }, 'POST');
+    check('POST is refused — this forwards reads only', response.status, 405);
+
+    globalThis.fetch = (async () => {
+      throw new Error('connect ETIMEDOUT');
+    }) as typeof globalThis.fetch;
+    response = await call('/shamela/book/1');
+    check('a dead upstream is a readable 502', response.status, 502);
+    check(
+      'naming the host and the cause',
+      ((await response.json()) as { error: string }).error,
+      'Could not reach https://shamela.ws: connect ETIMEDOUT',
+    );
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);

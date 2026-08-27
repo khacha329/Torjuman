@@ -96,15 +96,18 @@ export function ImportScreen() {
 
               {/* Said before the attempt rather than after it fails. Shamela
                   sends no CORS headers, so a browser can only reach it through
-                  the dev proxy — which does not exist on a static host. */}
+                  a proxy — the dev server's, or a deployed one. */}
               {!PROXY_AVAILABLE && (
                 <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   <strong>Importing is not available in this deployment.</strong> shamela.ws
-                  cannot be reached from a browser without the development proxy. Import on a
-                  desktop with <code className="rounded bg-amber-100 px-1">npm run dev</code>,
-                  then move the book across with <strong>Library transfer</strong> in
-                  Settings — which is what that feature is for. Everything else here works
-                  offline.
+                  cannot be reached from a browser without a proxy, and this build was made
+                  without one. Two ways forward: deploy{' '}
+                  <code className="rounded bg-amber-100 px-1">proxy/worker.js</code> and set
+                  the <code className="rounded bg-amber-100 px-1">PROXY_URL</code> repository
+                  variable, which makes importing work here; or import on a desktop with{' '}
+                  <code className="rounded bg-amber-100 px-1">npm run dev</code> and move the
+                  book across with <strong>Library transfer</strong> in Settings. Everything
+                  else here works offline.
                 </div>
               )}
 

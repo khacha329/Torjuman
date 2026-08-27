@@ -49,6 +49,27 @@ function resolveCatalogUrl(): string {
     : '';
 }
 
+/**
+ * The deployed proxy that stands in for the dev server's forwarding.
+ *
+ * GitHub Pages serves files; it cannot forward a request. shamela.ws, dorar.net
+ * and api.sunnah.com all send no CORS headers, so the deployed app can only
+ * reach them through something that will. That something is proxy/worker.js on
+ * Cloudflare Workers, and this is where its URL enters the build — from a
+ * repository *variable* (not a secret: it is a public URL, and pretending
+ * otherwise would only hide it from the person maintaining it).
+ *
+ * Empty when unset, and the app then says importing is unavailable rather than
+ * failing at the first fetch. See ProxyUnavailableError.
+ *
+ * The trailing slash is stripped because the prefixes it is concatenated with
+ * already start with one, and `https://…workers.dev//shamela` is a 404.
+ */
+function resolveProxyUrl(): string {
+  const raw = process.env.VITE_PROXY_URL ?? process.env.PROXY_URL ?? '';
+  return raw.trim().replace(/\/+$/, '');
+}
+
 // The Shamela proxy exists only for the web phase.
 //
 // shamela.ws sends no CORS headers, so a browser fetch() to it fails. Every
@@ -65,6 +86,8 @@ export default defineConfig({
     // through an .env file so there is one place the deployment identity is
     // derived, next to `base`.
     'import.meta.env.VITE_CATALOG_URL': JSON.stringify(resolveCatalogUrl()),
+    // Read by src/platform/http/WebHttpClient.ts.
+    'import.meta.env.VITE_PROXY_URL': JSON.stringify(resolveProxyUrl()),
   },
   plugins: [
     react(),

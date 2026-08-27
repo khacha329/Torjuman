@@ -1,0 +1,28 @@
+name = "hashiya-proxy"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# Who is allowed to use this Worker.
+#
+# The Worker URL ends up inside a public build, so anyone can read it. This
+# list is what stops another site from spending your request quota. It is not a
+# defence against someone using curl — an Origin header is trivially set by
+# hand — but combined with the four-host allowlist in worker.js it keeps this
+# useful only for the thing it was built for.
+#
+# An origin is scheme + host, with NO path: the Pages site lives at
+# https://khacha329.github.io/Torjuman/ but its origin is just
+# https://khacha329.github.io. Getting that wrong is the single most likely
+# cause of a 403 from this Worker.
+#
+# localhost is here so `npm run preview` can be tested against the real proxy.
+# The dev server does not need it — Vite proxies locally.
+[vars]
+ALLOWED_ORIGINS = "https://khacha329.github.io,http://localhost:4173,http://localhost:5173"
+
+# Not observability = true: this Worker handles an API key on the sunnah route
+# if that route is ever enabled, and request logging is not something to leave
+# switched on by default around one. Turn it on deliberately while debugging,
+# and off again afterwards.
+[observability]
+enabled = false

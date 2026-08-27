@@ -103,10 +103,13 @@ export function CatalogScreen({
         {!PROXY_AVAILABLE && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <strong>Importing does not work in this build.</strong> shamela.ws sends no CORS
-            headers, so a browser can only reach it through the development proxy, and a
-            deployed app has none. The list below is still the useful half: import these on
-            a desktop with <code className="rounded bg-amber-100 px-1">npm run dev</code>,
-            export each book from Settings → Library transfer, and load the files here.
+            headers, so a browser needs a proxy in front of it and this build was made
+            without one. The list below is still the useful half: import these on a desktop
+            with <code className="rounded bg-amber-100 px-1">npm run dev</code>, export each
+            book from Settings → Library transfer, and load the files here. To import
+            directly instead, deploy{' '}
+            <code className="rounded bg-amber-100 px-1">proxy/worker.js</code> and set the
+            repository variable <code className="rounded bg-amber-100 px-1">PROXY_URL</code>.
           </div>
         )}
 

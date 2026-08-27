@@ -8,6 +8,8 @@
 node_modules/
 /dist/
 /.verify/
+# wrangler's local state and build cache. Anchored, per the note above.
+/proxy/.wrangler/
 *.local
 .DS_Store
 

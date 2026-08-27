@@ -903,20 +903,43 @@ router, so deep links already work on Pages with no rewrite rules; the 404 page
 only catches a mistyped path under the app's base, and derives that base from
 its own location.
 
-### Importing is a desktop operation
+### Importing needs a proxy, and there are two of them
 
-shamela.ws sends no CORS headers, so a browser can only reach it through the
-Vite dev proxy — and on a static host those `/shamela/...` paths do not exist.
-Worse, the service worker answers navigations with `index.html`, so a request to
-a missing proxy path can come back **200 with a page of HTML**, and the parser
-then reports that Shamela returned no content.
+shamela.ws sends no CORS headers, so a browser can only reach it through
+something that will add them. `npm run dev` runs a server, so Vite forwards
+`/shamela/...` from Node where the same-origin policy does not apply. GitHub
+Pages is a file host: there is no process there to forward anything, and those
+paths do not exist. Worse, the service worker answers navigations with
+`index.html`, so a request to a missing proxy path can come back **200 with a
+page of HTML**, and the parser then reports that Shamela returned no content.
 
-So `WebHttpClient` rewrites onto proxy paths only under the dev server, and in a
-static build refuses a proxy-only host with `ProxyUnavailableError` naming the
-reason. The import screen says so before you type an ID rather than after the
-crawl fails. Books reach the phone through **Library transfer**, which is what
-that feature was built for. Everything else — reading, marks, cards, the
-dictionary, QUL resources, on-device translation — is local and unaffected.
+Hence two supported deployments, and `WebHttpClient` picks between them:
+
+| `PROXY_URL` set? | Where requests go | Importing |
+| --- | --- | --- |
+| dev server | `/shamela/...`, same origin | works |
+| yes | `https://…workers.dev/shamela/...` | works |
+| no | refused up front | desktop + Library transfer |
+
+`proxy/worker.js` is the deployed half — a Cloudflare Worker doing exactly what
+Vite's proxy does, with the same path prefixes so one client table serves both.
+Deploy it and set the `PROXY_URL` repository variable and importing works on the
+tablet; see [proxy/README.md](proxy/README.md). It forwards GET only, to an
+allowlist of hosts, and never logs.
+
+The `/sunnah` route is **commented out on purpose**: `api.sunnah.com`
+authenticates with a header, and the standing rule is that a key goes nowhere
+but its own provider's endpoint. Nothing breaks while it is off — an
+untranslated hadith renders as Arabic with an explicit note, never a
+machine translation. The Anthropic key never touches the Worker at all;
+`api.anthropic.com` sends CORS headers and is called directly.
+
+Without a proxy, `WebHttpClient` refuses a proxy-only host with
+`ProxyUnavailableError` naming the reason, and the import screen says so before
+you type an ID rather than after the crawl fails. Books then reach the phone
+through **Library transfer**, which is what that feature was built for.
+Everything else — reading, marks, cards, the dictionary, QUL resources,
+on-device translation — is local and unaffected either way.
 
 ### What is not in this repository
 

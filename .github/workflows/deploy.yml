@@ -65,6 +65,19 @@ jobs:
       # public. Verification stays a local gate, run before pushing, where those
       # files exist.
       - run: npm run build
+        env:
+          # A repository *variable*, not a secret — it is a public URL that ends
+          # up in the built JavaScript either way, and marking it secret would
+          # only mean Actions redacts it from the logs of the person trying to
+          # work out why importing is switched off.
+          #
+          # Settings → Secrets and variables → Actions → Variables → PROXY_URL,
+          # set to the deployed Worker's origin with no trailing path, e.g.
+          # https://hashiya-proxy.<subdomain>.workers.dev
+          #
+          # Unset is a supported state: the app builds and runs, and says
+          # importing is unavailable in this deployment.
+          PROXY_URL: ${{ vars.PROXY_URL }}
 
       - uses: actions/configure-pages@v5
 
