@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-27",
+  "updatedAt": "2026-08-29",
   "entries": [
     {
       "shamelaId": 9260,
@@ -85,6 +85,48 @@
       "approxPages": 4086,
       "description": "The companion reference to Fatḥ al-Bārī, and by the author of Riyāḍ aṣ-Ṣāliḥīn itself.",
       "recommended": false
+    },
+    {
+      "shamelaId": 1110,
+      "title": "أسد الغابة في معرفة الصحابة",
+      "titleEn": "Ibn al-Athīr, Usd al-Ghāba — Companions",
+      "author": "عز الدين ابن الأثير، أبو الحسن، علي بن محمد الجزري (ت ٦٣٠ هـ)",
+      "role": "reference",
+      "category": "التراجم والطبقات",
+      "group": "Biographies",
+      "approxPages": 3699,
+      "description": "Companions specifically, and the one to import first: its subjects are the narrators named in Riyāḍ aṣ-Ṣāliḥīn. Note the edition — other printings of this work carry only bāb headings and cannot be indexed.",
+      "recommended": true,
+      "edition": "ط العلمية",
+      "tocNodes": 8148
+    },
+    {
+      "shamelaId": 10906,
+      "title": "سير أعلام النبلاء",
+      "titleEn": "Adh-Dhahabī, Siyar aʿlām an-nubalāʾ",
+      "author": "شمس الدين، محمد بن أحمد بن عثمان الذهبي (ت ٧٤٨ هـ)",
+      "role": "reference",
+      "category": "التراجم والطبقات",
+      "group": "Biographies",
+      "approxPages": 14211,
+      "description": "Scholars broadly — the general-purpose choice, and the largest of the three. Muʾassasat ar-Risāla, the standard scholarly edition.",
+      "recommended": false,
+      "edition": "ط الرسالة",
+      "tocNodes": 6162
+    },
+    {
+      "shamelaId": 9767,
+      "title": "الإصابة في تمييز الصحابة",
+      "titleEn": "Ibn Ḥajar, al-Iṣāba — Companions",
+      "author": "أبو الفضل أحمد بن علي بن محمد بن أحمد بن حجر العسقلاني (ت ٨٥٢هـ)",
+      "role": "reference",
+      "category": "التراجم والطبقات",
+      "group": "Biographies",
+      "approxPages": 4406,
+      "description": "The fullest Companion dictionary, and the largest contents of the three at nearly fourteen thousand entries. Overlaps Usd al-Ghāba; import both only if you want to compare them.",
+      "recommended": false,
+      "edition": "دار الكتب العلمية",
+      "tocNodes": 13854
     }
   ]
 }
