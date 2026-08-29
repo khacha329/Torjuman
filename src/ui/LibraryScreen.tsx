@@ -4,11 +4,17 @@ import { navigate } from '../app/router';
 import type { Book } from '../types';
 import { Button, LinkButton, TopBar } from './common';
 import { useCrawlProgress } from './useCrawlProgress';
+import { useCatalogImport } from '../catalog/useCatalogImport';
 
 export function LibraryScreen() {
   const { storage, crawler } = useApp();
   const [books, setBooks] = useState<Book[] | null>(null);
   const progress = useCrawlProgress();
+  // A catalog import runs at app level now, so it keeps going while you read.
+  // This is where it stays visible once you have left the catalog screen —
+  // otherwise it would be a crawl hitting Shamela with nothing on screen
+  // saying so.
+  const batch = useCatalogImport();
 
   const refresh = useCallback(async () => {
     // Dictionaries and reference works are consulted, not read through, so
@@ -47,6 +53,28 @@ export function LibraryScreen() {
       </TopBar>
 
       <div className="flex-1 overflow-auto p-6">
+        {batch.running && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-xs">
+            <span className="font-medium">
+              Importing from the catalog — {batch.doneCount} of {batch.rows.length} done
+            </span>
+            {batch.rows.find((row) => row.status === 'importing') && (
+              <span dir="rtl" lang="ar" className="arabic text-[13px]">
+                {batch.rows.find((row) => row.status === 'importing')!.entry.title}
+              </span>
+            )}
+            <span className="text-muted">
+              {batch.stopping ? 'Stopping after the current page.' : 'Carries on while you read.'}
+            </span>
+            <span className="ms-auto flex gap-2">
+              <LinkButton to={{ name: 'catalog' }}>Show progress</LinkButton>
+              <Button onClick={batch.stopNow} disabled={batch.stopping}>
+                Stop now
+              </Button>
+            </span>
+          </div>
+        )}
+
         {books === null && <p className="text-sm text-muted">Loading…</p>}
 
         {books?.length === 0 && (

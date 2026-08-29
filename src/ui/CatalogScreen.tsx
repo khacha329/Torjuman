@@ -185,23 +185,48 @@ export function CatalogScreen({
               {batch.running ? (
                 <>
                   <Spinner label={`Importing… ${batch.doneCount} of ${batch.rows.length} done`} />
-                  <Button onClick={batch.cancel}>Stop after this book</Button>
+                  {/* Two buttons, because they do two different things and one
+                      label cannot honestly cover both. The crawler checks its
+                      pause flag at the top of every page, so "Stop now" lands
+                      within a page — it does not finish the book. */}
+                  <Button onClick={batch.stopNow} disabled={batch.stopping}>
+                    Stop now
+                  </Button>
+                  <Button onClick={batch.finishCurrentThenStop} disabled={batch.stopping}>
+                    Finish this book, then stop
+                  </Button>
+                  {/* Leaving no longer abandons the import: the batch lives in
+                      AppContext, so it keeps running and the Library shows it. */}
+                  <Button variant="primary" onClick={onDone}>
+                    Leave this running
+                  </Button>
                 </>
               ) : (
                 <>
-                  {batch.failedCount > 0 && (
+                  {batch.unfinishedCount > 0 && (
                     <Button onClick={() => void batch.retryFailed()}>
-                      Retry {batch.failedCount} failed
+                      Resume {batch.unfinishedCount} unfinished
                     </Button>
                   )}
                   <Button variant="primary" onClick={onDone}>
                     {batch.doneCount > 0 ? 'Go to the library' : 'Done'}
                   </Button>
+                  <Button variant="ghost" onClick={batch.reset}>
+                    Choose more books
+                  </Button>
                 </>
               )}
             </div>
 
-            {!batch.running && batch.failedCount > 0 && (
+            {batch.running && (
+              <p className="mt-2 text-xs text-muted">
+                {batch.stopping
+                  ? 'Stopping. Everything already fetched is kept.'
+                  : 'This continues while you read. Progress is on the Library screen, and closing the app resumes where it stopped.'}
+              </p>
+            )}
+
+            {!batch.running && batch.unfinishedCount > 0 && (
               <p className="mt-2 text-xs text-muted">
                 The books that imported are already in your library — a failure here does
                 not undo them.
@@ -266,6 +291,10 @@ function ProgressRow({ row }: { row: EntryState }) {
     queued: 'waiting',
     importing: `${row.pagesDone.toLocaleString()} / ${row.entry.approxPages.toLocaleString()} pages`,
     done: 'imported',
+    // Not 'imported'. A stopped book keeps every page it fetched and resumes,
+    // but it is not finished and — because the crawler only runs entity
+    // detection on a complete book — it has no verse or ḥadīth marks yet.
+    partial: `stopped at ${row.pagesDone.toLocaleString()} of ${row.entry.approxPages.toLocaleString()} pages`,
     failed: 'failed',
     skipped: 'skipped',
   };

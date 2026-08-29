@@ -12,6 +12,7 @@ import { IdbStorageAdapter } from '../platform/storage/IdbStorageAdapter';
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import { Crawler } from '../ingest/crawler';
+import { CatalogImportBatch } from '../catalog/importBatch';
 import type { AppSettings, GlossaryEntry, TranslationProfile } from '../types';
 import { createDefaultProfile, DEFAULT_PROFILE_ID } from '../translation/profiles';
 import { DEFAULT_PROVIDER_ID } from '../translation/registry';
@@ -47,6 +48,8 @@ interface AppServices {
   http: HttpClient;
   storage: StorageAdapter;
   crawler: Crawler;
+  /** Multi-book catalog imports, which continue while you read elsewhere. */
+  batch: CatalogImportBatch;
   settings: AppSettings;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
   profiles: TranslationProfile[];
@@ -82,7 +85,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const services = useMemo(() => {
     const http = new WebHttpClient();
     const storage = new IdbStorageAdapter();
-    return { http, storage, crawler: new Crawler(http, storage) };
+    const crawler = new Crawler(http, storage);
+    // Built here, beside the crawler, and for the same reason: a catalog import
+    // outlives the screen that started it, so its state cannot belong to that
+    // screen. See src/catalog/importBatch.ts.
+    return { http, storage, crawler, batch: new CatalogImportBatch(http, storage, crawler) };
   }, []);
 
   const loadAll = useCallback(async () => {

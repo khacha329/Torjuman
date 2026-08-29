@@ -2783,6 +2783,143 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
   }
 }
 
+console.log('\n=== Catalog import batch ===');
+
+{
+  const { CatalogImportBatch } = await import('../src/catalog/importBatch');
+
+  // A crawler stand-in that pauses exactly where the real one does: at a page
+  // boundary, returning NORMALLY rather than throwing. That clean return is
+  // what made the old code mark a half-crawled book "done".
+  function makeCrawler() {
+    let paused = false;
+    let current: { bookId: string; status: string; fetchedPages: number } | null = null;
+    const listeners = new Set<(p: never) => void>();
+    return {
+      started: [] as string[],
+      pauseCalls: 0,
+      get current() {
+        return current;
+      },
+      subscribe(listener: (p: never) => void) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      pause() {
+        this.pauseCalls++;
+        paused = true;
+      },
+      async start(bookId: string) {
+        this.started.push(bookId);
+        let fetched = 0;
+        for (let page = 0; page < 5; page++) {
+          if (paused) {
+            current = { bookId, status: 'paused', fetchedPages: fetched };
+            return;
+          }
+          fetched++;
+          current = { bookId, status: 'running', fetchedPages: fetched };
+          for (const listener of listeners) listener(current as never);
+        }
+        current = { bookId, status: 'complete', fetchedPages: fetched };
+      },
+    };
+  }
+
+  const entry = (shamelaId: number) => ({
+    shamelaId,
+    title: `book ${shamelaId}`,
+    titleEn: `book ${shamelaId}`,
+    author: '',
+    role: 'reading' as const,
+    category: '',
+    group: 'g',
+    approxPages: 5,
+    description: '',
+    recommended: false,
+  });
+
+  const stubStorage = {} as never;
+  const stubHttp = {} as never;
+
+  // --- the crawler's two exits, which the batch has to tell apart -------
+  {
+    const crawler = makeCrawler();
+    await crawler.start('b1');
+    check('a crawl that runs to the end reports complete', crawler.current!.status, 'complete');
+  }
+  {
+    const crawler = makeCrawler();
+    crawler.pause();
+    await crawler.start('b1');
+    check('a paused crawl reports paused', crawler.current!.status, 'paused');
+    expect(
+      '  having returned normally, not thrown',
+      true,
+      '(so the outcome must be read off the crawler, never assumed from a clean return)',
+    );
+  }
+
+  // --- stopNow vs finishCurrentThenStop --------------------------------
+  {
+    const crawler = makeCrawler();
+    const batch = new CatalogImportBatch(stubHttp, stubStorage, crawler as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (batch as any).state = { rows: [], running: true, stopping: false };
+
+    batch.finishCurrentThenStop();
+    check('"finish this book, then stop" does NOT pause the crawler', crawler.pauseCalls, 0);
+    check('  but does mark the batch stopping', batch.current.stopping, true);
+
+    batch.stopNow();
+    check('"stop now" pauses the crawler', crawler.pauseCalls, 1);
+  }
+
+  // --- neither fires when nothing is running ---------------------------
+  {
+    const crawler = makeCrawler();
+    const batch = new CatalogImportBatch(stubHttp, stubStorage, crawler as never);
+    batch.stopNow();
+    batch.finishCurrentThenStop();
+    check('stopping an idle batch is a no-op', crawler.pauseCalls, 0);
+  }
+
+  // --- a stopped book is unfinished, not done --------------------------
+  {
+    const crawler = makeCrawler();
+    const batch = new CatalogImportBatch(stubHttp, stubStorage, crawler as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (batch as any).state = {
+      rows: [
+        { entry: entry(1), status: 'done', pagesDone: 5, error: null, bookId: 'b1' },
+        { entry: entry(2), status: 'partial', pagesDone: 2, error: null, bookId: 'b2' },
+        { entry: entry(3), status: 'failed', pagesDone: 0, error: 'x', bookId: null },
+        { entry: entry(4), status: 'skipped', pagesDone: 0, error: null, bookId: null },
+      ],
+      running: false,
+      stopping: false,
+    };
+    check('a stopped book counts as unfinished', batch.unfinishedCount, 3);
+    check('  and only a completed one counts as done', batch.doneCount, 1);
+  }
+
+  // --- state outlives any one subscriber, which is the whole point -----
+  {
+    const crawler = makeCrawler();
+    const batch = new CatalogImportBatch(stubHttp, stubStorage, crawler as never);
+    let deliveries = 0;
+    const off = batch.subscribe(() => {
+      deliveries++;
+    });
+    check('subscribing replays current state at once', deliveries, 1);
+    off();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (batch as any).set({ running: true });
+    check('  unsubscribing stops delivery', deliveries, 1);
+    check('  but the batch kept running regardless', batch.current.running, true);
+  }
+}
+
 console.log('\n=== Biographical names (Amendment 16) ===');
 
 {
