@@ -1,6 +1,11 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import type { Block, Book } from '../types';
-import { buildBiographyIndex, type BiographyIndexResult } from './buildIndex';
+import type { BiographyEntry, Block, Book } from '../types';
+import { foldName } from '../retrieval/narrator';
+import {
+  buildBiographyIndex,
+  looksLikeEntryHeading,
+  type BiographyIndexResult,
+} from './buildIndex';
 import { lookupBiography, type BiographyLookup } from './lookup';
 
 // Wiring the biographical index to storage.
@@ -91,21 +96,134 @@ export async function ensureBiographyIndexes(
   return { indexed: await hasBiographies(storage), results };
 }
 
+/** What the sheet needs to render one entry. */
+export interface EntryReading {
+  blocks: Block[];
+  /** Printed ج/ص, read from the page rather than guessed from the index. */
+  volume: number | null;
+  printPage: number | null;
+  /** False when the entry's own heading could not be found in the body. */
+  anchored: boolean;
+  /** True when the entry runs past the pages that were read. */
+  truncated: boolean;
+  /** Pages the entry spans that have not been crawled yet. */
+  missingPages: number[];
+}
+
+/**
+ * How far past its own page an entry is allowed to run.
+ *
+ * A bound, not an estimate. Most entries are a page or two, but the major
+ * Companions are far longer — ʿUmar b. al-Khaṭṭāb runs 31 pages across eleven
+ * subsections. The cap only stops one lookup pulling half a volume out of
+ * IndexedDB if the index is ever wrong about where the next entry starts.
+ */
+const MAX_ENTRY_PAGES = 40;
+
 /**
  * The blocks making up one entry, read at open time rather than at index time.
  *
- * The contents give a page, not a range: an entry runs from its own heading to
- * the next one, which may be on the same page or several pages later. Reading
- * the page the entry starts on covers the overwhelming majority and costs one
- * lookup; nothing here fetches from the network, so an entry on an unfetched
- * page simply has no text to show and says so.
+ * ---------------------------------------------------------------------------
+ * A page is neither the start nor the end of an entry
+ *
+ * This is the thing the first version got wrong. The contents give a page, and
+ * the obvious implementation shows that page — but Usd al-Ghāba prints 2.5
+ * entries to a page. The page ʿUmar b. al-Khaṭṭāb starts on opens with the tail
+ * of one biography, continues with the whole of ʿUmar b. al-Ḥakam as-Sulamī,
+ * and only reaches ʿUmar himself in the second-to-last block, whose text then
+ * runs onto the following page. Showing the page showed the wrong man.
+ *
+ * So the body is anchored on the work's own heading. Usd al-Ghāba prints
+ * «[٣٨٣٠ - عمر بن الخطاب]» as a heading block, and the number is the same one
+ * the contents line carries — which makes it an exact, non-fuzzy anchor. The
+ * entry then runs to the next heading, across page boundaries, bounded by where
+ * the index says the following entry begins.
+ *
+ * Falling back to the whole page when no heading matches is deliberate: some
+ * text is better than none, and `anchored: false` lets the sheet say so rather
+ * than pretending.
+ * ---------------------------------------------------------------------------
  */
 export async function entryBlocks(
   storage: StorageAdapter,
-  bookId: string,
-  pageIndex: number,
-): Promise<Block[]> {
-  const page = await storage.getPage(bookId, pageIndex);
-  if (!page) return [];
-  return storage.listBlocksForPage(page.id);
+  entry: BiographyEntry,
+): Promise<EntryReading> {
+  const last = Math.min(
+    Math.max(entry.endPageIndex, entry.pageIndex),
+    entry.pageIndex + MAX_ENTRY_PAGES,
+  );
+  const truncated = entry.endPageIndex > last;
+
+  const blocks: Block[] = [];
+  const missingPages: number[] = [];
+  let volume: number | null = null;
+  let printPage: number | null = null;
+
+  for (let index = entry.pageIndex; index <= last; index++) {
+    const page = await storage.getPage(entry.bookId, index);
+    if (!page) {
+      missingPages.push(index);
+      continue;
+    }
+    if (index === entry.pageIndex) {
+      volume = page.volume;
+      printPage = page.printPage;
+    }
+    blocks.push(...(await storage.listBlocksForPage(page.id)));
+  }
+
+  if (blocks.length === 0) {
+    return { blocks, volume, printPage, anchored: false, truncated, missingPages };
+  }
+
+  const start = blocks.findIndex((block) => isHeadingFor(block, entry));
+  if (start === -1) {
+    // No heading matched. Show the page rather than nothing, and say so.
+    return { blocks, volume, printPage, anchored: false, truncated, missingPages };
+  }
+
+  // Runs to the next NUMBERED heading — the following entry.
+  //
+  // Not the next heading of any kind: a long biography is subdivided by its own
+  // unnumbered headings («إسلامه», «هجرته», «فضائله»), and stopping at the first
+  // of those cut ʿUmar's life off after its opening paragraph. Those headings
+  // are part of the entry and belong in the text, where they give the reader
+  // the work's own structure.
+  let end = blocks.length;
+  for (let index = start + 1; index < blocks.length; index++) {
+    const block = blocks[index];
+    if (block.type === 'chapter_title' && looksLikeEntryHeading(block.text)) {
+      end = index;
+      break;
+    }
+  }
+
+  return {
+    blocks: blocks.slice(start, end),
+    volume,
+    printPage,
+    anchored: true,
+    truncated: truncated && end === blocks.length,
+    missingPages,
+  };
+}
+
+/**
+ * Whether this block is the heading that opens the given entry.
+ *
+ * By number where the work prints one, because a number is exact and a name is
+ * not: «عمر بن الخطاب» also occurs inside «أم عبد الله بن عمر بن الخطاب», and
+ * matching on the name alone would open his daughter's entry for him. Falls
+ * back to the folded name for works that do not number their entries.
+ */
+function isHeadingFor(block: Block, entry: BiographyEntry): boolean {
+  if (block.type !== 'chapter_title') return false;
+
+  if (entry.entryNumber) {
+    // Bounded by non-digits so «٣٨٣» does not match inside «٣٨٣٠».
+    const pattern = new RegExp(`(?:^|[^0-9\u0660-\u0669])${entry.entryNumber}(?:[^0-9\u0660-\u0669]|$)`);
+    return pattern.test(block.text);
+  }
+
+  return foldName(block.text).includes(entry.nameNormalized);
 }

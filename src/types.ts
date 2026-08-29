@@ -708,6 +708,23 @@ export interface BiographyEntry {
    */
   aliases: { value: string; kind: string }[];
   pageIndex: number;
+  /**
+   * Page the FOLLOWING entry begins on — the bound on how far this one runs.
+   *
+   * Usd al-Ghāba puts 2.5 entries on an average page, so a page is neither the
+   * start nor the end of an entry: the page ʿUmar b. al-Khaṭṭāb starts on opens
+   * with the tail of one biography and the whole of another, and his own text
+   * continues onto the next page. Without this bound the sheet either shows
+   * somebody else's life or stops mid-sentence.
+   */
+  endPageIndex: number;
+  /**
+   * The work's own entry number, when it prints one — "٣٨٣٠".
+   *
+   * Used to find the entry's heading in the body, which is the only reliable
+   * way to know where on a shared page it actually begins.
+   */
+  entryNumber: string | null;
   /** Resolved lazily when the sheet opens; the TOC gives a page, not blocks. */
   blockIds: string[];
   volume: number;

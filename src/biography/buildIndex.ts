@@ -48,6 +48,8 @@ export const MIN_PERSON_COUNT = 100;
 
 export interface BiographyIndexResult {
   entries: BiographyEntry[];
+  /** True when the work numbers its entries and subsections were excluded. */
+  usesNumbering: boolean;
   /** Contents entries examined. */
   examined: number;
   /** How many of them read as a person rather than a structural heading. */
@@ -74,6 +76,7 @@ export function buildBiographyIndex(
 
   const refuse = (reason: string): BiographyIndexResult => ({
     entries: [],
+    usesNumbering: false,
     examined,
     personCount,
     personShare,
@@ -100,10 +103,35 @@ export function buildBiographyIndex(
     );
   }
 
+  // ---------------------------------------------------------------------
+  // A numbered contents line is an entry; an unnumbered one is a subsection.
+  //
+  // The contents of these works are FLAT — Usd al-Ghāba is 8,148 nodes all at
+  // depth 0 — so nesting cannot tell the two apart. ʿUmar b. al-Khaṭṭāb's entry
+  // is followed by «إسلامه», «هجرته», «فضائله», «مقتله» and seven more, each a
+  // sibling of the entry it belongs to. Treating those as people put them in
+  // the index as if they were names, and — worse — made the *next* node after
+  // ʿUmar be «إسلامه», so his 31-page life was bounded to a single page.
+  //
+  // The work's own numbering is what separates them, and all three works number
+  // heavily: 99% of person-like nodes in Usd al-Ghāba, 96% in Siyar, 75% in
+  // al-Iṣāba. Where a work numbers, only numbered nodes are entries — which
+  // also drops the front matter and the author's list of sources, both of which
+  // read as names and are not people.
+  // ---------------------------------------------------------------------
+  const inOrder = [...people].sort((a, b) => a.order - b.order);
+  const numbered = inOrder.filter((node) => entryNumberOf(node.title) !== null);
+  const usesNumbering = numbered.length >= inOrder.length * 0.5;
+  const ordered = usesNumbering ? numbered : inOrder;
+
   const entries: BiographyEntry[] = [];
-  for (const node of people) {
+  for (const [index, node] of ordered.entries()) {
     const aliases = deriveAliases(node.title);
     if (aliases.length === 0) continue;
+
+    // The next entry bounds this one. Where several share a page the bound is
+    // the same page, and the heading match inside it does the rest.
+    const next = ordered[index + 1];
 
     entries.push({
       id: `${bookId}|bio|${node.id}`,
@@ -112,16 +140,38 @@ export function buildBiographyIndex(
       nameNormalized: aliases[0].value,
       aliases,
       pageIndex: node.pageIndex,
+      endPageIndex: next ? next.pageIndex : node.pageIndex,
+      entryNumber: entryNumberOf(node.title),
       blockIds: [],
       volume: volumeOf(node.pageIndex, volumeStarts),
-      // The TOC carries only Shamela's sequential index. The printed ص lives on
-      // the Page record and is filled in when the sheet opens that page, so the
-      // index does not have to wait on every page being fetched.
+      // The TOC carries only Shamela's sequential index, and the printed ج/ص
+      // live on the Page record. Both are read when the sheet opens the page —
+      // storing the sequential index here and labelling it ص would be a lie.
       printPage: node.pageIndex,
     });
   }
 
-  return { entries, examined, personCount, personShare };
+  return { entries, usesNumbering, examined, personCount, personShare };
+}
+
+/**
+ * The work's own number for this entry, from the head of its contents line.
+ *
+ * «٣٨٣٠ - عمر بن الخطاب» yields «٣٨٣٠», which appears again as the body's
+ * heading «[٣٨٣٠ - عمر بن الخطاب]». That number is what locates the entry on a
+ * page it shares with two others. Null where a work does not number its
+ * entries, and the name is matched instead.
+ */
+export function entryNumberOf(title: string): string | null {
+  // The optional bracket lets this read the body's heading form,
+  // «[٣٨٣٠ - عمر بن الخطاب]», as well as the contents line's «٣٨٣٠ - …».
+  const match = /^\s*\[?\s*([0-9٠-٩]+)\s*[-–—]/.exec(title);
+  return match ? match[1] : null;
+}
+
+/** Whether a body heading opens a numbered entry rather than a subsection. */
+export function looksLikeEntryHeading(text: string): boolean {
+  return entryNumberOf(text) !== null;
 }
 
 /** Which volume a page index falls in, 1-based. */

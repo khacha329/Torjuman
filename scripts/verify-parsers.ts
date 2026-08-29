@@ -3184,6 +3184,137 @@ console.log('\n=== Biographical names (Amendment 16) ===');
   );
 }
 
+console.log('\n=== Biography entries are bounded by the work\'s own numbering ===');
+
+{
+  const { buildBiographyIndex, entryNumberOf, looksLikeEntryHeading } = await import(
+    '../src/biography/buildIndex'
+  );
+  const { entryBlocks } = await import('../src/biography/service');
+
+  check('a contents line yields its number', entryNumberOf('٣٨٣٠ - عمر بن الخطاب'), '٣٨٣٠');
+  check('  and so does the body heading form', entryNumberOf('[٣٨٣٠ - عمر بن الخطاب]'), '٣٨٣٠');
+  check('a subsection has no number', entryNumberOf('إسلامه ﵁'), null);
+  expect('  so it is not an entry heading', !looksLikeEntryHeading('إسلامه ﵁'), '');
+  expect('  while a numbered one is', looksLikeEntryHeading('[٣٨٣١ - عمرو بن سالم]'), '');
+
+  // The real shape of Usd al-Ghāba's contents: flat, with a numbered entry
+  // followed by its own unnumbered subsections as SIBLINGS.
+  const toc = [
+    ['٣٨٢٩ - عمر بن الحكم السلمي', 1987],
+    ['٣٨٣٠ - عمر بن الخطاب', 1987],
+    ['إسلامه ﵁', 1988],
+    ['هجرته ﵁', 1994],
+    ['فضائله ﵁', 1999],
+    ['مقتله ﵁', 2011],
+    ['٣٨٣١ - عمرو بن سالم الخزاعي', 2018],
+  ].map(([title, pageIndex], order) => ({
+    id: `b|toc${order}`,
+    bookId: 'b',
+    parentId: null,
+    title: title as string,
+    pageIndex: pageIndex as number,
+    order,
+    depth: 0,
+  }));
+
+  // Padded to clear the absolute floor without changing the shape under test.
+  const padding = Array.from({ length: 120 }, (_, index) => ({
+    id: `b|pad${index}`,
+    bookId: 'b',
+    parentId: null,
+    title: `${9000 + index} - محمد بن أحمد ${index}`,
+    pageIndex: 3000 + index,
+    order: 100 + index,
+    depth: 0,
+  }));
+
+  const built = buildBiographyIndex('b', [...toc, ...padding] as never, []);
+  expect('a numbered work is detected as numbered', built.usesNumbering, '');
+
+  const umar = built.entries.find((entry) => entry.entryNumber === '٣٨٣٠')!;
+  expect('the numbered entry is indexed', Boolean(umar), '');
+  check(
+    "  and its subsections are NOT indexed as people",
+    built.entries.filter((entry) => entry.name.startsWith('إسلامه')).length,
+    0,
+  );
+  // The bug: the next TOC node is a subsection, so bounding on it cut a
+  // 31-page life down to one page.
+  check('  its end is the next numbered entry, not the next subsection', umar.endPageIndex, 2018);
+  check('  not page 1988, where its first subsection begins', umar.endPageIndex === 1988, false);
+
+  // ---- reading the entry out of stored pages ----------------------------
+  const page = (pageIndex: number, texts: [type: string, text: string][]) => ({
+    id: `b:p${pageIndex}`,
+    pageIndex,
+    volume: 4,
+    printPage: 137 + (pageIndex - 1987),
+    blocks: texts.map(([type, text], i) => ({
+      id: `b:p${pageIndex}:${i}`,
+      type,
+      text,
+    })),
+  });
+
+  const pages = new Map([
+    [
+      1987,
+      page(1987, [
+        ['body', 'tail of an earlier life'],
+        ['chapter_title', '[٣٨٢٩ - عمر بن الحكم السلمي]'],
+        ['body', 'the Sulami man'],
+        ['chapter_title', '[٣٨٣٠ - عمر بن الخطاب]'],
+        ['body', 'ب د ع: عمر بن الخطاب بن نفيل'],
+      ]),
+    ],
+    [
+      1988,
+      page(1988, [
+        ['chapter_title', '[إسلامه ﵁]'],
+        ['body', 'how he became Muslim'],
+      ]),
+    ],
+    [
+      2018,
+      page(2018, [
+        ['chapter_title', '[٣٨٣١ - عمرو بن سالم الخزاعي]'],
+        ['body', 'the next man'],
+      ]),
+    ],
+  ]);
+
+  const storage = {
+    getPage: async (_bookId: string, pageIndex: number) => pages.get(pageIndex),
+    listBlocksForPage: async (pageId: string) => {
+      const index = Number(pageId.split('p')[1]);
+      return pages.get(index)?.blocks ?? [];
+    },
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reading = await entryBlocks(storage as any, umar as any);
+  expect('the entry is anchored on its own heading', reading.anchored, '');
+  check('  starting at that heading', reading.blocks[0].text, '[٣٨٣٠ - عمر بن الخطاب]');
+  expect(
+    "  never showing the neighbour's life",
+    !reading.blocks.some((block) => block.text.includes('الحكم')),
+    '(this was the reported bug)',
+  );
+  expect(
+    '  but keeping the entry\'s OWN subsections',
+    reading.blocks.some((block) => block.text.includes('إسلامه')),
+    '',
+  );
+  expect(
+    '  and stopping before the next numbered entry',
+    !reading.blocks.some((block) => block.text.includes('٣٨٣١')),
+    '',
+  );
+  check('  ج/ص come from the page, not the index', [reading.volume, reading.printPage], [4, 137]);
+  check('  pages not yet fetched are reported', reading.missingPages.length, 29);
+}
+
 console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) ===');
 
 {

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
-import { entryBlocks, lookupName } from '../../biography/service';
+import { entryBlocks, lookupName, type EntryReading } from '../../biography/service';
 import type { BiographyHit, BiographyLookup } from '../../biography/lookup';
-import type { Block } from '../../types';
 import { AnchoredPanel } from './AnchoredPanel';
 import { Spinner } from '../common';
 
@@ -44,7 +43,7 @@ export function BiographySheet({
   const { storage } = useApp();
   const [result, setResult] = useState<BiographyLookup | null>(null);
   const [chosen, setChosen] = useState<BiographyHit | null>(null);
-  const [blocks, setBlocks] = useState<Block[] | null>(null);
+  const [reading, setReading] = useState<EntryReading | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,13 +63,13 @@ export function BiographySheet({
 
   useEffect(() => {
     if (!chosen) {
-      setBlocks(null);
+      setReading(null);
       return;
     }
     let cancelled = false;
-    setBlocks(null);
-    void entryBlocks(storage, chosen.entry.bookId, chosen.entry.pageIndex).then((found) => {
-      if (!cancelled) setBlocks(found);
+    setReading(null);
+    void entryBlocks(storage, chosen.entry).then((found) => {
+      if (!cancelled) setReading(found);
     });
     return () => {
       cancelled = true;
@@ -90,9 +89,9 @@ export function BiographySheet({
           <span dir="rtl" lang="ar" className="arabic text-[13px] font-medium">
             {chosen ? chosen.entry.name : selection}
           </span>
-          {chosen && (
+          {chosen && reading?.printPage != null && (
             <span className="text-[10px] text-muted">
-              ج{chosen.entry.volume} · ص{chosen.entry.printPage}
+              ج{reading.volume ?? '?'} · ص{reading.printPage}
             </span>
           )}
         </>
@@ -152,8 +151,13 @@ export function BiographySheet({
                           <span dir="rtl" lang="ar" className="arabic flex-1 text-[14px]">
                             {hit.entry.name}
                           </span>
+                          {/* The work's own entry number, not a page: the
+                              contents give a sequential index, and printing
+                              that as ص would be a number the book does not
+                              have. The real ج/ص appears in the header once the
+                              page has been read. */}
                           <span className="shrink-0 text-[10px] text-muted">
-                            ج{hit.entry.volume} · ص{hit.entry.printPage}
+                            {hit.entry.entryNumber ? `#${hit.entry.entryNumber}` : ''}
                           </span>
                           {/* Why this row matched. A row that matched on the
                               first name alone is far weaker evidence than one
@@ -182,9 +186,9 @@ export function BiographySheet({
             </p>
           )}
 
-          {chosen && blocks === null && <Spinner label="Reading the entry…" />}
+          {chosen && reading === null && <Spinner label="Reading the entry…" />}
 
-          {chosen && blocks !== null && blocks.length === 0 && (
+          {chosen && reading !== null && reading.blocks.length === 0 && (
             <p className="text-[12px] text-muted">
               This entry is on page {chosen.entry.pageIndex} of{' '}
               <span dir="rtl" lang="ar" className="arabic">
@@ -195,17 +199,43 @@ export function BiographySheet({
             </p>
           )}
 
-          {chosen && blocks !== null && blocks.length > 0 && (
+          {/* The entry could not be located inside the page, so what follows is
+              the page — which in a work printing several entries to a page will
+              include neighbouring lives. Better to say so than to let the reader
+              assume the first paragraph is the right person. */}
+          {chosen && reading?.anchored === false && reading.blocks.length > 0 && (
+            <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+              The heading for this entry was not found, so the whole page is shown.
+              This work prints more than one life to a page, so some of what follows
+              may belong to a neighbouring entry.
+            </p>
+          )}
+
+          {chosen && reading !== null && reading.blocks.length > 0 && (
             <div
               dir="rtl"
               lang="ar"
               className="arabic space-y-2 text-[16px] leading-loose"
               style={{ ['--reader-line-height' as string]: '2.0' }}
             >
-              {blocks.map((block) => (
+              {reading.blocks.map((block) => (
                 <p key={block.id}>{block.text}</p>
               ))}
             </div>
+          )}
+
+          {chosen && reading?.missingPages.length ? (
+            <p className="mt-2 text-[11px] text-muted">
+              This entry continues onto {reading.missingPages.length} page
+              {reading.missingPages.length === 1 ? '' : 's'} not yet fetched. Resume
+              the import from the Library to read the rest.
+            </p>
+          ) : null}
+
+          {chosen && reading?.truncated && (
+            <p className="mt-2 text-[11px] text-muted">
+              A long entry, shown to the end of the pages read.
+            </p>
           )}
 
           {chosen && (
