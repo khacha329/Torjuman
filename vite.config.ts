@@ -43,10 +43,19 @@ function resolveCatalogUrl(): string {
   if (process.env.VITE_CATALOG_URL) return process.env.VITE_CATALOG_URL;
 
   const repository = process.env.GITHUB_REPOSITORY;
-  const ref = process.env.GITHUB_REF_NAME ?? 'main';
-  return repository
-    ? `https://raw.githubusercontent.com/${repository}/${ref}/public/catalog.json`
-    : '';
+  if (!repository) return '';
+
+  // Deliberately NOT the tag this build was cut from.
+  //
+  // Deploys come from tags now, and GITHUB_REF_NAME is therefore "v0.4.0" on a
+  // release build. Pointing the catalog at that would freeze it: the whole
+  // reason this URL exists is that a wrong Shamela ID can be corrected by
+  // editing one file, with no new build — and a tagged ref makes that
+  // impossible until the next release. A tag ref falls back to the default
+  // branch; anything else (a branch build, a workflow_dispatch) uses itself.
+  const ref = process.env.GITHUB_REF_NAME;
+  const branch = !ref || /^v\d/.test(ref) ? 'main' : ref;
+  return `https://raw.githubusercontent.com/${repository}/${branch}/public/catalog.json`;
 }
 
 /**
@@ -70,6 +79,24 @@ function resolveProxyUrl(): string {
   return raw.trim().replace(/\/+$/, '');
 }
 
+/**
+ * A human-usable version for this build.
+ *
+ * Deploys are cut from tags now, so on a release build GITHUB_REF_NAME is the
+ * tag itself — "v0.4.0" — which is exactly what a tester should quote. Off a
+ * tag it falls back to the package version plus the short commit, which is
+ * still unambiguous; and locally it says so plainly rather than inventing a
+ * version number that does not correspond to anything.
+ */
+function resolveVersion(): string {
+  const ref = process.env.GITHUB_REF_NAME;
+  if (ref && /^v\d/.test(ref)) return ref;
+
+  const sha = process.env.GITHUB_SHA?.slice(0, 7);
+  const pkg = process.env.npm_package_version ?? '0.0.0';
+  return sha ? `${pkg}+${sha}` : `${pkg}-local`;
+}
+
 // The Shamela proxy exists only for the web phase.
 //
 // shamela.ws sends no CORS headers, so a browser fetch() to it fails. Every
@@ -88,6 +115,11 @@ export default defineConfig({
     'import.meta.env.VITE_CATALOG_URL': JSON.stringify(resolveCatalogUrl()),
     // Read by src/platform/http/WebHttpClient.ts.
     'import.meta.env.VITE_PROXY_URL': JSON.stringify(resolveProxyUrl()),
+    // What build is this? Shown in Settings and copied into a bug report, so a
+    // tester's "it does X" can be pinned to an actual build rather than to
+    // whatever happened to be deployed that week.
+    __APP_VERSION__: JSON.stringify(resolveVersion()),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     react(),
@@ -104,7 +136,13 @@ export default defineConfig({
     // also why the LAN dev-server address is a development convenience and not
     // the way to run this on the tablet long-term.
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt', not 'autoUpdate'. autoUpdate calls skipWaiting, activating a
+      // new worker while the previous build's page is still running — and that
+      // page will 404 on any code-split chunk it has not loaded yet, because
+      // the new precache no longer holds its old hashed filename. Waiting until
+      // the reader accepts keeps each page on one consistent build.
+      // The prompt itself lives in src/app/pwaUpdate.ts.
+      registerType: 'prompt',
       // These three must agree with Vite's `base`, and the failure when they
       // do not is quiet: a service worker whose scope does not cover the page
       // registers successfully and then controls nothing, so the app looks

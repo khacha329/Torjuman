@@ -16,6 +16,7 @@ import { HadithSourceSection } from './HadithSourceSection';
 import { ProfileEditor } from './ProfileEditor';
 import { QulResources } from './QulResources';
 import { ReferenceWorks } from './ReferenceWorks';
+import { BuildSection } from './BuildSection';
 
 export function SettingsScreen() {
   return (
@@ -43,6 +44,7 @@ export function SettingsScreen() {
           <GlossaryTable />
           <BackupSection />
           <LibraryTransfer />
+          <BuildSection />
         </div>
       </div>
     </div>

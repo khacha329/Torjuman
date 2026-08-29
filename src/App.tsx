@@ -8,6 +8,7 @@ import { ImportScreen } from './ui/ImportScreen';
 import { OnboardingScreen } from './ui/OnboardingScreen';
 import { ReaderScreen } from './ui/reader/ReaderScreen';
 import { SettingsScreen } from './ui/settings/SettingsScreen';
+import { UpdateBar } from './ui/UpdateBar';
 
 const ONBOARDED_FLAG = 'shamela-reader.onboarded';
 const CATALOG_SEEN_FLAG = 'shamela-reader.catalogOffered';
@@ -80,6 +81,9 @@ export function App() {
   return (
     <AppProvider>
       <Routes />
+      {/* Outside Routes on purpose: an update notice must not disappear
+          because the reader navigated to Settings. */}
+      <UpdateBar />
     </AppProvider>
   );
 }

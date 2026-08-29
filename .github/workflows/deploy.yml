@@ -5,10 +5,23 @@ name: Deploy to GitHub Pages
 # GITHUB_REPOSITORY rather than hard-coding it, which means this workflow keeps
 # working if the repository is renamed.
 
+# Tags, not every push to main.
+#
+# Testers install this as a PWA and keep it. Deploying every commit meant every
+# half-finished change on main became the build somebody was reading from, and
+# a bug report could not be pinned to anything. A tag is a deliberate act: main
+# stays free for daily work, and what testers get is the last thing deliberately
+# released.
+#
+#   git tag -a v0.4.0 -m "…"  &&  git push origin v0.4.0
+#
+# The tag name also becomes the version shown in Settings — see resolveVersion
+# in vite.config.ts — so "which build?" has an answer a tester can read off.
 on:
   push:
-    branches: [main]
-  # So a failed deploy can be retried without an empty commit.
+    tags: ['v*']
+  # Redeploy the current tag without cutting a new one, and the way to publish
+  # a build from a branch while testing the workflow itself.
   workflow_dispatch:
 
 permissions:

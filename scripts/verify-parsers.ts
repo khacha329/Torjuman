@@ -2783,6 +2783,93 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
   }
 }
 
+console.log('\n=== Update prompt and activity gating ===');
+
+{
+  const { beginActivity, isBusy } = await import('../src/app/activity');
+
+  check('idle to begin with', isBusy(), false);
+  const endImport = beginActivity();
+  check('an import marks the app busy', isBusy(), true);
+
+  // Overlapping work: the first thing to finish must not declare the app idle
+  // while the second is still running. This is why it is a counter.
+  const endTranslate = beginActivity();
+  endImport();
+  check('one of two finishing leaves it busy', isBusy(), true);
+  endTranslate();
+  check('both finishing makes it idle', isBusy(), false);
+
+  // The end function is reached from both a success path and an error path in
+  // the same `finally`; a second call must not drive the count negative and
+  // leave the app permanently "idle" while still working.
+  endTranslate();
+  endTranslate();
+  check('ending twice is a no-op, not a negative count', isBusy(), false);
+  const again = beginActivity();
+  check('  and the counter still works afterwards', isBusy(), true);
+  again();
+  check('  back to idle', isBusy(), false);
+
+  // Subscribers see transitions, which is what releases a queued update notice.
+  const { subscribeActivity } = await import('../src/app/activity');
+  const seen: boolean[] = [];
+  const off = subscribeActivity((busy) => seen.push(busy));
+  check('subscribing reports the current state at once', seen, [false]);
+  const work = beginActivity();
+  work();
+  check('  then every transition', seen, [false, true, false]);
+  off();
+  beginActivity()();
+  check('  and unsubscribing stops delivery', seen.length, 3);
+}
+
+console.log('\n=== Deploy trigger and build identity ===');
+
+{
+  const { readFileSync: readWorkflow } = await import('node:fs');
+  const workflow = readWorkflow(
+    join(process.cwd(), '.github', 'workflows', 'deploy.yml'),
+    'utf8',
+  );
+
+  // Testers keep this installed as a PWA. Deploying every commit to main meant
+  // whatever was half-finished became the build somebody was reading from.
+  expect('the deploy workflow triggers on tags', /tags:\s*\['v\*'\]/.test(workflow), '');
+  expect(
+    '  and not on every push to main',
+    !/branches:\s*\[main\]/.test(workflow),
+    '',
+  );
+  expect(
+    '  while keeping a manual trigger for redeploys',
+    workflow.includes('workflow_dispatch:'),
+    '',
+  );
+
+  const config = readFileSync(join(process.cwd(), 'vite.config.ts'), 'utf8');
+  expect(
+    'the build injects a version and a build time',
+    config.includes('__APP_VERSION__') && config.includes('__BUILD_TIME__'),
+    '',
+  );
+  // A tagged deploy must not freeze the refreshable catalog at its tag: the
+  // point of that URL is correcting a Shamela ID without shipping a build.
+  expect(
+    'the catalog URL falls back to a branch on a tag build',
+    config.includes('const branch =') && config.includes("? 'main' : ref"),
+    '',
+  );
+
+  // prompt, not autoUpdate: skipWaiting activates a new worker under a page
+  // that will then 404 on any code-split chunk it has not loaded yet.
+  expect(
+    "the service worker waits rather than skipping",
+    config.includes("registerType: 'prompt'"),
+    '',
+  );
+}
+
 console.log('\n=== Catalog import batch ===');
 
 {

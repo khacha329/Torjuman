@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { beginActivity } from '../../app/activity';
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../app/secrets';
 import { newId } from '../../lib/id';
@@ -249,6 +250,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       upsert(card);
       setBusy(true);
       setNotice(null);
+      // Also held app-wide, so the service-worker update prompt waits: a reload
+      // mid-request loses the passage and the tokens already spent on it.
+      const endActivity = beginActivity();
 
       try {
         if (offline) {
@@ -339,6 +343,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         upsert(failed);
         return failed;
       } finally {
+        endActivity();
         setBusy(false);
         setStreaming((previous) => {
           const next = { ...previous };

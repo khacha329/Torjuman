@@ -4,6 +4,7 @@ import type { Crawler } from '../ingest/crawler';
 import { createBookFromPreview, fetchBookPreview } from '../ingest/importer';
 import type { CatalogEntry } from '../types';
 import { importOrder } from './catalogService';
+import { beginActivity } from '../app/activity';
 
 // Importing a selection from the catalog, one book after another.
 //
@@ -197,6 +198,9 @@ export class CatalogImportBatch {
 
   private async runBatch(queue: CatalogEntry[]): Promise<void> {
     this.set({ running: true });
+    // Holds back the service-worker update prompt: reloading part-way through
+    // a crawl throws away the page in flight and restarts the batch UI.
+    const endActivity = beginActivity();
     try {
       for (const entry of queue) {
         if (this.cancelled) {
@@ -206,6 +210,7 @@ export class CatalogImportBatch {
         await this.importOne(entry);
       }
     } finally {
+      endActivity();
       this.set({ running: false, stopping: false });
     }
   }
