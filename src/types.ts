@@ -220,8 +220,18 @@ export interface Entity {
   startOffset: number; // within the start block's display text
   endBlockId: string;
   endOffset: number; // within the end block's display text
-  type: 'quran' | 'hadith';
-  reference: string; // "2:255" | "2:255-2:257" | "riyadussalihin:412"
+  /**
+   * 'narrator' is the one pre-marked *name* in the app, and deliberately the
+   * only one. A ḥadīth's narrator sits in a structurally identifiable slot —
+   * after عن/حدثنا/أخبرنا inside a hadith_matn block — which makes it a
+   * high-precision, low-volume case: one per ḥadīth, in a known position.
+   * Every other name is looked up on demand from the selection rail, because
+   * tinting the hundreds a six-volume commentary mentions would bury the
+   * marks, verses and translated ranges already competing for the same
+   * visual channels.
+   */
+  type: 'quran' | 'hadith' | 'narrator';
+  reference: string; // "2:255" | "2:255-2:257" | "riyadussalihin:412" | folded name
   matchQuality: 'exact' | 'partial' | 'unresolved';
   detectedAt: number;
   /** Muṣḥaf text for a resolved verse, so the sheet needs no network at all. */
@@ -535,6 +545,13 @@ export interface QulResource {
   /** What was actually read. SQLite is normalized away at import; see qul/sqlite.ts. */
   format: 'json' | 'sqlite';
   importedAt: number;
+  /**
+   * Present when this resource was installed from the bundled set rather than
+   * chosen by the user, and which version of it. Absent for a manual import,
+   * which is what keeps the two apart in Settings and stops a seed from
+   * silently replacing a resource someone imported deliberately.
+   */
+  seed?: { slug: string; version: number };
 }
 
 /**
@@ -669,6 +686,34 @@ export interface ReadingPosition {
  * app/secrets.ts). Keeping them out of this record keeps them out of the
  * backup file, which the user may well copy between devices or email himself.
  */
+/**
+ * One person's entry in a biographical work, located from that work's own
+ * table of contents.
+ *
+ * Retrieval only. Nothing here is generated, summarised or ranked by a model:
+ * the name is what the work prints, the aliases are string decompositions of
+ * it, and the body shown to the reader is the blocks at `pageIndex`, verbatim.
+ */
+export interface BiographyEntry {
+  id: string;
+  bookId: string;
+  /** As printed in the contents, harakāt and all. Displayed. */
+  name: string;
+  /** Folded whole name. Search only, never displayed. */
+  nameNormalized: string;
+  /**
+   * Derived forms this entry is findable under, most specific first, each
+   * tagged with how specific it is so results can be ranked without a model.
+   * See biography/names.ts.
+   */
+  aliases: { value: string; kind: string }[];
+  pageIndex: number;
+  /** Resolved lazily when the sheet opens; the TOC gives a page, not blocks. */
+  blockIds: string[];
+  volume: number;
+  printPage: number;
+}
+
 export interface AppSettings {
   /**
    * The provider the settings screen is currently showing. The provider that
@@ -700,6 +745,15 @@ export interface AppSettings {
    * which sunnah.com's API does not expose — not as a translation source.
    */
   hadithSourceId: HadithSourceId;
+  /**
+   * Slugs of bundled QUL resources the user has deleted.
+   *
+   * Without this, seeding would reinstall on the next launch whatever was just
+   * removed, and "Remove" would mean "remove until you close the app" — the
+   * kind of thing that reads as a bug and cannot be worked around. Settings
+   * offers a way to bring them back.
+   */
+  qulSeedRemoved?: string[];
   /**
    * The Compile action on a Qurʾān entity sheet. Off by default, and stays off:
    * the retrieved tabs are the primary interface and the compiled view is an

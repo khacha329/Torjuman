@@ -25,8 +25,36 @@ import { surahName } from '../shamela/quranRefs';
  * This is only ever used for muṣḥaf lookup. `normalize` is untouched and
  * remains the single fold behind block search, exactly as specified.
  */
+
+/**
+ * Hamza seats, deleted before `normalize` sees them.
+ *
+ * The same problem as alef, one letter over. The muṣḥaf writes the hamza of
+ * ٱلسَّيِّـَٔاتِ as a combining U+0654 sitting on a tatweel; the sharḥ writes
+ * ٱلسَّيِّئَاتِ with a yāʾ-seated ئ. `normalize` strips the combining mark as a
+ * diacritic — leaving nothing — but folds ئ to ي, leaving a letter. So the same
+ * word came out as لسيت from the muṣḥaf and لسييت from the sharḥ, and a
+ * quotation containing it broke mid-word.
+ *
+ * That is precisely the Hūd 11:114 failure: agreement ran fourteen characters
+ * and then stopped inside the fourth word, so whole-word rounding discarded
+ * that word and the quotation fell to three words, under the floor. It looked
+ * like a length bug and was an orthography bug.
+ *
+ * Deleting the seat on both sides makes them agree, and follows the rule the
+ * fold already applies to alef: where two orthographies disagree about how to
+ * write something, the fold stops treating it as information. U+0654/U+0655 are
+ * the combining marks; ؤ and ئ are the seated letters. Bare ء is already
+ * removed below.
+ */
+// Written as escapes deliberately. U+0654/U+0655 are combining marks: a
+// literal one inside a character class renders on top of the bracket and is
+// silently corrupted by the next tool that touches the line.
+//   U+0624 waw-seated, U+0626 ya-seated, U+0654 hamza above, U+0655 below.
+const HAMZA_SEAT = /[\u0624\u0626\u0654\u0655]/g;
+
 export function quranFold(input: string): string {
-  let folded = normalize(input.replace(/ى/g, 'ا'))
+  let folded = normalize(input.replace(/ى/g, 'ا').replace(HAMZA_SEAT, ''))
     // Alef and the standalone hamza carry no information that survives the
     // difference between the two orthographies, so both go. ءَامَنُوا in the
     // muṣḥaf and آمَنُوا in the sharḥ then agree.
@@ -381,11 +409,24 @@ export class QuranIndex {
 /**
  * The bundled English translation.
  *
- * Dr. Mustafa Khattab's Clear Qurʾān, shipped with the app so a verse renders
- * with no network at all. It was withdrawn from the public quran.com API — which
- * is why the *online* path defaults to Saheeh International — but is still
- * published as a static export, so the offline path carries the translation
- * actually wanted rather than a substitute.
+ * Pickthall (1930), shipped with the app so a verse renders with no network at
+ * all.
+ *
+ * ---------------------------------------------------------------------------
+ * Why Pickthall and not Khattab
+ *
+ * The Clear Qurʾān is exclusively licensed. Shipping it inside a public
+ * repository is redistribution, and that permission is not the maintainer's to
+ * grant. Pickthall died in 1936, so this text is out of copyright and can be
+ * bundled without asking. The archaic English is a real cost, borne hardest by
+ * the readers a translation exists for.
+ *
+ * So this is the floor, not the ceiling: whenever there is a network, the sheet
+ * shows whichever translation Settings points at — `data.verse?.english ||
+ * data.bundledEnglish` in EntitySheet — and this only fills the gap. A reader
+ * who wants Khattab selects it there, on their own device, and it is fetched
+ * rather than redistributed.
+ * ---------------------------------------------------------------------------
  */
 export class QuranEnglish {
   readonly translation: string;
@@ -426,7 +467,7 @@ let cachedEnglish: Promise<QuranEnglish> | null = null;
 
 export function loadQuranEnglish(): Promise<QuranEnglish> {
   cachedEnglish ??= (async () => {
-    const response = await fetch(`${ASSETS}quran/khattab.json`);
+    const response = await fetch(`${ASSETS}quran/english.json`);
     if (!response.ok) {
       throw new Error(`Could not load the bundled translation (HTTP ${response.status}).`);
     }

@@ -9,6 +9,8 @@ import { useMarks } from './useMarks';
 import { useExplanations } from './useExplanations';
 import { MarginMenu } from './MarginMenu';
 import { DictionarySheet, type GlossState } from './DictionarySheet';
+import { BiographySheet } from './BiographySheet';
+import { ensureBiographyIndexes } from '../../biography/service';
 import { glossWord } from '../../translation/gloss';
 import {
   loadDictionary,
@@ -71,8 +73,16 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [selection, setSelection] = useState({
     active: false,
     singleWord: false,
+    shortSelection: false,
     centerY: null as number | null,
   });
+  /** The name being looked up, and what the sheet anchors to. */
+  const [biography, setBiography] = useState<{
+    selection: string;
+    anchor: HTMLElement;
+  } | null>(null);
+  /** Whether any biographical work is imported, so the rail can say so. */
+  const [biographyAvailable, setBiographyAvailable] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
@@ -312,6 +322,21 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
    * Debounced because it fires continuously during a drag. Nothing is resolved
    * or stored — only whether a selection exists and whether it is one word.
    */
+  // Checked once per book rather than on every selection: the rail needs to
+  // know whether to offer the action at all, and importing a biographical work
+  // mid-read is not a thing that happens.
+  useEffect(() => {
+    let cancelled = false;
+    // Indexes any biographical work imported but not yet indexed, then reports
+    // whether the action has anything to search.
+    void ensureBiographyIndexes(storage).then(({ indexed }) => {
+      if (!cancelled) setBiographyAvailable(indexed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storage]);
+
   useEffect(() => {
     let timer: number;
 
@@ -334,7 +359,12 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       if (!resolved) return;
       act(resolved);
       window.getSelection()?.removeAllRanges();
-      setSelection({ active: false, singleWord: false, centerY: null });
+      setSelection({
+        active: false,
+        singleWord: false,
+        shortSelection: false,
+        centerY: null,
+      });
     },
     [],
   );
@@ -362,7 +392,12 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         // rail is skipped. Clearing the selection also takes the system bar
         // with it.
         window.getSelection()?.removeAllRanges();
-        setSelection({ active: false, singleWord: false, centerY: null });
+        setSelection({
+        active: false,
+        singleWord: false,
+        shortSelection: false,
+        centerY: null,
+      });
       }
     };
 
@@ -705,9 +740,19 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               translatedBlockIds={translatedBlockIds}
               markers={markers}
               entitiesByBlock={entitiesByBlock}
-              onEntityTap={(entity, anchorElement) =>
-                setEntitySheet({ entity, anchor: anchorElement })
-              }
+              onEntityTap={(entity, anchorElement) => {
+                // A narrator is a name, so it opens the biographical lookup
+                // rather than the verse/ḥadīth sheet. `label` is the name as
+                // printed; `reference` is its folded form.
+                if (entity.type === 'narrator') {
+                  setBiography({
+                    selection: entity.label ?? entity.reference,
+                    anchor: anchorElement,
+                  });
+                  return;
+                }
+                setEntitySheet({ entity, anchor: anchorElement });
+              }}
               marksByBlock={marks.byBlock}
               onMarginTap={(block) => void marks.toggleBlockSkip(block)}
               onMarginHold={(block, anchorElement) =>
@@ -798,10 +843,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       {selection.active && (
         <SelectionRail
           singleWord={selection.singleWord}
+          shortSelection={selection.shortSelection}
           centerY={selection.centerY}
           busy={translator.busy}
           dictionaryAvailable={dictionary !== null}
+          biographyAvailable={biographyAvailable}
           meaningAvailable={navigator.onLine || secrets.getProviderKey('anthropic') !== ''}
+          onBiography={() =>
+            withSelection((anchor) => {
+              const element = blockElementFor(anchor.startBlockId);
+              if (element) setBiography({ selection: anchor.sourceText, anchor: element });
+            })
+          }
           onTranslate={() => withSelection((anchor) => void runTranslate(anchor))}
           onExplain={() =>
             withSelection((anchor) => {
@@ -834,6 +887,14 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           onMarkRead={() => withSelection((anchor) => void marks.markSelection(anchor, 'read'))}
           onMarkSkip={() => withSelection((anchor) => void marks.markSelection(anchor, 'skip'))}
           onClearMarks={() => withSelection((anchor) => void marks.clearMarksIn(anchor))}
+        />
+      )}
+
+      {biography && (
+        <BiographySheet
+          selection={biography.selection}
+          anchor={biography.anchor}
+          onClose={() => setBiography(null)}
         />
       )}
 

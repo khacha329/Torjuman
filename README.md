@@ -232,13 +232,24 @@ startup so Android does not evict an hour of crawling under storage pressure.
 register over plain HTTP, so the LAN dev-server address is a development
 convenience, not the way to run this on the tablet long-term.
 
-### Khattab, after all
+### The bundled translation is Pickthall, and why
 
-The offline path bundles **Dr. Mustafa Khattab's The Clear Qurʾān** — the
-translation originally asked for. It was withdrawn from the quran.com API, which
-is why the *online* retrieval path still defaults to Saheeh International, but it
-is published as a static export, so the offline path carries the real thing. A
-verse renders with its proper English and no network at all.
+The offline path bundles **Pickthall (1930)**, not Khattab.
+
+The Clear Qurʾān is exclusively licensed. Bundling it into a repository that is
+public is redistribution, and that permission is not this project's to grant, so
+it was removed. Pickthall died in 1936, which puts his text out of copyright and
+makes it shippable without asking anyone.
+
+The cost is real and worth stating: Pickthall's English is archaic
+("overtaketh", "thou"), which is hardest on exactly the readers a translation
+exists for. So it is a **floor, not a ceiling**. It is used only when nothing
+better is available; **Settings → Qurʾān translation** points the online lookup
+at any translation quran.com carries, and whatever is selected there wins on
+every verse sheet. Selecting Khattab on your own device fetches it for you,
+which is a different act from redistributing it to everyone else.
+
+The same principle governs `public/qul/` — see [docs/RESOURCES.md](docs/RESOURCES.md).
 
 ### The invariant
 
@@ -659,7 +670,7 @@ import time, and every QUL resource is keyed by exactly that.
 
 | Tab | Needs | Source |
 |---|---|---|
-| Translation | nothing — bundled | muṣḥaf + Khattab |
+| Translation | nothing — bundled | muṣḥaf + Pickthall, or the online choice |
 | Tafsīr | a tafsīr import | what the mufassir wrote |
 | Similar | an ayah-matching import | QUL's matches, rendered from the muṣḥaf |
 | Topics | a topics import | QUL's editorial grouping |
@@ -943,10 +954,23 @@ on-device translation — is local and unaffected either way.
 
 ### What is not in this repository
 
-`fixtures/` (real Shamela pages) and `qul/` (QUL resources) are gitignored:
-neither is needed to build or run the app, and this repo is public. That is why
-CI runs `npm run build` rather than `npm run verify` — verification reads those
-files and stays a local gate. Run it before pushing.
+**Pointers, not content.** The catalog names books rather than containing them,
+and `public/qul/` names resources rather than carrying them. Redistributing
+someone else's licensed text through a public repository is not a permission
+this project holds, and the terms differ per resource rather than being one
+blanket grant — QUL's exported JSON carries no licence metadata at all, so it
+has to be checked per resource, by a person, on their own page.
+
+Gitignored: `fixtures/` (real Shamela pages), `qul/` and `public/qul/` (QUL
+resources), `glossary-sources/`.
+
+Nothing breaks when they are absent. A QUL resource that is not present means
+its tab is not rendered, which is the same behaviour as never having imported
+it. [docs/RESOURCES.md](docs/RESOURCES.md) says what to download and where each
+file goes.
+
+That is also why CI runs `npm run build` rather than `npm run verify` —
+verification reads those files and stays a local gate. Run it before pushing.
 
 ## What is deliberately not built
 

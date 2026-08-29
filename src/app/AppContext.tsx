@@ -16,6 +16,7 @@ import type { AppSettings, GlossaryEntry, TranslationProfile } from '../types';
 import { createDefaultProfile, DEFAULT_PROFILE_ID } from '../translation/profiles';
 import { DEFAULT_PROVIDER_ID } from '../translation/registry';
 import { DEFAULT_TRANSLATION_ID, DEFAULT_TRANSLATION_NAME } from '../retrieval/quran';
+import { seedQulResources, type SeedOutcome, type SeedProgress } from '../qul/seed';
 
 // Composition root. The concrete WebHttpClient and IdbStorageAdapter are chosen
 // here and nowhere else — swapping in the Capacitor implementations later is a
@@ -55,6 +56,10 @@ interface AppServices {
   glossary: GlossaryEntry[];
   refreshGlossary: () => Promise<void>;
   reload: () => Promise<void>;
+  /** Non-null only while the bundled QUL resources are installing. */
+  seeding: SeedProgress | null;
+  /** What the last seeding run did, for Settings and diagnostics. */
+  seedOutcome: SeedOutcome | null;
 }
 
 const AppContext = createContext<AppServices | null>(null);
@@ -71,6 +76,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [profiles, setProfiles] = useState<TranslationProfile[]>([]);
   const [glossary, setGlossary] = useState<GlossaryEntry[]>([]);
+  const [seeding, setSeeding] = useState<SeedProgress | null>(null);
+  const [seedOutcome, setSeedOutcome] = useState<SeedOutcome | null>(null);
 
   const services = useMemo(() => {
     const http = new WebHttpClient();
@@ -125,6 +132,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         await loadAll();
         if (!cancelled) setReady(true);
+
+        // Bundled QUL resources, after the app is usable and never before it.
+        // This copies ~3.5 MB into IndexedDB on a first boot, and the reader
+        // must not wait on it: a verse sheet opened mid-seed simply shows the
+        // tabs that are ready. Failures are recorded, not thrown — an install
+        // with no network is a normal state, and it retries next launch.
+        void (async () => {
+          try {
+            // Read straight from storage rather than from the `settings` state:
+            // this runs in the same tick that loadAll set it, so the state
+            // variable is still the previous render's value and a resource the
+            // user removed would come straight back.
+            const stored = await services.storage.getSettings();
+            const outcome = await seedQulResources(
+              services.storage,
+              import.meta.env.BASE_URL,
+              stored?.qulSeedRemoved ?? [],
+              (progress) => {
+                if (!cancelled) setSeeding(progress);
+              },
+            );
+            if (!cancelled) setSeedOutcome(outcome);
+          } catch (caught) {
+            // Seeding must never be able to take the app down with it.
+            if (!cancelled) {
+              setSeedOutcome({
+                installed: [],
+                upToDate: [],
+                absent: [],
+                failed: { '*': caught instanceof Error ? caught.message : String(caught) },
+              });
+            }
+          } finally {
+            if (!cancelled) setSeeding(null);
+          }
+        })();
       } catch (caught) {
         if (!cancelled) {
           setError(caught instanceof Error ? caught.message : String(caught));
@@ -212,6 +255,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         glossary,
         refreshGlossary,
         reload: loadAll,
+        seeding,
+        seedOutcome,
       }}
     >
       {children}

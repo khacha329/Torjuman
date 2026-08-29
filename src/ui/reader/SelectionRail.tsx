@@ -36,9 +36,17 @@ export const RAIL_WIDTH = 52;
 export interface SelectionRailProps {
   /** True when the selection is exactly one word — enables the word actions. */
   singleWord: boolean;
+  /**
+   * True when the selection is short enough to be a name — roughly one to five
+   * words. Longer than that is a phrase, and offering to look it up in a
+   * biographical dictionary would be an affordance that never succeeds.
+   */
+  shortSelection: boolean;
   busy: boolean;
   dictionaryAvailable: boolean;
   meaningAvailable: boolean;
+  /** Whether any biographical work is imported and indexed. */
+  biographyAvailable: boolean;
   /**
    * Viewport y of the middle of the selection. The rail centres on it where
    * there is room and clamps to stay wholly on screen where there is not.
@@ -48,6 +56,7 @@ export interface SelectionRailProps {
   onExplain: () => void;
   onMeaning: () => void;
   onDictionary: () => void;
+  onBiography: () => void;
   onMarkRead: () => void;
   onMarkSkip: () => void;
   onClearMarks: () => void;
@@ -55,14 +64,17 @@ export interface SelectionRailProps {
 
 export function SelectionRail({
   singleWord,
+  shortSelection,
   busy,
   dictionaryAvailable,
   meaningAvailable,
+  biographyAvailable,
   centerY,
   onTranslate,
   onExplain,
   onMeaning,
   onDictionary,
+  onBiography,
   onMarkRead,
   onMarkSkip,
   onClearMarks,
@@ -114,6 +126,32 @@ export function SelectionRail({
       <RailAction label="Explain — what this phrase means as a concept" onClick={onExplain} disabled={busy}>
         <ExplainIcon />
       </RailAction>
+
+      {/* Biography sits between the phrase actions and the word actions
+          because a name is neither: one to five words, which is shorter than a
+          phrase worth translating and longer than a word worth glossing.
+
+          Deliberately NOT a pre-marked tint on every name in the text. A
+          six-volume commentary names hundreds of people, and tinting them all
+          would bury the marks, entities and translated ranges already
+          competing for the same visual channels. On demand costs nothing when
+          unused. */}
+      {shortSelection && (
+        <>
+          <Divider />
+          <RailAction
+            label={
+              biographyAvailable
+                ? 'Biography — look this name up in the imported biographical works'
+                : 'Biography — none imported; Settings → Add from catalog'
+            }
+            onClick={onBiography}
+            disabled={!biographyAvailable}
+          >
+            <BiographyIcon />
+          </RailAction>
+        </>
+      )}
 
       {singleWord && (
         <>
@@ -278,6 +316,17 @@ function DictionaryIcon() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" {...stroke} aria-hidden>
       <path d="M5 4h11a2 2 0 0 1 2 2v14H6a1.5 1.5 0 0 1 0-3h12" />
       <path d="M9 8h6M9 11.5h4" />
+    </svg>
+  );
+}
+
+/** A person, for the biographical lookup. Distinct in silhouette from the
+ *  book-shaped Dictionary icon it sits next to. */
+function BiographyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" {...stroke} aria-hidden>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
     </svg>
   );
 }

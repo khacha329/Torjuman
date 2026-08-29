@@ -17,21 +17,30 @@ const SOURCE =
   'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/ara-quranuthmanihaf.json';
 
 /**
- * Dr. Mustafa Khattab, The Clear Qurʾān — the translation the spec asks for.
+ * Pickthall, The Meaning of the Glorious Koran (1930).
  *
- * It was withdrawn from the public quran.com API, which is why the *online*
- * retrieval path defaults to Saheeh International. It is still published as a
- * static export here, so the offline path can carry the translation actually
- * wanted rather than a substitute. Bundling it also means verses render with no
- * network at all, which is the whole point of the offline pipeline.
+ * ---------------------------------------------------------------------------
+ * Why not Khattab, which the spec originally asked for
+ *
+ * The Clear Qurʾān is exclusively licensed. Bundling it into a repository that
+ * is public is redistribution, and that is not ours to grant — so it was taken
+ * out. Pickthall died in 1936, which puts this text out of copyright under
+ * life+70, and it can be shipped without asking anyone.
+ *
+ * The cost is real and worth naming: Pickthall's English is archaic
+ * ("overtaketh"), which is hardest on exactly the readers a translation helps
+ * most. So it is the *bundled floor*, not the ceiling — Settings can point the
+ * online lookup at any translation quran.com carries, including Khattab, and
+ * that choice wins wherever there is a network. See loadQuranEnglish.
+ * ---------------------------------------------------------------------------
  */
 const ENGLISH_SOURCE =
-  'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/eng-mustafakhattaba.json';
-const ENGLISH_NAME = 'Dr. Mustafa Khattab, The Clear Qurʾān';
+  'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/eng-mohammedmarmadu.json';
+const ENGLISH_NAME = 'Pickthall, The Meaning of the Glorious Koran (1930)';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const target = join(here, '..', 'public', 'quran', 'uthmani.json');
-const englishTarget = join(here, '..', 'public', 'quran', 'khattab.json');
+const englishTarget = join(here, '..', 'public', 'quran', 'english.json');
 
 const response = await fetch(SOURCE);
 if (!response.ok) {
@@ -138,4 +147,4 @@ writeFileSync(englishTarget, JSON.stringify(englishBundle), 'utf8');
 
 const englishBytes = Buffer.byteLength(JSON.stringify(englishBundle), 'utf8');
 console.log(`\nWrote ${english.length} English āyāt (${ENGLISH_NAME})`);
-console.log(`  ${(englishBytes / 1024 / 1024).toFixed(2)} MB -> public/quran/khattab.json`);
+console.log(`  ${(englishBytes / 1024 / 1024).toFixed(2)} MB -> public/quran/english.json`);

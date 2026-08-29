@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type {
   AppSettings,
+  BiographyEntry,
   Block,
   Book,
   CrawlState,
@@ -39,7 +40,9 @@ const DB_NAME = 'shamela-reader';
 // word-gloss cache, v7 imported QUL resources and their compiled views.
 // Entities are derived, so an upgrade drops and rebuilds that store rather than
 // migrating it; nothing else is touched.
-const DB_VERSION = 7;
+// 8 adds biographyEntries. The store is derived from each book's own table of
+// contents, so it is created empty and rebuilt on demand rather than migrated.
+const DB_VERSION = 8;
 const SETTINGS_KEY = 'app';
 
 interface Schema extends DBSchema {
@@ -88,6 +91,11 @@ interface Schema extends DBSchema {
     indexes: { byResource: string; byResourceKey: [string, string] };
   };
   qulCompilations: { key: string; value: QulCompilation };
+  biographyEntries: {
+    key: string;
+    value: BiographyEntry;
+    indexes: { byBook: string };
+  };
   profiles: { key: string; value: TranslationProfile };
   glossary: { key: string; value: GlossaryEntry };
   quranVerses: { key: string; value: QuranVerse };
@@ -156,6 +164,10 @@ export class IdbStorageAdapter implements StorageAdapter {
             qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
             db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
           }
+          if (!db.objectStoreNames.contains('biographyEntries')) {
+            const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
+            biography.createIndex('byBook', 'bookId');
+          }
           return;
         }
 
@@ -204,6 +216,12 @@ export class IdbStorageAdapter implements StorageAdapter {
         qulEntries.createIndex('byResource', 'resourceId');
         qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
         db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
+
+        // Derived from each book's contents, so indexed only by book: a lookup
+        // reads every imported biographical work anyway, and there are three of
+        // them at most.
+        const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
+        biography.createIndex('byBook', 'bookId');
 
         db.createObjectStore('profiles', { keyPath: 'id' });
         db.createObjectStore('glossary', { keyPath: 'id' });
@@ -554,6 +572,30 @@ export class IdbStorageAdapter implements StorageAdapter {
 
   async putQulResource(resource: QulResource): Promise<void> {
     await this.handle.put('qulResources', resource);
+  }
+
+  // ---------------------------------------------------------------- biography
+
+  async putBiographyEntries(entries: BiographyEntry[]): Promise<void> {
+    const transaction = this.handle.transaction('biographyEntries', 'readwrite');
+    await Promise.all(entries.map((entry) => transaction.store.put(entry)));
+    await transaction.done;
+  }
+
+  async listBiographyEntries(bookId?: string): Promise<BiographyEntry[]> {
+    if (bookId === undefined) return this.handle.getAll('biographyEntries');
+    return this.handle.getAllFromIndex('biographyEntries', 'byBook', bookId);
+  }
+
+  async clearBiographyEntries(bookId: string): Promise<void> {
+    const transaction = this.handle.transaction('biographyEntries', 'readwrite');
+    const index = transaction.store.index('byBook');
+    let cursor = await index.openCursor(IDBKeyRange.only(bookId));
+    while (cursor) {
+      await cursor.delete();
+      cursor = await cursor.continue();
+    }
+    await transaction.done;
   }
 
   async listQulResources(): Promise<QulResource[]> {

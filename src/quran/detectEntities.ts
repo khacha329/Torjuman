@@ -1,6 +1,7 @@
 import type { Block, Entity } from '../types';
 import { newId } from '../lib/id';
 import { normalize } from '../lib/arabic';
+import { foldName, narratorSpanIn } from '../retrieval/narrator';
 import { MIN_MATCH_WORDS, quranFold, type QuranIndex } from './quranIndex';
 
 // Locating quoted verses and hadiths in a book's blocks.
@@ -253,8 +254,28 @@ export function detectEntities(
     // Ḥadīth. The parser already pulled the number off the matn at import, and
     // for a sharḥ that keeps an-Nawawī's numbering that number *is* the
     // reference — no inference, no fuzzy text matching.
+    //
+    // -----------------------------------------------------------------------
+    // Identification and retrieval are separate questions, and conflating them
+    // is what previously made every ḥadīth in an unmapped book untappable.
+    //
+    //   identification  Which ḥadīth is this?      the number, from the book
+    //   retrieval       Is there verified English? sunnah.com, needs a network
+    //
+    // `hadithCollection` answers only the second: it names the sunnah.com
+    // collection this book's numbering maps to, and it is null for every book
+    // except Riyāḍ aṣ-Ṣāliḥīn. Gating the entity on it meant that in the sharḥ
+    // of the Arbaʿīn — where the numbering is perfectly well defined by the
+    // book itself — no ḥadīth was marked at all.
+    //
+    // A ḥadīth's identity comes from the book. When retrieval has nothing to
+    // add, the entity still exists and the sheet says so honestly; that note is
+    // the correct output, and it is never replaced with a machine translation.
+    // 'unresolved' now means only what it says: the ḥadīth could not be
+    // identified from the book, which here means the matn carried no number.
+    // -----------------------------------------------------------------------
     if (block.type === 'hadith_matn') {
-      const resolvable = block.hadithNumber && deps.hadithCollection;
+      const number = block.hadithNumber;
       entities.push({
         id: newId('ent'),
         bookId,
@@ -263,10 +284,52 @@ export function detectEntities(
         endBlockId: block.id,
         endOffset: block.text.length,
         type: 'hadith',
-        reference: resolvable ? `${deps.hadithCollection}:${block.hadithNumber}` : '',
-        matchQuality: resolvable ? 'exact' : 'unresolved',
+        // Scoped to the book when no collection is known, because the record is
+        // cached under this string: a bare "12" would serve one book's ḥadīth
+        // from another book's cache entry.
+        reference: number
+          ? deps.hadithCollection
+            ? `${deps.hadithCollection}:${number}`
+            : `${bookId}#${number}`
+          : '',
+        matchQuality: number ? 'exact' : 'unresolved',
         detectedAt: now,
+        // Without this the panel title for an unmapped book would read
+        // "shamela-21812#12". The reference stays the cache key; this is what
+        // the reader sees.
+        label: number && !deps.hadithCollection ? `Ḥadīth ${number}` : undefined,
       });
+
+      // The narrator, and only the narrator.
+      //
+      // This is the one name in the app that is pre-marked, because it is the
+      // one that sits in a structurally identifiable slot: after عن/حدثنا/
+      // أخبرنا, inside a matn block, one per ḥadīth. High precision, low
+      // volume. Every other name is looked up on demand from the rail —
+      // tinting the hundreds a six-volume commentary mentions would bury the
+      // marks, verses and translated ranges that already compete for the same
+      // visual channels.
+      //
+      // Nested inside the ḥadīth entity above, which is why flattenAnnotations
+      // resolves the narrowest covering entity rather than the first.
+      const span = narratorSpanIn(block.text);
+      if (span) {
+        entities.push({
+          id: newId('ent'),
+          bookId,
+          startBlockId: block.id,
+          startOffset: span.start,
+          endBlockId: block.id,
+          endOffset: span.end,
+          type: 'narrator',
+          // The folded name, so tapping it can go straight to the biographical
+          // index without re-reading the isnād.
+          reference: foldName(span.name),
+          matchQuality: 'exact',
+          detectedAt: now,
+          label: span.name,
+        });
+      }
     }
   }
 

@@ -25,6 +25,12 @@ const CAPABILITIES: Capability[] = [
     detail:
       'Arabic always. English only where a verified translation was retrieved and cached earlier — never machine-translated.',
   },
+  {
+    label: 'Tafsīr, similar āyāt and sūrah background',
+    offline: 'conditional',
+    detail:
+      'These ship with the app but install themselves on the first launch with a network, so a brand-new install that has never been online does not have them yet.',
+  },
   { label: 'Dictionary lookup', offline: 'yes', detail: 'Once a dictionary is imported.' },
   { label: 'Cached translations, glosses and explanations', offline: 'yes' },
   { label: 'Marks, notes, glossary', offline: 'yes' },

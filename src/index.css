@@ -297,6 +297,20 @@ pre {
   background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
+/* Narrators sit INSIDE a tinted ḥadīth, so a third background colour would
+   stack on the second and read as a third kind of thing. A dotted underline
+   instead: visible as an affordance, invisible as a block of colour, and it
+   survives being nested without muddying what it sits in. */
+.entity-narrator {
+  background-color: transparent;
+  text-decoration: underline dotted
+    color-mix(in srgb, var(--color-ink) 45%, transparent);
+  text-underline-offset: 4px;
+}
+.entity-narrator:hover {
+  background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

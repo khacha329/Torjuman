@@ -124,7 +124,13 @@ export default defineConfig({
         // the user chooses to download an on-device translation model. Putting
         // that in the precache would make every cold install pay for a feature
         // most installs never turn on.
-        globIgnores: ['**/ort-wasm*'],
+        //
+        // Nor the bundled QUL resources. Those are fetched once on first boot
+        // and copied into IndexedDB, so a precached copy would be a second
+        // 3.5 MB of the same data that nothing ever reads again — and would
+        // make a resource the user deleted in Settings reappear from cache.
+        // See src/qul/seed.ts.
+        globIgnores: ['**/ort-wasm*', 'qul/*.json'],
         // A cold launch with no network renders the library, not the browser's
         // error page. Base-prefixed for the same reason as `scope` above.
         navigateFallback: `${base}index.html`,

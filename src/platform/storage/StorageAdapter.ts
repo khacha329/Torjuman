@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  BiographyEntry,
   Block,
   Book,
   CrawlState,
@@ -162,6 +163,12 @@ export interface StorageAdapter {
   getQulEntry(resourceId: string, key: string): Promise<QulEntry | undefined>;
   /** Several keys at once — the Topics tab needs a topic per ID. */
   getQulEntries(resourceId: string, keys: string[]): Promise<QulEntry[]>;
+
+  // Biographical name index, derived from each work's own table of contents
+  putBiographyEntries(entries: BiographyEntry[]): Promise<void>;
+  /** Every imported work's entries when `bookId` is omitted. */
+  listBiographyEntries(bookId?: string): Promise<BiographyEntry[]>;
+  clearBiographyEntries(bookId: string): Promise<void>;
 
   // Compiled views — the one generated thing in the QUL feature
   putQulCompilation(record: QulCompilation): Promise<void>;

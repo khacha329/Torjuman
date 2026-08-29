@@ -160,6 +160,55 @@ export function narratorIn(text: string): string | null {
   return null;
 }
 
+/**
+ * The same read, but as offsets into the passage.
+ *
+ * `narratorIn` returns a cleaned string for matching against dorar; this
+ * returns where the name actually sits, which is what a pre-marked span needs.
+ * Kept beside it rather than derived from it because the cleaning is lossy —
+ * punctuation is replaced and titles are stripped — so the returned string
+ * cannot be found back in the original by searching for it.
+ */
+export function narratorSpanIn(
+  text: string,
+): { start: number; end: number; name: string } | null {
+  const EDGE = /[\s،,.:؛\-–—ـ]/;
+
+  for (const closer of CLOSERS) {
+    const pattern = new RegExp(closer.source, 'g');
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(text)) !== null) {
+      const before = text.slice(0, match.index);
+      const anchorEnd = lastIsnadAnchor(before);
+      if (anchorEnd === -1) continue;
+
+      let start = anchorEnd;
+      let end = match.index;
+      while (start < end && EDGE.test(text[start])) start++;
+      while (end > start && EDGE.test(text[end - 1])) end--;
+      if (end <= start) continue;
+
+      const raw = text.slice(start, end);
+      const name = raw
+        .replace(TITLES, '')
+        .replace(NAME_PUNCTUATION, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const words = name.split(' ').filter((word) => word !== '');
+      if (words.length < 1 || words.length > 8 || name.length < 3) continue;
+
+      // A leading title is not part of the name, so the span starts after it —
+      // «أمير المؤمنين أبي حفص عمر» marks «أبي حفص عمر».
+      const title = TITLES.exec(raw);
+      return { start: start + (title ? title[0].length : 0), end, name };
+    }
+  }
+
+  return null;
+}
+
 /** Index just past the last «عن» / «وعن» / «حدثنا … عن» in a run of text. */
 function lastIsnadAnchor(before: string): number {
   const anchor = /(?:^|\s)و?عن\s+/g;

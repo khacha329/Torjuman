@@ -646,7 +646,7 @@ check('block order index covers every block', blockOrderIndex(fakeBlocks).size, 
 
 console.log('\n=== Bundled Qurʾān index ===');
 
-const { buildQuranIndex } = await import('../src/quran/quranIndex');
+const { buildQuranIndex, quranFold } = await import('../src/quran/quranIndex');
 const { detectEntities, hadithCollectionFor } = await import('../src/quran/detectEntities');
 
 const quranBundle = JSON.parse(
@@ -784,6 +784,181 @@ expect(
   marked.startsWith('(') && marked.endsWith(')'),
   `→ ${marked.slice(0, 3)}…${marked.slice(-3)}`,
 );
+
+console.log('\n=== Short quotations (Amendment 15 Part 2) ===');
+
+{
+  // Ibn Daqīq al-ʿĪd quotes Hūd 11:114 in exactly four words, and it was not
+  // detected. The cause was not a length bound: it was the hamza seat. The
+  // sharḥ writes ٱلسَّيِّئَاتِ with a yāʾ-seated ئ, which `normalize` folds to
+  // ي; the muṣḥaf writes a combining hamza on a tatweel, which `normalize`
+  // strips as a diacritic. One side kept a letter the other dropped, so
+  // agreement stopped *inside* the fourth word, whole-word rounding discarded
+  // it, and a four-word quotation fell to three — under the floor.
+  const bookSpelling = 'إِنَّ الْحَسَنَاتِ يُذْهِبْنَ السَّيِّئَاتِ';
+  const mushafWord = quran.textOf(11, 114)!.split(/\s+/).find((w) => quranFold(w).startsWith('لسي'))!;
+
+  check(
+    'the two spellings of السيئات now fold alike',
+    quranFold(bookSpelling.split(/\s+/)[3]),
+    quranFold(mushafWord),
+  );
+
+  const hud = detectIn(`وقول الله تعالى: (${bookSpelling}) (هود: الآية ١١٤)`);
+  check('the four-word Hūd quotation is detected', hud.length, 1);
+  check('and resolves to the right āyah', hud[0]?.reference, '11:114');
+  check('as an exact match, not a guess', hud[0]?.matchQuality, 'exact');
+  check('covering all four words', hud[0]?.matchedWords, 4);
+
+  // Five words: comfortably above the floor, and never in doubt. Kept inside a
+  // single āyah so this tests length and nothing else — the range case is
+  // covered separately by 26:218-26:219 above.
+  const five = detectIn('قال تعالى: (صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ)');
+  check('a five-word quotation is detected', five.length, 1);
+  check('  and resolves', five[0]?.reference, '1:7');
+
+  // Three words is deliberately below the floor. Measured over 50 pages of
+  // 9260, lowering MIN_MATCH_WORDS to 3 took candidates from 58 to 121 but the
+  // ambiguous share from 8.6% to 28%, and agreement with the edition's own
+  // printed citations from 93% to 84%. Short phrases are not distinctively
+  // Qurʾānic, and an affordance that misattributes is worse than none.
+  const three = detectIn('وقال: (مَالِكِ يَوْمِ الدِّينِ) في الفاتحة');
+  check('a three-word quotation is deliberately NOT marked', three.length, 0);
+
+  // The spec asked this be confirmed rather than assumed: entity detection must
+  // run on every book, not only on a hadith-commentary profile. It does —
+  // entityService calls detectEntities unconditionally — and a 'body' block
+  // (what the generic profile produces) is proof at this level.
+  const generic = detectEntities(
+    'b',
+    [
+      {
+        id: 'g1',
+        bookId: 'b',
+        pageId: 'b:p1',
+        order: 1,
+        type: 'body' as const,
+        text: `قال تعالى: (${bookSpelling})`,
+        normalized: '',
+        contentHash: '',
+        hadithNumber: null,
+        tocNodeId: null,
+        spans: [],
+        anchor: null,
+      },
+    ] as never,
+    { quran, hadithCollection: null },
+  );
+  expect(
+    'detection is not gated on structure profile',
+    generic.some((e) => e.type === 'quran' && e.reference === '11:114'),
+    '(a generic "body" block still yields the verse)',
+  );
+}
+
+console.log('\n=== Ḥadīth identity does not depend on retrieval (Part 3) ===');
+
+{
+  const matn = (hadithNumber: string | null) => ({
+    id: 'h1',
+    bookId: 'b',
+    pageId: 'b:p1',
+    order: 1,
+    type: 'hadith_matn' as const,
+    text: 'عن عمر بن الخطاب رضي الله عنه قال: قال رسول الله صلى الله عليه وسلم: إنما الأعمال بالنيات',
+    normalized: '',
+    contentHash: '',
+    hadithNumber,
+    tocNodeId: null,
+    spans: [],
+    anchor: null,
+  });
+
+  const hadithIn = (hadithNumber: string | null, collection: string | null) =>
+    detectEntities('shamela-21812', [matn(hadithNumber)] as never, {
+      quran,
+      hadithCollection: collection,
+    }).filter((e) => e.type === 'hadith');
+
+  // The regression: the sharḥ of the Arbaʿīn maps to no sunnah.com collection,
+  // so every ḥadīth in it was marked unresolved and rendered untappable — even
+  // though the book numbers them itself and the number IS the identity.
+  const unmapped = hadithIn('12', null);
+  check('a numbered ḥadīth in an unmapped book still yields an entity', unmapped.length, 1);
+  check('  and is identified, so it is marked and tappable', unmapped[0]?.matchQuality, 'exact');
+  check('  under a book-scoped reference, not a bare number', unmapped[0]?.reference, 'shamela-21812#12');
+  check('  with a readable label for the panel title', unmapped[0]?.label, 'Ḥadīth 12');
+
+  const mapped = hadithIn('412', 'riyadussalihin');
+  check('a mapped book still produces the sunnah.com reference', mapped[0]?.reference, 'riyadussalihin:412');
+  check('  and is exact', mapped[0]?.matchQuality, 'exact');
+
+  // 'unresolved' now means only what it says.
+  const unnumbered = hadithIn(null, 'riyadussalihin');
+  check('a matn with no number cannot be identified', unnumbered[0]?.matchQuality, 'unresolved');
+
+  // The point of the fix: it reaches the renderer.
+  const { markableByBlock: markable15 } = await import('../src/quran/entityService');
+  const ranges = markable15(unmapped, [matn('12')] as never);
+  expect(
+    'the unmapped ḥadīth reaches the renderer as a markable range',
+    (ranges.get('h1') ?? []).length >= 1,
+    `(${(ranges.get('h1') ?? []).length} range(s))`,
+  );
+
+  // ---- narrators are pre-marked; nobody else is (Amendment 16) ----------
+  const all = detectEntities('shamela-21812', [matn('12')] as never, {
+    quran,
+    hadithCollection: null,
+  });
+  const narrators = all.filter((entity) => entity.type === 'narrator');
+  check('the narrator in the isnād is pre-marked', narrators.length, 1);
+  check('  reading the name off the formula', narrators[0]?.label, 'عمر بن الخطاب');
+
+  // The offsets must point at the real text, not at a cleaned copy.
+  const marked = matn('12').text.slice(narrators[0].startOffset, narrators[0].endOffset);
+  check('  with offsets into the original text', marked, 'عمر بن الخطاب');
+
+  // Nested inside the ḥadīth entity, and the narrower one must win or the name
+  // is never separately tappable.
+  const nested = markable15(all, [matn('12')] as never).get('h1') ?? [];
+  const { flattenAnnotations } = await import('../src/ui/reader/annotations');
+  const segments = flattenAnnotations(matn('12').text.length, {
+    spans: [],
+    entities: nested as never,
+    marks: [],
+  });
+  const narratorSegment = segments.find(
+    (segment) => segment.entity?.type === 'narrator',
+  );
+  expect('the nested narrator survives flattening', Boolean(narratorSegment), '');
+  check(
+    '  covering exactly the name',
+    matn('12').text.slice(narratorSegment!.start, narratorSegment!.end),
+    'عمر بن الخطاب',
+  );
+  expect(
+    '  while the ḥadīth still owns the rest of the block',
+    segments.some((segment) => segment.entity?.type === 'hadith'),
+    '',
+  );
+
+  // Ordinary commentary that merely mentions a name gets no narrator mark:
+  // pre-marking is for the isnād slot only.
+  const prose = detectEntities(
+    'b',
+    [
+      {
+        ...matn(null),
+        id: 'p1',
+        type: 'sharh' as const,
+        text: 'وقد ذكر الإمام أحمد بن حنبل رحمه الله هذه المسألة في مواضع من كتبه',
+      },
+    ] as never,
+    { quran, hadithCollection: null },
+  );
+  check('a name in ordinary prose is not pre-marked', prose.length, 0);
+}
 
 const detectionStart = performance.now();
 const detected = detectEntities('shamela-9260', detectionBlocks, {
@@ -1461,16 +1636,30 @@ const { splitSentences, applyPlaceholders, restorePlaceholders, placeholdersInta
   await import('../src/translation/offline/sentences');
 
 const englishBundle = JSON.parse(
-  readFileSync(join(process.cwd(), 'public', 'quran', 'khattab.json'), 'utf8'),
+  readFileSync(join(process.cwd(), 'public', 'quran', 'english.json'), 'utf8'),
 );
 const quranEnglish = new QuranEnglish(englishBundle);
 
-check('the bundled translation is Khattab', englishBundle.translation, 'Dr. Mustafa Khattab, The Clear Qurʾān');
+// Pickthall and not Khattab, and this is a licensing check as much as a data
+// one: The Clear Qurʾān is exclusively licensed, so shipping it in a public
+// repository would be redistributing something this project cannot grant.
+// Pickthall died in 1936. If this assertion ever fails because the bundled
+// file changed, the question to ask is whether the new text may be shipped.
+check(
+  'the bundled translation is public domain',
+  englishBundle.translation,
+  'Pickthall, The Meaning of the Glorious Koran (1930)',
+);
 check('it covers every āyah', englishBundle.ayat.length, 6236);
 expect(
   'and 2:255 reads correctly',
-  quranEnglish.at(quran.flatIndexOf(2, 255))?.startsWith('Allah! There is no god'),
+  quranEnglish.at(quran.flatIndexOf(2, 255))?.startsWith('Allah! There is no deity save Him'),
   '',
+);
+expect(
+  'no exclusively-licensed translation is committed',
+  !existsSync(join(process.cwd(), 'public', 'quran', 'khattab.json')),
+  '(public/quran/khattab.json must not exist)',
 );
 
 // A selection containing commentary, a verse, more commentary, and a ḥadīth.
@@ -2594,6 +2783,326 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
   }
 }
 
+console.log('\n=== Biographical names (Amendment 16) ===');
+
+{
+  const { deriveAliases, looksLikePerson, foldQuery } = await import('../src/biography/names');
+  const { buildBiographyIndex, MIN_PERSON_COUNT } = await import('../src/biography/buildIndex');
+  const { lookupBiography } = await import('../src/biography/lookup');
+
+  const kindsOf = (name: string) =>
+    deriveAliases(name).map((alias) => `${alias.kind}:${alias.value}`);
+
+  // The worked example from the amendment.
+  const umar = deriveAliases('عمر بن الخطاب بن نفيل القرشي');
+  const byKind = new Map(umar.map((alias) => [alias.kind, alias.value]));
+  check('full name is indexed', byKind.get('full'), 'عمر بن الخطاب بن نفيل القرشي');
+  check('ism + nasab is indexed', byKind.get('ism-nasab'), 'عمر بن الخطاب');
+  check('the bare ism is indexed', byKind.get('ism'), 'عمر');
+  check('the nisba is indexed', byKind.get('nisba'), 'القرشي');
+
+  // A kunya leading the name must not be mistaken for the ism.
+  const abuHafs = new Map(
+    deriveAliases('أبو حفص عمر بن الخطاب').map((a) => [a.kind, a.value]),
+  );
+  check('the kunya is read', abuHafs.get('kunya'), 'ابو حفص');
+  check('  and the ism is still عمر, not أبو', abuHafs.get('ism'), 'عمر');
+  check('  with the nasab intact', abuHafs.get('ism-nasab'), 'عمر بن الخطاب');
+
+  // أبي/أبا/أبو are one name in three cases; foldName already unifies them.
+  check(
+    'أبي هريرة and أبو هريرة fold together',
+    foldQuery('أبي هريرة'),
+    foldQuery('أبو هريرة'),
+  );
+
+  // Honorifics follow a name in the text but not in the contents.
+  check(
+    'an honorific does not defeat the match',
+    foldQuery('عمر بن الخطاب رضي الله عنه'),
+    foldQuery('عمر بن الخطاب'),
+  );
+  expect(
+    'a death date in the heading is stripped',
+    !kindsOf('الذهبي، محمد بن أحمد (ت ٧٤٨ هـ)').some((entry) => entry.includes('748')),
+    '',
+  );
+
+  // Structural headings must never be indexed as people. These are the real
+  // ones from Taqrīb at-Tahdhīb and the collapsed Usd al-Ghāba editions.
+  for (const heading of [
+    'حرف الألف',
+    'ذكر من اسمه أحمد',
+    'باب الهمزة',
+    'مقدمة التحقيق',
+    'فصل في كذا',
+    'المجلد الأول',
+  ]) {
+    expect(`"${heading}" is not a person`, !looksLikePerson(heading), '');
+  }
+  for (const name of ['عمر بن الخطاب', 'أبان بن سعيد', 'عائشة أم المؤمنين', 'أبو هريرة']) {
+    expect(`"${name}" is a person`, looksLikePerson(name), '');
+  }
+
+  // ---- the quality gate ------------------------------------------------
+  const node = (id: number, title: string) => ({
+    id: `b|toc${id}`,
+    bookId: 'b',
+    parentId: null,
+    title,
+    pageIndex: id,
+    order: id,
+    depth: 0,
+  });
+
+  // Taqrīb's shape: letter headings standing in for thousands of narrators.
+  const taqribShape = Array.from({ length: 249 }, (_, index) =>
+    node(index, index % 2 === 0 ? `حرف ${index}` : `ذكر من اسمه فلان ${index}`),
+  );
+  const refusedTaqrib = buildBiographyIndex('b', taqribShape as never);
+  check('a letter-heading contents is refused', refusedTaqrib.entries.length, 0);
+  expect(
+    '  with a reason naming the problem',
+    Boolean(refusedTaqrib.refusedBecause?.includes('section headings')),
+    '',
+  );
+
+  // The collapsed-edition shape: 33 bāb headings for a whole work.
+  const collapsed = ['مقدمة التحقيق', 'مقدمة ابن الأثير'].concat(
+    Array.from({ length: 31 }, (_, index) => `باب ${index}`),
+  );
+  const refusedCollapsed = buildBiographyIndex(
+    'b',
+    collapsed.map((title, index) => node(index, title)) as never,
+  );
+  check('a collapsed bāb-only edition is refused', refusedCollapsed.entries.length, 0);
+  expect(
+    '  and the reason points at the edition',
+    Boolean(refusedCollapsed.refusedBecause?.includes('edition')),
+    '',
+  );
+
+  // A real name index passes.
+  const names = Array.from({ length: MIN_PERSON_COUNT + 50 }, (_, index) =>
+    node(index, `محمد بن أحمد ${index} القرشي`),
+  );
+  names.push(node(9000, 'حرف الألف'));
+  const accepted = buildBiographyIndex('b', names as never, [0]);
+  check('a genuine name index builds', accepted.entries.length, MIN_PERSON_COUNT + 50);
+  check('  and the structural heading is left out', accepted.refusedBecause, undefined);
+
+  // ---- ranking and ambiguity -------------------------------------------
+  const entries = [
+    { name: 'عمر بن الخطاب بن نفيل القرشي', page: 10 },
+    { name: 'عمر بن عبد العزيز', page: 20 },
+    { name: 'عمر بن أبي سلمة', page: 30 },
+  ].map((row, index) => ({
+    id: `e${index}`,
+    bookId: 'usd',
+    name: row.name,
+    nameNormalized: deriveAliases(row.name)[0].value,
+    aliases: deriveAliases(row.name),
+    pageIndex: row.page,
+    blockIds: [],
+    volume: 1,
+    printPage: row.page,
+  }));
+  const books = [{ id: 'usd', title: 'أسد الغابة' }];
+
+  const bare = lookupBiography('عمر', entries as never, books);
+  check('a bare ism returns every candidate', bare.total, 3);
+  expect(
+    '  none of them silently chosen',
+    bare.groups[0].hits.every((hit) => hit.matchedAs === 'ism'),
+    '',
+  );
+
+  const specific = lookupBiography('عمر بن الخطاب', entries as never, books);
+  check('ism + nasab narrows to one', specific.total, 1);
+  check('  matched at the nasab, not the bare ism', specific.groups[0].hits[0].matchedAs, 'ism-nasab');
+
+  const withHonorific = lookupBiography('عمر بن الخطاب رضي الله عنه', entries as never, books);
+  check('an honorific in the selection still matches', withHonorific.total, 1);
+
+  const none = lookupBiography('زيد بن ثابت', entries as never, books);
+  check('no match is an empty result, never a nearest guess', none.total, 0);
+
+  // Token boundaries: عمر must not match inside عمرو.
+  const amr = [
+    {
+      id: 'x',
+      bookId: 'usd',
+      name: 'عمرو بن العاص',
+      nameNormalized: deriveAliases('عمرو بن العاص')[0].value,
+      aliases: deriveAliases('عمرو بن العاص'),
+      pageIndex: 1,
+      blockIds: [],
+      volume: 1,
+      printPage: 1,
+    },
+  ];
+  check('عمر does not match inside عمرو', lookupBiography('عمر', amr as never, books).total, 0);
+
+  // Grouping across works.
+  const twoBooks = [
+    ...entries,
+    { ...entries[0], id: 'z', bookId: 'siyar' },
+  ];
+  const grouped = lookupBiography('عمر بن الخطاب', twoBooks as never, [
+    ...books,
+    { id: 'siyar', title: 'سير أعلام النبلاء' },
+  ]);
+  check('results from several works are grouped by book', grouped.groups.length, 2);
+  expect(
+    '  each group naming its source',
+    grouped.groups.every((group) => group.bookTitle.length > 0),
+    '',
+  );
+}
+
+console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) ===');
+
+{
+  const { seedQulResources, pendingSeeds, SEED_MANIFEST } = await import('../src/qul/seed');
+
+  // A stand-in for the QUL half of StorageAdapter, plus a counter so an extra
+  // write is visible rather than merely implied by the final row count.
+  function makeQulStorage() {
+    const resources = new Map<string, AnyRecord>();
+    const entries = new Map<string, AnyRecord>();
+    let entryWrites = 0;
+    return {
+      resources,
+      entries,
+      get entryWrites() {
+        return entryWrites;
+      },
+      listQulResources: async () => [...resources.values()],
+      putQulResource: async (resource: AnyRecord) => {
+        resources.set(resource.id as string, resource);
+      },
+      deleteQulResource: async (id: string) => {
+        resources.delete(id);
+        for (const key of [...entries.keys()]) {
+          if (entries.get(key)!.resourceId === id) entries.delete(key);
+        }
+      },
+      putQulEntries: async (rows: AnyRecord[]) => {
+        entryWrites += rows.length;
+        for (const row of rows) entries.set(row.id as string, row);
+      },
+    };
+  }
+
+  // Serve the real files off disk, exactly as the deployed app fetches them.
+  const realFetch = globalThis.fetch;
+  let fetches = 0;
+  globalThis.fetch = (async (url: string) => {
+    fetches++;
+    const name = String(url).split('/').pop()!;
+    const path = join(process.cwd(), 'public', 'qul', name);
+    if (!existsSync(path)) return new Response(null, { status: 404 });
+    return new Response(readFileSync(path));
+  }) as typeof globalThis.fetch;
+
+  try {
+    // public/qul/ is gitignored — the resources are licensed by their
+    // publishers and are not redistributed here — so a clean checkout has
+    // none of them. That is the supported "absent" path, tested below; the
+    // full install path only runs where the files are actually present.
+    const havePresent = SEED_MANIFEST.filter((entry) =>
+      existsSync(join(process.cwd(), 'public', 'qul', entry.file)),
+    );
+    console.log(
+      `  ${havePresent.length}/${SEED_MANIFEST.length} bundled resources present locally` +
+        (havePresent.length === SEED_MANIFEST.length ? '' : ' — install checks skipped'),
+    );
+
+    // Absent is a quiet, supported state and must never be reported as a
+    // failure: a public build legitimately ships none of these.
+    {
+      const bare = makeQulStorage();
+      const realExists = globalThis.fetch;
+      globalThis.fetch = (async () => new Response(null, { status: 404 })) as typeof globalThis.fetch;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const none = await seedQulResources(bare as any, '/');
+      globalThis.fetch = realExists;
+      check('a build with no resource files installs nothing', none.installed.length, 0);
+      check('  reporting them absent', none.absent.length, SEED_MANIFEST.length);
+      check('  and NOT as failures', Object.keys(none.failed).length, 0);
+      check('  leaving no resource rows behind', bare.resources.size, 0);
+    }
+
+    if (havePresent.length < SEED_MANIFEST.length) {
+      console.log('  (skipping the install checks — see docs/RESOURCES.md)');
+    } else {
+    const storage = makeQulStorage();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const first = await seedQulResources(storage as any, '/');
+    check('a fresh install installs every bundled resource', first.installed.length, SEED_MANIFEST.length);
+    check('  and reports none failed', Object.keys(first.failed).length, 0);
+    expect(
+      '  with entries actually written',
+      storage.entries.size > 6000,
+      `(${storage.entries.size.toLocaleString()} entries)`,
+    );
+
+    const afterFirst = storage.entries.size;
+    const writesAfterFirst = storage.entryWrites;
+
+    // THE acceptance criterion: seeding twice must not duplicate or corrupt.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const second = await seedQulResources(storage as any, '/');
+    check('a second run installs nothing', second.installed.length, 0);
+    check('  and reports everything up to date', second.upToDate.length, SEED_MANIFEST.length);
+    check('  entry count is unchanged', storage.entries.size, afterFirst);
+    check('  and no entry was rewritten', storage.entryWrites, writesAfterFirst);
+    check('  no duplicate resource rows', storage.resources.size, SEED_MANIFEST.length);
+
+    // An interrupted run leaves entries but no resource row — nothing reads
+    // those, and the next boot must redo it cleanly rather than skip it.
+    const slug = SEED_MANIFEST[0].slug;
+    storage.resources.delete(`qul-seed-${slug}`);
+    expect(
+      'an interrupted install is seen as still pending',
+      pendingSeeds([...storage.resources.values()] as never).some((e) => e.slug === slug),
+      '',
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const third = await seedQulResources(storage as any, '/');
+    check('  and is redone', third.installed, [slug]);
+    check('  leaving the same entry count, not more', storage.entries.size, afterFirst);
+
+    // A removed resource must stay removed.
+    check(
+      'a resource the user deleted is not reinstalled',
+      pendingSeeds([] as never, [slug]).some((e) => e.slug === slug),
+      false,
+    );
+    expect(
+      '  but the others still are',
+      pendingSeeds([] as never, [slug]).length === SEED_MANIFEST.length - 1,
+      '',
+    );
+
+    // Offline first launch: recorded, not thrown, and retried next time.
+    globalThis.fetch = (async () => {
+      throw new Error('offline');
+    }) as typeof globalThis.fetch;
+    const offline = makeQulStorage();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const failed = await seedQulResources(offline as any, '/');
+    check('an offline first launch installs nothing', failed.installed.length, 0);
+    check('  and records why, rather than throwing', Object.keys(failed.failed).length, SEED_MANIFEST.length);
+    check('  leaving no half-written resource', offline.resources.size, 0);
+
+    expect('the real files were fetched, not stubbed away', fetches > 0, `(${fetches} fetches)`);
+    }
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
 console.log('\n=== Runtime asset URLs survive a base path ===');
 
 {
@@ -2632,7 +3141,7 @@ console.log('\n=== Runtime asset URLs survive a base path ===');
   // And the muṣḥaf loaders specifically, since they are the ones that broke.
   const quranSource = readFileSync(join(process.cwd(), 'src', 'quran', 'quranIndex.ts'), 'utf8');
   expect('the muṣḥaf loader is base-prefixed', quranSource.includes('${ASSETS}quran/uthmani.json'));
-  expect('the translation loader is base-prefixed', quranSource.includes('${ASSETS}quran/khattab.json'));
+  expect('the translation loader is base-prefixed', quranSource.includes('${ASSETS}quran/english.json'));
 }
 
 console.log('\n=== The deployed proxy (proxy/worker.js) ===');

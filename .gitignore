@@ -37,6 +37,19 @@ node_modules/
 /fixtures/
 /qul/
 
+# --- Bundled QUL resources: pointers, not content -----------------------------
+# public/qul/ is where the seeder reads from at first boot, and it is NOT
+# committed. Same principle as the Amendment 14 catalog, one layer down: the
+# app ships the knowledge of what to install and where to get it, not the
+# licensed text itself. Redistributing a third-party resource through a public
+# repository is not a permission this project holds — and the licences differ
+# per resource, so "QUL" is not one answer.
+#
+# Nothing breaks when they are absent. Seeding reports them as not shipped, and
+# a tab with no resource behind it is not rendered at all. See docs/RESOURCES.md
+# for what to download and where each one goes.
+/public/qul/
+
 # --- Personal work ----------------------------------------------------------
 # The glossary is authored terminology, not source. Delete these two lines if
 # you would rather version it.

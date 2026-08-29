@@ -20,11 +20,24 @@ export interface QulInspection extends QulReading {
 
 /** Read and identify a file without writing anything. */
 export async function inspectQulFile(file: File): Promise<QulInspection> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  return inspectQulBytes(new Uint8Array(await file.arrayBuffer()), file.name);
+}
 
+/**
+ * The same identification, from bytes rather than a File.
+ *
+ * Seeding fetches from public/qul/ and has an ArrayBuffer, not a File. Sharing
+ * this rather than reimplementing it means a bundled resource and a hand-picked
+ * one are read by exactly the same code — including the format detection, which
+ * is where a divergence would be least visible and most annoying.
+ */
+export async function inspectQulBytes(
+  bytes: Uint8Array,
+  fileName: string,
+): Promise<QulInspection> {
   if (looksLikeSqlite(bytes)) {
     const tables = await readSqliteTables(bytes);
-    return { ...readQulSqlite(tables, file.name), fileName: file.name, byteSize: file.size };
+    return { ...readQulSqlite(tables, fileName), fileName, byteSize: bytes.byteLength };
   }
 
   let root: unknown;
@@ -37,7 +50,7 @@ export async function inspectQulFile(file: File): Promise<QulInspection> {
     );
   }
 
-  return { ...readQulJson(root, file.name), fileName: file.name, byteSize: file.size };
+  return { ...readQulJson(root, fileName), fileName, byteSize: bytes.byteLength };
 }
 
 /**

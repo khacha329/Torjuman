@@ -40,6 +40,22 @@ interface Seed {
   group: string;
   description: string;
   recommended: boolean;
+  /**
+   * Which printing this ID is, where the work has several. Recorded so the
+   * catalog names the edition the ID actually points at rather than the work
+   * in the abstract.
+   */
+  edition?: string;
+  /**
+   * Contents entries counted on the live page when this ID was verified.
+   *
+   * A fingerprint, not a fact anyone needs. Editions of the same work differ by
+   * two orders of magnitude here — 8,148 against 33 — and the difference
+   * decides whether a biographical index can be built at all. Checked below
+   * against a re-read, so an edition swap fails the build instead of shipping
+   * an ID that imports the wrong printing.
+   */
+  tocNodes?: number;
 }
 
 const SEEDS: Seed[] = [
@@ -106,6 +122,64 @@ const SEEDS: Seed[] = [
       'The companion reference to Fatḥ al-Bārī, and by the author of Riyāḍ aṣ-Ṣāliḥīn itself.',
     recommended: false,
   },
+
+  // --------------------------------------------------------------------
+  // Biographies (Amendment 16)
+  //
+  // The `edition` fields below are not decoration. Every one of these works
+  // exists on Shamela in several editions with different paginations, and the
+  // wrong one imports a real book that is not the intended one — a failure
+  // much harder to notice than a 404. Worse, the editions differ in whether
+  // their contents list people at all:
+  //
+  //   أسد الغابة  1110  ط العلمية    8,148 TOC nodes   indexes
+  //   أسد الغابة 23700  ط الفكر         33 TOC nodes   USELESS, all collapsed
+  //   أسد الغابة  1564  ط الشعب         33 TOC nodes   USELESS, all collapsed
+  //
+  // Same work, same author, same title in the listing. So `tocNodes` is
+  // recorded here as a fingerprint: the build re-reads it from the live page
+  // and fails when it no longer matches, which turns a silent edition swap
+  // into a build error.
+  //
+  // تقريب التهذيب (8609) is deliberately NOT here. Its contents are 249 letter
+  // headings — «حرف الألف», «ذكر من اسمه أحمد» — standing in for some 8,800
+  // narrators listed only in the body. It is an excellent narrator dictionary
+  // and its TOC cannot index it; that needs a body-level parser, scoped
+  // separately.
+  // --------------------------------------------------------------------
+  {
+    shamelaId: 1110,
+    titleEn: 'Ibn al-Athīr, Usd al-Ghāba — Companions',
+    role: 'reference',
+    group: 'Biographies',
+    edition: 'ط العلمية',
+    tocNodes: 8148,
+    description:
+      'Companions specifically, and the one to import first: its subjects are the narrators named in Riyāḍ aṣ-Ṣāliḥīn. Note the edition — other printings of this work carry only bāb headings and cannot be indexed.',
+    recommended: true,
+  },
+  {
+    shamelaId: 10906,
+    titleEn: 'Adh-Dhahabī, Siyar aʿlām an-nubalāʾ',
+    role: 'reference',
+    group: 'Biographies',
+    edition: 'ط الرسالة',
+    tocNodes: 6162,
+    description:
+      'Scholars broadly — the general-purpose choice, and the largest of the three. Muʾassasat ar-Risāla, the standard scholarly edition.',
+    recommended: false,
+  },
+  {
+    shamelaId: 9767,
+    titleEn: 'Ibn Ḥajar, al-Iṣāba — Companions',
+    role: 'reference',
+    group: 'Biographies',
+    edition: 'دار الكتب العلمية',
+    tocNodes: 13854,
+    description:
+      'The fullest Companion dictionary, and the largest contents of the three at nearly fourteen thousand entries. Overlaps Usd al-Ghāba; import both only if you want to compare them.',
+    recommended: false,
+  },
 ];
 
 interface CatalogEntry extends Omit<Seed, 'group'> {
@@ -133,6 +207,27 @@ for (const seed of SEEDS) {
     const meta = parseBookPage(await get(`/book/${seed.shamelaId}`), seed.shamelaId);
     if (!meta) throw new Error('the book page did not parse');
 
+    // Edition fingerprint. Shamela can and does re-point an ID, and two
+    // printings of the same work carry the same title and author — so the
+    // contents count is the only cheap thing that actually distinguishes them.
+    if (seed.tocNodes !== undefined) {
+      const countNodes = (nodes: { children?: unknown[] }[]): number =>
+        nodes.reduce(
+          (total, node) =>
+            total + 1 + (node.children ? countNodes(node.children as never) : 0),
+          0,
+        );
+      const actual = countNodes(meta.toc as never);
+      const drift = Math.abs(actual - seed.tocNodes) / seed.tocNodes;
+      if (drift > 0.05) {
+        throw new Error(
+          `contents changed: expected ~${seed.tocNodes} entries, found ${actual}. ` +
+            `This ID may now point at a different edition — check it before shipping, ` +
+            `because an edition with collapsed bāb headings cannot be name-indexed.`,
+        );
+      }
+    }
+
     // The page count is only on a content page's pager, never on the landing
     // page — the same finding the importer is built around.
     await delay(400);
@@ -151,6 +246,8 @@ for (const seed of SEEDS) {
       approxPages,
       description: seed.description,
       recommended: seed.recommended,
+      ...(seed.edition ? { edition: seed.edition } : {}),
+      ...(seed.tocNodes !== undefined ? { tocNodes: seed.tocNodes } : {}),
     });
 
     console.log(

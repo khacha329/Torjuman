@@ -97,8 +97,22 @@ export function flattenAnnotations(textLength: number, layers: AnnotationLayers)
     if (end <= start) continue;
 
     const span = spans.find((candidate) => candidate.start <= start && candidate.end >= end);
-    const entityRange = layers.entities.find(
-      (candidate) => candidate.start <= start && candidate.end >= end,
+    // The NARROWEST covering entity wins, not the first one found.
+    //
+    // Entities nest: a ḥadīth entity spans its whole matn block, and the
+    // narrator entity inside it covers just the name in the isnād. Taking the
+    // first match would hand the narrator's own segment to the ḥadīth and the
+    // name would never be separately tappable. This mirrors the rule pickMark
+    // already applies below — the more specific statement about a passage wins.
+    const entityRange = layers.entities.reduce<EntityRange | undefined>(
+      (narrowest, candidate) => {
+        if (candidate.start > start || candidate.end < end) return narrowest;
+        if (!narrowest) return candidate;
+        return candidate.end - candidate.start < narrowest.end - narrowest.start
+          ? candidate
+          : narrowest;
+      },
+      undefined,
     );
 
     // Span scope beats block scope, so a span mark wins where both apply. They
@@ -172,7 +186,13 @@ export function classesFor(segment: Segment): string {
 
   if (segment.entity) {
     classes.push('entity-tint');
-    classes.push(segment.entity.type === 'quran' ? 'entity-quran' : 'entity-hadith');
+    classes.push(
+      segment.entity.type === 'quran'
+        ? 'entity-quran'
+        : segment.entity.type === 'narrator'
+          ? 'entity-narrator'
+          : 'entity-hadith',
+    );
     if (segment.entityWhole) classes.push('entity-isolate');
   }
 

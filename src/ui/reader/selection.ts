@@ -79,9 +79,20 @@ export function readSelection(): SelectionAnchor | null {
   };
 }
 
+/**
+ * Longest selection still offered a biographical lookup.
+ *
+ * A name in this text runs from one word («عمر») to about five («أبو حفص عمر
+ * بن الخطاب»). Past that it is a phrase, and offering to look it up in a
+ * biographical dictionary would be an affordance that can only ever fail.
+ */
+export const NAME_MAX_WORDS = 5;
+
 export interface SelectionPeek {
   active: boolean;
   singleWord: boolean;
+  /** Short enough to be a personal name — see NAME_MAX_WORDS. */
+  shortSelection: boolean;
   /**
    * Viewport y of the middle of the selection, for positioning the rail.
    *
@@ -94,7 +105,12 @@ export interface SelectionPeek {
   centerY: number | null;
 }
 
-const NO_SELECTION: SelectionPeek = { active: false, singleWord: false, centerY: null };
+const NO_SELECTION: SelectionPeek = {
+  active: false,
+  singleWord: false,
+  shortSelection: false,
+  centerY: null,
+};
 
 /**
  * Whether a usable selection exists inside the reader, without resolving it.
@@ -116,9 +132,12 @@ export function peekSelection(): SelectionPeek {
   const text = selection.toString().trim();
   if (text === '') return NO_SELECTION;
 
+  const words = text.split(/\s+/).filter(Boolean).length;
+
   return {
     active: true,
     singleWord: !/\s/.test(text) && text.length <= 40,
+    shortSelection: words >= 1 && words <= NAME_MAX_WORDS && text.length <= 120,
     centerY: selectionCenterY(selection),
   };
 }

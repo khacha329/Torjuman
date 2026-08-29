@@ -67,7 +67,9 @@ export function BlockText({
               'aria-label':
                 segment.entity.type === 'quran'
                   ? `Qurʾān ${segment.entity.label ?? segment.entity.reference}`
-                  : `Ḥadīth ${segment.entity.reference}`,
+                  : segment.entity.type === 'narrator'
+                    ? `Narrator ${segment.entity.label ?? segment.entity.reference}`
+                    : `Ḥadīth ${segment.entity.reference}`,
             }
           : {})}
       >
