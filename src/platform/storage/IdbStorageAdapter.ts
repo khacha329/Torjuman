@@ -8,6 +8,7 @@ import type {
   DictionaryEntry,
   Entity,
   ExplanationCard,
+  SharhCard,
   GlossaryEntry,
   Mark,
   HadithRecord,
@@ -22,6 +23,8 @@ import type {
   TranslationProfile,
   WordGloss,
 } from '../../types';
+import type { StoredNarratorProfile } from '../../biography/narratorProfile';
+import { letterFold } from '../../lib/arabic';
 import type {
   PageMeta,
   SearchHit,
@@ -42,7 +45,14 @@ const DB_NAME = 'shamela-reader';
 // migrating it; nothing else is touched.
 // 8 adds biographyEntries. The store is derived from each book's own table of
 // contents, so it is created empty and rebuilt on demand rather than migrated.
-const DB_VERSION = 8;
+// 9 adds sharhCards: commentary retrieved verbatim from an imported sharḥ. Its
+// own store rather than a kind inside `cards`, which is keyed for the
+// translation cache — a card that was never generated has no cache key.
+// 10 adds narratorProfiles, keyed by a unique id and indexed multiEntry on
+// `namings`. Unlike biographyEntries — a few thousand short rows read whole —
+// this store holds tens of thousands of full profiles, so a lookup must go
+// through an index rather than load it.
+const DB_VERSION = 10;
 const SETTINGS_KEY = 'app';
 
 interface Schema extends DBSchema {
@@ -83,6 +93,18 @@ interface Schema extends DBSchema {
     value: ExplanationCard;
     indexes: { byBook: string };
   };
+  // Indexed by the book being READ, not the commentary quoted: a card is
+  // anchored in the reader's own book, and that is what a delete has to follow.
+  sharhCards: {
+    key: string;
+    value: SharhCard;
+    indexes: { byBook: string };
+  };
+  narratorProfiles: {
+    key: string;
+    value: StoredNarratorProfile;
+    indexes: { byNaming: string; byShard: string };
+  };
   wordGlosses: { key: string; value: WordGloss };
   qulResources: { key: string; value: QulResource };
   qulEntries: {
@@ -109,6 +131,16 @@ interface Schema extends DBSchema {
 interface SearchEntry {
   id: string;
   normalized: string;
+  /**
+   * Letters and single spaces only.
+   *
+   * Reader search wants `normalized`, which keeps punctuation, because a
+   * reader types punctuation. Matching one book's passage against another's
+   * wants this: the two editors punctuate differently, and a colon or a
+   * doubled bracket in one and not the other defeats an otherwise exact run.
+   * Computed once, when the index loads.
+   */
+  folded: string;
 }
 
 export class IdbStorageAdapter implements StorageAdapter {
@@ -168,6 +200,15 @@ export class IdbStorageAdapter implements StorageAdapter {
             const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
             biography.createIndex('byBook', 'bookId');
           }
+          if (!db.objectStoreNames.contains('sharhCards')) {
+            const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
+            sharh.createIndex('byBook', 'bookId');
+          }
+          if (!db.objectStoreNames.contains('narratorProfiles')) {
+            const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
+            narrators.createIndex('byNaming', 'namings', { multiEntry: true });
+            narrators.createIndex('byShard', 'shard');
+          }
           return;
         }
 
@@ -205,6 +246,19 @@ export class IdbStorageAdapter implements StorageAdapter {
 
         const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
         explanations.createIndex('byBook', 'bookId');
+
+        // Retrieved commentary. Its own store rather than a kind inside
+        // `cards`, because that store is keyed for the translation cache —
+        // byCacheKey — and a card that was never generated has no cache key.
+        const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
+        sharh.createIndex('byBook', 'bookId');
+
+        // Imported narrator profiles. `byNaming` is multiEntry over every form a
+        // man is cited under, so a short mention in a commentary reaches a
+        // profile filed under a twelve-word nasab in one indexed read.
+        const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
+        narrators.createIndex('byNaming', 'namings', { multiEntry: true });
+        narrators.createIndex('byShard', 'shard');
 
         db.createObjectStore('wordGlosses', { keyPath: 'word' });
 
@@ -265,6 +319,14 @@ export class IdbStorageAdapter implements StorageAdapter {
       'marks',
       'cards',
       'explanationCards',
+      'sharhCards',
+      // biographyEntries was missing here, and its absence was not harmless.
+      // Re-importing a biographical work left the old index in place, and
+      // `ensureBiographyIndexes` only builds for a book with NO entries — so
+      // the stale rows survived and kept pointing at page indices from the
+      // previous import. That is what produces "the entry is on a page that has
+      // not been fetched yet" for a book that is fully imported.
+      'biographyEntries',
     ] as const) {
       const tx = db.transaction(store, 'readwrite');
       let cursor = await tx.store.index('byBook').openCursor(id);
@@ -274,6 +336,11 @@ export class IdbStorageAdapter implements StorageAdapter {
       }
       await tx.done;
     }
+    // Narrator profiles are filed by SHARD, not by book, so they are not in
+    // the loop above. A Taqrīb import's profiles belong to this book and must
+    // go with it; an installed Itqan shard belongs to no book and must not.
+    await this.deleteNarratorShard(`taqrib:${id}`);
+
     await db.delete('books', id);
     await db.delete('crawlStates', id);
     await db.delete('positions', id);
@@ -400,13 +467,44 @@ export class IdbStorageAdapter implements StorageAdapter {
       IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]),
     );
     while (cursor) {
-      entries.push({ id: cursor.value.id, normalized: cursor.value.normalized });
+      entries.push({
+        id: cursor.value.id,
+        normalized: cursor.value.normalized,
+        folded: letterFold(cursor.value.normalized),
+      });
       cursor = await cursor.continue();
     }
     await tx.done;
 
     this.searchIndex.set(bookId, entries);
     return entries;
+  }
+
+  /**
+   * Search on letters alone, for matching a passage across two books.
+   *
+   * Same scan as `searchBlocks`, against the folded field. Separate rather
+   * than a flag because the two have different meanings: one answers "where
+   * did the reader's words occur", the other "is this the same passage".
+   */
+  async searchBlocksLoose(
+    bookId: string,
+    foldedQuery: string,
+    limit: number,
+  ): Promise<SearchHit[]> {
+    if (!foldedQuery) return [];
+    const entries = await this.loadSearchIndex(bookId);
+
+    const hits: SearchHit[] = [];
+    for (const entry of entries) {
+      const at = entry.folded.indexOf(foldedQuery);
+      if (at === -1) continue;
+      const block = await this.getBlock(entry.id);
+      if (!block) continue;
+      hits.push({ block, matchStart: at, matchLength: foldedQuery.length });
+      if (hits.length >= limit) break;
+    }
+    return hits;
   }
 
   async searchBlocks(
@@ -691,6 +789,59 @@ export class IdbStorageAdapter implements StorageAdapter {
     await this.handle.delete('explanationCards', id);
   }
 
+  // -------------------------------------------------------------- sharḥ
+
+  async putSharhCard(card: SharhCard): Promise<void> {
+    await this.handle.put('sharhCards', card);
+  }
+
+  async listSharhCards(bookId: string): Promise<SharhCard[]> {
+    return this.handle.getAllFromIndex('sharhCards', 'byBook', bookId);
+  }
+
+  async deleteSharhCard(id: string): Promise<void> {
+    await this.handle.delete('sharhCards', id);
+  }
+
+  // ---------------------------------------------------- narrator profiles
+
+  async putNarratorProfiles(profiles: StoredNarratorProfile[]): Promise<void> {
+    for (let i = 0; i < profiles.length; i += 500) {
+      const tx = this.handle.transaction('narratorProfiles', 'readwrite');
+      await Promise.all(profiles.slice(i, i + 500).map((row) => tx.store.put(row)));
+      await tx.done;
+    }
+  }
+
+  async findNarratorProfiles(naming: string): Promise<StoredNarratorProfile[]> {
+    if (naming.length < 3) return [];
+    return this.handle.getAllFromIndex('narratorProfiles', 'byNaming', naming);
+  }
+
+  async listNarratorShards(): Promise<{ shard: string; count: number }[]> {
+    const counts = new Map<string, number>();
+    const tx = this.handle.transaction('narratorProfiles', 'readonly');
+    // Key cursor only: counting shards must not read tens of thousands of
+    // full profiles into memory just to render a settings row.
+    let cursor = await tx.store.index('byShard').openKeyCursor();
+    while (cursor) {
+      counts.set(cursor.key as string, (counts.get(cursor.key as string) ?? 0) + 1);
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return [...counts].map(([shard, count]) => ({ shard, count }));
+  }
+
+  async deleteNarratorShard(shard: string): Promise<void> {
+    const tx = this.handle.transaction('narratorProfiles', 'readwrite');
+    let cursor = await tx.store.index('byShard').openCursor(IDBKeyRange.only(shard));
+    while (cursor) {
+      await cursor.delete();
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+  }
+
   async putWordGloss(gloss: WordGloss): Promise<void> {
     await this.handle.put('wordGlosses', gloss);
   }
@@ -719,6 +870,7 @@ export class IdbStorageAdapter implements StorageAdapter {
       })),
       cards: await db.getAll('cards'),
       explanationCards: await db.getAll('explanationCards'),
+      sharhCards: await db.getAll('sharhCards'),
       marks: await db.getAll('marks'),
       glossary: await db.getAll('glossary'),
       profiles: await db.getAll('profiles'),
@@ -734,7 +886,7 @@ export class IdbStorageAdapter implements StorageAdapter {
     const db = this.handle;
 
     const write = async <
-      K extends 'cards' | 'explanationCards' | 'marks' | 'glossary' | 'profiles' |
+      K extends 'cards' | 'explanationCards' | 'sharhCards' | 'marks' | 'glossary' | 'profiles' |
         'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths',
     >(
       store: K,
@@ -750,6 +902,7 @@ export class IdbStorageAdapter implements StorageAdapter {
 
     await write('cards', bundle.cards);
     await write('explanationCards', bundle.explanationCards);
+    await write('sharhCards', bundle.sharhCards);
     await write('marks', bundle.marks);
     await write('glossary', bundle.glossary);
     await write('profiles', bundle.profiles);

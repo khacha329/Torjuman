@@ -7,6 +7,7 @@ import {
   type BiographyIndexResult,
 } from './buildIndex';
 import { lookupBiography, type BiographyLookup } from './lookup';
+import { recordRetrieval } from '../app/retrievalLog';
 
 // Wiring the biographical index to storage.
 //
@@ -58,7 +59,45 @@ export async function lookupName(
     storage.listBiographyEntries(),
     storage.listBooks(),
   ]);
-  return lookupBiography(selection, entries, books);
+  const result = lookupBiography(selection, entries, books);
+
+  // "No entry for this name" has two completely different causes that read the
+  // same on the panel: no biographical work is indexed at all, or three are and
+  // none of them has him. The index size separates them.
+  const works = books.filter(isBiographicalWork);
+  recordRetrieval({
+    kind: 'biography',
+    outcome:
+      result.total > 0 ? 'hit' : entries.length === 0 ? 'data-absent' : 'no-match',
+    query: selection,
+    summary:
+      entries.length === 0
+        ? works.length === 0
+          ? 'No biographical work is imported, so there was nothing to search.'
+          : `${works.length} biographical work(s) imported but the name index is ` +
+            `empty — the index was refused or has not been built.`
+        : `${result.total} candidate(s) across ${result.groups.length} work(s), ` +
+          `from an index of ${entries.length} entries.`,
+    detail: [
+      ['index size', `${entries.length} entries`],
+      [
+        'candidates',
+        result.groups
+          .flatMap((group) =>
+            group.hits.map(
+              (hit) =>
+                `${hit.entry.name} [${hit.entry.bookId}` +
+                `${hit.entry.entryNumber ? ` #${hit.entry.entryNumber}` : ''}] ` +
+                `${hit.exact ? 'exact' : hit.matchedAs}`,
+            ),
+          )
+          .slice(0, 12)
+          .join(' | ') || 'none',
+      ],
+    ],
+  });
+
+  return result;
 }
 
 /** Whether any biographical work is imported and indexed at all. */
@@ -172,13 +211,45 @@ export async function entryBlocks(
     blocks.push(...(await storage.listBlocksForPage(page.id)));
   }
 
+  // Every field the amendment asks for about an entry read: which book it came
+  // from, which pages were touched, and where the heading was found inside
+  // them. The bookId is here because "the wrong text appeared" and "text from
+  // another book appeared" are different bugs with different fixes, and the
+  // panel cannot tell you which one you are looking at.
+  const note = (
+    outcome: 'hit' | 'no-match' | 'data-absent' | 'lookup-failed',
+    summary: string,
+    extra: [string, string][] = [],
+  ) =>
+    recordRetrieval({
+      kind: 'biography',
+      outcome,
+      query: entry.name,
+      summary,
+      detail: [
+        ['bookId', entry.bookId],
+        ['entry number', entry.entryNumber ?? 'unnumbered'],
+        ['pages', `${entry.pageIndex}..${entry.endPageIndex} (read to ${last})`],
+        ['blocks on those pages', String(blocks.length)],
+        ['pages not fetched', missingPages.length ? missingPages.join(', ') : 'none'],
+        ...extra,
+      ],
+    });
+
   if (blocks.length === 0) {
+    note('data-absent', 'None of this entry\'s pages have been fetched yet.');
     return { blocks, volume, printPage, anchored: false, truncated, missingPages };
   }
 
   const start = blocks.findIndex((block) => isHeadingFor(block, entry));
   if (start === -1) {
     // No heading matched. Show the page rather than nothing, and say so.
+    note(
+      'lookup-failed',
+      'The entry\'s own heading was not found on its pages, so the whole page is ' +
+        'shown and may include a neighbouring life.',
+      [['first block', blocks[0].text]],
+    );
     return { blocks, volume, printPage, anchored: false, truncated, missingPages };
   }
 
@@ -198,8 +269,14 @@ export async function entryBlocks(
     }
   }
 
+  const body = blocks.slice(start, end);
+  note('hit', `Anchored on the entry's own heading; ${body.length} block(s).`, [
+    ['heading', blocks[start].text],
+    ['stopped at', end === blocks.length ? 'end of the pages read' : blocks[end].text],
+  ]);
+
   return {
-    blocks: blocks.slice(start, end),
+    blocks: body,
     volume,
     printPage,
     anchored: true,

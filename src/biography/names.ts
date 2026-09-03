@@ -154,8 +154,23 @@ export function deriveAliases(name: string): Alias[] {
   if (ism && ism !== 'بن') {
     // ism + nasab: «عمر بن الخطاب». The single most useful key — specific
     // enough to identify, short enough that the commentary actually writes it.
+    //
+    // The father's name is not always one token. «عبد» and «أبو» are construct
+    // heads that bind the word after them into a single name, and taking one
+    // token past «بن» cuts them in half:
+    //
+    //   علي بن أبي طالب      →  «علي بن ابو»      a name nobody has written
+    //   عمر بن عبد العزيز    →  «عمر بن عبد»      likewise
+    //
+    // Both are among the most frequently cited names in the corpus, so the
+    // truncated form is not an edge case. It also shows: this alias is what the
+    // inline name layer marks, and a short match colours «عمر بن عبد» while
+    // leaving «العزيز» plain, which reads as a rendering bug.
     if (tokens[start + 1] === 'بن' && tokens[start + 2]) {
-      aliases.push({ value: `${ism} بن ${tokens[start + 2]}`, kind: 'ism-nasab' });
+      const head = tokens[start + 2];
+      const compound = (head === 'عبد' || head === 'ابو' || head === 'ام') && tokens[start + 3];
+      const father = compound ? `${head} ${tokens[start + 3]}` : head;
+      aliases.push({ value: `${ism} بن ${father}`, kind: 'ism-nasab' });
     }
     // Bare ism last, and ranked last. «عمر» is dozens of people.
     aliases.push({ value: ism, kind: 'ism' });

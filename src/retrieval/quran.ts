@@ -1,6 +1,7 @@
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { QuranVerse } from '../types';
+import { recordRetrieval } from '../app/retrievalLog';
 
 // Qurʾān retrieval from the quran.com v4 API.
 //
@@ -69,10 +70,39 @@ export async function fetchVerse(
   options: QuranLookupOptions,
 ): Promise<QuranVerse | null> {
   const key = `${reference}@${options.translationId}`;
-  const cached = await storage.getQuranVerse(key);
-  if (cached) return cached;
 
-  if (!/^\d+:\d+$/.test(reference)) return null;
+  // Every exit records. The amendment's requirement is that the three ways this
+  // can come back empty are told apart, and the only place that distinction
+  // exists is right here — by the time the caller has `null`, it is gone.
+  const log = (
+    outcome: 'hit' | 'no-match' | 'data-absent' | 'lookup-failed',
+    summary: string,
+    detail: [string, string][] = [],
+  ) =>
+    recordRetrieval({
+      kind: 'quran',
+      outcome,
+      query: reference,
+      summary,
+      detail: [
+        ['translation', `${options.translationName} (id ${options.translationId})`],
+        ...detail,
+      ],
+    });
+
+  const cached = await storage.getQuranVerse(key);
+  if (cached) {
+    log('hit', 'Served from the local cache; no request made.', [
+      ['cached at', new Date(cached.fetchedAt).toISOString()],
+      ['english', cached.english],
+    ]);
+    return cached;
+  }
+
+  if (!/^\d+:\d+$/.test(reference)) {
+    log('lookup-failed', 'Reference is not in sūrah:āyah form, so no request was made.');
+    return null;
+  }
 
   const url =
     `${API}/verses/by_key/${reference}` +
@@ -81,10 +111,25 @@ export async function fetchVerse(
   let response;
   try {
     response = await http.get(url);
-  } catch {
+  } catch (caught) {
+    // The common case here is the proxy: an unconfigured or origin-rejected
+    // Worker fails as a network error, which is indistinguishable from being
+    // offline unless the reason is written down.
+    log('lookup-failed', 'The request threw before a response arrived.', [
+      ['url', url],
+      ['error', caught instanceof Error ? caught.message : String(caught)],
+      ['online', String(navigator.onLine)],
+    ]);
     return null;
   }
-  if (!response.ok) return null;
+  if (!response.ok) {
+    log('lookup-failed', `The API answered HTTP ${response.status}.`, [
+      ['url', url],
+      ['status', String(response.status)],
+      ['body', response.body],
+    ]);
+    return null;
+  }
 
   let payload: {
     verse?: {
@@ -95,6 +140,13 @@ export async function fetchVerse(
   try {
     payload = JSON.parse(response.body);
   } catch {
+    // HTTP 200 with a body that is not JSON is the signature of a static host
+    // answering a path it does not have — index.html, status 200. Quoting the
+    // body is what makes that recognisable at a glance.
+    log('lookup-failed', 'The response was HTTP 200 but not JSON.', [
+      ['url', url],
+      ['body', response.body],
+    ]);
     return null;
   }
 
@@ -103,7 +155,21 @@ export async function fetchVerse(
 
   // A withdrawn translation id comes back as 200 with nothing in it. Treat that
   // as a failed retrieval rather than caching an empty English rendering.
-  if (arabic === '' || english === '') return null;
+  if (arabic === '' || english === '') {
+    log(
+      'data-absent',
+      english === ''
+        ? 'The API answered, but this translation carries no text for this āyah — ' +
+            'the usual cause is a translation id that has been withdrawn from the free tier.'
+        : 'The API answered with a translation but no Arabic.',
+      [
+        ['url', url],
+        ['arabic returned', arabic === '' ? 'none' : `${arabic.length} characters`],
+        ['english returned', english === '' ? 'none' : `${english.length} characters`],
+      ],
+    );
+    return null;
+  }
 
   const verse: QuranVerse = {
     reference: key,
@@ -113,6 +179,10 @@ export async function fetchVerse(
     fetchedAt: Date.now(),
   };
   await storage.putQuranVerse(verse);
+  log('hit', 'Retrieved and cached.', [
+    ['url', url],
+    ['english', verse.english],
+  ]);
   return verse;
 }
 

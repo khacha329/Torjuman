@@ -211,7 +211,22 @@ export function narratorSpanIn(
 
 /** Index just past the last «عن» / «وعن» / «حدثنا … عن» in a run of text. */
 function lastIsnadAnchor(before: string): number {
-  const anchor = /(?:^|\s)و?عن\s+/g;
+  // The left boundary is "not an Arabic letter", NOT "whitespace".
+  //
+  // The intent has always been to stop «عن» matching inside a longer word —
+  // «سمعن», «معن» — and `\s` looked like the way to express it. It is not: the
+  // collection prints its ḥadīth number hard against the formula, with no
+  // space,
+  //
+  //     ٤-وعن أبي عبد الله جابر بن عبد الله رضي الله عنهما قال
+  //
+  // so the anchor was preceded by a hyphen and never matched. `narratorIn`
+  // returned null, and because a null narrator makes `searchDorar` bail BEFORE
+  // it issues a request, dorar appeared to be returning nothing at all — no
+  // grading, no takhrīj, no rāwī — when in fact it was never asked. The same
+  // shape of mistake as the ASCII-only `\b` in names.ts: a boundary written for
+  // English against Arabic text.
+  const anchor = /(?:^|[^ء-ي])و?عن\s+/g;
   let found = -1;
   let match: RegExpExecArray | null;
   while ((match = anchor.exec(before)) !== null) {
