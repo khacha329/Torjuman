@@ -2,6 +2,7 @@ import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book, Entity, EntityRange } from '../types';
 import { detectEntities, hadithCollectionFor, unmatchedDelimitedSpans } from './detectEntities';
 import { loadQuranIndex } from './quranIndex';
+import { buildPersonIndex } from '../biography/detectNames';
 
 // Building and rebuilding a book's entities.
 //
@@ -39,14 +40,19 @@ export async function regenerateEntities(
   storage: StorageAdapter,
   book: Book,
 ): Promise<EntityBuildResult> {
-  const [quran, blocks] = await Promise.all([
+  // The name index is read across ALL books, not this one: the names being
+  // marked come from whichever biographical dictionaries are imported, and the
+  // book being scanned is normally not one of them.
+  const [quran, blocks, people] = await Promise.all([
     loadQuranIndex(),
     storage.listBlocks(book.id),
+    storage.listBiographyEntries(),
   ]);
 
   const entities = detectEntities(book.id, blocks, {
     quran,
     hadithCollection: book.hadithCollection ?? hadithCollectionFor(book.title),
+    people: buildPersonIndex(people),
   });
 
   await storage.clearEntities(book.id);

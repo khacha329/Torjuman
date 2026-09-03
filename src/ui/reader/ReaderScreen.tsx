@@ -11,6 +11,7 @@ import { MarginMenu } from './MarginMenu';
 import { DictionarySheet, type GlossState } from './DictionarySheet';
 import { BiographySheet } from './BiographySheet';
 import { ensureBiographyIndexes } from '../../biography/service';
+import { ensureNarratorSources } from '../../biography/narratorService';
 import { glossWord } from '../../translation/gloss';
 import {
   loadDictionary,
@@ -25,6 +26,14 @@ import {
   markableByBlock,
 } from '../../quran/entityService';
 import { EntitySheet } from './EntitySheet';
+import { useSharh } from './useSharh';
+import { useBatchTranslate } from './useBatchTranslate';
+import { BatchProposal, BatchRunning } from './BatchTranslateBar';
+import {
+  commentaryRange,
+  estimateBatch,
+  type BatchEstimate,
+} from '../../translation/hadithRange';
 import { Button, LinkButton, Spinner } from '../common';
 import { BlockList, type BlockListHandle } from './BlockList';
 import { CardPanel, type PanelScope } from './CardPanel';
@@ -57,7 +66,7 @@ function useIsWide(): boolean {
 }
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
-  const { storage, settings, updateSettings } = useApp();
+  const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
   const isWide = useIsWide();
 
   const [book, setBook] = useState<Book | null>(null);
@@ -122,6 +131,36 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const translator = useTranslator(bookId, blocks, entities);
   const marks = useMarks(bookId, blocks);
   const explanations = useExplanations(bookId, blocks);
+  const sharh = useSharh(bookId, blocks);
+  const batch = useBatchTranslate(translator.translate);
+
+  /**
+   * A batch that has been costed but not started.
+   *
+   * Held separately from the run itself so the estimate can be shown and
+   * declined: the amendment's requirement is that the price is seen BEFORE
+   * anything is spent, which means a state between asking and running.
+   */
+  const [batchProposal, setBatchProposal] = useState<{
+    range: Block[];
+    estimate: BatchEstimate;
+  } | null>(null);
+
+  const proposeBatch = useCallback(
+    (matnBlockId: string) => {
+      const range = commentaryRange(blocks, matnBlockId);
+      if (range.length === 0) return;
+      setBatchProposal({
+        range,
+        estimate: estimateBatch(range, {
+          model: activeProfile.model,
+          systemPrompt: activeProfile.systemPrompt,
+          glossary,
+        }),
+      });
+    },
+    [blocks, activeProfile.model, activeProfile.systemPrompt, glossary],
+  );
 
   const [marginMenu, setMarginMenu] = useState<{
     block: Block;
@@ -184,10 +223,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     [dictionary],
   );
 
-  /** Translation cards and note cards share the panel. */
+  /** Every card kind shares the panel, and the anchor fields order them. */
   const allCards = useMemo<Card[]>(
-    () => [...translator.cards, ...marks.noteCards, ...explanations.cards],
-    [translator.cards, marks.noteCards, explanations.cards],
+    () => [...translator.cards, ...marks.noteCards, ...explanations.cards, ...sharh.cards],
+    [translator.cards, marks.noteCards, explanations.cards, sharh.cards],
   );
 
   const editNote = useCallback(
@@ -331,6 +370,11 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     // whether the action has anything to search.
     void ensureBiographyIndexes(storage).then(({ indexed }) => {
       if (!cancelled) setBiographyAvailable(indexed);
+    });
+    // Taqrīb is read from its body rather than its contents, so it is built
+    // here rather than by the index above, which refuses it — correctly.
+    void ensureNarratorSources(storage).then(({ available }) => {
+      if (!cancelled && available) setBiographyAvailable(true);
     });
     return () => {
       cancelled = true;
@@ -627,17 +671,20 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       onToggleCollapse={(card) => {
         if (card.kind === 'note') void marks.setCollapsed(card.markId, !card.collapsed);
         else if (card.kind === 'explanation') void explanations.setCollapsed(card, !card.collapsed);
+        else if (card.kind === 'sharh') void sharh.setCollapsed(card, !card.collapsed);
         else void translator.setCollapsed(card, !card.collapsed);
       }}
       onCollapseAll={(collapsed) => {
         void translator.setAllCollapsed(collapsed);
         for (const card of marks.noteCards) void marks.setCollapsed(card.markId, collapsed);
         for (const card of explanations.cards) void explanations.setCollapsed(card, collapsed);
+        for (const card of sharh.cards) void sharh.setCollapsed(card, collapsed);
       }}
       onRetranslate={(card, options) => void translator.retranslate(card, options)}
       onDelete={(card) => {
         if (card.kind === 'note') void marks.removeMark(card.markId);
         else if (card.kind === 'explanation') void explanations.remove(card);
+        else if (card.kind === 'sharh') void sharh.remove(card);
         else void translator.remove(card);
       }}
       onEditNote={(card) => void editNote(card)}
@@ -714,6 +761,49 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         </p>
       )}
 
+      {/* A sharḥ lookup that found nothing says so here rather than producing an
+          empty card. Not every ḥadīth in one collection is commented on in
+          another, so this is a normal answer and reads as one. */}
+      {sharh.notice && (
+        <p className="flex shrink-0 items-center gap-2 border-b border-rule bg-parchment px-3 py-1.5 text-[11px] text-muted">
+          {sharh.notice}
+          <button
+            onClick={() => sharh.setNotice(null)}
+            className="ml-auto rounded px-1.5 hover:bg-rule"
+          >
+            Dismiss
+          </button>
+        </p>
+      )}
+
+      {/* Costed, not started. Nothing is spent until the second tap. */}
+      {batchProposal && !batch.progress?.running && (
+        <BatchProposal
+          estimate={batchProposal.estimate}
+          model={activeProfile.model}
+          onStart={() => {
+            const range = batchProposal.range;
+            setBatchProposal(null);
+            void batch.run(range);
+          }}
+          onCancel={() => setBatchProposal(null)}
+        />
+      )}
+
+      {batch.progress && (
+        <BatchRunning
+          progress={batch.progress}
+          onStop={batch.cancel}
+          onDismiss={batch.dismiss}
+        />
+      )}
+
+      {sharh.busy && (
+        <p className="shrink-0 border-b border-rule bg-parchment px-3 py-1.5 text-[11px] text-muted">
+          Searching the commentary for this ḥadīth…
+        </p>
+      )}
+
       <div className="flex min-h-0 flex-1">
         {/* The rail's width, reserved rather than floated over.
             The Arabic column must measure the same with a selection as
@@ -741,10 +831,15 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               markers={markers}
               entitiesByBlock={entitiesByBlock}
               onEntityTap={(entity, anchorElement) => {
-                // A narrator is a name, so it opens the biographical lookup
-                // rather than the verse/ḥadīth sheet. `label` is the name as
-                // printed; `reference` is its folded form.
-                if (entity.type === 'narrator') {
+                // A name opens the biographical lookup rather than the
+                // verse/ḥadīth sheet — both kinds of it. `label` is the name as
+                // the book printed it; `reference` is its folded form.
+                //
+                // The selection passed is the printed form deliberately: the
+                // lookup re-folds it, and the sheet's header shows the reader
+                // the words they actually tapped rather than a normalised
+                // string they never wrote.
+                if (entity.type === 'narrator' || entity.type === 'person') {
                   setBiography({
                     selection: entity.label ?? entity.reference,
                     anchor: anchorElement,
@@ -957,6 +1052,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           }
           onClear={(block) => void marks.clearBlock(block)}
           onAddNote={(block) => void addNoteToBlock(block)}
+          onTranslateAll={(block) => proposeBatch(block.id)}
           onClose={() => setMarginMenu(null)}
         />
       )}
@@ -980,6 +1076,19 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             if (!block) return;
             void runTranslateBlock(block);
           }}
+          // The matn as this book prints it is the search key. Not the
+          // reference: the commentary numbers its ḥadīth on its own collection's
+          // scheme, and no arithmetic connects the two.
+          onSharh={(work) => {
+            void sharh.lookup(
+              entitySheet.entity,
+              work,
+              entityText(entitySheet.entity, blocks),
+            );
+          }}
+          // The entity is anchored on the matn block, which is exactly where a
+          // commentary range starts.
+          onTranslateAll={() => proposeBatch(entitySheet.entity.startBlockId)}
         />
       )}
 

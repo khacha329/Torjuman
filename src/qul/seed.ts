@@ -1,6 +1,7 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { QulEntry, QulResource } from '../types';
 import { inspectQulBytes } from './importResource';
+import { recordRetrieval } from '../app/retrievalLog';
 
 // QUL resources that install themselves on first boot, when present.
 //
@@ -46,6 +47,22 @@ export interface SeedEntry {
   version: number;
   /** Shown in Settings before anything is fetched. */
   approxBytes: number;
+  /**
+   * Whether this file is committed to the repository and therefore expected in
+   * every build.
+   *
+   * This is the distinction that makes a missing file loud. Both states are
+   * legitimate and they fail identically at the network layer — a 404 — so
+   * without saying which was intended, a resource that was supposed to ship and
+   * silently did not looks exactly like one that was deliberately left out. The
+   * first is a deployment bug; the second is the licence being respected.
+   *
+   *   true   committed; a 404 is a BUG and is reported loudly
+   *   false  not redistributable; a 404 is the expected state and is quiet
+   */
+  bundled: boolean;
+  /** Why `bundled` is what it is. Shown in Settings for the ones that are not. */
+  licence: string;
 }
 
 /**
@@ -62,10 +79,51 @@ export interface SeedEntry {
  * Topics tab simply does not appear until it is added.
  */
 export const SEED_MANIFEST: SeedEntry[] = [
-  { slug: 'muyassar', file: 'ar-tafsir-muyassar.json', version: 1, approxBytes: 2_370_000 },
-  { slug: 'matching-ayah', file: 'matching-ayah.json', version: 1, approxBytes: 378_000 },
-  { slug: 'surah-info-en', file: 'surah-info-en.json', version: 1, approxBytes: 954_000 },
+  {
+    slug: 'matching-ayah',
+    file: 'matching-ayah.json',
+    version: 1,
+    approxBytes: 378_000,
+    bundled: true,
+    // Not a text. Every value is a computed similarity measurement — an ayah
+    // key, a word count, a coverage percentage, word offsets — produced by
+    // QUL's own matching pass over the muṣḥaf. There is no third party's
+    // writing in the file to redistribute.
+    licence: 'Computed matching data, no third-party text. Committed.',
+  },
+  {
+    slug: 'muyassar',
+    file: 'ar-tafsir-muyassar.json',
+    version: 1,
+    approxBytes: 2_370_000,
+    bundled: false,
+    // at-Tafsīr al-Muyassar is a King Fahd Complex production of the 2000s,
+    // not a classical text out of copyright. Whether it may be redistributed
+    // is a question about that specific resource's terms, and the export
+    // carries no licence metadata to answer it from.
+    licence:
+      'at-Tafsīr al-Muyassar, King Fahd Complex, modern. Redistribution terms ' +
+      'not established — install it yourself from QUL.',
+  },
+  {
+    slug: 'surah-info-en',
+    file: 'surah-info-en.json',
+    version: 1,
+    approxBytes: 954_000,
+    bundled: false,
+    // The English sūrah introductions in this export are Mawdūdī's, from the
+    // Tafhīm al-Qurʾān prefaces — the "Name / Period of Revelation / Theme and
+    // Subject Matter" structure is his. He died in 1979, so this is in
+    // copyright in every jurisdiction that matters, however widely it is
+    // reproduced online.
+    licence:
+      'Mawdūdī, Tafhīm al-Qurʾān sūrah introductions — in copyright. ' +
+      'Install it yourself from QUL.',
+  },
 ];
+
+/** The subset that must be present in a correctly built deployment. */
+export const BUNDLED_SEEDS = SEED_MANIFEST.filter((entry) => entry.bundled);
 
 /** Total the bundled set will occupy, for Settings to state up front. */
 export const SEED_APPROX_BYTES = SEED_MANIFEST.reduce(
@@ -91,15 +149,25 @@ export interface SeedOutcome {
   /** Already present at the current version. */
   upToDate: string[];
   /**
-   * Slugs whose file is not in this build at all — a 404.
+   * Slugs deliberately not shipped, whose file 404s as expected.
    *
-   * Distinct from `failed` on purpose. public/qul/ is gitignored, so a build
-   * made from a clean checkout legitimately ships none of these, and that is
-   * not an error to report to the reader: the resource is simply not installed
-   * and its tab does not appear. Only a real failure — a network drop, a
-   * corrupt file — belongs in `failed`.
+   * Distinct from `failed` on purpose. The licensed resources are gitignored,
+   * so every build legitimately ships without them, and that is not an error to
+   * report to the reader: the resource is simply not installed and its tab does
+   * not appear.
    */
   absent: string[];
+  /**
+   * Slugs that ARE committed and still 404ed — a deployment fault.
+   *
+   * This is the case that used to be indistinguishable from `absent`, and it
+   * cost a debugging session: a resource can vanish from a build for reasons
+   * that have nothing to do with the network — a .gitignore pattern matching
+   * more than it meant to, a file never added, a `globIgnores` line — and the
+   * app then renders an empty tab as though that were the intended state.
+   * Nothing here is quiet.
+   */
+  missing: string[];
   /** slug → why it could not be installed. */
   failed: Record<string, string>;
 }
@@ -155,6 +223,7 @@ export async function seedQulResources(
     installed: [],
     upToDate: SEED_MANIFEST.filter((entry) => !pending.includes(entry)).map((e) => e.slug),
     absent: [],
+    missing: [],
     failed: {},
   };
   if (pending.length === 0) return outcome;
@@ -167,10 +236,22 @@ export async function seedQulResources(
       report('fetching');
       const response = await fetch(`${baseUrl}qul/${entry.file}`);
 
-      // Not shipped in this build. public/qul/ is gitignored, so this is the
-      // normal state of a clean checkout — recorded quietly, not as a failure.
       if (response.status === 404) {
-        outcome.absent.push(entry.slug);
+        if (entry.bundled) {
+          // Committed, and not there. Say so on the console as well as in the
+          // outcome: whoever is looking at a blank tab on a tablet has the
+          // console available and the Settings panel two taps away, and this
+          // is the one line that names the cause rather than the symptom.
+          console.error(
+            `[seed] ${entry.file} is committed to the repository but returned 404 ` +
+              `from ${baseUrl}qul/. It did not reach this build — check .gitignore ` +
+              `and that the file was committed.`,
+          );
+          outcome.missing.push(entry.slug);
+        } else {
+          // Deliberately not shipped: the licence is not ours to grant. Normal.
+          outcome.absent.push(entry.slug);
+        }
         continue;
       }
       if (!response.ok) {
@@ -218,6 +299,33 @@ export async function seedQulResources(
         caught instanceof Error ? caught.message : String(caught);
     }
   }
+
+  recordRetrieval({
+    kind: 'seed',
+    outcome:
+      outcome.missing.length > 0 || Object.keys(outcome.failed).length > 0
+        ? 'lookup-failed'
+        : outcome.absent.length > 0
+          ? 'data-absent'
+          : 'hit',
+    query: `${pending.length} pending of ${SEED_MANIFEST.length} bundled resources`,
+    summary:
+      outcome.missing.length > 0
+        ? `${outcome.missing.length} committed resource(s) did not reach this build.`
+        : `${outcome.installed.length} installed, ${outcome.absent.length} not shipped.`,
+    detail: [
+      ['base', baseUrl],
+      ['installed', outcome.installed.join(', ') || 'none'],
+      ['missing (a bug)', outcome.missing.join(', ') || 'none'],
+      ['not shipped (by licence)', outcome.absent.join(', ') || 'none'],
+      [
+        'failed',
+        Object.entries(outcome.failed)
+          .map(([slug, why]) => `${slug}: ${why}`)
+          .join(' | ') || 'none',
+      ],
+    ],
+  });
 
   return outcome;
 }

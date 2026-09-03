@@ -3315,6 +3315,658 @@ console.log('\n=== Biography entries are bounded by the work\'s own numbering ==
   check('  pages not yet fetched are reported', reading.missingPages.length, 29);
 }
 
+console.log('\n=== Two biographical works stay scoped to their own book (Amendment 17 Part 4) ===');
+
+{
+  const { buildBiographyIndex } = await import('../src/biography/buildIndex');
+  const { entryBlocks } = await import('../src/biography/service');
+  const { lookupBiography } = await import('../src/biography/lookup');
+
+  // ---------------------------------------------------------------------
+  // Built to collide.
+  //
+  // The reported symptom was a Companion's entry showing text from a different
+  // imported book, and the three ways that can happen all reduce to the same
+  // mistake: identifying a page or a block by something less than the whole
+  // key. So the two works here agree on everything EXCEPT the book:
+  //
+  //   * the same page indices        (1987, 2018)
+  //   * the same entry number        (٣٨٣٠)
+  //   * the same block ordinals      (:0, :1, …)
+  //   * the same person's name       عمر بن الخطاب
+  //
+  // Ids therefore differ only by their bookId prefix. Any lookup that keys on
+  // page-and-index, or on a block ordinal, or that forgets to pass the book at
+  // all, silently reads the other work — and the assertions below are what
+  // notice.
+  // ---------------------------------------------------------------------
+  const makeToc = (bookId: string, marker: string) =>
+    [
+      ['٣٨٣٠ - عمر بن الخطاب', 1987],
+      ['٣٨٣١ - عمرو بن سالم الخزاعي', 2018],
+    ]
+      .map(([title, pageIndex], order) => ({
+        id: `${bookId}|toc${order}`,
+        bookId,
+        parentId: null,
+        title: title as string,
+        pageIndex: pageIndex as number,
+        order,
+        depth: 0,
+      }))
+      .concat(
+        Array.from({ length: 120 }, (_, index) => ({
+          id: `${bookId}|pad${index}`,
+          bookId,
+          parentId: null,
+          title: `${9000 + index} - ${marker} بن أحمد ${index}`,
+          pageIndex: 3000 + index,
+          order: 100 + index,
+          depth: 0,
+        })),
+      );
+
+  const usd = buildBiographyIndex('usd', makeToc('usd', 'محمد') as never, []);
+  const isaba = buildBiographyIndex('isaba', makeToc('isaba', 'علي') as never, []);
+  expect('both works index', usd.entries.length > 0 && isaba.entries.length > 0, '');
+
+  // One page store for both books, keyed exactly as IdbStorageAdapter keys it:
+  // `${bookId}:p${pageIndex}` for the page, and the page's own id for its
+  // blocks. Built from each work's own contents so that EVERY entry resolves to
+  // real blocks — a store covering only the two hand-written pages would leave
+  // the other 120 entries reading nothing, and a test that asserts over an
+  // empty list passes for the wrong reason.
+  //
+  // The body names its own book, so a crossed wire is legible in the failure
+  // message rather than merely counted.
+  const pagesOf = (bookId: string, toc: ReturnType<typeof makeToc>) =>
+    toc.map((node) => ({
+      id: `${bookId}:p${node.pageIndex}`,
+      pageIndex: node.pageIndex,
+      volume: 1,
+      printPage: 137,
+      blocks: [
+        {
+          id: `${bookId}:p${node.pageIndex}:0`,
+          type: 'chapter_title',
+          text: `[${node.title}]`,
+        },
+        {
+          id: `${bookId}:p${node.pageIndex}:1`,
+          type: 'body',
+          text: `نص من كتاب ${bookId}`,
+        },
+      ],
+    }));
+
+  const allPages = new Map(
+    [
+      ...pagesOf('usd', makeToc('usd', 'محمد')),
+      ...pagesOf('isaba', makeToc('isaba', 'علي')),
+    ].map((page) => [page.id, page] as const),
+  );
+
+  const storage = {
+    getPage: async (bookId: string, pageIndex: number) => allPages.get(`${bookId}:p${pageIndex}`),
+    listBlocksForPage: async (pageId: string) => allPages.get(pageId)?.blocks ?? [],
+  };
+
+  // Every entry of both works is resolved, but asserted in aggregate: 244
+  // near-identical "ok" lines would bury the three checks in this file that
+  // actually distinguish one book from the other.
+  for (const [label, built] of [
+    ['Usd al-Ghāba', usd],
+    ['al-Iṣāba', isaba],
+  ] as const) {
+    const strays: string[] = [];
+    let read = 0;
+    for (const entry of built.entries) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const reading = await entryBlocks(storage as any, entry as any);
+      read += reading.blocks.length;
+      for (const block of reading.blocks) {
+        if (!block.id.startsWith(`${entry.bookId}:`)) {
+          strays.push(`${entry.entryNumber ?? entry.name} → ${block.id}`);
+        }
+      }
+    }
+    expect(`${label}: ${built.entries.length} entries resolved to real blocks`, read > 0, '');
+    check(`  every one of those ${read} blocks belongs to its own book`, strays.slice(0, 3), []);
+  }
+
+  // And the same collision at the lookup layer: one query, both works, grouped
+  // rather than merged, with each hit still carrying the book it came from.
+  const books = [
+    { id: 'usd', title: 'أسد الغابة' },
+    { id: 'isaba', title: 'الإصابة' },
+  ];
+  const both = lookupBiography(
+    'عمر بن الخطاب',
+    [...usd.entries, ...isaba.entries] as never,
+    books as never,
+  );
+  check('one name in two works yields two hits', both.total, 2);
+  check('  grouped by work rather than merged', both.groups.length, 2);
+  expect(
+    '  and each hit keeps its own bookId',
+    both.groups.every((group) => group.hits.every((hit) => hit.entry.bookId === group.bookId)),
+    '',
+  );
+}
+
+console.log('\n=== Names are marked inline, precisely (Amendment 17 Part 5) ===');
+
+{
+  const { deriveAliases } = await import('../src/biography/names');
+  const { buildPersonIndex, detectPersonSpans } = await import('../src/biography/detectNames');
+
+  const entryFor = (name: string, id: string) => ({
+    id,
+    bookId: 'usd',
+    name,
+    nameNormalized: deriveAliases(name)[0]?.value ?? '',
+    aliases: deriveAliases(name),
+    pageIndex: 1,
+    endPageIndex: 1,
+    entryNumber: null,
+    blockIds: [],
+    volume: 1,
+    printPage: 1,
+  });
+
+  const index = buildPersonIndex([
+    entryFor('عمر بن الخطاب بن نفيل القرشي العدوي', 'e1'),
+    entryFor('أبو حفص عمر بن عبد العزيز', 'e2'),
+    entryFor('أبان بن عثمان', 'e3'),
+  ] as never);
+
+  // The rule that keeps the page readable.
+  expect('a bare ism is never indexed', !index.byAlias.has('عمر'), '(محمد would colour half the page)');
+  expect('  nor a nisba', !index.byAlias.has('القرشي'), '(that is a clan, not a man)');
+  expect('ism + nasab is indexed', index.byAlias.has('عمر بن الخطاب'), '');
+  expect('  and a kunya', index.byAlias.has('ابو حفص'), '');
+
+  // ---- offsets must land on the ORIGINAL text --------------------------
+  //
+  // BlockText renders block.text through these offsets and the rendered
+  // characters must equal block.text exactly, because selection anchors are
+  // resolved by counting characters in the DOM. An offset that is off by one
+  // does not look wrong — it silently mis-anchors every card in the block.
+  const text = 'قال عمر بن الخطاب رضي الله عنه في هذا الباب وقال أبو حفص أيضا';
+  const spans = detectPersonSpans(text, index);
+
+  check('two names found in the sentence', spans.length, 2);
+  check('  the first is the full ism+nasab', text.slice(spans[0].start, spans[0].end), 'عمر بن الخطاب');
+  check('  the second is the kunya', text.slice(spans[1].start, spans[1].end), 'أبو حفص');
+  expect(
+    '  the honorific is left outside the span',
+    !text.slice(spans[0].start, spans[0].end).includes('رضي'),
+    '',
+  );
+  expect('  spans do not overlap', spans[0].end <= spans[1].start, '');
+
+  // ابن and بن are the same word written two ways, and the index holds only
+  // the folded form. Per-token folding has to reproduce that or the commonest
+  // written form of every nasab silently fails to match.
+  const ibn = detectPersonSpans('روى عمر ابن الخطاب حديثا', index);
+  check('«ابن» matches an index built from «بن»', ibn.length, 1);
+  check('  and the span is the printed form', 'روى عمر ابن الخطاب حديثا'.slice(ibn[0].start, ibn[0].end), 'عمر ابن الخطاب');
+
+  // Precision, restated as behaviour rather than as a lookup.
+  check('a lone given name is not marked', detectPersonSpans('وقال عمر رحمه الله', index).length, 0);
+  check('  nor a lone nisba', detectPersonSpans('وهو القرشي المعروف', index).length, 0);
+  check(
+    '  and a one-word full name is treated as a bare ism',
+    detectPersonSpans('حدثنا أبان عن غيره', index).length,
+    0,
+  );
+
+  // Longest-first at a shared starting word.
+  const both = buildPersonIndex([
+    entryFor('عمر بن الخطاب', 'e4'),
+    entryFor('عمر بن عبد العزيز بن مروان', 'e5'),
+  ] as never);
+  const compoundText = 'عن عمر بن عبد العزيز رحمه الله';
+  const longest = detectPersonSpans(compoundText, both);
+  check('the longer alias wins at a shared first word', longest.length, 1);
+
+  // A construct father's name must not be cut in half. «عبد العزيز» and «أبي
+  // طالب» are single names in two words, and marking only the first colours
+  // half of one — which reads as a rendering bug rather than as a short match.
+  check(
+    '  a compound father\'s name is marked whole',
+    compoundText.slice(longest[0].start, longest[0].end),
+    'عمر بن عبد العزيز',
+  );
+  // Asserted by value rather than by kind: for this name the ism+nasab and the
+  // full form are the same four words, and de-duplication keeps the more
+  // specific of the two. What matters is that «علي بن ابو طالب» is derived at
+  // all — the truncated «علي بن ابو» was the bug.
+  const aliAliases = deriveAliases('علي بن أبي طالب');
+  expect(
+    '  «علي بن أبي طالب» derives whole, not «علي بن أبو»',
+    aliAliases.some((alias) => alias.value === 'علي بن ابو طالب'),
+    '',
+  );
+  expect(
+    '  and the truncated form is not derived',
+    !aliAliases.some((alias) => alias.value === 'علي بن ابو'),
+    '',
+  );
+  const ali = buildPersonIndex([entryFor('علي بن أبي طالب', 'e6')] as never);
+  const aliText = 'قال علي بن أبي طالب رضي الله عنه';
+  const aliSpans = detectPersonSpans(aliText, ali);
+  check('  and matches in running text', aliText.slice(aliSpans[0].start, aliSpans[0].end), 'علي بن أبي طالب');
+
+  // An empty index is the normal state before any biographical work is
+  // imported, and must cost nothing and mark nothing.
+  const { EMPTY_PERSON_INDEX } = await import('../src/biography/detectNames');
+  check('no imported dictionary marks nothing', detectPersonSpans(text, EMPTY_PERSON_INDEX).length, 0);
+}
+
+console.log('\n=== A ḥadīth finds its commentary by its own words (Amendment 17 Part 7) ===');
+
+{
+  const { matnShingles, findSharh, isCommentaryWork } = await import('../src/retrieval/sharh');
+
+  // Classification is by Shamela's own category, so no work is named in code.
+  expect(
+    'a reference work in «شروح الحديث» is a commentary',
+    isCommentaryWork({ role: 'reference', category: 'شروح الحديث' } as never),
+    '',
+  );
+  expect(
+    '  a book being READ is not, whatever its category',
+    !isCommentaryWork({ role: 'reading', category: 'شروح الحديث' } as never),
+    '',
+  );
+  expect(
+    '  and neither is a reference work of another kind',
+    !isCommentaryWork({ role: 'reference', category: 'التراجم والطبقات' } as never),
+    '',
+  );
+
+  const matn =
+    'إنما الأعمال بالنيات وإنما لكل امرئ ما نوى فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله';
+
+  const shingles = matnShingles(matn);
+  expect('shingles are drawn from the matn', shingles.length > 1, '');
+  check('  each is four words', [...new Set(shingles.map((s) => s.split(' ').length))], [4]);
+  check('  and none repeats', shingles.length, new Set(shingles).size);
+  // Spread, not consecutive: a narration whose OPENING differs must still
+  // match on the rest, which only works if the shingles are not all from the
+  // first clause.
+  expect(
+    '  drawn from across the matn, not just its opening',
+    !normalize(matn).startsWith(shingles[shingles.length - 1]),
+    '(otherwise a differing opening formula defeats every shingle at once)',
+  );
+
+  // ---- a commentary to search --------------------------------------------
+  const mk = (order: number, type: string, text: string) => ({
+    id: `sharh:b${order}`,
+    bookId: 'sharh',
+    pageId: 'sharh:p5',
+    order,
+    type,
+    text,
+    normalized: normalize(text),
+  });
+
+  const blocks = [
+    mk(9, 'body', 'باب الإخلاص'),
+    // The commentary quotes the matn — with a differing opening, which is the
+    // case an exact substring search cannot handle.
+    mk(10, 'hadith_matn', `عن عمر رضي الله عنه قال ${matn} وهذا لفظ البخاري`),
+    mk(11, 'sharh', 'قوله إنما الأعمال بالنيات فيه دليل على أن العمل بلا نية لا يعتد به'),
+    mk(12, 'sharh', 'وقوله فمن كانت هجرته يبين أن الجزاء من جنس العمل'),
+    // The next ḥadīth. Its own matn ends this one's commentary.
+    mk(13, 'hadith_matn', 'وعن عائشة رضي الله عنها قالت حديث آخر لا علاقة له'),
+    mk(14, 'sharh', 'شرح الحديث الذي بعده'),
+    // A decoy: shares ONE formulaic run with the matn and nothing else.
+    mk(20, 'sharh', 'إلى الله ورسوله في موضع آخر من الكتاب'),
+  ];
+
+  const storage = {
+    searchBlocks: async (_bookId: string, query: string, limit: number) =>
+      blocks
+        .filter((block) => block.normalized.includes(query))
+        .slice(0, limit)
+        .map((block) => ({ block, matchStart: 0, matchLength: query.length })),
+    listBlocksForPage: async (pageId: string) =>
+      pageId === 'sharh:p5' ? blocks : [],
+    getPage: async () => undefined,
+  };
+
+  const work = { id: 'sharh', title: 'شرح النووي', role: 'reference', category: 'شروح الحديث' };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const found = await findSharh(storage as any, work as any, matn);
+  expect('the commentary passage is found', found !== null, '');
+  check('  anchored on the block carrying the matn', found!.matnBlock.id, 'sharh:b10');
+  expect('  on more than one independent shingle', found!.shingleHits >= 2, '');
+  check('  the commentary that follows is returned', found!.commentary.length, 2);
+  expect(
+    '  stopping at the NEXT ḥadīth',
+    !found!.commentary.some((block) => block.text.includes('عائشة')),
+    '',
+  );
+  expect(
+    '  and never returning the decoy',
+    found!.matnBlock.id !== 'sharh:b20',
+    '(one shared formulaic run is not a match)',
+  );
+
+  // The precision gate. A matn that shares nothing but a stock phrase must
+  // return nothing rather than a passage about a different ḥadīth.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const miss = await findSharh(storage as any, work as any, 'من حسن إسلام المرء تركه ما لا يعنيه');
+  check('an unrelated ḥadīth finds no passage', miss, null);
+
+  // Too short to key on at all — distinct from "searched and not found".
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check('a matn shorter than one shingle is refused', await findSharh(storage as any, work as any, 'قال'), null);
+}
+
+console.log("\n=== A ḥadīth's commentary range and its cost (Amendment 17 Part 6) ===");
+
+{
+  const { commentaryRange, estimateBatch, formatCost } = await import(
+    '../src/translation/hadithRange'
+  );
+
+  const mk = (
+    order: number,
+    type: string,
+    text: string,
+    hadithNumber: string | null = null,
+  ) => ({ id: `b${order}`, bookId: 'b', pageId: 'b:p1', order, type, text, hadithNumber });
+
+  // The shape that makes the naive rule wrong: Ibn ʿUthaymīn quotes another
+  // ḥadīth inside his commentary, and the parser types it `hadith_matn`
+  // because it IS ḥadīth text. It carries no number, because it is not an
+  // entry in this book.
+  const blocks = [
+    mk(1, 'chapter_title', 'باب الإخلاص'),
+    mk(2, 'hadith_matn', 'إنما الأعمال بالنيات', '1'),
+    mk(3, 'takhrij', 'متفق عليه'),
+    mk(4, 'sharh', 'قوله إنما الأعمال بالنيات أي لا عمل إلا بنية'),
+    mk(5, 'hadith_matn', 'ويشهد له قوله صلى الله عليه وسلم من حسن إسلام المرء', null),
+    mk(6, 'sharh', 'وهذا يبين المقصود'),
+    mk(7, 'quran', 'وما أمروا إلا ليعبدوا الله مخلصين له الدين'),
+    mk(8, 'sharh', 'والآية دالة على ذلك'),
+    mk(9, 'hadith_matn', 'وعن عائشة رضي الله عنها قالت', '2'),
+    mk(10, 'sharh', 'شرح الحديث الثاني'),
+  ];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const range = commentaryRange(blocks as any, 'b2');
+
+  check('the range starts at the matn itself', range[0].id, 'b2');
+  check('  and ends before the next NUMBERED ḥadīth', range[range.length - 1].id, 'b8');
+  check('  covering the whole discussion', range.length, 7);
+  expect(
+    '  passing straight over an unnumbered quoted ḥadīth',
+    range.some((block) => block.id === 'b5'),
+    '(stopping there would cut the commentary in half)',
+  );
+  expect(
+    '  and never reaching the next entry',
+    !range.some((block) => block.id === 'b9'),
+    '',
+  );
+  check('an unknown block id yields no range', commentaryRange(blocks as any, 'nope').length, 0);
+
+  // The last ḥadīth in a book has no terminator and must run to the end.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  check('the last ḥadīth runs to the end of the book', commentaryRange(blocks as any, 'b9').length, 2);
+
+  // ---- cost, before anything is spent ------------------------------------
+  const estimate = estimateBatch(range as never, {
+    model: 'claude-sonnet-5',
+    systemPrompt: 'Translate faithfully.',
+    glossary: [],
+  });
+
+  check('the estimate counts every block in the range', estimate.blocks, 7);
+  expect('  and reports a cost', estimate.costUsd !== null, '');
+  expect(
+    '  charging the system prompt once PER BLOCK',
+    // Each block is its own request, so the fixed overhead is paid seven times.
+    // If it were charged once, input would be barely above the content alone.
+    estimate.inputTokens > range.reduce((n, b) => n + Math.ceil(b.text.length / 3), 0) + 6,
+    '(block-by-block means paying the prompt every time)',
+  );
+  expect('  and expecting more output than input content', estimate.outputTokens > 0, '');
+
+  const dearer = estimateBatch(range as never, {
+    model: 'claude-opus-5',
+    systemPrompt: 'Translate faithfully.',
+    glossary: [],
+  });
+  expect('a dearer model estimates dearer', dearer.costUsd! > estimate.costUsd!, '');
+
+  const unknown = estimateBatch(range as never, {
+    model: 'some-unreleased-model',
+    systemPrompt: '',
+    glossary: [],
+  });
+  check('an unpriced model reports no cost rather than zero', unknown.costUsd, null);
+  check('  and says so', formatCost(unknown.costUsd), 'unknown for this model');
+  check('  a tiny cost is not rounded to $0.00', formatCost(0.0004), 'under $0.01');
+}
+
+console.log('\n=== Taqrīb entries parse out of the body (Amendment 17 Part 3) ===');
+
+{
+  const { parseTaqribEntry, isCrossReference, isTaqribEntry, isTaqrib, parseTaqribBlocks } =
+    await import('../src/biography/taqrib');
+
+  expect('the work is recognised by title', isTaqrib('تقريب التهذيب'), '');
+  expect('  and a different work is not', !isTaqrib('تهذيب الكمال في أسماء الرجال'), '');
+
+  const taqribPages = readdirSync(FIXTURES).filter((name) =>
+    /^taqrib-8609-\d+\.html$/.test(name),
+  );
+
+  if (taqribPages.length === 0) {
+    console.log('  (no Taqrīb fixtures present — skipping; see docs/RESOURCES.md)');
+  } else {
+    const blocks = taqribPages.flatMap((name) => parsePage(read(name), 8609)?.blocks ?? []);
+    const entries = parseTaqribBlocks(blocks as never);
+
+    console.log(`  ${taqribPages.length} pages, ${blocks.length} blocks, ${entries.length} entries`);
+    expect('entries are found in the body', entries.length > 50, '');
+
+    // A cross-reference is a pointer to another entry, not a person, and must
+    // never become a profile with a name and nothing behind it.
+    const crossRefs = blocks.filter((block) => isCrossReference(block.text));
+    expect('cross-references exist in this book', crossRefs.length > 0, '');
+    check(
+      '  and none of them parses as an entry',
+      crossRefs.filter((block) => isTaqribEntry(block.text)).length,
+      0,
+    );
+    check(
+      '  nor yields a profile',
+      crossRefs.filter((block) => parseTaqribEntry(block.text) !== null).length,
+      0,
+    );
+
+    // Coverage, measured rather than asserted at 100%: Ibn Ḥajar is often
+    // silent about a man's death or his kunya, and silence is a correct output.
+    // These floors are set below what was measured so a real regression trips
+    // them while ordinary variation between pages does not.
+    const share = (n: number) => Math.round((100 * n) / entries.length);
+    const withVerdict = entries.filter((e) => e.profile.ibnHajar).length;
+    const withTabaqa = entries.filter((e) => e.profile.generation).length;
+    const withDeath = entries.filter((e) => e.profile.death).length;
+    const withKunya = entries.filter((e) => e.profile.kunya).length;
+
+    console.log(
+      `  verdict ${share(withVerdict)}%  ṭabaqa ${share(withTabaqa)}%  ` +
+        `death ${share(withDeath)}%  kunya ${share(withKunya)}%`,
+    );
+    expect("Ibn Ḥajar's verdict is read for most entries", share(withVerdict) >= 85, '(measured 96.6%)');
+    expect('  and the ṭabaqa for most', share(withTabaqa) >= 75, '(measured 87.4%)');
+
+    // The ṭabaqa must be one of the twelve. A generic «من ال…» match pulled in
+    // «الكوفي», which is a nisba and would have printed as a generation.
+    const ORDINALS = new Set([
+      'الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة',
+      'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة',
+    ]);
+    check(
+      '  every ṭabaqa read is one of the twelve',
+      entries.filter((e) => e.profile.generation && !ORDINALS.has(e.profile.generation.value)).length,
+      0,
+    );
+
+    // Every entry keeps its own paragraph verbatim, so a reading can be checked.
+    check(
+      'every profile carries its source paragraph',
+      entries.filter((e) => e.profile.sources.length === 0).length,
+      0,
+    );
+    expect(
+      '  and nothing is attributed to a source that did not say it',
+      entries.every((e) =>
+        e.profile.sources.every((s) => s.source === 'taqrib' && s.text.includes(e.entryNumber)),
+      ),
+      '',
+    );
+    // A verdict always comes with a statement naming the work it is from.
+    check(
+      '  a verdict always appears in أقوال العلماء too',
+      entries.filter((e) => e.profile.ibnHajar && e.profile.statements.length === 0).length,
+      0,
+    );
+  }
+
+  // The qualified gradings are different judgements from the bare ones and must
+  // not be truncated to them.
+  const graded = parseTaqribEntry('١٢٣- فلان بن فلان الكوفي ثقة حافظ من الثالثة مات سنة عشر');
+  check('a qualified grading is read whole', graded?.profile.ibnHajar?.value, 'ثقة حافظ');
+  check('  the ṭabaqa comes with it', graded?.profile.generation?.value, 'الثالثة');
+  expect('  and the death clause', graded?.profile.death?.value.startsWith('مات سنة'), '');
+  check('  with the nisba as the known-as', graded?.profile.knownAs?.value, 'الكوفي');
+
+  const silent = parseTaqribEntry('١٢٤- فلان بن فلان');
+  expect('an entry with no apparatus still parses', silent !== null, '');
+  check('  and leaves every silent field null', silent?.profile.ibnHajar, null);
+  check('  including the generation', silent?.profile.generation, null);
+}
+
+console.log('\n=== Itqan shards convert, and merge with Taqrīb (Amendment 17 Part 3) ===');
+
+{
+  const { convertItqanProfile, readItqanShard, isItqanShard } = await import(
+    '../src/biography/itqan'
+  );
+  const { mergeProfiles, hasContent } = await import('../src/biography/narratorProfile');
+  const { parseTaqribEntry } = await import('../src/biography/taqrib');
+
+  expect('a shard filename is recognised', isItqanShard('profiles_companion.json'), '');
+  expect('  and so is another grade', isItqanShard('profiles_mostly_reliable.json'), '');
+  expect('  but not the name index', !isItqanShard('by_name.json'), '');
+
+  // Shaped exactly as the real file: "-" is its placeholder for absent, and the
+  // grading per work lives under classical_sources.
+  const raw = {
+    id: 18,
+    full_name: 'علقمة بن وقاص الليثي',
+    kunya: 'أبو يحيى',
+    laqab: '-',
+    nasab: 'الليثي ، العتواري ، المدني',
+    tabaqat: 'الثانية',
+    city: 'المدينة',
+    death: '-',
+    grade_ar: 'له صحبة',
+    dhahabi: 'ثقة',
+    namings: ['علقمة', 'علقمة بن وقاص', 'علقمة بن وقاص الليثي', '-'],
+    classical_sources: {
+      taqrib: { entry_id: 4685, grade_ar: 'صدوق' },
+      thiqat: { entry_id: 4560, grade_ar: 'ذكره ابن حبان في الثقات' },
+      jarh: { entry_id: 2259, grade_ar: '' },
+      brand_new_work: { entry_id: 1, grade_ar: 'ثقة' },
+    },
+  };
+
+  const profile = convertItqanProfile(raw as never)!;
+  expect('a profile converts', profile !== null, '');
+  check('  the kunya is read', profile.kunya?.value, 'أبو يحيى');
+  check('  the nasab becomes the lineage', profile.lineage?.value, 'الليثي ، العتواري ، المدني');
+  check('  the ṭabaqa is read', profile.generation?.value, 'الثانية');
+  check('  the city becomes residence', profile.residence?.value, 'المدينة');
+
+  // "-" means the file has no value. Printing it would claim the source
+  // addressed the question and had nothing to say, which is a different claim.
+  check('  a "-" placeholder is absent, not a value', profile.laqab ?? profile.knownAs, null);
+  check('  and so is a "-" death', profile.death, null);
+
+  // The card's «حكم ابن حجر» row must be Ibn Ḥajar's, not an aggregate that
+  // happens to sit at the top level of the file.
+  check("  Ibn Ḥajar's row comes from the taqrib cross-reference", profile.ibnHajar?.value, 'صدوق');
+  expect(
+    "  never from the shard's own consolidated grade",
+    profile.ibnHajar?.value !== 'له صحبة',
+    '(that is Itqan aggregating 22 works, not Ibn Ḥajar speaking)',
+  );
+
+  const works = profile.statements.map((s) => s.work);
+  expect('every work that graded him appears', works.includes('تقريب التهذيب'), '');
+  expect('  including adh-Dhahabī', works.includes('الذهبي'), '');
+  expect('  a work with an empty grade is skipped', !works.includes('الجرح والتعديل'), '');
+  expect(
+    '  and an unknown work prints as itself rather than vanishing',
+    works.includes('brand_new_work'),
+    '',
+  );
+
+  expect('namings are folded for lookup', profile.namings.length >= 3, '');
+  expect('  with the "-" placeholder dropped', !profile.namings.includes('-'), '');
+
+  check('a row with no name converts to nothing', convertItqanProfile({} as never), null);
+
+  // ---- whole shard ------------------------------------------------------
+  const shard = readItqanShard({ '18': raw, '19': {}, '20': { full_name: 'فلان' } }, 'profiles_x.json');
+  check('the shard converts what it can', shard.profiles.length, 2);
+  check('  counting what it could not', shard.skipped, 1);
+  check('  ids come from the file’s own keys', shard.profiles[0].id, 'itqan:18');
+  check('  and every row remembers its file', shard.profiles[0].shard, 'profiles_x.json');
+
+  let threw = '';
+  try {
+    readItqanShard([1, 2, 3] as never, 'x.json');
+  } catch (error) {
+    threw = error instanceof Error ? error.message : String(error);
+  }
+  expect('a file that is not a shard is refused', threw.length > 0, '');
+
+  // ---- merging the two sources ------------------------------------------
+  const fromTaqrib = parseTaqribEntry('٤٦٨٥- علقمة بن وقاص الليثي ثقة من الثانية')!.profile;
+  const merged = mergeProfiles(fromTaqrib, profile);
+
+  expect('the merged card has content', hasContent(merged), '');
+  // Taqrīb is primary: the verdict is Ibn Ḥajar's own wording in his own book,
+  // where Itqan's is a third party's cross-reference to it.
+  check("Ibn Ḥajar's own book wins his own row", merged.ibnHajar?.value, 'ثقة');
+  check('  and its source is recorded as such', merged.ibnHajar?.source, 'taqrib');
+  // Everything Taqrīb is silent about is filled from Itqan, attributed to it.
+  check('Itqan fills what Taqrīb does not say', merged.residence?.value, 'المدينة');
+  check('  attributed to Itqan', merged.residence?.source, 'itqan');
+  expect(
+    'both works’ statements survive the merge',
+    merged.statements.some((s) => s.source === 'taqrib') &&
+      merged.statements.some((s) => s.source === 'itqan'),
+    '(a disagreement between them is content, not noise)',
+  );
+
+  // The same verdict from the same work twice is one fact, not two rows.
+  const twice = mergeProfiles(profile, profile);
+  check('a repeated statement is not duplicated', twice.statements.length, profile.statements.length);
+}
+
 console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) ===');
 
 {
@@ -3361,10 +4013,10 @@ console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) =
   }) as typeof globalThis.fetch;
 
   try {
-    // public/qul/ is gitignored — the resources are licensed by their
-    // publishers and are not redistributed here — so a clean checkout has
-    // none of them. That is the supported "absent" path, tested below; the
-    // full install path only runs where the files are actually present.
+    // public/qul/ is gitignored per file rather than wholesale: the computed
+    // matching data ships, the two copyrighted texts do not. So a clean
+    // checkout has some of these and not others, and the install checks below
+    // only run where the actual files happen to be present.
     const havePresent = SEED_MANIFEST.filter((entry) =>
       existsSync(join(process.cwd(), 'public', 'qul', entry.file)),
     );
@@ -3373,8 +4025,16 @@ console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) =
         (havePresent.length === SEED_MANIFEST.length ? '' : ' — install checks skipped'),
     );
 
-    // Absent is a quiet, supported state and must never be reported as a
-    // failure: a public build legitimately ships none of these.
+    // A 404 means two opposite things depending on the resource, and Amendment
+    // 17 Part 1 exists because they were being reported identically:
+    //
+    //   not bundled  the licence is not ours to grant, the file was never
+    //                shipped, and its absence is the intended state — quiet.
+    //   bundled      the file IS committed, so a 404 means it did not reach the
+    //                build. A deployment fault, and loud.
+    //
+    // Both arrive here as the same HTTP status, so nothing but the manifest can
+    // tell them apart. That is what this asserts.
     {
       const bare = makeQulStorage();
       const realExists = globalThis.fetch;
@@ -3382,9 +4042,20 @@ console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const none = await seedQulResources(bare as any, '/');
       globalThis.fetch = realExists;
+
+      const shipped = SEED_MANIFEST.filter((entry) => entry.bundled);
+      const licensed = SEED_MANIFEST.filter((entry) => !entry.bundled);
+      expect('the manifest has both kinds to tell apart', shipped.length > 0 && licensed.length > 0, '');
+
       check('a build with no resource files installs nothing', none.installed.length, 0);
-      check('  reporting them absent', none.absent.length, SEED_MANIFEST.length);
-      check('  and NOT as failures', Object.keys(none.failed).length, 0);
+      check('  the licensed ones are reported absent', none.absent.length, licensed.length);
+      check('  the committed ones are reported MISSING', none.missing.length, shipped.length);
+      expect(
+        '  and the two lists do not overlap',
+        none.absent.every((slug) => !none.missing.includes(slug)),
+        '(a slug reported both ways would defeat the distinction)',
+      );
+      check('  neither is reported as a failure', Object.keys(none.failed).length, 0);
       check('  leaving no resource rows behind', bare.resources.size, 0);
     }
 

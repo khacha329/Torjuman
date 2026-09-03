@@ -37,18 +37,32 @@ node_modules/
 /fixtures/
 /qul/
 
-# --- Bundled QUL resources: pointers, not content -----------------------------
-# public/qul/ is where the seeder reads from at first boot, and it is NOT
-# committed. Same principle as the Amendment 14 catalog, one layer down: the
-# app ships the knowledge of what to install and where to get it, not the
-# licensed text itself. Redistributing a third-party resource through a public
-# repository is not a permission this project holds — and the licences differ
-# per resource, so "QUL" is not one answer.
+# --- Bundled QUL resources: per resource, not per folder ----------------------
+# The licences differ per resource, so "QUL" is not one answer — and excluding
+# the whole folder answered it as though it were, which kept a redistributable
+# file out of the deployed build along with the two that had to stay out.
 #
-# Nothing breaks when they are absent. Seeding reports them as not shipped, and
-# a tab with no resource behind it is not rendered at all. See docs/RESOURCES.md
-# for what to download and where each one goes.
-/public/qul/
+# The `*` and the negation are both load-bearing, and this is the one gitignore
+# idiom that does not read the way it looks:
+#
+#     /public/qul/    excludes the DIRECTORY, and git will then not re-include
+#                     anything inside it. A following `!` line does nothing.
+#     /public/qul/*   excludes the CONTENTS, leaving the directory itself
+#                     un-excluded — which is what makes `!` work below.
+#
+# Default to excluded. A resource is added to the negation list only after its
+# terms have been read, and the reason is recorded beside it in src/qul/seed.ts
+# so the judgement travels with the decision. See docs/RESOURCES.md.
+/public/qul/*
+
+# Computed matching data — ayah keys, word counts, coverage percentages, word
+# offsets — produced by QUL's own pass over the muṣḥaf. No third party's writing
+# to redistribute, so it ships, and seeding treats a 404 on it as a bug.
+!/public/qul/matching-ayah.json
+
+# Deliberately still excluded, both modern and in copyright:
+#   ar-tafsir-muyassar.json  King Fahd Complex, 2000s
+#   surah-info-en.json       Mawdūdī's Tafhīm al-Qurʾān sūrah introductions
 
 # --- Personal work ----------------------------------------------------------
 # The glossary is authored terminology, not source. Delete these two lines if

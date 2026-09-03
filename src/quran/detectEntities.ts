@@ -3,6 +3,7 @@ import { newId } from '../lib/id';
 import { normalize } from '../lib/arabic';
 import { foldName, narratorSpanIn } from '../retrieval/narrator';
 import { MIN_MATCH_WORDS, quranFold, type QuranIndex } from './quranIndex';
+import { detectPersonSpans, type PersonIndex } from '../biography/detectNames';
 
 // Locating quoted verses and hadiths in a book's blocks.
 //
@@ -41,6 +42,16 @@ export interface DetectionDeps {
   quran: QuranIndex;
   /** sunnah.com collection this book's hadith numbers map to, if any. */
   hadithCollection: string | null;
+  /**
+   * Names from the imported biographical works, for inline marking.
+   *
+   * Empty when no such work is imported, and that is the normal state rather
+   * than a degraded one: no names are marked, and every name remains reachable
+   * by selection exactly as before. Importing a biographical dictionary later
+   * and regenerating is what turns the layer on — which is why this is a
+   * parameter rather than something detection reads for itself.
+   */
+  people?: PersonIndex;
 }
 
 /** A word of block text, with its place in both the original and the fold. */
@@ -211,6 +222,11 @@ export function detectEntities(
   const byId = new Map(blocks.map((block) => [block.id, block]));
 
   for (const [index, block] of blocks.entries()) {
+    // Set by the ḥadīth branch below, and read by the name scan after it: the
+    // narrator occupies the same characters the name scan would match, and the
+    // two layers must not both claim it.
+    let narratorSpan: { start: number; end: number; name: string } | null = null;
+
     // Each block is scanned together with a lookahead into the next, so a
     // quotation cut in half by a page break is matched as one run and produces
     // a single entity whose start and end blocks differ.
@@ -313,6 +329,7 @@ export function detectEntities(
       // Nested inside the ḥadīth entity above, which is why flattenAnnotations
       // resolves the narrowest covering entity rather than the first.
       const span = narratorSpanIn(block.text);
+      narratorSpan = span;
       if (span) {
         entities.push({
           id: newId('ent'),
@@ -328,6 +345,50 @@ export function detectEntities(
           matchQuality: 'exact',
           detectedAt: now,
           label: span.name,
+        });
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Names from the imported biographical works.
+    //
+    // Every block, not only a matn: the whole point is the names the
+    // commentary mentions in passing, which is where a reader stops and
+    // wonders who is meant.
+    //
+    // Marked `partial`, never `exact`. The distinction is real and load-bearing
+    // — a verse resolves to one place in the muṣḥaf and a numbered ḥadīth to
+    // one record, but «أبو حفص» resolves to a list, and this layer deliberately
+    // does not choose from it. `partial` is what that means: located, not
+    // identified. It still renders, because markableByBlock drops only
+    // `unresolved`.
+    // -----------------------------------------------------------------------
+    if (deps.people) {
+      for (const person of detectPersonSpans(block.text, deps.people)) {
+        // The narrator branch above already marked this name, in these exact
+        // characters. Two entities over one name would leave the reader two
+        // targets and let the narrowest-covering rule choose between them on a
+        // tie-break that means nothing.
+        if (
+          narratorSpan &&
+          person.start < narratorSpan.end &&
+          narratorSpan.start < person.end
+        ) {
+          continue;
+        }
+
+        entities.push({
+          id: newId('ent'),
+          bookId,
+          startBlockId: block.id,
+          startOffset: person.start,
+          endBlockId: block.id,
+          endOffset: person.end,
+          type: 'person',
+          reference: person.reference,
+          matchQuality: 'partial',
+          detectedAt: now,
+          label: person.text,
         });
       }
     }

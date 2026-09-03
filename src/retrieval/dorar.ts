@@ -2,6 +2,7 @@ import { normalize } from '../lib/arabic';
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { HadithAttribution } from '../types';
 import { narratorMatches } from './narrator';
+import { recordRetrieval, type RetrievalOutcome } from '../app/retrievalLog';
 
 // dorar.net — grading and takhrīj, and nothing else.
 //
@@ -78,6 +79,19 @@ const EMPTY: HadithAttribution = {
  * records passed the filter are all kept.
  */
 export interface DorarDiagnostics {
+  /**
+   * Which of the three kinds of empty this was.
+   *
+   * Stated at each exit rather than inferred afterwards from the status code
+   * and the counts. Those two cannot separate the cases that matter: a parse
+   * failure and a genuinely empty result set are both "HTTP 200, nothing
+   * parsed", and calling the first one "no match" would report a broken scraper
+   * as a correct negative — the exact confusion this field exists to end.
+   *
+   * The initial value is `lookup-failed`, so an exit added later and left
+   * unannotated is reported as a fault rather than as a clean miss.
+   */
+  outcome: RetrievalOutcome;
   url: string;
   query: string;
   status: number;
@@ -121,10 +135,43 @@ export async function searchDorar(
   http: HttpClient,
   options: { arabicText: string; narrator: string | null },
 ): Promise<DorarSearchResult> {
+  const result = await runDorarSearch(http, options);
+  const d = result.diagnostics;
+
+  // The distinction that earns its keep here is `no-match` on a full result
+  // set: dorar answering with twelve records that are all some other
+  // companion's narration is the pipeline working exactly as designed — the
+  // narrator filter refusing to attach a grading to a ḥadīth it does not
+  // belong to — and it presents as an empty panel, identically to a broken
+  // request. Reading "12 parsed, 0 passed the filter" ends that in one glance.
+  recordRetrieval({
+    kind: 'hadith',
+    outcome: d.outcome,
+    query: d.query || '(no search term)',
+    summary: d.problem ?? `${d.matched} of ${d.parsed} record(s) matched the narrator.`,
+    detail: [
+      ['url', d.url],
+      ['status', d.status === 0 ? 'no response' : String(d.status)],
+      ['narrator from the block', d.narrator ?? 'none extracted'],
+      ['narrators returned', d.narratorsSeen.length ? d.narratorsSeen.join(' · ') : 'none'],
+      ['parsed', String(d.parsed)],
+      ['passed the filter', String(d.matched)],
+      ['raw response', d.rawResponse || '(empty)'],
+    ],
+  });
+
+  return result;
+}
+
+async function runDorarSearch(
+  http: HttpClient,
+  options: { arabicText: string; narrator: string | null },
+): Promise<DorarSearchResult> {
   const query = searchTermFor(options.arabicText);
   const url = `${DORAR_API}?skey=${encodeURIComponent(query)}`;
 
   const diagnostics: DorarDiagnostics = {
+    outcome: 'lookup-failed',
     url,
     query,
     status: 0,
@@ -184,6 +231,8 @@ export async function searchDorar(
   ];
 
   if (all.length === 0) {
+    // Parsed cleanly, and the answer is nothing. A correct negative.
+    diagnostics.outcome = 'no-match';
     diagnostics.problem = 'dorar.net returned no records for this wording.';
     return { hits: [], diagnostics };
   }
@@ -194,9 +243,14 @@ export async function searchDorar(
   diagnostics.matched = hits.length;
 
   if (hits.length === 0) {
+    // The narrator filter doing its job. Also a correct negative, and the one
+    // most often mistaken for a bug.
+    diagnostics.outcome = 'no-match';
     diagnostics.problem =
       `dorar.net returned ${all.length} record(s), none narrated by ${options.narrator}. ` +
       'No grading is shown rather than one belonging to a different narration.';
+  } else {
+    diagnostics.outcome = 'hit';
   }
 
   return { hits, diagnostics };

@@ -141,11 +141,12 @@ const SEEDS: Seed[] = [
   // and fails when it no longer matches, which turns a silent edition swap
   // into a build error.
   //
-  // تقريب التهذيب (8609) is deliberately NOT here. Its contents are 249 letter
-  // headings — «حرف الألف», «ذكر من اسمه أحمد» — standing in for some 8,800
-  // narrators listed only in the body. It is an excellent narrator dictionary
-  // and its TOC cannot index it; that needs a body-level parser, scoped
-  // separately.
+  // تقريب التهذيب (8609) is here now, and it is the exception to everything
+  // above: its contents are 249 letter headings — «حرف الألف», «ذكر من اسمه
+  // أحمد» — standing in for some 8,800 narrators listed only in the body. The
+  // TOC index refuses it, correctly, and it is read by a body-level parser
+  // instead (src/biography/taqrib.ts). So its `tocNodes` fingerprint guards the
+  // edition, not the index: nothing is built from those 249 nodes.
   // --------------------------------------------------------------------
   {
     shamelaId: 1110,
@@ -156,6 +157,17 @@ const SEEDS: Seed[] = [
     tocNodes: 8148,
     description:
       'Companions specifically, and the one to import first: its subjects are the narrators named in Riyāḍ aṣ-Ṣāliḥīn. Note the edition — other printings of this work carry only bāb headings and cannot be indexed.',
+    recommended: true,
+  },
+  {
+    shamelaId: 8609,
+    titleEn: 'Ibn Ḥajar, Taqrīb at-Tahdhīb — narrators',
+    role: 'reference',
+    group: 'Biographies',
+    edition: 'دار الرشيد',
+    tocNodes: 249,
+    description:
+      "The narrator dictionary behind the structured card: Ibn Ḥajar's own verdict and the ṭabaqa for some 8,800 transmitters, one short entry each. Unlike the others here it is read from its body rather than its contents, so its short table of contents is expected and not a problem.",
     recommended: true,
   },
   {

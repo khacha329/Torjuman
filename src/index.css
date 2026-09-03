@@ -81,6 +81,9 @@
   --color-rule: #e5ded1;
   --color-accent: #7c5c2e;
   --color-verse: #1c5c52;
+  /* Marked personal names. A fourth hue, chosen to sit apart from both the
+     verse teal and the accent brown at a glance and under a reading lamp. */
+  --color-name: #4d3a75;
   --color-matn: #f4efe3;
 }
 
@@ -309,6 +312,31 @@ pre {
 }
 .entity-narrator:hover {
   background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
+/* Names in the running text: COLOUR, and nothing else.
+
+   No background, no border, no underline at rest. This is the last unused
+   visual channel in the Arabic column — verses hold a cool background, ḥadīth a
+   warm one, skip marks a warm highlight, read marks an accent underline,
+   translated ranges a border — and names are the most frequent layer of the
+   five. A sixth background would not add a signal, it would flatten the other
+   four into noise.
+
+   The hue is a muted indigo: distinct from the teal of revelation and the brown
+   of the accent, and dark enough on parchment that vocalised Arabic stays
+   legible at reading size, which a lighter tint would not be. */
+.entity-person {
+  color: var(--color-name);
+  background-color: transparent;
+}
+
+/* Hover is the only state that adds anything, and it adds an underline rather
+   than a fill — pointer devices get the affordance, and the touch reading
+   surface stays exactly as it renders. */
+.entity-person:hover {
+  text-decoration: underline dotted color-mix(in srgb, var(--color-name) 55%, transparent);
+  text-underline-offset: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

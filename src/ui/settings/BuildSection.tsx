@@ -6,6 +6,7 @@ import {
   OFFLINE_DTYPE,
 } from '../../translation/offline/OfflineProvider';
 import { Button } from '../common';
+import { formatRetrievalLog } from '../../app/retrievalLog';
 
 // Which build is this, and what state is it in.
 //
@@ -83,10 +84,21 @@ export function BuildSection() {
         ? [
             `  seeding: ${seedOutcome.installed.length} installed, ` +
               `${seedOutcome.upToDate.length} up to date, ` +
-              `${seedOutcome.absent.length} not in this build, ` +
+              `${seedOutcome.absent.length} not shipped by licence, ` +
+              `${seedOutcome.missing.length} MISSING FROM BUILD, ` +
               `${Object.keys(seedOutcome.failed).length} failed`,
+            // Named individually, and in capitals, because this line is the
+            // difference between "the licence says no" and "the deployment
+            // dropped a file that was committed" — and the second one is a bug
+            // that otherwise presents as an empty tab.
+            ...(seedOutcome.missing.length > 0
+              ? [`  MISSING: ${seedOutcome.missing.join(', ')} — committed but not served`]
+              : []),
           ]
         : []),
+      ``,
+      `retrieval this session`,
+      ...formatRetrievalLog(),
       ``,
       `offline model`,
       `  requested dtype  ${OFFLINE_DTYPE}`,
@@ -135,6 +147,21 @@ export function BuildSection() {
         <dt className="text-muted">Built</dt>
         <dd>{formatBuildTime(__BUILD_TIME__)}</dd>
       </dl>
+
+      {/* Loud on purpose. A committed resource that did not reach the build is
+          invisible everywhere else in the app — the tab it feeds simply does
+          not render, which is also what a deliberately unshipped resource looks
+          like. This is the only place the two are told apart. */}
+      {seedOutcome && seedOutcome.missing.length > 0 && (
+        <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-900">
+          <strong>{seedOutcome.missing.length} bundled resource(s) missing from this
+          build:</strong>{' '}
+          {seedOutcome.missing.join(', ')}. These are committed to the repository and
+          should have been served. This is a build fault, not a licence one — check
+          that <code>.gitignore</code> is not excluding them and that they were
+          committed.
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button onClick={() => void copy()}>Copy diagnostics</Button>

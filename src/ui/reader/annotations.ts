@@ -185,13 +185,19 @@ export function classesFor(segment: Segment): string {
   if (segment.spanKind) classes.push(SPAN_CLASS[segment.spanKind]);
 
   if (segment.entity) {
+    // entity-tint carries the affordance — cursor, radius, transition — and no
+    // colour of its own. The type class supplies the channel: background for a
+    // verse and a ḥadīth, a dotted underline for a narrator, and for a person
+    // text colour alone.
     classes.push('entity-tint');
     classes.push(
       segment.entity.type === 'quran'
         ? 'entity-quran'
         : segment.entity.type === 'narrator'
           ? 'entity-narrator'
-          : 'entity-hadith',
+          : segment.entity.type === 'person'
+            ? 'entity-person'
+            : 'entity-hadith',
     );
     if (segment.entityWhole) classes.push('entity-isolate');
   }

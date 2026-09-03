@@ -168,6 +168,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 installed: [],
                 upToDate: [],
                 absent: [],
+                missing: [],
                 failed: { '*': caught instanceof Error ? caught.message : String(caught) },
               });
             }

@@ -1,5 +1,6 @@
 import { normalize } from '../lib/arabic';
 import { surahName } from '../shamela/quranRefs';
+import { recordRetrieval } from '../app/retrievalLog';
 
 /**
  * The fold used for matching a quotation against the muṣḥaf.
@@ -463,15 +464,45 @@ export class QuranEnglish {
  */
 const ASSETS = import.meta.env.BASE_URL;
 
+/**
+ * Record the outcome of loading a bundled asset, then let the caller throw.
+ *
+ * These two files are committed and precached, so a 404 on either is never a
+ * licence decision and never a network condition — it is the base path being
+ * wrong, or the file not having reached the build. That has happened twice, and
+ * both times it surfaced as a verse panel that was simply empty. It is written
+ * down now.
+ */
+function noteAssetLoad(file: string, ok: boolean, note: string): void {
+  recordRetrieval({
+    kind: 'quran',
+    outcome: ok ? 'hit' : 'data-absent',
+    query: file,
+    summary: note,
+    detail: [
+      ['url', `${ASSETS}${file}`],
+      ['base', ASSETS],
+    ],
+  });
+}
+
 let cachedEnglish: Promise<QuranEnglish> | null = null;
 
 export function loadQuranEnglish(): Promise<QuranEnglish> {
   cachedEnglish ??= (async () => {
     const response = await fetch(`${ASSETS}quran/english.json`);
     if (!response.ok) {
+      noteAssetLoad(
+        'quran/english.json',
+        false,
+        `The bundled translation did not load (HTTP ${response.status}). It is ` +
+          `committed and precached, so this is a build or base-path fault.`,
+      );
       throw new Error(`Could not load the bundled translation (HTTP ${response.status}).`);
     }
-    return new QuranEnglish(await response.json());
+    const loaded = new QuranEnglish(await response.json());
+    noteAssetLoad('quran/english.json', true, `Bundled translation loaded: ${loaded.translation}.`);
+    return loaded;
   })();
   return cachedEnglish;
 }
@@ -488,9 +519,17 @@ export function loadQuranIndex(): Promise<QuranIndex> {
   cached ??= (async () => {
     const response = await fetch(`${ASSETS}quran/uthmani.json`);
     if (!response.ok) {
+      noteAssetLoad(
+        'quran/uthmani.json',
+        false,
+        `The bundled muṣḥaf did not load (HTTP ${response.status}). Verse detection ` +
+          `cannot run at all without it, so every verse in every book goes unmarked.`,
+      );
       throw new Error(`Could not load the bundled Qurʾān text (HTTP ${response.status}).`);
     }
-    return new QuranIndex(await response.json());
+    const loaded = new QuranIndex(await response.json());
+    noteAssetLoad('quran/uthmani.json', true, 'Bundled muṣḥaf loaded.');
+    return loaded;
   })();
   return cached;
 }

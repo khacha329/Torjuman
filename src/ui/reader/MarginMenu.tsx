@@ -10,6 +10,7 @@ export function MarginMenu({
   onRead,
   onClear,
   onAddNote,
+  onTranslateAll,
   onClose,
 }: {
   block: Block;
@@ -19,6 +20,8 @@ export function MarginMenu({
   onRead: (block: Block) => void;
   onClear: (block: Block) => void;
   onAddNote: (block: Block) => void;
+  /** Only offered on a ḥadīth's own matn: see the guard below. */
+  onTranslateAll: (block: Block) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -83,6 +86,20 @@ export function MarginMenu({
       >
         {current?.note ? 'Edit note…' : 'Add note…'}
       </button>
+      {/* Only on a matn block. The action translates one ḥadīth's commentary,
+          and that range is defined by starting at a matn — offering it beside
+          an arbitrary paragraph would have no range to mean. */}
+      {block.type === 'hadith_matn' && (
+        <button
+          className={`${item} border-t border-rule`}
+          onClick={() => {
+            onTranslateAll(block);
+            onClose();
+          }}
+        >
+          Translate all…
+        </button>
+      )}
       <button
         className={`${item} text-muted disabled:opacity-40`}
         disabled={!current}

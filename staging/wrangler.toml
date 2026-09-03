@@ -1,0 +1,37 @@
+# The staging site: a build of whatever is on your machine, at its own URL.
+#
+# ---------------------------------------------------------------------------
+# Why this exists
+#
+# GitHub Pages hosts exactly one site per repository, and deploys now come from
+# v* tags. That is deliberate — a tester's build should be something you chose
+# to release — but it leaves nowhere to look at a change before releasing it.
+# This is that nowhere: a separate origin, holding a separate build, which no
+# tester is pointed at and which never touches the Pages site.
+#
+#   Pages    https://khacha329.github.io/Torjuman/   the last v* tag
+#   staging  https://hashiya-staging.khacha.workers.dev   whatever you last staged
+#
+# It is a Worker with no script — just static assets — which is why there is no
+# `main` key here. Same account and same wrangler login as the proxy next door.
+#
+# Unlisted, not private. Anyone who knows the URL can open it. Nobody is given
+# it, and it is in no README, but if that needs to be a real lock rather than an
+# obscure one, put Cloudflare Access in front of this Worker: Zero Trust →
+# Access → Applications, one-time PIN to your address. Free, and about five
+# minutes.
+# ---------------------------------------------------------------------------
+
+name = "hashiya-staging"
+compatibility_date = "2025-09-01"
+
+[assets]
+# Built by scripts/stage.mjs immediately before deploy, with BASE_PATH=/ so the
+# asset URLs are root-relative — this host has no /Torjuman/ prefix.
+directory = "../dist"
+# The app is a hash router, so every route is really "/". This only matters for
+# a stray path typed by hand, which should land on the app rather than a 404.
+not_found_handling = "single-page-application"
+
+[observability]
+enabled = false
