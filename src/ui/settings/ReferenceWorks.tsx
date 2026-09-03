@@ -14,7 +14,11 @@ export function ReferenceWorks() {
   const { storage } = useApp();
   const [books, setBooks] = useState<Book[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [busy, setBusy] = useState<string | null>(null);
+  // Which row is working and what it is doing. Removing Fatḥ al-Bārī clears ten
+  // stores and can take a few seconds even now that it batches — without a
+  // label the button just sits there and the work reads as a dead press.
+  const [busy, setBusy] = useState<{ id: string; label: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const all = await storage.listBooks();
@@ -36,10 +40,13 @@ export function ReferenceWorks() {
   }, [refresh]);
 
   const rebuild = async (book: Book) => {
-    setBusy(book.id);
+    setBusy({ id: book.id, label: 'Indexing…' });
+    setError(null);
     try {
       const total = await buildRootIndex(storage, book);
       setCounts((previous) => ({ ...previous, [book.id]: total }));
+    } catch (cause) {
+      setError(`Could not rebuild the index: ${(cause as Error).message}`);
     } finally {
       setBusy(null);
     }
@@ -49,8 +56,18 @@ export function ReferenceWorks() {
     if (!window.confirm(`Remove "${book.title}" and its root index from this device?`)) {
       return;
     }
-    await storage.deleteBook(book.id);
-    await refresh();
+    setBusy({ id: book.id, label: 'Removing…' });
+    setError(null);
+    try {
+      await storage.deleteBook(book.id);
+      await refresh();
+    } catch (cause) {
+      // A removal that fails silently is indistinguishable from one that is
+      // merely slow, and the book stays on the list either way. Say which.
+      setError(`Could not remove "${book.title}": ${(cause as Error).message}`);
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -61,6 +78,12 @@ export function ReferenceWorks() {
         entirely local — no model call and no network — so they work with the tablet
         offline.
       </p>
+
+      {error && (
+        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
 
       {books.length === 0 ? (
         <div className="rounded-md border border-dashed border-rule p-4 text-sm">
@@ -95,14 +118,24 @@ export function ReferenceWorks() {
               {/* Only a dictionary has a root index to rebuild; a reference
                   work is searched through the ordinary block index. */}
               {book.role === 'dictionary' &&
-                (busy === book.id ? (
+                (busy?.id === book.id && busy.label === 'Indexing…' ? (
                   <Spinner label="Indexing…" />
                 ) : (
-                  <Button onClick={() => void rebuild(book)}>Rebuild index</Button>
+                  <Button disabled={busy !== null} onClick={() => void rebuild(book)}>
+                    Rebuild index
+                  </Button>
                 ))}
-              <Button variant="danger" onClick={() => void remove(book)}>
-                Remove
-              </Button>
+              {busy?.id === book.id && busy.label === 'Removing…' ? (
+                <Spinner label="Removing…" />
+              ) : (
+                <Button
+                  variant="danger"
+                  disabled={busy !== null}
+                  onClick={() => void remove(book)}
+                >
+                  Remove
+                </Button>
+              )}
             </div>
           ))}
         </div>

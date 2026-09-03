@@ -15,10 +15,15 @@ compatibility_date = "2025-09-01"
 # https://khacha329.github.io. Getting that wrong is the single most likely
 # cause of a 403 from this Worker.
 #
+# The staging Worker (staging/wrangler.toml) is here for the same reason the
+# Pages origin is: it serves a real build over HTTPS, so importing there goes
+# through this proxy rather than Vite's. Omit it and staging looks like a
+# deployment with importing switched off.
+#
 # localhost is here so `npm run preview` can be tested against the real proxy.
 # The dev server does not need it — Vite proxies locally.
 [vars]
-ALLOWED_ORIGINS = "https://khacha329.github.io,http://localhost:4173,http://localhost:5173"
+ALLOWED_ORIGINS = "https://khacha329.github.io,https://hashiya-staging.khacha.workers.dev,http://localhost:4173,http://localhost:5173"
 
 # Not observability = true: this Worker handles an API key on the sunnah route
 # if that route is ever enabled, and request logging is not something to leave

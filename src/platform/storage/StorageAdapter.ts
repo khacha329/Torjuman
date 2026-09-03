@@ -7,6 +7,7 @@ import type {
   DictionaryEntry,
   Entity,
   ExplanationCard,
+  SharhCard,
   GlossaryEntry,
   Mark,
   WordGloss,
@@ -21,6 +22,7 @@ import type {
   TranslationCard,
   TranslationProfile,
 } from '../../types';
+import type { StoredNarratorProfile } from '../../biography/narratorProfile';
 
 // The only interface the app knows about for persistence.
 //
@@ -46,6 +48,7 @@ export interface WorkBundle {
   referencedBooks: { shamelaId: number; bookId: string; title: string }[];
   cards: TranslationCard[];
   explanationCards: ExplanationCard[];
+  sharhCards: SharhCard[];
   marks: Mark[];
   glossary: GlossaryEntry[];
   profiles: TranslationProfile[];
@@ -110,6 +113,8 @@ export interface StorageAdapter {
   getBlock(id: string): Promise<Block | undefined>;
   countBlocks(bookId: string): Promise<number>;
   searchBlocks(bookId: string, normalizedQuery: string, limit: number): Promise<SearchHit[]>;
+  /** Search on letters alone — for matching a passage across two books. */
+  searchBlocksLoose(bookId: string, foldedQuery: string, limit: number): Promise<SearchHit[]>;
 
   // Entities (derived; safe to regenerate)
   putEntities(entities: Entity[]): Promise<void>;
@@ -190,6 +195,18 @@ export interface StorageAdapter {
   putExplanationCard(card: ExplanationCard): Promise<void>;
   listExplanationCards(bookId: string): Promise<ExplanationCard[]>;
   deleteExplanationCard(id: string): Promise<void>;
+
+  // Retrieved commentary, anchored in the book being read.
+  putSharhCard(card: SharhCard): Promise<void>;
+  listSharhCards(bookId: string): Promise<SharhCard[]>;
+  deleteSharhCard(id: string): Promise<void>;
+
+  // Imported narrator profiles, looked up through a multiEntry index rather
+  // than by reading the store: there are tens of thousands of them.
+  putNarratorProfiles(profiles: StoredNarratorProfile[]): Promise<void>;
+  findNarratorProfiles(naming: string): Promise<StoredNarratorProfile[]>;
+  listNarratorShards(): Promise<{ shard: string; count: number }[]>;
+  deleteNarratorShard(shard: string): Promise<void>;
 
   // Word gloss cache
   putWordGloss(gloss: WordGloss): Promise<void>;

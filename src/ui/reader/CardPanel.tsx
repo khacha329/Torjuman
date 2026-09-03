@@ -5,6 +5,7 @@ import { toArabicNumerals } from '../../lib/arabic';
 import { TranslationCardView } from './TranslationCardView';
 import { NoteCardView } from './NoteCardView';
 import { ExplanationCardView } from './ExplanationCardView';
+import { SharhCardView } from './SharhCardView';
 import {
   blockOrderIndex,
   filterCards,
@@ -176,6 +177,15 @@ export function CardPanel({
                 <ExplanationCardView
                   card={card}
                   isActive={card.id === activeCardId}
+                  onFocus={() => onFocusCard(card)}
+                  onToggleCollapse={() => onToggleCollapse(card)}
+                  onDelete={() => onDelete(card)}
+                />
+              ) : card.kind === 'sharh' ? (
+                <SharhCardView
+                  card={card}
+                  isActive={card.id === activeCardId}
+                  citation={citationFor(card)}
                   onFocus={() => onFocusCard(card)}
                   onToggleCollapse={() => onToggleCollapse(card)}
                   onDelete={() => onDelete(card)}

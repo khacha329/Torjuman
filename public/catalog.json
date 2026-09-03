@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-29",
+  "updatedAt": "2026-09-03",
   "entries": [
     {
       "shamelaId": 9260,
@@ -99,6 +99,20 @@
       "recommended": true,
       "edition": "ط العلمية",
       "tocNodes": 8148
+    },
+    {
+      "shamelaId": 8609,
+      "title": "تقريب التهذيب",
+      "titleEn": "Ibn Ḥajar, Taqrīb at-Tahdhīb — narrators",
+      "author": "أبو الفضل أحمد بن علي بن محمد بن أحمد بن حجر العسقلاني (ت ٨٥٢هـ)",
+      "role": "reference",
+      "category": "التراجم والطبقات",
+      "group": "Biographies",
+      "approxPages": 688,
+      "description": "The narrator dictionary behind the structured card: Ibn Ḥajar's own verdict and the ṭabaqa for some 8,800 transmitters, one short entry each. Unlike the others here it is read from its body rather than its contents, so its short table of contents is expected and not a problem.",
+      "recommended": true,
+      "edition": "دار الرشيد",
+      "tocNodes": 249
     },
     {
       "shamelaId": 10906,

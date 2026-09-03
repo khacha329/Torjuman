@@ -69,7 +69,9 @@ export function BlockText({
                   ? `Qurʾān ${segment.entity.label ?? segment.entity.reference}`
                   : segment.entity.type === 'narrator'
                     ? `Narrator ${segment.entity.label ?? segment.entity.reference}`
-                    : `Ḥadīth ${segment.entity.reference}`,
+                    : segment.entity.type === 'person'
+                      ? `Look up ${segment.entity.label ?? segment.entity.reference}`
+                      : `Ḥadīth ${segment.entity.reference}`,
             }
           : {})}
       >

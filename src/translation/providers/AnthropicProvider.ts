@@ -13,8 +13,8 @@ import {
   ANTHROPIC_MODELS,
   CACHE_READ_MULTIPLIER,
   CACHE_WRITE_MULTIPLIER,
-  MAX_TOKENS_CEILING,
   maxTokensFor,
+  outputCeilingFor,
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
@@ -167,7 +167,11 @@ export class AnthropicProvider implements TranslationProvider {
         'Now produce the translation, using the notes above where they help.'
       : renderUser(request);
 
-    let budget = maxTokensFor(request.targetText);
+    // Sized against THIS model's ceiling rather than the shared default:
+    // Sonnet 5 and Opus 5 accept 128K output tokens, and this call streams,
+    // which is what the SDK requires for a budget that large.
+    const ceiling = outputCeilingFor(request.model);
+    let budget = maxTokensFor(request.targetText, 4, request.model);
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const stream = client.messages.stream({
@@ -219,8 +223,8 @@ export class AnthropicProvider implements TranslationProvider {
       // once with a bigger budget rather than telling the user the reply was
       // malformed.
       if (message.stop_reason === 'max_tokens') {
-        if (attempt === 0 && budget < MAX_TOKENS_CEILING) {
-          budget = Math.min(budget * 2, MAX_TOKENS_CEILING);
+        if (attempt === 0 && budget < ceiling) {
+          budget = Math.min(budget * 2, ceiling);
           continue;
         }
         throw new TranslationError(

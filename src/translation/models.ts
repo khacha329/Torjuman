@@ -105,11 +105,11 @@ export function defaultModelFor(providerId: ProviderId): string {
  * Arabic runs roughly 2.5 characters per token. The translation plus its JSON
  * envelope is allowed 2.5x that, with a floor for very short selections.
  */
-export function maxTokensFor(targetText: string, multiplier = 4): number {
+export function maxTokensFor(targetText: string, multiplier = 4, model?: string): number {
   const estimatedTargetTokens = Math.ceil(targetText.length / 2.5);
   return Math.min(
     Math.max(Math.round(estimatedTargetTokens * multiplier), 2048),
-    MAX_TOKENS_CEILING,
+    model ? outputCeilingFor(model) : MAX_TOKENS_CEILING,
   );
 }
 
@@ -122,6 +122,29 @@ export function maxTokensFor(targetText: string, multiplier = 4): number {
  * leaves room for short passages that still produce several segments.
  */
 export const MAX_TOKENS_CEILING = 32000;
+
+/**
+ * Per-model output ceilings, where the model allows more than the default.
+ *
+ * Claude Sonnet 5 and Opus 5 both accept up to 128K output tokens, and the SDK
+ * requires streaming for values that large — which this app already does, on
+ * both providers. The shared 32,000 default was leaving most of that unused:
+ * `maxTokensFor` caps there, so any passage over roughly 20,000 characters got
+ * the same budget as one of 20,000, and the retry after a truncation had
+ * nowhere to grow.
+ *
+ * Only models whose limit has been checked are listed. Haiku 4.5 is absent
+ * deliberately rather than assumed to match its siblings, and Gemini keeps the
+ * default because its limits were not verified here.
+ */
+const OUTPUT_CEILINGS: Record<string, number> = {
+  'claude-opus-5': 128_000,
+  'claude-sonnet-5': 128_000,
+};
+
+export function outputCeilingFor(model: string): number {
+  return OUTPUT_CEILINGS[model] ?? MAX_TOKENS_CEILING;
+}
 
 /** Rough token estimate for UI display. Mixed Arabic/English, so ~3 chars. */
 export function estimateTokens(text: string): number {

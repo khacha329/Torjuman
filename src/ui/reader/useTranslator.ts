@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { beginActivity } from '../../app/activity';
+import { coverageOf } from '../../translation/coverage';
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../app/secrets';
 import { newId } from '../../lib/id';
@@ -291,11 +292,18 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
         );
 
+        // Measured before enrichment, against the Arabic that was sent. A
+        // well-formed answer that quietly stopped half way through the passage
+        // is indistinguishable from a complete one at every other layer.
+        const coverage = coverageOf(anchor.sourceText, result.segments);
+
         const finished: TranslationCard = {
           ...card,
           status: 'complete',
           usage: result.usage,
           costUsd: result.costUsd,
+          coverage: coverage.ratio,
+          reachedEnd: coverage.reachedEnd,
           segments: await enrichSegments(result.segments, {
             http,
             storage,

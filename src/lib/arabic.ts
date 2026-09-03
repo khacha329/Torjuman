@@ -39,6 +39,23 @@ const TATWEEL = /ـ/g;
  *
  * Order matters and follows the spec exactly.
  */
+/**
+ * `normalize`, and then nothing but letters and single spaces.
+ *
+ * `normalize` keeps punctuation on purpose: block search is a substring search
+ * over what a reader typed, and a reader types punctuation. Matching one book's
+ * passage against another's is the opposite case — «قال: كنا» in one edition is
+ * «قال كنا» in the next, and the doubled brackets a collection uses to mark
+ * quoted speech are its own typesetting. Comparing on letters alone is what
+ * makes a cross-book match possible at all.
+ */
+export function letterFold(input: string): string {
+  return normalize(input)
+    .replace(/[^ء-ي\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function normalize(input: string): string {
   return input
     .replace(DIACRITICS, '')

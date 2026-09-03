@@ -2,13 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { navigate } from '../app/router';
 import type { Book } from '../types';
-import { Button, LinkButton, TopBar } from './common';
+import { Button, LinkButton, Spinner, TopBar } from './common';
 import { useCrawlProgress } from './useCrawlProgress';
 import { useCatalogImport } from '../catalog/useCatalogImport';
 
 export function LibraryScreen() {
   const { storage, crawler } = useApp();
   const [books, setBooks] = useState<Book[] | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const progress = useCrawlProgress();
   // A catalog import runs at app level now, so it keeps going while you read.
   // This is where it stays visible once you have left the catalog screen —
@@ -32,8 +34,18 @@ export function LibraryScreen() {
       `Delete "${book.title}"?\n\nThis removes the imported text, and any translation cards anchored to it, from this device. It cannot be undone.`,
     );
     if (!confirmed) return;
-    await storage.deleteBook(book.id);
-    await refresh();
+    // A large book takes long enough to clear that an unchanged card reads as a
+    // dead press. Say the row is going, and say so if it did not.
+    setDeleting(book.id);
+    setError(null);
+    try {
+      await storage.deleteBook(book.id);
+      await refresh();
+    } catch (cause) {
+      setError(`Could not delete "${book.title}": ${(cause as Error).message}`);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const resume = async (book: Book) => {
@@ -73,6 +85,12 @@ export function LibraryScreen() {
               </Button>
             </span>
           </div>
+        )}
+
+        {error && (
+          <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
         )}
 
         {books === null && <p className="text-sm text-muted">Loading…</p>}
@@ -162,9 +180,17 @@ export function LibraryScreen() {
                     <Button onClick={() => void resume(book)}>Resume import</Button>
                   )}
                   <div className="ml-auto">
-                    <Button variant="danger" onClick={() => void remove(book)}>
-                      Delete
-                    </Button>
+                    {deleting === book.id ? (
+                      <Spinner label="Deleting…" />
+                    ) : (
+                      <Button
+                        variant="danger"
+                        disabled={deleting !== null}
+                        onClick={() => void remove(book)}
+                      >
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { modelsFor } from '../../translation/models';
 import { OFFLINE_MODELS } from '../../translation/offline/OfflineProvider';
 import { allProviders, badgeFor, providerFor } from '../../translation/registry';
 import { Spinner } from '../common';
+import { isIncomplete } from '../../translation/coverage';
 
 const SEGMENT_STYLE: Record<TranslatedSegment['type'], { label: string; frame: string }> = {
   quran: { label: 'Qurʾān', frame: 'border-l-2 border-verse/50 bg-verse/5' },
@@ -143,6 +144,27 @@ export function TranslationCardView({
 
       {card.status === 'error' && (
         <ErrorPanel card={card} onRetry={() => onRetranslate()} />
+      )}
+
+      {/* An answer that stopped early is well-formed and looks finished. The
+          only signal is the measurement, so it is stated plainly and above the
+          text rather than as a footnote under it — the point is to be seen
+          before the translation is trusted. Cards made before coverage was
+          measured have no value here and say nothing. */}
+      {card.status === 'complete' && card.coverage !== undefined && isIncomplete({
+        sourceWords: 0,
+        translatedWords: 0,
+        ratio: card.coverage,
+        reachedEnd: card.reachedEnd ?? true,
+      }) && (
+        <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+          <strong>This translation is incomplete.</strong>{' '}
+          {card.reachedEnd === false
+            ? 'It stops before the end of the passage.'
+            : `About ${Math.round(card.coverage * 100)}% of the passage came back.`}{' '}
+          Translate a shorter selection, or use <em>Translate all</em> on a ḥadīth,
+          which goes block by block.
+        </p>
       )}
 
       {card.status === 'complete' && (

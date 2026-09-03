@@ -17,6 +17,8 @@ import { ProfileEditor } from './ProfileEditor';
 import { QulResources } from './QulResources';
 import { ReferenceWorks } from './ReferenceWorks';
 import { BuildSection } from './BuildSection';
+import { RetrievalSection } from './RetrievalSection';
+import { NarratorSources } from './NarratorSources';
 
 export function SettingsScreen() {
   return (
@@ -40,10 +42,14 @@ export function SettingsScreen() {
           <EntitySection />
           <ReferenceWorks />
           <QulResources />
+          <NarratorSources />
           <ProfileEditor />
           <GlossaryTable />
           <BackupSection />
           <LibraryTransfer />
+          {/* Next to the build panel on purpose: a bug report is the version
+              plus what retrieval actually did, and they get copied together. */}
+          <RetrievalSection />
           <BuildSection />
         </div>
       </div>

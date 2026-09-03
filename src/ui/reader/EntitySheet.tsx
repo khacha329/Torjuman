@@ -26,12 +26,14 @@ import {
 } from '../../qul/service';
 import { isCloudProvider } from '../../translation/TranslationProvider';
 import type {
+  Book,
   Entity,
   HadithRecord,
   ProviderId,
   QulCompilation,
   QuranVerse,
 } from '../../types';
+import { commentaryWorks } from '../../retrieval/sharh';
 import { AnchoredPanel } from './AnchoredPanel';
 import {
   ArabicVerse,
@@ -82,6 +84,10 @@ export function EntitySheet(props: {
   contextText: string;
   onClose: () => void;
   onTranslateSurrounding: () => void;
+  /** Look this ḥadīth up in one imported commentary. */
+  onSharh: (book: Book) => void;
+  /** Propose translating this ḥadīth's whole commentary. */
+  onTranslateAll: () => void;
 }) {
   return props.entity.type === 'quran' ? (
     <QuranSheet {...props} />
@@ -455,6 +461,8 @@ function HadithSheet({
   contextText,
   onClose,
   onTranslateSurrounding,
+  onSharh,
+  onTranslateAll,
 }: {
   entity: Entity;
   anchor: HTMLElement;
@@ -462,6 +470,8 @@ function HadithSheet({
   contextText: string;
   onClose: () => void;
   onTranslateSurrounding: () => void;
+  onSharh: (book: Book) => void;
+  onTranslateAll: () => void;
 }) {
   const { http, storage, settings } = useApp();
   const online = useOnline();
@@ -469,6 +479,21 @@ function HadithSheet({
   const [diagnostics, setDiagnostics] = useState<DorarDiagnostics | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Whichever commentaries happen to be imported. Not a fixed list, and no work
+  // is named in code: a book qualifies by Shamela's own «شروح الحديث» category,
+  // so Sharḥ an-Nawawī and Fatḥ al-Bārī appear as siblings and anything else
+  // the reader adds joins them without a change here.
+  const [commentaries, setCommentaries] = useState<Book[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void commentaryWorks(storage).then((works) => {
+      if (!cancelled) setCommentaries(works);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -518,14 +543,50 @@ function HadithSheet({
         </>
       }
       footer={
-        <Button
-          onClick={() => {
-            onTranslateSurrounding();
-            onClose();
-          }}
-        >
-          Translate the surrounding passage
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => {
+              onTranslateSurrounding();
+              onClose();
+            }}
+          >
+            Translate the surrounding passage
+          </Button>
+
+          {/* The whole commentary, not just the block. Opens a confirmation
+              rather than starting: this is the most expensive action in the
+              app and must not be one tap from a surprise. */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onTranslateAll();
+              onClose();
+            }}
+          >
+            Translate all…
+          </Button>
+
+          {/* One button per imported commentary, labelled with the work itself.
+              The amendment asks for a «شرح النووي» action; naming each button
+              after the work it actually searches is the same affordance with no
+              special case, and it stays correct the moment a second commentary
+              is imported. Absent any, no button renders — the action is not
+              offered where it could not work. */}
+          {commentaries.map((work) => (
+            <Button
+              key={work.id}
+              variant="ghost"
+              onClick={() => {
+                onSharh(work);
+                onClose();
+              }}
+            >
+              <span dir="rtl" lang="ar" className="arabic">
+                {work.title}
+              </span>
+            </Button>
+          ))}
+        </div>
       }
     >
       {/* Gradings first. They are the facts that decide how a ḥadīth is used.

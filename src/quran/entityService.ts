@@ -2,6 +2,8 @@ import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book, Entity, EntityRange } from '../types';
 import { detectEntities, hadithCollectionFor, unmatchedDelimitedSpans } from './detectEntities';
 import { loadQuranIndex } from './quranIndex';
+import { buildPersonIndex } from '../biography/detectNames';
+import { isBiographicalWork } from '../biography/service';
 
 // Building and rebuilding a book's entities.
 //
@@ -39,18 +41,36 @@ export async function regenerateEntities(
   storage: StorageAdapter,
   book: Book,
 ): Promise<EntityBuildResult> {
-  const [quran, blocks] = await Promise.all([
+  // The name index is read across ALL books, not this one: the names being
+  // marked come from whichever biographical dictionaries are imported, and the
+  // book being scanned is normally not one of them.
+  const [quran, blocks, people] = await Promise.all([
     loadQuranIndex(),
     storage.listBlocks(book.id),
+    storage.listBiographyEntries(),
   ]);
+
+  // Names are not marked inside a name dictionary.
+  //
+  // Taqrīb produced 16,174 of them, which is not a bug in the matcher — the
+  // whole body of that book IS names, so nearly every block matches. It is
+  // simply circular: nobody looks a narrator up from inside a narrator
+  // dictionary, and the cost is 16,000 rows and a page painted end to end.
+  // Commentaries stay marked; only the biographical works themselves opt out.
+  const marksNames = !isBiographicalWork(book);
 
   const entities = detectEntities(book.id, blocks, {
     quran,
     hadithCollection: book.hadithCollection ?? hadithCollectionFor(book.title),
+    people: marksNames ? buildPersonIndex(people) : undefined,
   });
 
   await storage.clearEntities(book.id);
   await storage.putEntities(entities);
+
+  // Stamped so `ensureEntities` can tell stale from merely present. Recorded
+  // even when this book does not mark names, so it is not rebuilt forever.
+  await storage.putBook({ ...book, nameIndexSize: people.length });
 
   return summarize(entities, unmatchedDelimitedSpans(blocks, entities));
 }
@@ -65,11 +85,22 @@ export async function ensureEntities(
   storage: StorageAdapter,
   book: Book,
 ): Promise<Entity[]> {
-  const existing = await storage.listEntities(book.id);
-  if (existing.length > 0) return existing;
-
   const blocks = await storage.countBlocks(book.id);
   if (blocks === 0) return [];
+
+  const existing = await storage.listEntities(book.id);
+
+  // "Present" is not "current".
+  //
+  // The marked-name layer is derived from the imported biographical works, so
+  // a book detected before one of those finished importing carries no names —
+  // and the old gate, "has any entities at all", then blocked the rebuild
+  // permanently, because the verse and ḥadīth entities were there in their
+  // thousands. Comparing against the index size the layer was built with makes
+  // finishing an import heal itself instead of needing Re-detect.
+  const indexSize = (await storage.listBiographyEntries()).length;
+  const current = existing.length > 0 && book.nameIndexSize === indexSize;
+  if (current) return existing;
 
   await regenerateEntities(storage, book);
   return storage.listEntities(book.id);

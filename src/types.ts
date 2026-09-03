@@ -95,6 +95,23 @@ export interface Book {
    */
   hadithCollection: string | null;
   /**
+   * How many name-index entries existed when this book's entities were built.
+   *
+   * The marked-name layer is derived from the imported biographical works, so
+   * it can only be as complete as that index was at detection time — and
+   * detection ran once, on first open, gated on the book having no entities at
+   * all. Import a dictionary afterwards and nothing rebuilt: the book had
+   * thousands of verse and ḥadīth entities, so the gate held, and no name was
+   * ever marked. That is exactly what happened, and the manual "Re-detect"
+   * button was the only way out of it.
+   *
+   * Recording the size the layer was built against turns "have any entities"
+   * into "are the entities current", so importing or finishing a biographical
+   * work heals itself on the next open. `undefined` on a book detected before
+   * this existed, which reads as stale and rebuilds once.
+   */
+  nameIndexSize?: number;
+  /**
    * A dictionary is imported through the same pipeline but plays a different
    * role: it is looked up, not read. Dictionaries stay out of the library grid
    * and live in Settings → Reference works.
@@ -230,7 +247,20 @@ export interface Entity {
    * marks, verses and translated ranges already competing for the same
    * visual channels.
    */
-  type: 'quran' | 'hadith' | 'narrator';
+  /**
+   * 'person' is the second marked name layer, added in Amendment 17 Part 5, and
+   * it is the opposite trade to 'narrator': low precision of *identity* in
+   * exchange for coverage. A narrator is one man in a known slot; a person is
+   * any multi-word name that appears in an imported biographical index, marked
+   * without deciding which of the people bearing it is meant. Both open the
+   * same lookup, which shows every candidate — so marking is a claim that this
+   * is a name, never a claim about whose.
+   *
+   * It renders in colour rather than as a background tint, because names are
+   * frequent enough that another background layer would bury the marks, verses
+   * and translated ranges already competing for that channel.
+   */
+  type: 'quran' | 'hadith' | 'narrator' | 'person';
   reference: string; // "2:255" | "2:255-2:257" | "riyadussalihin:412" | folded name
   matchQuality: 'exact' | 'partial' | 'unresolved';
   detectedAt: number;
@@ -304,6 +334,16 @@ export interface TranslationCard extends CardBase {
   kind: 'translation';
   sourceText: string; // exact Arabic selected
   segments: TranslatedSegment[];
+  /**
+   * Share of the selected Arabic that came back translated, and whether the
+   * passage's closing words did.
+   *
+   * Truncation already raises an error. This catches the quiet case: a
+   * well-formed answer that stopped early, which every other layer accepts as
+   * complete. Undefined on cards made before this was measured.
+   */
+  coverage?: number;
+  reachedEnd?: boolean;
   profileId: string;
   promptVersion: number;
   glossaryHash: string;
@@ -426,7 +466,34 @@ export interface ExplanationCard extends CardBase {
   errorKind?: TranslationErrorKind;
 }
 
-export type Card = TranslationCard | NoteCard | ExplanationCard;
+/**
+ * A ḥadīth's commentary, retrieved verbatim from an imported sharḥ.
+ *
+ * The one card kind with no provider, no model, no usage and no cost, because
+ * nothing about it is generated. It is a passage from a book the reader
+ * imported, located by searching that book for the ḥadīth's own words, and
+ * shown in Arabic exactly as the work prints it.
+ *
+ * That is why it carries `bookTitle` and the matched block ids rather than a
+ * `sourceText`: what it holds is a citation, and a reader checking it should be
+ * able to find the same words in the same book.
+ */
+export interface SharhCard extends CardBase {
+  kind: 'sharh';
+  /** The commentary the passage came from. */
+  sourceBookId: string;
+  sourceBookTitle: string;
+  /** The matn block in the commentary, then the commentary blocks. */
+  matnText: string;
+  passages: string[];
+  /** Independent shingles matched, of how many were tried. Shown, not hidden:
+   *  a 2-of-10 match and a 9-of-10 match deserve different confidence. */
+  shingleHits: number;
+  shinglesTried: number;
+  truncated: boolean;
+}
+
+export type Card = TranslationCard | NoteCard | ExplanationCard | SharhCard;
 
 /**
  * An English gloss for a single word, in the sense it carries in its sentence.

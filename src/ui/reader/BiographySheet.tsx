@@ -3,6 +3,8 @@ import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { entryBlocks, lookupName, type EntryReading } from '../../biography/service';
 import type { BiographyHit, BiographyLookup } from '../../biography/lookup';
+import { lookupNarrator, type NarratorCandidate } from '../../biography/narratorService';
+import { NarratorCard } from './NarratorCard';
 import { AnchoredPanel } from './AnchoredPanel';
 import { Spinner } from '../common';
 
@@ -44,11 +46,26 @@ export function BiographySheet({
   const [result, setResult] = useState<BiographyLookup | null>(null);
   const [chosen, setChosen] = useState<BiographyHit | null>(null);
   const [reading, setReading] = useState<EntryReading | null>(null);
+  /**
+   * Structured profiles, from Taqrīb and any installed Itqan shard.
+   *
+   * A separate lookup from the prose entry above, and deliberately not merged
+   * with it: these are field-by-field records keyed by name, while the entries
+   * above are continuous prose located in a book. They answer different
+   * questions and are shown as different things.
+   */
+  const [profiles, setProfiles] = useState<NarratorCandidate[]>([]);
+  const [profileIndex, setProfileIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setResult(null);
     setChosen(null);
+    setProfiles([]);
+    setProfileIndex(0);
+    void lookupNarrator(storage, selection).then((found) => {
+      if (!cancelled) setProfiles(found);
+    });
     void lookupName(storage, selection).then((found) => {
       if (cancelled) return;
       setResult(found);
@@ -99,7 +116,36 @@ export function BiographySheet({
     >
       {!result && <Spinner label="Searching the imported works…" />}
 
-      {result && result.total === 0 && (
+      {/* The structured card first: it is the direct answer to "who is this",
+          where the prose entry below is the reading. */}
+      {profiles.length > 0 && (
+        <div className="mb-4 rounded-md border border-rule p-3">
+          {profiles.length > 1 && (
+            <div dir="rtl" className="mb-2 flex flex-wrap gap-1">
+              {profiles.map((candidate, index) => (
+                <button
+                  key={candidate.profile.key + index}
+                  onClick={() => setProfileIndex(index)}
+                  className={`arabic rounded px-2 py-0.5 text-[12px] transition ${
+                    index === profileIndex ? 'bg-accent/15 text-ink' : 'text-muted hover:bg-rule/40'
+                  }`}
+                >
+                  {candidate.profile.fullName.split(' ').slice(0, 4).join(' ')}
+                </button>
+              ))}
+            </div>
+          )}
+          {profiles.length > 1 && (
+            <p className="mb-2 text-[11px] text-muted">
+              {profiles.length} people are recorded under this name. None is chosen
+              for you.
+            </p>
+          )}
+          <NarratorCard candidate={profiles[Math.min(profileIndex, profiles.length - 1)]} />
+        </div>
+      )}
+
+      {result && result.total === 0 && profiles.length === 0 && (
         <div className="text-[12px] text-muted">
           <p>
             No entry for{' '}
