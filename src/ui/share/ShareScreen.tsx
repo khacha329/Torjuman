@@ -6,7 +6,7 @@ import { fromBase64Url } from '../../share/crypto';
 import { loadShare, ShareLoadError } from '../../share/loadShare';
 import { ShareStorageAdapter } from '../../share/ShareStorageAdapter';
 import type { ShareBundle } from '../../share/bundle';
-import { Button, LinkButton, Spinner } from '../common';
+import { Button, Spinner } from '../common';
 import { ReaderScreen } from '../reader/ReaderScreen';
 
 // A shared chapter, opened from a link.
@@ -127,57 +127,29 @@ export function ShareScreen({ id, keyText }: { id: string; keyText: string }) {
     return <ShareError message={state.message} detail={state.detail} />;
   }
 
+  // No banner above the reader.
+  //
+  // There was one, naming the work and offering a way out. It is gone because
+  // the reader's own header already does both jobs: it prints the book's title
+  // in Arabic, and its "← Library" control leaves the share route exactly as a
+  // dedicated exit would. A second bar restating that was a strip of vertical
+  // space on a tablet spent telling the reader something the screen already
+  // said.
+  //
+  // What is genuinely lost is the author and publisher line. That is a real
+  // cost — attribution matters for material taken from someone's edition — and
+  // it is accepted here rather than overlooked, because the work itself is
+  // still named and a visitor is being handed one chapter by someone who will
+  // be teaching it to them, not an anonymous extract.
   return (
     <ReadOnlyContext.Provider value={true}>
       <StorageOverride storage={shareStorage!}>
-        <div dir="ltr" className="ltr-isolate flex h-full flex-col">
-          <ShareBanner bundle={state.bundle} />
-          <div className="min-h-0 flex-1">
-            <ReaderScreen bookId={state.bundle.sourceBook.bookId} />
-          </div>
-        </div>
+        <ReaderScreen bookId={state.bundle.sourceBook.bookId} />
       </StorageOverride>
     </ReadOnlyContext.Provider>
   );
 }
 
-/**
- * Always on screen, never dismissable.
- *
- * A visitor who scrolls past a one-time notice and then forgets they are in
- * somebody else's chapter is the failure this prevents — they would read a
- * missing Translate button as a bug, and an empty contents drawer as a broken
- * import. It names the work, says plainly that this is an extract, and offers
- * the way out.
- */
-function ShareBanner({ bundle }: { bundle: ShareBundle }) {
-  return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-verse/40 bg-verse/[0.07] px-3 py-1.5 text-[11px]">
-      <span className="shrink-0 rounded-full bg-verse/15 px-2 py-0.5 font-medium text-[10px]">
-        Shared extract
-      </span>
-      <span className="arabic min-w-0 truncate text-[13px]" dir="rtl" lang="ar">
-        {bundle.sourceBook.title}
-      </span>
-      <span className="min-w-0 truncate text-muted">
-        {bundle.sourceBook.author}
-        {bundle.sourceBook.publisher ? ` · ${bundle.sourceBook.publisher}` : ''}
-      </span>
-      {/* The "Read-only — one chapter, not the whole work" line used to sit
-          here and has been removed deliberately.
-          It was explaining the app to the reader rather than telling them
-          anything about the text. The absence of a Translate button is not a
-          state a visitor needs narrating, and the "Shared extract" chip beside
-          the title already says what this is. What stays is the part that is
-          about the material — which work, whose edition — and the way out. */}
-      <span className="ms-auto shrink-0">
-        <LinkButton to={{ name: 'library' }} variant="ghost">
-          Leave shared view
-        </LinkButton>
-      </span>
-    </div>
-  );
-}
 
 function ShareError({ message, detail }: { message: string; detail: string | null }) {
   return (
