@@ -163,7 +163,13 @@ function ShareBanner({ bundle }: { bundle: ShareBundle }) {
         {bundle.sourceBook.author}
         {bundle.sourceBook.publisher ? ` · ${bundle.sourceBook.publisher}` : ''}
       </span>
-      <span className="text-muted">Read-only — one chapter, not the whole work.</span>
+      {/* The "Read-only — one chapter, not the whole work" line used to sit
+          here and has been removed deliberately.
+          It was explaining the app to the reader rather than telling them
+          anything about the text. The absence of a Translate button is not a
+          state a visitor needs narrating, and the "Shared extract" chip beside
+          the title already says what this is. What stays is the part that is
+          about the material — which work, whose edition — and the way out. */}
       <span className="ms-auto shrink-0">
         <LinkButton to={{ name: 'library' }} variant="ghost">
           Leave shared view

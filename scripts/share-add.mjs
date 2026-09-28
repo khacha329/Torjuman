@@ -19,7 +19,15 @@
 // No dependencies, no network, and it never overwrites without being told to.
 // ---------------------------------------------------------------------------
 
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  readdirSync,
+  statSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs';
 import { join, basename, resolve } from 'node:path';
 
 // Mirrors the header in src/share/crypto.ts. Duplicated rather than imported
@@ -116,7 +124,18 @@ for (const target of targets) {
     }
 
     writeFileSync(destination, buffer);
-    console.log(`  ${basename(file)}  ->  public/shares/${found.id}.bin`);
+
+    // A file that was already inside public/shares/ under the wrong name is
+    // being RENAMED, not copied. Leaving the original behind would publish the
+    // same chapter twice and quietly double what the repository carries — which
+    // is exactly what happened the first time this ran over a folder of
+    // misnamed downloads.
+    if (resolve(file) !== destination && resolve(file).startsWith(SHARES_DIR)) {
+      unlinkSync(file);
+      console.log(`  ${basename(file)}  ->  ${found.id}.bin  (renamed in place)`);
+    } else {
+      console.log(`  ${basename(file)}  ->  public/shares/${found.id}.bin`);
+    }
     added += 1;
   }
 }

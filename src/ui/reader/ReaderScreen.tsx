@@ -118,6 +118,23 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const restoredRef = useRef(false);
   const shareButtonRef = useRef<HTMLSpanElement>(null);
   const [showShare, setShowShare] = useState(false);
+  /**
+   * The card panel's scope inside a shared view, defaulting to All.
+   *
+   * Visible is the right default for the reader's own library: a six-volume
+   * commentary holds thousands of cards and scoping them to what is on screen
+   * is what keeps the panel usable. A shared chapter is a few hundred blocks
+   * and a few dozen cards, so that reasoning does not carry over — and the
+   * failure it produces is severe. A visitor lands at the top of the chapter,
+   * the first translation is pages further in, and the panel is empty. Nothing
+   * tells them a scope control exists, so an empty panel reads as "this share
+   * has no translations" — which is the one thing a share exists to deliver.
+   *
+   * Kept in memory rather than in settings: the scope belongs to this viewing,
+   * not to the visitor's own reading preferences, and a shared chapter must not
+   * quietly rewrite those. The selector still works; only its default differs.
+   */
+  const [sharedScope, setSharedScope] = useState<PanelScope>('all');
 
   // Computed up here because the marker handler needs it: the panel being open
   // decides whether a marker tap scrolls the panel or opens a popover.
@@ -676,11 +693,13 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       streaming={translator.streaming}
       activeCardId={activeCardId}
       stats={translator.stats}
-      scope={settings.panelScope}
+      scope={readOnly ? sharedScope : settings.panelScope}
       visibleRange={settledRange}
       sectionNodeId={sectionNodeId}
       isStale={translator.isStale}
-      onScopeChange={(scope: PanelScope) => void updateSettings({ panelScope: scope })}
+      onScopeChange={(scope: PanelScope) =>
+        readOnly ? setSharedScope(scope) : void updateSettings({ panelScope: scope })
+      }
       onFocusCard={focusCard}
       onToggleCollapse={(card) => {
         if (card.kind === 'note') void marks.setCollapsed(card.markId, !card.collapsed);
