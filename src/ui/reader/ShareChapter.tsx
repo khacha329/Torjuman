@@ -50,6 +50,21 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Save the sealed bundle, under a name that MUST be exact.
+ *
+ * The filename is not cosmetic: the loader fetches `<share id>.bin`, and the id
+ * is what the link carries. A file saved under any other name is unreachable,
+ * and the failure surfaces much later as "this shared chapter could not be
+ * found" — pointing at the link, which is fine, rather than at the download,
+ * which is not.
+ *
+ * Which is exactly what happened. The anchor below used to be clicked without
+ * being added to the document, and Android Chrome ignores `download` on a
+ * detached element: it fell back to naming the file after the blob's own UUID.
+ * The element therefore goes into the DOM before the click and comes out after,
+ * which is the one arrangement every browser honours.
+ */
 function download(bytes: Uint8Array, filename: string): void {
   const url = URL.createObjectURL(
     new Blob([bytes as BlobPart], { type: 'application/octet-stream' }),
@@ -57,9 +72,44 @@ function download(bytes: Uint8Array, filename: string): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  anchor.rel = 'noopener';
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
   anchor.click();
+  anchor.remove();
   // Revoked on a delay rather than immediately: some Android browsers have not
   // started reading the blob by the time click() returns.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Save the link as a text file beside the bundle.
+ *
+ * The link is generated on the tablet and the file has to be committed from a
+ * computer, so "read the link off the device and retype 22 characters" is a
+ * real step in a real workflow, and a bad one. This puts the link in the
+ * Downloads folder next to the bundle, to be carried across by the same means.
+ *
+ * Offered rather than automatic: two downloads fired back to back trip
+ * Android's "allow multiple downloads?" prompt, and a share should not open
+ * with a permission dialog.
+ */
+function downloadLink(id: string, link: string, title: string): void {
+  const text =
+    `${title}\n\n${link}\n\n` +
+    `File: ${shareFileName(id)}\n` +
+    `Put that file in public/shares/ (npm run share:add does it for you), ` +
+    `then commit and push to main.\n\n` +
+    `This link carries the only key to the chapter. Anyone who has it can read it.\n`;
+
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${id}.link.txt`;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
@@ -365,10 +415,22 @@ function Published({
 }) {
   return (
     <>
+      {/* The filename is load-bearing and browsers do rename downloads, so it
+          is stated as a requirement rather than left as an incidental detail
+          in step one. Getting it wrong produces a dead link whose error points
+          at the link rather than at the file. */}
+      <p className="rounded-md border border-rule bg-parchment px-2.5 py-2 text-[11px]">
+        The file must be named exactly{' '}
+        <code className="rounded bg-rule/40 px-1 break-all">
+          {shareFileName(sealed.bundle.id)}
+        </code>
+        . If your browser saved it under a different name, rename it — the link looks the
+        chapter up by that name.
+      </p>
+
       <ol className="list-decimal space-y-1 pl-4 text-muted">
         <li>
-          <code className="rounded bg-rule/40 px-1">{shareFileName(sealed.bundle.id)}</code> has
-          been downloaded ({formatBytes(sealed.bytes.length)}).
+          Downloaded ({formatBytes(sealed.bytes.length)}). Check the name matches above.
         </li>
         <li>
           Move it into <code className="rounded bg-rule/40 px-1">public/shares/</code> in the
@@ -388,7 +450,14 @@ function Published({
         >
           {link}
         </p>
-        <Button onClick={onCopy}>{copied ? 'Copied' : 'Copy link'}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onCopy}>{copied ? 'Copied' : 'Copy link'}</Button>
+          <Button
+            onClick={() => downloadLink(sealed.bundle.id, link, sealed.bundle.title)}
+          >
+            Save link as a file
+          </Button>
+        </div>
       </div>
 
       <p className="text-[11px] text-muted">

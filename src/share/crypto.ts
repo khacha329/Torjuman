@@ -29,15 +29,40 @@ import { isShareBundle, type ShareBundle } from './bundle';
 //   magic   4 bytes  "HSH1", so a truncated or wrong file fails immediately
 //                    and legibly rather than as a decryption error
 //   flags   1 byte   bit 0: the plaintext is gzipped
+//   idLen   1 byte   length of the id that follows
+//   id      N bytes  ASCII, in clear — see below
 //   iv     12 bytes  random per file, as AES-GCM requires
 //   body    …        AES-GCM ciphertext with its tag
 //
 // Compress first, then encrypt. The other order is a common mistake and a
 // pointless one: ciphertext is indistinguishable from noise and does not
 // compress.
+//
+// ---------------------------------------------------------------------------
+// Why the id is in clear
+//
+// The loader fetches `<id>.bin`, so the filename IS the id, and a file saved
+// under any other name is unreachable. That happened: a browser ignored the
+// download attribute and named a bundle after its blob UUID, and because the id
+// lived only inside the ciphertext, the correct name could not be recovered
+// from the file at all — it had to be read off the device that made it.
+//
+// A file that cannot tell you what it is called is a bad file format. The id is
+// not a secret in any case: it is the filename in a public repository and it is
+// in the link. So it sits in the header, where `readShareId` can recover it
+// with no key, and scripts/share-add.mjs uses exactly that to put a downloaded
+// bundle in the right place under the right name.
+//
+// It is passed to AES-GCM as additional authenticated data, so the header id
+// and the ciphertext are bound together: swapping one file's id onto another's
+// body fails to decrypt rather than silently serving the wrong chapter.
 // ---------------------------------------------------------------------------
 
-const MAGIC = new Uint8Array([0x48, 0x53, 0x48, 0x31]); // "HSH1"
+// "HSH2". The envelope changed shape, so the magic changes with it — an older
+// bundle then fails at the first four bytes with something a reader can act on,
+// rather than misparsing a header whose fields have moved.
+const MAGIC = new Uint8Array([0x48, 0x53, 0x48, 0x32]);
+const LEGACY_MAGIC = new Uint8Array([0x48, 0x53, 0x48, 0x31]);
 const IV_BYTES = 12;
 const KEY_BYTES = 32;
 const FLAG_GZIP = 0x01;
@@ -159,45 +184,89 @@ export async function sealBundle(bundle: ShareBundle, key: Uint8Array): Promise<
   const json = new TextEncoder().encode(JSON.stringify(bundle));
   const { bytes: body, compressed } = await gzip(json);
 
+  const id = new TextEncoder().encode(bundle.id);
+  if (id.length > 255) throw new Error('Share id is too long to store in the header.');
+
   const iv = randomBytes(IV_BYTES);
   const cipher = new Uint8Array(
     await subtle().encrypt(
-      { name: 'AES-GCM', iv: iv as BufferSource },
+      // The id travels as additional authenticated data: it is not encrypted,
+      // but it cannot be altered without decryption failing.
+      { name: 'AES-GCM', iv: iv as BufferSource, additionalData: id as BufferSource },
       await importKey(key, 'encrypt'),
       body as BufferSource,
     ),
   );
 
-  const out = new Uint8Array(MAGIC.length + 1 + IV_BYTES + cipher.length);
-  out.set(MAGIC, 0);
-  out[MAGIC.length] = compressed ? FLAG_GZIP : 0;
-  out.set(iv, MAGIC.length + 1);
-  out.set(cipher, MAGIC.length + 1 + IV_BYTES);
+  const out = new Uint8Array(MAGIC.length + 2 + id.length + IV_BYTES + cipher.length);
+  let at = 0;
+  out.set(MAGIC, at);
+  at += MAGIC.length;
+  out[at++] = compressed ? FLAG_GZIP : 0;
+  out[at++] = id.length;
+  out.set(id, at);
+  at += id.length;
+  out.set(iv, at);
+  at += IV_BYTES;
+  out.set(cipher, at);
   return out;
+}
+
+/**
+ * The share id a file belongs to, read from its header with no key.
+ *
+ * This is what makes a bundle self-naming: `scripts/share-add.mjs` calls it to
+ * work out what a downloaded file should be called, whatever the browser
+ * decided to save it as. Returns null for anything that is not one of our
+ * files, so a caller can say so rather than crash.
+ */
+export function readShareId(file: Uint8Array): string | null {
+  if (file.length < MAGIC.length + 2) return null;
+  for (let i = 0; i < MAGIC.length; i += 1) {
+    if (file[i] !== MAGIC[i]) return null;
+  }
+  const idLength = file[MAGIC.length + 1];
+  const start = MAGIC.length + 2;
+  if (idLength === 0 || file.length < start + idLength + IV_BYTES) return null;
+  return new TextDecoder().decode(file.subarray(start, start + idLength));
 }
 
 /** The inverse, with every failure mode turned into something a reader can act on. */
 export async function openBundle(file: Uint8Array, key: Uint8Array): Promise<ShareBundle> {
-  if (file.length < MAGIC.length + 1 + IV_BYTES) {
+  if (file.length < MAGIC.length + 2 + IV_BYTES) {
     throw new Error('This shared file is incomplete.');
   }
-  for (let i = 0; i < MAGIC.length; i += 1) {
-    if (file[i] !== MAGIC[i]) {
-      // Overwhelmingly the common case is a 404 page served as the file, so say
-      // the thing that is actually true rather than talking about magic bytes.
-      throw new Error('That link does not point at a shared chapter.');
+
+  const startsWith = (prefix: Uint8Array) =>
+    prefix.every((byte, index) => file[index] === byte);
+
+  if (!startsWith(MAGIC)) {
+    // A bundle from before the id moved into the header. Nothing can be done
+    // with it here — say which problem it is, since "publish it again" is the
+    // fix and "that link is wrong" would send the reader looking elsewhere.
+    if (startsWith(LEGACY_MAGIC)) {
+      throw new Error('This link was made by an older version and needs publishing again.');
     }
+    // Overwhelmingly the common case is a 404 page served as the file, so say
+    // the thing that is actually true rather than talking about magic bytes.
+    throw new Error('That link does not point at a shared chapter.');
   }
 
   const flags = file[MAGIC.length];
-  const iv = file.subarray(MAGIC.length + 1, MAGIC.length + 1 + IV_BYTES);
-  const body = file.subarray(MAGIC.length + 1 + IV_BYTES);
+  const idLength = file[MAGIC.length + 1];
+  const idStart = MAGIC.length + 2;
+  if (file.length < idStart + idLength + IV_BYTES) {
+    throw new Error('This shared file is incomplete.');
+  }
+  const id = file.subarray(idStart, idStart + idLength);
+  const iv = file.subarray(idStart + idLength, idStart + idLength + IV_BYTES);
+  const body = file.subarray(idStart + idLength + IV_BYTES);
 
   let plain: Uint8Array;
   try {
     plain = new Uint8Array(
       await subtle().decrypt(
-        { name: 'AES-GCM', iv: iv as BufferSource },
+        { name: 'AES-GCM', iv: iv as BufferSource, additionalData: id as BufferSource },
         await importKey(key, 'decrypt'),
         body as BufferSource,
       ),
@@ -220,6 +289,13 @@ export async function openBundle(file: Uint8Array, key: Uint8Array): Promise<Sha
 
   if (!isShareBundle(parsed)) {
     throw new Error('This shared chapter is not in a format this app recognises.');
+  }
+
+  // The header id is authenticated, so it cannot disagree with the payload
+  // without decryption having already failed. Checked anyway: it costs nothing
+  // and it is the invariant the filename depends on.
+  if (parsed.id !== new TextDecoder().decode(id)) {
+    throw new Error('This shared file does not match its own name.');
   }
   return parsed;
 }

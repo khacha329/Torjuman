@@ -4759,6 +4759,53 @@ console.log('\n=== Shared views ===');
   }
   expect('a tampered file is refused — AES-GCM authenticates', tamperMessage !== '', tamperMessage);
 
+  // -- the file names itself
+  //
+  // The id lives in the header, in clear, so a bundle can be filed correctly
+  // from a computer that has neither the key nor the device that made it. This
+  // exists because a browser once ignored the download attribute and saved a
+  // bundle under a blob UUID, and the correct name was then unrecoverable from
+  // the file — which is a bad property for a format whose filename is its
+  // address.
+
+  {
+    const { readShareId } = await import('../src/share/crypto');
+
+    check('the id is readable with no key', readShareId(sealed), bundle.id);
+    check('a non-bundle has no id', readShareId(new TextEncoder().encode('<!doctype html>')), null);
+    check('a truncated header has no id', readShareId(sealed.subarray(0, 4)), null);
+
+    // Authenticated, not merely present: the id is passed to AES-GCM as
+    // additional data, so editing it in the header breaks decryption instead of
+    // quietly serving one chapter under another's name.
+    const swapped = new Uint8Array(sealed);
+    const idAt = 6; // magic(4) + flags(1) + idLen(1)
+    swapped[idAt] = swapped[idAt] === 65 ? 66 : 65;
+    let swapMessage = '';
+    try {
+      await openBundle(swapped, key);
+    } catch (error) {
+      swapMessage = (error as Error).message;
+    }
+    expect('an edited header id is refused', swapMessage !== '', swapMessage);
+
+    // A bundle from before the id moved into the header: nothing can open it,
+    // and the message has to say "publish again" rather than "bad link".
+    const legacy = new Uint8Array(sealed);
+    legacy[3] = 0x31; // "HSH2" -> "HSH1"
+    let legacyMessage = '';
+    try {
+      await openBundle(legacy, key);
+    } catch (error) {
+      legacyMessage = (error as Error).message;
+    }
+    check(
+      'an older bundle says to publish it again',
+      legacyMessage,
+      'This link was made by an older version and needs publishing again.',
+    );
+  }
+
   // The realistic corruption is not a flipped bit: it is a 404 page served
   // where the file should be. That has to read as a bad link.
   let notOurs = '';
