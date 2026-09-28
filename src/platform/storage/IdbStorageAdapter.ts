@@ -18,6 +18,7 @@ import type {
   QulResource,
   QuranVerse,
   ReadingPosition,
+  ShareRecord,
   TocNode,
   TranslationCard,
   TranslationProfile,
@@ -52,7 +53,10 @@ const DB_NAME = 'shamela-reader';
 // `namings`. Unlike biographyEntries — a few thousand short rows read whole —
 // this store holds tens of thousands of full profiles, so a lookup must go
 // through an index rather than load it.
-const DB_VERSION = 10;
+// 11 adds shareRecords: what this device has published as a shared link. A few
+// dozen tiny rows read whole, so no index. It holds each share's decryption
+// key, which exists in no other place — see ShareRecord.
+const DB_VERSION = 11;
 const SETTINGS_KEY = 'app';
 
 /**
@@ -141,6 +145,7 @@ interface Schema extends DBSchema {
     value: StoredNarratorProfile;
     indexes: { byNaming: string; byShard: string };
   };
+  shareRecords: { key: string; value: ShareRecord };
   wordGlosses: { key: string; value: WordGloss };
   qulResources: { key: string; value: QulResource };
   qulEntries: {
@@ -245,6 +250,9 @@ export class IdbStorageAdapter implements StorageAdapter {
             narrators.createIndex('byNaming', 'namings', { multiEntry: true });
             narrators.createIndex('byShard', 'shard');
           }
+          if (!db.objectStoreNames.contains('shareRecords')) {
+            db.createObjectStore('shareRecords', { keyPath: 'id' });
+          }
           return;
         }
 
@@ -295,6 +303,10 @@ export class IdbStorageAdapter implements StorageAdapter {
         const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
         narrators.createIndex('byNaming', 'namings', { multiEntry: true });
         narrators.createIndex('byShard', 'shard');
+
+        // Shared chapters this device published. No index: there are a few
+        // dozen at most and Settings reads all of them at once.
+        db.createObjectStore('shareRecords', { keyPath: 'id' });
 
         db.createObjectStore('wordGlosses', { keyPath: 'word' });
 
@@ -870,6 +882,28 @@ export class IdbStorageAdapter implements StorageAdapter {
     await this.purgeIndex('narratorProfiles', 'byShard', shard);
   }
 
+  // -------------------------------------------------------- shared chapters
+
+  async putShareRecord(record: ShareRecord): Promise<void> {
+    await this.handle.put('shareRecords', record);
+  }
+
+  async listShareRecords(): Promise<ShareRecord[]> {
+    const records = await this.handle.getAll('shareRecords');
+    return records.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  /**
+   * Forgets the local record. It does not, and cannot, unpublish anything.
+   *
+   * The file lives in a git repository that only the author can push to, so
+   * withdrawing a share is deleting that file and pushing. Settings says so
+   * rather than implying this button did it.
+   */
+  async deleteShareRecord(id: string): Promise<void> {
+    await this.handle.delete('shareRecords', id);
+  }
+
   async putWordGloss(gloss: WordGloss): Promise<void> {
     await this.handle.put('wordGlosses', gloss);
   }
@@ -906,6 +940,7 @@ export class IdbStorageAdapter implements StorageAdapter {
       wordGlosses: await db.getAll('wordGlosses'),
       quranVerses: await db.getAll('quranVerses'),
       hadiths: await db.getAll('hadiths'),
+      shareRecords: await db.getAll('shareRecords'),
       settings: (await this.getSettings()) ?? null,
     };
   }
@@ -915,7 +950,7 @@ export class IdbStorageAdapter implements StorageAdapter {
 
     const write = async <
       K extends 'cards' | 'explanationCards' | 'sharhCards' | 'marks' | 'glossary' | 'profiles' |
-        'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths',
+        'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths' | 'shareRecords',
     >(
       store: K,
       rows: Schema[K]['value'][] | undefined,
@@ -938,6 +973,8 @@ export class IdbStorageAdapter implements StorageAdapter {
     await write('wordGlosses', bundle.wordGlosses);
     await write('quranVerses', bundle.quranVerses);
     await write('hadiths', bundle.hadiths);
+    // Absent on a backup written before shares existed, which `write` handles.
+    await write('shareRecords', bundle.shareRecords);
     if (bundle.settings) await this.putSettings(bundle.settings);
 
     // Work anchored to a book that is not on this device restores fine — block

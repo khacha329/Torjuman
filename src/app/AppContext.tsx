@@ -73,6 +73,32 @@ export function useApp(): AppServices {
   return context;
 }
 
+/**
+ * Re-provide the app with a different storage adapter for one subtree.
+ *
+ * This is the whole mechanism behind shared views. Every screen reaches its
+ * data through `useApp().storage` and none of them know which adapter that is,
+ * so handing the reader a read-only adapter backed by a downloaded bundle
+ * turns it into a viewer for somebody else's chapter with no changes to the
+ * reader at all. See share/ShareStorageAdapter.ts.
+ *
+ * Everything else in the context is passed through untouched: the visitor's own
+ * settings, profiles and glossary are still theirs, and the http client is
+ * still the real one, because a shared view still resolves verses and tafsīr
+ * from data that lives on their device.
+ */
+export function StorageOverride({
+  storage,
+  children,
+}: {
+  storage: StorageAdapter;
+  children: ReactNode;
+}) {
+  const services = useApp();
+  const overridden = useMemo(() => ({ ...services, storage }), [services, storage]);
+  return <AppContext.Provider value={overridden}>{children}</AppContext.Provider>;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);

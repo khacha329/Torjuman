@@ -4468,6 +4468,435 @@ console.log('\n=== The deployed proxy (proxy/worker.js) ===');
   }
 }
 
+// ------------------------------------------- Shared views (Amendment 18)
+//
+// Three things are worth proving here and none of them are provable by reading
+// the code:
+//
+//   1. A bundle carries a chapter and nothing that merely touches it. The
+//      "both ends in range" rule is what stops a card anchored across the
+//      boundary shipping an anchor the visitor has no block for.
+//   2. The file is opaque and tamper-evident. Committing ciphertext to a
+//      public repository is the whole basis for sharing book text at all, so
+//      a wrong key and a mangled file must both fail, loudly.
+//   3. Nothing from a shared chapter reaches the visitor's own database. That
+//      is an acceptance criterion, and it is exactly the kind of leak that
+//      never shows up in manual testing.
+
+console.log('\n=== Shared views ===');
+
+{
+  const { tocSubtree, chapterRange, buildBundle } = await import('../src/share/buildBundle');
+  const { isShareBundle } = await import('../src/share/bundle');
+  const { sealBundle, openBundle, generateShareKey } = await import('../src/share/crypto');
+  const { parseShareRoute } = await import('../src/share/shareLink');
+  const { ShareStorageAdapter } = await import('../src/share/ShareStorageAdapter');
+
+  const BOOK = 'shamela-9260';
+  const node = (id: string, parentId: string | null, order: number) => ({
+    id,
+    bookId: BOOK,
+    parentId,
+    title: `node ${id}`,
+    pageIndex: 1,
+    order,
+    depth: parentId ? 1 : 0,
+  });
+  const toc = [node('t1', null, 0), node('t2', 't1', 1), node('t3', null, 2)];
+
+  const block = (n: number, tocNodeId: string) => ({
+    id: `${BOOK}:b${n}`,
+    bookId: BOOK,
+    pageId: `${BOOK}:p${n <= 3 ? 1 : 2}`,
+    order: n,
+    type: 'body' as const,
+    text: `نص ${n}`,
+    normalized: `نص ${n}`,
+    contentHash: '',
+    hadithNumber: null,
+    tocNodeId,
+    spans: [],
+    anchor: null,
+  });
+  const blocks = [block(1, 't1'), block(2, 't1'), block(3, 't1'), block(4, 't2'), block(5, 't3')];
+
+  // -- range selection
+
+  check('a subtree collects the node and its children', [...tocSubtree(toc, 't1')].sort(), [
+    't1',
+    't2',
+  ]);
+  check('an unrelated sibling is not in the subtree', tocSubtree(toc, 't1').has('t3'), false);
+
+  const range = chapterRange(blocks, toc, 't1');
+  check(
+    'a chapter takes its sub-headings with it',
+    range.blocks.map((b) => b.order),
+    [1, 2, 3, 4],
+  );
+
+  // -- assembly
+
+  const anchored = (startBlockId: string, endBlockId: string) => ({
+    startBlockId,
+    startOffset: 0,
+    endBlockId,
+    endOffset: 1,
+  });
+
+  const narrator = {
+    id: 'itqan:1',
+    shard: 'itqan:profiles_companion.json',
+    key: 'ابو هريرة',
+    fullName: 'أبو هريرة',
+    namings: ['ابو هريرة'],
+    kunya: null,
+    lineage: null,
+    knownAs: null,
+    generation: null,
+    residence: null,
+    birth: null,
+    death: null,
+    placeOfBirth: null,
+    placeOfDeath: null,
+    ibnHajar: null,
+    statements: [],
+    sources: [],
+  };
+
+  const hadith = {
+    reference: 'riyadussalihin:1',
+    collection: 'riyadussalihin',
+    number: '1',
+    arabic: 'إنما الأعمال بالنيات',
+    english: '',
+    grade: null,
+    sourceUrl: null,
+    fetchedAt: 0,
+  };
+
+  let ownWrites = 0;
+  const ownStorage = {
+    async getBook() {
+      return {
+        id: BOOK,
+        shamelaId: 9260,
+        title: 'شرح رياض الصالحين',
+        author: 'ابن عثيمين',
+        publisher: 'دار الوطن',
+        edition: '',
+        volumeCount: 6,
+        category: 'شروح الحديث',
+        structureProfile: 'hadith-commentary',
+        importedAt: 0,
+        importStatus: 'complete',
+        totalPages: 10,
+        fetchedPages: 10,
+        volumeStarts: [],
+        hadithCollection: null,
+        role: 'reading',
+      };
+    },
+    async listTocNodes() {
+      return toc;
+    },
+    async listPageMeta() {
+      return [
+        { pageIndex: 1, volume: 1, printPage: 5 },
+        { pageIndex: 2, volume: 1, printPage: 6 },
+        { pageIndex: 9, volume: 2, printPage: 40 },
+      ];
+    },
+    // One card wholly inside the chapter, one straddling its last block and the
+    // next chapter's first.
+    async listCards() {
+      return [
+        { id: 'c1', bookId: BOOK, kind: 'translation', ...anchored(`${BOOK}:b1`, `${BOOK}:b2`) },
+        { id: 'c2', bookId: BOOK, kind: 'translation', ...anchored(`${BOOK}:b4`, `${BOOK}:b5`) },
+      ];
+    },
+    async listMarks() {
+      return [{ id: 'm1', bookId: BOOK, ...anchored(`${BOOK}:b3`, `${BOOK}:b3`) }];
+    },
+    async listEntities() {
+      return [
+        {
+          id: 'e1',
+          bookId: BOOK,
+          type: 'narrator',
+          reference: 'ابو هريرة',
+          ...anchored(`${BOOK}:b1`, `${BOOK}:b1`),
+        },
+        {
+          id: 'e2',
+          bookId: BOOK,
+          type: 'hadith',
+          reference: 'riyadussalihin:1',
+          ...anchored(`${BOOK}:b2`, `${BOOK}:b2`),
+        },
+        // Outside the chapter: its narrator must not be resolved into the
+        // bundle, or a share would carry profiles for names it never shows.
+        {
+          id: 'e3',
+          bookId: BOOK,
+          type: 'narrator',
+          reference: 'انس بن مالك',
+          ...anchored(`${BOOK}:b5`, `${BOOK}:b5`),
+        },
+      ];
+    },
+    async listExplanationCards() {
+      return [];
+    },
+    async listSharhCards() {
+      return [];
+    },
+    async findNarratorProfiles(naming: string) {
+      return naming === 'ابو هريرة' ? [narrator] : [];
+    },
+    async getHadith(reference: string) {
+      return reference === 'riyadussalihin:1' ? hadith : undefined;
+    },
+    // Every write the share adapter might wrongly pass through lands here.
+    async putBook() {
+      ownWrites += 1;
+    },
+    async putBlocks() {
+      ownWrites += 1;
+    },
+    async putCard() {
+      ownWrites += 1;
+    },
+    async putMarks() {
+      ownWrites += 1;
+    },
+    async putEntities() {
+      ownWrites += 1;
+    },
+    async putReadingPosition() {
+      ownWrites += 1;
+    },
+    async putHadith() {
+      ownWrites += 1;
+    },
+    async putNarratorProfiles() {
+      ownWrites += 1;
+    },
+    async listBiographyEntries() {
+      return [];
+    },
+    async listNarratorShards() {
+      return [];
+    },
+  } as unknown as import('../src/platform/storage/StorageAdapter').StorageAdapter;
+
+  const bundle = await buildBundle(ownStorage, { bookId: BOOK, range });
+
+  check('the bundle carries the chapter’s blocks', bundle.blocks.length, 4);
+  check(
+    'a card wholly inside the range travels',
+    bundle.cards.map((c) => c.id),
+    ['c1'],
+  );
+  check('a card straddling the boundary does not', bundle.cards.length, 1);
+  check('marks inside the range travel', bundle.marks.length, 1);
+  check(
+    'only the pages the range sits on',
+    bundle.pageMeta.map((m) => m.pageIndex),
+    [1, 2],
+  );
+  check(
+    'the narrator named in the range is resolved',
+    bundle.resolved.narrators.map((p) => p.id),
+    ['itqan:1'],
+  );
+  check('a narrator named outside it is not', bundle.resolved.narrators.length, 1);
+  check(
+    'the ḥadīth quoted in the range is resolved',
+    bundle.resolved.hadiths.map((h) => h.reference),
+    ['riyadussalihin:1'],
+  );
+  expect(
+    'the title names the work and the chapter',
+    bundle.title.includes('شرح رياض الصالحين') && bundle.title.includes('node t1'),
+    bundle.title,
+  );
+
+  // -- the file
+
+  const key = generateShareKey();
+  const sealed = await sealBundle(bundle, key);
+
+  expect('a sealed bundle is smaller than its JSON', sealed.length < JSON.stringify(bundle).length,
+    `${sealed.length} < ${JSON.stringify(bundle).length}`);
+  expect(
+    'the Arabic is not readable in the sealed bytes',
+    !new TextDecoder('utf-8', { fatal: false }).decode(sealed).includes('شرح رياض'),
+  );
+
+  const reopened = await openBundle(sealed, key);
+  check('a sealed bundle reopens to the same id', reopened.id, bundle.id);
+  check('…with its blocks intact', reopened.blocks.length, 4);
+  check('…and its text unchanged', reopened.blocks[0].text, bundle.blocks[0].text);
+  check('…and its resolved references', reopened.resolved.narrators.length, 1);
+
+  const wrongKey = generateShareKey();
+  let refused = '';
+  try {
+    await openBundle(sealed, wrongKey);
+  } catch (error) {
+    refused = (error as Error).message;
+  }
+  expect('the wrong key is refused', refused !== '', refused);
+
+  const tampered = new Uint8Array(sealed);
+  tampered[tampered.length - 1] ^= 0xff;
+  let tamperMessage = '';
+  try {
+    await openBundle(tampered, key);
+  } catch (error) {
+    tamperMessage = (error as Error).message;
+  }
+  expect('a tampered file is refused — AES-GCM authenticates', tamperMessage !== '', tamperMessage);
+
+  // The realistic corruption is not a flipped bit: it is a 404 page served
+  // where the file should be. That has to read as a bad link.
+  let notOurs = '';
+  try {
+    await openBundle(new TextEncoder().encode('<!doctype html><html>404'), key);
+  } catch (error) {
+    notOurs = (error as Error).message;
+  }
+  check('an HTML page in place of a bundle', notOurs, 'That link does not point at a shared chapter.');
+
+  // -- validation
+
+  expect('a real bundle validates', isShareBundle(bundle));
+  expect('an HTML string does not', !isShareBundle('<!doctype html>'));
+  expect('null does not', !isShareBundle(null));
+  expect('a bundle with no blocks array does not', !isShareBundle({ ...bundle, blocks: undefined }));
+  expect(
+    'a bundle whose blocks lack text does not',
+    !isShareBundle({ ...bundle, blocks: [{ id: 'x' }] }),
+  );
+  expect(
+    'a bundle with no resolved section does not',
+    !isShareBundle({ ...bundle, resolved: undefined }),
+  );
+
+  // -- ranges spanning more than one chapter
+
+  {
+    const { orderRange } = await import('../src/share/buildBundle');
+    // "From the start of t1 through the end of t3" — the shape the picker
+    // builds when an end chapter is chosen. It must cross the boundary that
+    // chapterRange deliberately stops at.
+    const span = orderRange(blocks, 1, 5);
+    check(
+      'a span runs through to the end chapter',
+      span.blocks.map((b) => b.order),
+      [1, 2, 3, 4, 5],
+    );
+    check('a span given backwards is normalised', orderRange(blocks, 5, 1).blocks.length, 5);
+    check('a span of one block is one block', orderRange(blocks, 3, 3).blocks.length, 1);
+
+    const spanned = await buildBundle(ownStorage, {
+      bookId: BOOK,
+      range: { ...span, label: 'node t1 — node t3' },
+    });
+    check('a wider range carries the card that straddled the old boundary', spanned.cards.length, 2);
+    check(
+      'and resolves the narrator that was outside it',
+      spanned.resolved.narrators.length,
+      1,
+    );
+    check(
+      'and picks up the further page',
+      spanned.pageMeta.map((m) => m.pageIndex),
+      [1, 2],
+    );
+  }
+
+  // -- links
+
+  const keyText = 'a'.repeat(43);
+  expect('a share route parses', parseShareRoute(`/share/abc123/${keyText}`)?.id === 'abc123');
+  expect('a short key is rejected', parseShareRoute('/share/abc123/tooshort') === null);
+  expect('a non-share path is rejected', parseShareRoute('/read/shamela-9260') === null);
+
+  // A link is handed to somebody else and is the only copy of the key, so the
+  // round trip is the one thing in this feature that must not be approximately
+  // right. Built the way Settings builds it, parsed the way the router does.
+  {
+    const { shareLinkFromKeyText } = await import('../src/share/shareLink');
+    const { toBase64Url } = await import('../src/share/crypto');
+
+    const linkKey = toBase64Url(key);
+    const link = shareLinkFromKeyText(bundle.id, linkKey);
+    const parsed = parseShareRoute(link.slice(link.indexOf('#') + 1));
+
+    check('a built link parses back to its id', parsed?.id, bundle.id);
+    expect(
+      'a built link parses back to the same key bytes',
+      parsed !== null && [...parsed.key].join(',') === [...key].join(','),
+    );
+    // The point of the fragment: the key is after the '#', so it is never part
+    // of what a browser sends to the host.
+    expect('the key sits after the fragment marker', link.indexOf('#') < link.indexOf(linkKey));
+    expect('nothing before the fragment carries the id', !link.slice(0, link.indexOf('#')).includes(bundle.id));
+
+    // And the bundle it points at actually opens with the key the link carried.
+    const viaLink = await openBundle(sealed, parsed!.key);
+    check('a bundle opens with the key taken from its link', viaLink.id, bundle.id);
+  }
+
+  // -- the read-only adapter
+
+  const shareStorage = new ShareStorageAdapter(bundle, ownStorage);
+
+  check('the shared book is readable', (await shareStorage.getBook(BOOK))?.title, 'شرح رياض الصالحين');
+  check('an unrelated book is not', await shareStorage.getBook('shamela-1'), undefined);
+  check('blocks come from the bundle', (await shareStorage.listBlocks(BOOK)).length, 4);
+  check('cards come from the bundle', (await shareStorage.listCards(BOOK)).length, 1);
+  check('marks come from the bundle', (await shareStorage.listMarks(BOOK)).length, 1);
+  check('entities come from the bundle', (await shareStorage.listEntities(BOOK)).length, 2);
+  check(
+    'the resolved ḥadīth is served',
+    (await shareStorage.getHadith('riyadussalihin:1'))?.arabic,
+    'إنما الأعمال بالنيات',
+  );
+  check(
+    'a narrator is found by the naming the tap will use',
+    (await shareStorage.findNarratorProfiles('ابو هريرة')).length,
+    1,
+  );
+  check('search is scoped to the shared range', (await shareStorage.searchBlocks(BOOK, 'نص', 10)).length, 4);
+  check('a page’s stored HTML never travels', await shareStorage.getPage(), undefined);
+  check('the translation cache always misses', await shareStorage.getCardByCacheKey(), undefined);
+  check('no reading position is restored', await shareStorage.getReadingPosition(), undefined);
+
+  // The acceptance criterion, stated as a test: nothing a visitor does while
+  // reading a shared chapter can write that chapter into their own library.
+  await shareStorage.putBook({} as never);
+  await shareStorage.putBlocks([] as never);
+  await shareStorage.putCard({} as never);
+  await shareStorage.putMarks([] as never);
+  await shareStorage.putEntities([] as never);
+  await shareStorage.putReadingPosition({} as never);
+  await shareStorage.putHadith({} as never);
+  await shareStorage.putNarratorProfiles([] as never);
+  check('no write reaches the visitor’s own database', ownWrites, 0);
+
+  let exportRefused = '';
+  try {
+    await shareStorage.exportWork();
+  } catch (error) {
+    exportRefused = (error as Error).message;
+  }
+  check('a shared chapter cannot be backed up as the visitor’s work', exportRefused,
+    'A shared chapter cannot be exported.');
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);

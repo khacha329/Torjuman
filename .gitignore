@@ -64,6 +64,16 @@ node_modules/
 #   ar-tafsir-muyassar.json  King Fahd Complex, 2000s
 #   surah-info-en.json       Mawdūdī's Tafhīm al-Qurʾān sūrah introductions
 
+# --- Shared chapters: committed on purpose ----------------------------------
+# /public/shares/*.bin is NOT excluded, and it is the one place book text
+# reaches this public repository. It is allowed through because of what those
+# files are rather than what they contain: AES-GCM ciphertext whose key exists
+# only in the link the author sends. Committing one publishes an opaque blob;
+# reading it needs the link.
+#
+# Anything unencrypted must never land there. If a plaintext bundle is ever
+# added, exclude it here first — see public/shares/README.md.
+
 # --- Personal work ----------------------------------------------------------
 # The glossary is authored terminology, not source. Delete these two lines if
 # you would rather version it.

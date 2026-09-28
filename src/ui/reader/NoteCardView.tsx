@@ -1,5 +1,6 @@
 import { BidiText } from '../../components/BidiText';
 import type { NoteCard } from '../../types';
+import { useReadOnly } from '../../app/readOnly';
 
 // A mark that carries a note, shown in the card panel.
 //
@@ -24,6 +25,7 @@ export function NoteCardView({
   onEditNote: () => void;
   onDelete: () => void;
 }) {
+  const readOnly = useReadOnly();
   const tone =
     card.markKind === 'skip'
       ? 'border-[#d9a441]/50 bg-[#d9a441]/[0.06]'
@@ -104,17 +106,21 @@ export function NoteCardView({
         <BidiText>{card.note}</BidiText>
       </p>
 
-      <footer className="mt-3 flex items-center gap-2 border-t border-rule pt-2 text-[11px]">
-        <button onClick={onEditNote} className="rounded px-2 py-1 text-muted hover:bg-rule">
-          Edit note
-        </button>
-        <button
-          onClick={onDelete}
-          className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
-        >
-          Remove mark
-        </button>
-      </footer>
+      {/* A visitor reads the author's notes and cannot edit or unmark them.
+          With both controls gone the footer has nothing left to hold. */}
+      {!readOnly && (
+        <footer className="mt-3 flex items-center gap-2 border-t border-rule pt-2 text-[11px]">
+          <button onClick={onEditNote} className="rounded px-2 py-1 text-muted hover:bg-rule">
+            Edit note
+          </button>
+          <button
+            onClick={onDelete}
+            className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
+          >
+            Remove mark
+          </button>
+        </footer>
+      )}
     </article>
   );
 }

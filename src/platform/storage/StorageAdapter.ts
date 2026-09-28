@@ -18,6 +18,7 @@ import type {
   QulResource,
   QuranVerse,
   ReadingPosition,
+  ShareRecord,
   TocNode,
   TranslationCard,
   TranslationProfile,
@@ -56,6 +57,21 @@ export interface WorkBundle {
   wordGlosses: WordGloss[];
   quranVerses: QuranVerse[];
   hadiths: HadithRecord[];
+  /**
+   * Chapters this device published, with their decryption keys.
+   *
+   * Included deliberately. A share's key exists only in the link and in this
+   * record, so a backup that left them out would mean every published link
+   * became unreachable on moving to a new device — the chapters would have to
+   * be republished under new ids, breaking links already handed out.
+   *
+   * Absent on a bundle written before shares existed, hence optional.
+   *
+   * This does not weaken the rule above it: a share key unlocks a chapter its
+   * author chose to publish and that anyone holding the link can already read.
+   * Provider API keys are a different thing entirely and are still never here.
+   */
+  shareRecords?: ShareRecord[];
   settings: AppSettings | null;
 }
 
@@ -207,6 +223,12 @@ export interface StorageAdapter {
   findNarratorProfiles(naming: string): Promise<StoredNarratorProfile[]>;
   listNarratorShards(): Promise<{ shard: string; count: number }[]>;
   deleteNarratorShard(shard: string): Promise<void>;
+
+  // Chapters this device has published as shared links. The record carries the
+  // decryption key, which exists nowhere else — see ShareRecord.
+  putShareRecord(record: ShareRecord): Promise<void>;
+  listShareRecords(): Promise<ShareRecord[]>;
+  deleteShareRecord(id: string): Promise<void>;
 
   // Word gloss cache
   putWordGloss(gloss: WordGloss): Promise<void>;

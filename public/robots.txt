@@ -1,0 +1,39 @@
+# Ḥāshiya — crawler rules.
+#
+# ---------------------------------------------------------------------------
+# READ THIS BEFORE TRUSTING IT
+#
+# Crawlers read robots.txt from the ORIGIN ROOT and nowhere else. This app is a
+# GitHub Pages *project* site, so this file is served at
+#
+#     https://<user>.github.io/Torjuman/robots.txt
+#
+# which no crawler ever requests. The effective file is
+# https://<user>.github.io/robots.txt, and it lives in the separate
+# <user>.github.io repository. To actually exclude shared chapters, add the
+# Disallow line below to THAT file, with the /Torjuman/ prefix:
+#
+#     Disallow: /Torjuman/shares/
+#
+# This copy is kept as the canonical statement of intent, and so the rule is
+# somewhere near the code it describes rather than in another repository with
+# no explanation.
+#
+# ---------------------------------------------------------------------------
+# What actually protects a shared chapter
+#
+# Not this file. Two other things, both of which work whether or not a crawler
+# is polite:
+#
+#   - The bundles are AES-GCM encrypted and the key exists only in the
+#     fragment of the link, which browsers never send to a server. A crawler
+#     that fetches one gets noise. See src/share/crypto.ts.
+#   - The rendered view adds `noindex, nofollow` to the document for as long as
+#     a share is on screen, and removes it on exit — the chapter renders at the
+#     app's own URL, which must stay indexable the rest of the time. See
+#     src/ui/share/ShareScreen.tsx.
+# ---------------------------------------------------------------------------
+
+User-agent: *
+Disallow: /shares/
+Allow: /

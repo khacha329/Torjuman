@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../app/AppContext';
+import { useReadOnly } from '../../app/readOnly';
 import { toArabicNumerals } from '../../lib/arabic';
 import { BidiText } from '../../components/BidiText';
 import type { LookupResult } from '../../dictionary/dictionaryService';
@@ -34,6 +35,7 @@ export function DictionarySheet({
   onTranslateEntry: (text: string) => void;
 }) {
   const { settings } = useApp();
+  const readOnly = useReadOnly();
   const [selected, setSelected] = useState(0);
 
   const hit = result.hits[selected];
@@ -71,7 +73,11 @@ export function DictionarySheet({
       footer={
         hit ? (
           <div className="flex items-center gap-2">
-            <Button onClick={() => onTranslateEntry(entryText)}>Translate this entry</Button>
+            {/* The entry itself is offline and stays; translating it is a
+                model call, and a visitor has no key to make one with. */}
+            {!readOnly && (
+              <Button onClick={() => onTranslateEntry(entryText)}>Translate this entry</Button>
+            )}
             <span className="text-[10px] text-muted">needs network</span>
           </div>
         ) : undefined

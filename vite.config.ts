@@ -59,6 +59,30 @@ function resolveCatalogUrl(): string {
 }
 
 /**
+ * Where published share bundles are read from.
+ *
+ * Identical reasoning to the catalog above, and the same deliberate choice of
+ * the branch over the tag — more sharply here, because a share is the most
+ * time-sensitive thing this app publishes. "Here is what we covered in session
+ * twelve" is sent the same week; making it wait for a tagged release would turn
+ * every share into a deploy. Reading from the branch means publishing one is a
+ * single commit, which is exactly what Amendment 18 asks for.
+ *
+ * Bundles are encrypted and their keys live only in the links, so what sits at
+ * this URL is opaque either way. See src/share/crypto.ts.
+ */
+function resolveShareBaseUrl(): string {
+  if (process.env.VITE_SHARE_BASE_URL) return process.env.VITE_SHARE_BASE_URL;
+
+  const repository = process.env.GITHUB_REPOSITORY;
+  if (!repository) return '';
+
+  const ref = process.env.GITHUB_REF_NAME;
+  const branch = !ref || /^v\d/.test(ref) ? 'main' : ref;
+  return `https://raw.githubusercontent.com/${repository}/${branch}/public/shares`;
+}
+
+/**
  * The deployed proxy that stands in for the dev server's forwarding.
  *
  * GitHub Pages serves files; it cannot forward a request. shamela.ws, dorar.net
@@ -113,6 +137,8 @@ export default defineConfig({
     // through an .env file so there is one place the deployment identity is
     // derived, next to `base`.
     'import.meta.env.VITE_CATALOG_URL': JSON.stringify(resolveCatalogUrl()),
+    // Read by src/share/shareLink.ts.
+    'import.meta.env.VITE_SHARE_BASE_URL': JSON.stringify(resolveShareBaseUrl()),
     // Read by src/platform/http/WebHttpClient.ts.
     'import.meta.env.VITE_PROXY_URL': JSON.stringify(resolveProxyUrl()),
     // What build is this? Shown in Settings and copied into a bug report, so a

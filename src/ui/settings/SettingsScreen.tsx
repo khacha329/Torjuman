@@ -19,6 +19,7 @@ import { ReferenceWorks } from './ReferenceWorks';
 import { BuildSection } from './BuildSection';
 import { RetrievalSection } from './RetrievalSection';
 import { NarratorSources } from './NarratorSources';
+import { PublishedShares } from './PublishedShares';
 
 export function SettingsScreen() {
   return (
@@ -45,6 +46,7 @@ export function SettingsScreen() {
           <NarratorSources />
           <ProfileEditor />
           <GlossaryTable />
+          <PublishedShares />
           <BackupSection />
           <LibraryTransfer />
           {/* Next to the build panel on purpose: a bug report is the version

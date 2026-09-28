@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useReadOnly } from '../../app/readOnly';
 
 // Actions for the current selection, in a vertical rail on the left edge.
 //
@@ -79,6 +80,7 @@ export function SelectionRail({
   onMarkSkip,
   onClearMarks,
 }: SelectionRailProps) {
+  const readOnly = useReadOnly();
   const railRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState<number | null>(null);
 
@@ -119,13 +121,29 @@ export function SelectionRail({
       onMouseDown={(event) => event.preventDefault()}
       onTouchStart={(event) => event.preventDefault()}
     >
-      <RailAction label={busy ? 'Translating…' : 'Translate'} onClick={onTranslate} disabled={busy} primary>
-        {busy ? <SpinnerIcon /> : <TranslateIcon />}
-      </RailAction>
+      {/* Translate and Explain both spend somebody's money on somebody's key.
+          In a shared view there is neither, so they are absent rather than
+          disabled — see app/readOnly.ts. */}
+      {!readOnly && (
+        <>
+          <RailAction
+            label={busy ? 'Translating…' : 'Translate'}
+            onClick={onTranslate}
+            disabled={busy}
+            primary
+          >
+            {busy ? <SpinnerIcon /> : <TranslateIcon />}
+          </RailAction>
 
-      <RailAction label="Explain — what this phrase means as a concept" onClick={onExplain} disabled={busy}>
-        <ExplainIcon />
-      </RailAction>
+          <RailAction
+            label="Explain — what this phrase means as a concept"
+            onClick={onExplain}
+            disabled={busy}
+          >
+            <ExplainIcon />
+          </RailAction>
+        </>
+      )}
 
       {/* Biography sits between the phrase actions and the word actions
           because a name is neither: one to five words, which is shorter than a
@@ -156,17 +174,21 @@ export function SelectionRail({
       {singleWord && (
         <>
           <Divider />
-          <RailAction
-            label={
-              meaningAvailable
-                ? 'Meaning — English, as used in this sentence'
-                : 'Meaning — offline and not cached; Dictionary works offline'
-            }
-            onClick={onMeaning}
-            disabled={!meaningAvailable}
-          >
-            <MeaningIcon />
-          </RailAction>
+          {/* Meaning is a model call; Dictionary is a lookup in a book the
+              visitor may have imported themselves, and stays. */}
+          {!readOnly && (
+            <RailAction
+              label={
+                meaningAvailable
+                  ? 'Meaning — English, as used in this sentence'
+                  : 'Meaning — offline and not cached; Dictionary works offline'
+              }
+              onClick={onMeaning}
+              disabled={!meaningAvailable}
+            >
+              <MeaningIcon />
+            </RailAction>
+          )}
           <RailAction
             label={
               dictionaryAvailable
@@ -181,17 +203,23 @@ export function SelectionRail({
         </>
       )}
 
-      <Divider />
+      {/* The author's marks are shown in a shared view but cannot be changed:
+          they are the preparation being handed over, not a shared workspace. */}
+      {!readOnly && (
+        <>
+          <Divider />
 
-      <RailAction label="Mark to be read out in the session" onClick={onMarkRead}>
-        <ReadIcon />
-      </RailAction>
-      <RailAction label="Mark to be passed over" onClick={onMarkSkip}>
-        <SkipIcon />
-      </RailAction>
-      <RailAction label="Clear any marks touching this selection" onClick={onClearMarks} muted>
-        <ClearIcon />
-      </RailAction>
+          <RailAction label="Mark to be read out in the session" onClick={onMarkRead}>
+            <ReadIcon />
+          </RailAction>
+          <RailAction label="Mark to be passed over" onClick={onMarkSkip}>
+            <SkipIcon />
+          </RailAction>
+          <RailAction label="Clear any marks touching this selection" onClick={onClearMarks} muted>
+            <ClearIcon />
+          </RailAction>
+        </>
+      )}
     </div>
   );
 }

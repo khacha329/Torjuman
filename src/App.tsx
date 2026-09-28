@@ -7,6 +7,7 @@ import { CatalogScreen } from './ui/CatalogScreen';
 import { ImportScreen } from './ui/ImportScreen';
 import { OnboardingScreen } from './ui/OnboardingScreen';
 import { ReaderScreen } from './ui/reader/ReaderScreen';
+import { ShareScreen } from './ui/share/ShareScreen';
 import { SettingsScreen } from './ui/settings/SettingsScreen';
 import { UpdateBar } from './ui/UpdateBar';
 
@@ -40,6 +41,18 @@ function Routes() {
   // Offered once, immediately after the key step: a new install has an empty
   // library, and hunting Shamela IDs by hand is the setup burden this removes.
   const [catalogOffered, setCatalogOffered] = useState(() => flagSet(CATALOG_SEEN_FLAG));
+
+  // A shared link skips both setup screens, and this is load-bearing rather
+  // than a convenience. Amendment 18's whole promise is "no account, no key, no
+  // install" — but both gates below fire on exactly the state a first-time
+  // visitor arrives in, so without this they would be asked to choose a
+  // translation provider and import books before being allowed to read the
+  // chapter they were sent. Neither screen is skipped permanently: the flags
+  // are untouched, so a visitor who later opens the app on its own still gets
+  // the normal introduction.
+  if (route.name === 'share') {
+    return <ShareScreen id={route.id} keyText={route.key} />;
+  }
 
   if (!onboarded) {
     return (

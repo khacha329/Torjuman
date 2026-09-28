@@ -53,9 +53,10 @@ interface BlockListProps {
   /** Each block's share of the reading marks. */
   marksByBlock: Map<string, MarkRange[]>;
   /** Margin tap: toggle skip on this block. */
-  onMarginTap: (block: Block) => void;
+  /** Both absent in a shared view — see MarginTarget. */
+  onMarginTap?: (block: Block) => void;
   /** Margin long-press: open the Skip / Read / Clear / Note menu. */
-  onMarginHold: (block: Block, anchor: HTMLElement) => void;
+  onMarginHold?: (block: Block, anchor: HTMLElement) => void;
   /** Block to flash, e.g. after tapping a card or a search result. */
   flashBlockId: string | null;
   /** Search match to mark, in display-text offsets. */
@@ -299,12 +300,22 @@ function MarginTarget({
 }: {
   block: Block;
   marks: MarkRange[] | undefined;
-  onTap: (block: Block) => void;
-  onHold: (block: Block, anchor: HTMLElement) => void;
+  /**
+   * Absent in a shared view.
+   *
+   * The band still *renders* the author's marks — they are the preparation
+   * being handed over and the main reason to look at the margin at all — but
+   * it stops being a control. Optional rather than a no-op handler so the
+   * element also drops out of the tab order and stops announcing itself as a
+   * button, which a no-op would leave in place and lying.
+   */
+  onTap?: (block: Block) => void;
+  onHold?: (block: Block, anchor: HTMLElement) => void;
 }) {
   const timer = useRef<number | null>(null);
   const origin = useRef<{ x: number; y: number } | null>(null);
   const held = useRef(false);
+  const interactive = onTap !== undefined || onHold !== undefined;
 
   const skip = marks?.find((range) => range.mark.kind === 'skip');
   const read = marks?.find((range) => range.mark.kind === 'read');
@@ -317,17 +328,26 @@ function MarginTarget({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={skip ? 'Marked skip — tap to clear' : 'Tap to mark this passage skip'}
-      className="absolute top-0 -right-11 bottom-0 z-0 w-11 cursor-pointer select-none"
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-label={
+        !interactive
+          ? undefined
+          : skip
+            ? 'Marked skip — tap to clear'
+            : 'Tap to mark this passage skip'
+      }
+      className={`absolute top-0 -right-11 bottom-0 z-0 w-11 select-none ${
+        interactive ? 'cursor-pointer' : 'pointer-events-none'
+      }`}
       onPointerDown={(event) => {
+        if (!interactive) return;
         held.current = false;
         origin.current = { x: event.clientX, y: event.clientY };
         const element = event.currentTarget;
         timer.current = window.setTimeout(() => {
           held.current = true;
-          onHold(block, element);
+          onHold?.(block, element);
         }, 480);
       }}
       onPointerMove={(event) => {
@@ -341,14 +361,14 @@ function MarginTarget({
       onPointerUp={() => {
         const wasTap = timer.current !== null && !held.current;
         clear();
-        if (wasTap) onTap(block);
+        if (wasTap) onTap?.(block);
       }}
       onPointerLeave={clear}
       onPointerCancel={clear}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          onTap(block);
+          onTap?.(block);
         }
       }}
     >

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
+import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../app/secrets';
 import { hrefFor } from '../../app/router';
 import { parseArabicNumber, toArabicNumerals } from '../../lib/arabic';
@@ -46,6 +47,7 @@ import {
   type VisibleRange,
 } from './cardLayout';
 import { SearchPanel, type SearchResult } from './SearchPanel';
+import { ShareChapter } from './ShareChapter';
 import { TocDrawer } from './TocDrawer';
 import { peekSelection, readSelection, type SelectionAnchor } from './selection';
 import { RAIL_WIDTH, SelectionRail } from './SelectionRail';
@@ -67,6 +69,9 @@ function useIsWide(): boolean {
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
+  // True only inside a shared view. Everything it gates is a control that
+  // spends money, needs a key, or writes to a library the viewer does not own.
+  const readOnly = useReadOnly();
   const isWide = useIsWide();
 
   const [book, setBook] = useState<Book | null>(null);
@@ -111,6 +116,8 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   const listRef = useRef<BlockListHandle>(null);
   const restoredRef = useRef(false);
+  const shareButtonRef = useRef<HTMLSpanElement>(null);
+  const [showShare, setShowShare] = useState(false);
 
   // Computed up here because the marker handler needs it: the panel being open
   // decides whether a marker tap scrolls the panel or opens a popover.
@@ -307,16 +314,23 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // Entities are derived data, so a book imported before detection existed —
   // or restored from an older backup — builds them here on first open.
+  //
+  // Never in a shared view. Its entities travelled with the bundle already
+  // resolved, and detection is not a safe thing to re-run over them: it reads
+  // the imported biographical works to decide which names to mark, a visitor
+  // has none, and `regenerateEntities` would therefore replace a marked-up
+  // chapter with an unmarked one. Read what the bundle carried and stop.
   useEffect(() => {
     if (!book || blocks.length === 0) return;
     let cancelled = false;
-    void ensureEntities(storage, book).then((found) => {
+    const load = readOnly ? storage.listEntities(book.id) : ensureEntities(storage, book);
+    void load.then((found) => {
       if (!cancelled) setEntities(found);
     });
     return () => {
       cancelled = true;
     };
-  }, [storage, book, blocks.length]);
+  }, [storage, book, blocks.length, readOnly]);
 
   const entitiesByBlock = useMemo(
     () => markableByBlock(entities, blocks),
@@ -696,7 +710,9 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     // The app shell is English. Only the reading surface itself is RTL, and it
     // sets that on its own blocks — direction is never inherited across here.
     <div dir="ltr" className="ltr-isolate flex h-full flex-col">
-      {!hasKey && <NoKeyBanner />}
+      {/* Amendment 18: "No API key required or requested." A visitor was sent a
+          chapter to read, not invited to set up a translation provider. */}
+      {!hasKey && !readOnly && <NoKeyBanner />}
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-rule bg-white/85 px-3 py-2 backdrop-blur">
         <LinkButton to={{ name: 'library' }} variant="ghost">
           ← Library
@@ -732,6 +748,13 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
         <Button onClick={() => setShowToc(true)}>Contents</Button>
         <Button onClick={() => setShowSearch((value) => !value)}>Search</Button>
+        {/* Publishing is the author's act and is never offered inside somebody
+            else's shared view — a visitor cannot re-share what they were sent. */}
+        {!readOnly && (
+          <span ref={shareButtonRef}>
+            <Button onClick={() => setShowShare(true)}>Share</Button>
+          </span>
+        )}
         {isWide && (
           <Button
             onClick={() => void updateSettings({ panelCollapsed: !settings.panelCollapsed })}
@@ -849,9 +872,14 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
                 setEntitySheet({ entity, anchor: anchorElement });
               }}
               marksByBlock={marks.byBlock}
-              onMarginTap={(block) => void marks.toggleBlockSkip(block)}
-              onMarginHold={(block, anchorElement) =>
-                setMarginMenu({ block, anchor: anchorElement })
+              // The author's marks still render in the margin; the margin just
+              // stops being a control. Undefined rather than a no-op so the
+              // band also leaves the tab order — see MarginTarget.
+              onMarginTap={readOnly ? undefined : (block) => void marks.toggleBlockSkip(block)}
+              onMarginHold={
+                readOnly
+                  ? undefined
+                  : (block, anchorElement) => setMarginMenu({ block, anchor: anchorElement })
               }
               flashBlockId={flashBlockId}
               match={match}
@@ -1019,7 +1047,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         />
       )}
 
-      {marginMenu && (
+      {marginMenu && !readOnly && (
         <MarginMenu
           block={marginMenu.block}
           anchor={marginMenu.anchor}
@@ -1104,6 +1132,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           onRetranslate={(card, options) => void translator.retranslate(card, options)}
           onDelete={(card) => void translator.remove(card)}
           onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
+        />
+      )}
+
+      {showShare && shareButtonRef.current && (
+        <ShareChapter
+          bookId={bookId}
+          blocks={blocks}
+          tocNodes={tocNodes}
+          // The chapter on screen, which is what "share this chapter" means.
+          tocNodeId={activeTocNodeId}
+          anchor={shareButtonRef.current}
+          onClose={() => setShowShare(false)}
         />
       )}
 

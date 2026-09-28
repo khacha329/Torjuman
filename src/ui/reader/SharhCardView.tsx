@@ -1,4 +1,5 @@
 import type { SharhCard } from '../../types';
+import { useReadOnly } from '../../app/readOnly';
 
 // A ḥadīth's commentary, retrieved from an imported sharḥ.
 //
@@ -28,6 +29,7 @@ export function SharhCardView({
   onToggleCollapse: () => void;
   onDelete: () => void;
 }) {
+  const readOnly = useReadOnly();
   const frame = `ltr-isolate rounded-lg border transition ${
     isActive
       ? 'border-verse shadow-md'
@@ -84,13 +86,15 @@ export function SharhCardView({
             {citation}
           </span>
         )}
-        <button
-          onClick={onDelete}
-          className="shrink-0 rounded px-1 text-xs text-muted hover:bg-rule"
-          aria-label="Delete commentary card"
-        >
-          ×
-        </button>
+        {!readOnly && (
+          <button
+            onClick={onDelete}
+            className="shrink-0 rounded px-1 text-xs text-muted hover:bg-rule"
+            aria-label="Delete commentary card"
+          >
+            ×
+          </button>
+        )}
       </header>
 
       {/* The matn as the commentary itself prints it, which is not always

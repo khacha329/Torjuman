@@ -2,6 +2,7 @@ import { BidiText } from '../../components/BidiText';
 import { toArabicNumerals } from '../../lib/arabic';
 import type { ExplanationCard } from '../../types';
 import { Spinner } from '../common';
+import { useReadOnly } from '../../app/readOnly';
 
 // An answer to "what does this phrase mean as a concept", attached beneath the
 // translation it hangs from.
@@ -21,6 +22,7 @@ export function ExplanationCardView({
   onToggleCollapse: () => void;
   onDelete: () => void;
 }) {
+  const readOnly = useReadOnly();
   const frame = `ltr-isolate rounded-lg border border-l-4 transition ${
     isActive
       ? 'border-accent border-l-accent shadow-md'
@@ -167,12 +169,14 @@ export function ExplanationCardView({
           {card.model}
           {card.costUsd ? ` · $${card.costUsd.toFixed(4)}` : ''}
         </span>
-        <button
-          onClick={onDelete}
-          className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
-        >
-          Delete
-        </button>
+        {!readOnly && (
+          <button
+            onClick={onDelete}
+            className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        )}
       </footer>
     </article>
   );

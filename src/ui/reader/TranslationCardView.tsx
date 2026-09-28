@@ -6,6 +6,7 @@ import { OFFLINE_MODELS } from '../../translation/offline/OfflineProvider';
 import { allProviders, badgeFor, providerFor } from '../../translation/registry';
 import { Spinner } from '../common';
 import { isIncomplete } from '../../translation/coverage';
+import { useReadOnly } from '../../app/readOnly';
 
 const SEGMENT_STYLE: Record<TranslatedSegment['type'], { label: string; frame: string }> = {
   quran: { label: 'Qurʾān', frame: 'border-l-2 border-verse/50 bg-verse/5' },
@@ -38,6 +39,7 @@ export function TranslationCardView({
   onDelete: () => void;
   onAddGlossaryTerm: (term: string) => void;
 }) {
+  const readOnly = useReadOnly();
   const [copied, setCopied] = useState(false);
   const [showRetranslateMenu, setShowRetranslateMenu] = useState(false);
 
@@ -175,7 +177,9 @@ export function TranslationCardView({
         </div>
       )}
 
-      {uncertainTerms.length > 0 && (
+      {/* The glossary steers future translations, so it belongs to whoever is
+          doing the translating. A visitor has none to steer. */}
+      {!readOnly && uncertainTerms.length > 0 && (
         <div className="mt-3 border-t border-rule pt-3">
           <p className="mb-1.5 text-[11px] text-muted">
             Terms the model flagged as candidates for the glossary:
@@ -204,23 +208,25 @@ export function TranslationCardView({
       )}
 
       <footer className="mt-3 flex flex-wrap items-center gap-2 border-t border-rule pt-3 text-[11px]">
-        <div className="relative">
-          <button
-            onClick={() => setShowRetranslateMenu((open) => !open)}
-            className="rounded px-2 py-1 text-muted hover:bg-rule"
-          >
-            Retranslate ▾
-          </button>
-          {showRetranslateMenu && (
-            <RetranslateMenu
-              onPick={(options) => {
-                setShowRetranslateMenu(false);
-                onRetranslate(options);
-              }}
-              onClose={() => setShowRetranslateMenu(false)}
-            />
-          )}
-        </div>
+        {!readOnly && (
+          <div className="relative">
+            <button
+              onClick={() => setShowRetranslateMenu((open) => !open)}
+              className="rounded px-2 py-1 text-muted hover:bg-rule"
+            >
+              Retranslate ▾
+            </button>
+            {showRetranslateMenu && (
+              <RetranslateMenu
+                onPick={(options) => {
+                  setShowRetranslateMenu(false);
+                  onRetranslate(options);
+                }}
+                onClose={() => setShowRetranslateMenu(false)}
+              />
+            )}
+          </div>
+        )}
         {/* "Dig deeper" used to live here and re-translated the passage over
             the top of work the user already had. It is now Explain, on a text
             selection, because the question is about a specific phrase and the
@@ -232,12 +238,16 @@ export function TranslationCardView({
         >
           {copied ? 'Copied' : 'Copy English'}
         </button>
-        <button
-          onClick={onDelete}
-          className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
-        >
-          Delete
-        </button>
+        {/* Copy English stays in a shared view — taking a translation away to
+            read from is the whole point of being sent one. Delete does not. */}
+        {!readOnly && (
+          <button
+            onClick={onDelete}
+            className="ml-auto rounded px-2 py-1 text-red-700 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        )}
       </footer>
     </article>
   );

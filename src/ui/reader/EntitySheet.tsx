@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/AppContext';
+import { useReadOnly } from '../../app/readOnly';
 import { navigate } from '../../app/router';
 import { secrets } from '../../app/secrets';
 import { useOnline } from '../../app/useOnline';
@@ -123,6 +124,7 @@ function QuranSheet({
   onTranslateSurrounding: () => void;
 }) {
   const { http, storage, settings, activeProfile } = useApp();
+  const readOnly = useReadOnly();
   const [data, setData] = useState<QuranSheetData | null>(null);
   const [tab, setTab] = useState<TabId>('translation');
 
@@ -222,15 +224,20 @@ function QuranSheet({
           )}
         </>
       }
+      // The verse itself, its translation, its tafsīr and the topics all come
+      // from data every install already has — which is exactly why none of it
+      // travels in a bundle. Only this footer spends a key, so only it goes.
       footer={
-        <Button
-          onClick={() => {
-            onTranslateSurrounding();
-            onClose();
-          }}
-        >
-          Translate the surrounding passage
-        </Button>
+        readOnly ? undefined : (
+          <Button
+            onClick={() => {
+              onTranslateSurrounding();
+              onClose();
+            }}
+          >
+            Translate the surrounding passage
+          </Button>
+        )
       }
     >
       {tabs.length > 1 && (
@@ -474,6 +481,7 @@ function HadithSheet({
   onTranslateAll: () => void;
 }) {
   const { http, storage, settings } = useApp();
+  const readOnly = useReadOnly();
   const online = useOnline();
   const [record, setRecord] = useState<HadithRecord | null>(null);
   const [diagnostics, setDiagnostics] = useState<DorarDiagnostics | null>(null);
@@ -542,7 +550,11 @@ function HadithSheet({
           <span className="text-[12px] font-medium">{entity.label ?? entity.reference}</span>
         </>
       }
+      // Matn, reference and gradings all render above; every control down here
+      // either spends a key or searches a commentary the visitor has not
+      // imported. In a shared view the sheet is the answer, not a menu.
       footer={
+        readOnly ? undefined : (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => {
@@ -587,6 +599,7 @@ function HadithSheet({
             </Button>
           ))}
         </div>
+        )
       }
     >
       {/* Gradings first. They are the facts that decide how a ḥadīth is used.
