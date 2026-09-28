@@ -4850,6 +4850,27 @@ console.log('\n=== Shared views ===');
     check('a bundle opens with the key taken from its link', viaLink.id, bundle.id);
   }
 
+  // -- failure reporting
+  //
+  // A regression, and an instructive one. `shareUrls` returns one absolute URL
+  // and one relative one; `fetch` takes both, but `new URL(relative)` with no
+  // base throws. That call sat inside the message-building for a share that was
+  // not found, so every missing share reported "Failed to construct 'URL'"
+  // instead of saying it could not be found — the diagnostic was replaced by an
+  // exception thrown while formatting it.
+
+  {
+    const { hostOf } = await import('../src/share/loadShare');
+    check(
+      'an absolute URL names its host',
+      hostOf('https://raw.githubusercontent.com/a/b/shares/x.bin'),
+      'raw.githubusercontent.com',
+    );
+    check('a relative URL falls back to itself', hostOf('/Torjuman/shares/x.bin'), '/Torjuman/shares/x.bin');
+    check('nonsense does not throw', hostOf('::::'), '::::');
+    check('the empty string does not throw', hostOf(''), '');
+  }
+
   // -- the read-only adapter
 
   const shareStorage = new ShareStorageAdapter(bundle, ownStorage);

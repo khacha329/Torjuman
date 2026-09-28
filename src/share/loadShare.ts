@@ -22,6 +22,27 @@ export class ShareLoadError extends Error {
 }
 
 /**
+ * A host to name in a failure message, from a URL that may be relative.
+ *
+ * `shareUrls` returns one absolute URL and one relative one, and `fetch`
+ * accepts both — but `new URL(relative)` with no base throws. That threw while
+ * *building the error message* for a share that was not found, inside the try;
+ * the catch then called it again and the exception escaped, so every missing
+ * share reported "Failed to construct 'URL': Invalid URL" instead of saying it
+ * could not be found.
+ *
+ * Hence a helper that cannot throw. Formatting a diagnostic must never be able
+ * to replace the diagnostic.
+ */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url, globalThis.location?.href).host || url;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Fetch the bundle's bytes, trying each candidate URL in turn.
  *
  * Two places hold a copy — the repository branch, which is current the moment a
@@ -38,12 +59,12 @@ async function fetchBundle(id: string): Promise<Uint8Array> {
     try {
       const response = await fetch(url, { cache: 'no-cache' });
       if (!response.ok) {
-        failures.push(`${response.status} from ${new URL(url).host}`);
+        failures.push(`${response.status} from ${hostOf(url)}`);
         continue;
       }
       return new Uint8Array(await response.arrayBuffer());
     } catch (cause) {
-      failures.push(`${new URL(url).host}: ${(cause as Error).message}`);
+      failures.push(`${hostOf(url)}: ${(cause as Error).message}`);
     }
   }
 
