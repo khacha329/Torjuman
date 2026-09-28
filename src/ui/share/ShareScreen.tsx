@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StorageOverride, useApp } from '../../app/AppContext';
 import { ReadOnlyContext } from '../../app/readOnly';
-import { navigate } from '../../app/router';
 import { fromBase64Url } from '../../share/crypto';
 import { loadShare, ShareLoadError } from '../../share/loadShare';
 import { ShareStorageAdapter } from '../../share/ShareStorageAdapter';
@@ -161,12 +160,12 @@ function ShareError({ message, detail }: { message: string; detail: string | nul
           Shared chapters are published one at a time and can be withdrawn, so a link
           that worked before may simply be gone. Whoever sent it can publish it again.
         </p>
-        <div className="flex gap-2">
-          <Button onClick={() => window.location.reload()}>Try again</Button>
-          <Button variant="primary" onClick={() => navigate({ name: 'library' })}>
-            Go to the library
-          </Button>
-        </div>
+        {/* Retry, and nothing else. "Go to the library" used to sit beside it
+            and was the wrong offer twice over: the visitor has no library, so
+            it led to an empty screen, and it turned a broken link into a door
+            into an app they never asked for. A failed share is a dead end, and
+            saying so plainly is better than inventing somewhere to send them. */}
+        <Button onClick={() => window.location.reload()}>Try again</Button>
       </div>
     </div>
   );

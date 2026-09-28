@@ -86,6 +86,29 @@ function pageIndexOf(block: Block): number {
   return Number(block.pageId.split(':p')[1] ?? 0);
 }
 
+/**
+ * Drop the author's billing telemetry from a card before it travels.
+ *
+ * `costUsd` and `usage` are what a translation cost the person who made it, and
+ * `rawResponse` is the unparsed model output kept when JSON parsing failed.
+ * None of it is about the text. In the author's own library the cost is the
+ * point — he is deciding whether a passage is worth Sonnet — but on a chapter
+ * handed to a study circle it is a price tag on somebody's lesson preparation.
+ *
+ * Removed here rather than only hidden in the UI, so it is genuinely absent
+ * from the file rather than merely not drawn. Someone holding the link holds
+ * the key, and anything left in the bundle is readable by them.
+ *
+ * The provider and model stay. That a rendering came from a model at all is
+ * something a reader needs in order to weigh it.
+ */
+function withoutTelemetry<T extends { costUsd?: number | null; usage?: unknown; rawResponse?: string }>(
+  card: T,
+): T {
+  const { costUsd: _costUsd, usage: _usage, rawResponse: _rawResponse, ...rest } = card;
+  return rest as T;
+}
+
 export interface BuildOptions {
   bookId: string;
   range: ShareRange;
@@ -126,12 +149,14 @@ export async function buildBundle(
       storage.listPageMeta(bookId),
     ]);
 
-  const cards = allCards.filter((card) => both(card.startBlockId, card.endBlockId));
+  const cards = allCards
+    .filter((card) => both(card.startBlockId, card.endBlockId))
+    .map(withoutTelemetry);
   const marks = allMarks.filter((mark) => both(mark.startBlockId, mark.endBlockId));
   const entities = allEntities.filter((entity) => both(entity.startBlockId, entity.endBlockId));
-  const explanations = allExplanations.filter((card) =>
-    both(card.startBlockId, card.endBlockId),
-  );
+  const explanations = allExplanations
+    .filter((card) => both(card.startBlockId, card.endBlockId))
+    .map(withoutTelemetry);
   const sharh = allSharh.filter((card) => both(card.startBlockId, card.endBlockId));
 
   // Only the pages the range actually sits on. The header's ج/ص and

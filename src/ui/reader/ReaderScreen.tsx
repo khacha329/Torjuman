@@ -672,8 +672,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   if (!book) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted">That book is not in this library.</p>
-        <LinkButton to={{ name: 'library' }}>Back to library</LinkButton>
+        <p className="text-sm text-muted">
+          {readOnly ? 'This shared chapter could not be opened.' : 'That book is not in this library.'}
+        </p>
+        {!readOnly && <LinkButton to={{ name: 'library' }}>Back to library</LinkButton>}
       </div>
     );
   }
@@ -733,9 +735,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           chapter to read, not invited to set up a translation provider. */}
       {!hasKey && !readOnly && <NoKeyBanner />}
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-rule bg-white/85 px-3 py-2 backdrop-blur">
-        <LinkButton to={{ name: 'library' }} variant="ghost">
-          ← Library
-        </LinkButton>
+        {/* A shared link is a chapter, not a door into the app.
+            Someone sent this to read; the library behind it is not theirs and
+            holds nothing for them. With the banner's exit gone too, a shared
+            view now has no route out at all, which is the intent: the page
+            shows what was shared and stops there. Note this hides the
+            affordance, not the route — the app is client-side, so anyone who
+            edits the URL still lands on their own (empty) library. */}
+        {!readOnly && (
+          <LinkButton to={{ name: 'library' }} variant="ghost">
+            ← Library
+          </LinkButton>
+        )}
 
         <div className="min-w-0 flex-1">
           <p className="arabic truncate text-sm font-semibold" dir="rtl">

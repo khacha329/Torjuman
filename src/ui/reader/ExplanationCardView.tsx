@@ -167,7 +167,10 @@ export function ExplanationCardView({
       <footer className="mt-3 flex items-center gap-2 border-t border-rule pt-2 text-[11px]">
         <span className="text-[10px] text-muted">
           {card.model}
-          {card.costUsd ? ` · $${card.costUsd.toFixed(4)}` : ''}
+          {/* Cost is hidden in a shared view — see CostLabel in
+              TranslationCardView. The model is not: it says the answer was
+              generated, which a reader needs. */}
+          {!readOnly && card.costUsd ? ` · $${card.costUsd.toFixed(4)}` : ''}
         </span>
         {!readOnly && (
           <button

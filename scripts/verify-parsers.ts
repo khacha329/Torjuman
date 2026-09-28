@@ -4611,7 +4611,17 @@ console.log('\n=== Shared views ===');
     // next chapter's first.
     async listCards() {
       return [
-        { id: 'c1', bookId: BOOK, kind: 'translation', ...anchored(`${BOOK}:b1`, `${BOOK}:b2`) },
+        {
+          id: 'c1',
+          bookId: BOOK,
+          kind: 'translation',
+          // The author's billing telemetry. Present on every real card and
+          // deliberately absent from a bundle.
+          costUsd: 0.0231,
+          usage: { inputTokens: 900, outputTokens: 1400, cacheReadTokens: 0 },
+          rawResponse: '{"segments":[…]}',
+          ...anchored(`${BOOK}:b1`, `${BOOK}:b2`),
+        },
         { id: 'c2', bookId: BOOK, kind: 'translation', ...anchored(`${BOOK}:b4`, `${BOOK}:b5`) },
       ];
     },
@@ -4699,6 +4709,14 @@ console.log('\n=== Shared views ===');
     ['c1'],
   );
   check('a card straddling the boundary does not', bundle.cards.length, 1);
+
+  // What a lesson cost to prepare is not part of the lesson. Stripped from the
+  // file rather than only hidden in the UI: whoever holds the link holds the
+  // key, so anything left in the bundle is readable by them.
+  check('a shared card carries no cost', 'costUsd' in bundle.cards[0], false);
+  check('…no token usage', 'usage' in bundle.cards[0], false);
+  check('…and no raw model output', 'rawResponse' in bundle.cards[0], false);
+  check('but still says which model produced it', 'kind' in bundle.cards[0], true);
   check('marks inside the range travel', bundle.marks.length, 1);
   check(
     'only the pages the range sits on',

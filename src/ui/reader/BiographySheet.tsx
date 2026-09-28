@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
+import { useReadOnly } from '../../app/readOnly';
 import { navigate } from '../../app/router';
 import { entryBlocks, lookupName, type EntryReading } from '../../biography/service';
 import type { BiographyHit, BiographyLookup } from '../../biography/lookup';
@@ -43,6 +44,7 @@ export function BiographySheet({
   onClose: () => void;
 }) {
   const { storage } = useApp();
+  const readOnly = useReadOnly();
   const [result, setResult] = useState<BiographyLookup | null>(null);
   const [chosen, setChosen] = useState<BiographyHit | null>(null);
   const [reading, setReading] = useState<EntryReading | null>(null);
@@ -158,11 +160,22 @@ export function BiographySheet({
               person, which is worse than no answer. */}
           <p className="mt-2">
             No nearest match is offered — a name that is close is a different
-            person. Try a shorter form of the name, or add another work in{' '}
-            <button className="underline" onClick={() => navigate({ name: 'settings' })}>
-              Settings → Add from catalog
-            </button>
-            .
+            person. Try a shorter form of the name
+            {/* A visitor cannot usefully import a biographical work to improve
+                a chapter someone else prepared, so they are not sent to. The
+                substantive half — that nothing close is offered, and why —
+                stays, because it is about the lookup rather than the app. */}
+            {readOnly ? (
+              '.'
+            ) : (
+              <>
+                , or add another work in{' '}
+                <button className="underline" onClick={() => navigate({ name: 'settings' })}>
+                  Settings → Add from catalog
+                </button>
+                .
+              </>
+            )}
           </p>
         </div>
       )}

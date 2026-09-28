@@ -325,6 +325,15 @@ function formatUsd(value: number): string {
 }
 
 function CostLabel({ card }: { card: TranslationCard }) {
+  const readOnly = useReadOnly();
+
+  // What a translation cost is the author's business, not the reader's. In his
+  // own library it is the point — he is deciding whether a passage is worth
+  // Sonnet — but on a chapter handed to a study circle it is a price tag on
+  // somebody's lesson preparation, and it tells the person reading it nothing
+  // they can act on. The provider badge stays: whether a rendering came from a
+  // model at all is something a reader genuinely needs to know.
+  if (readOnly) return null;
   if (card.status !== 'complete' || !card.usage) return null;
 
   const cached = card.usage.cacheReadTokens > 0;

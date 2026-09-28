@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Block, Card, ProviderId, TranslationCard } from '../../types';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';
+import { useReadOnly } from '../../app/readOnly';
 import { toArabicNumerals } from '../../lib/arabic';
 import { TranslationCardView } from './TranslationCardView';
 import { NoteCardView } from './NoteCardView';
@@ -337,6 +338,14 @@ function PanelHeader({
  * visible gets managed, one that arrives on a monthly statement does not.
  */
 function SessionTotals({ stats }: { stats: SessionStats }) {
+  const readOnly = useReadOnly();
+
+  // Nothing is translated inside a shared view, so `requests` is zero and this
+  // would return null anyway. Gated explicitly rather than left to that: "no
+  // spend is shown because no spend happened" is an emergent property, and the
+  // moment anything else increments a counter it would start displaying
+  // somebody's costs to their students.
+  if (readOnly) return null;
   if (stats.requests === 0) return null;
 
   const paid = stats.requestsByProvider.anthropic;

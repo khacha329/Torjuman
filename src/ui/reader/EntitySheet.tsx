@@ -271,7 +271,10 @@ function QuranSheet({
           </p>
           {/* Without this the feature is invisible: one tab and no hint that
               tafsīr, similar āyāt and topics are a file import away. */}
-          {data.resourceIds.length === 0 && (
+          {/* Absent in a shared view: it invites the reader to import a
+              resource into a library that is not theirs, to enrich a chapter
+              they were merely sent. */}
+          {data.resourceIds.length === 0 && !readOnly && (
             <div className="mt-3">
               <MissingResource
                 what="QUL resource"
@@ -681,7 +684,10 @@ function HadithSheet({
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
           No verified English translation is available for this ḥadīth, so none is shown. A
           machine translation is deliberately not produced for ḥadīth text.
-          {!secrets.getSunnahKey() && (
+          {/* The key prompt is the author's business. A visitor is told the
+              translation is absent — which is the honest and important part —
+              without being sent to configure a service to fix it. */}
+          {!secrets.getSunnahKey() && !readOnly && (
             <>
               {' '}
               sunnah.com is the source that carries one, and it needs a key —{' '}
