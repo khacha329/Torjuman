@@ -1,8 +1,0 @@
-شرح رياض الصالحين — ١- باب الإخلاص وإحضار النية في جميع الأعمال والأقوال البارزة والخفية
-
-https://khacha329.github.io/Torjuman/#/share/AgBFOjaPAusaLkdybFnn5g/Q8lTpto45UdM2R3kGE5jm-Yp0IFh-drTBGqYYdBPfH0
-
-File: AgBFOjaPAusaLkdybFnn5g.bin
-Put that file in public/shares/ (npm run share:add does it for you), then commit and push to main.
-
-This link carries the only key to the chapter. Anyone who has it can read it.

@@ -1,8 +1,0 @@
-شرح رياض الصالحين — ٣- باب الصبر
-
-https://khacha329.github.io/Torjuman/#/share/qCNbgj1spmEnCdDwFJmwIg/uf3UOBbPQ_nHS6jeRhpKP9swyqxf1fJm3aHKa6FSOJM
-
-File: qCNbgj1spmEnCdDwFJmwIg.bin
-Put that file in public/shares/ (npm run share:add does it for you), then commit and push to main.
-
-This link carries the only key to the chapter. Anyone who has it can read it.
