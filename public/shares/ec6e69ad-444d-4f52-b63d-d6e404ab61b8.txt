@@ -1,0 +1,8 @@
+شرح رياض الصالحين — ٢- باب التوبة
+
+https://khacha329.github.io/Torjuman/#/share/YF2Oeqm9iuHerfTqEMiVog/ybmUD9RMQTkwO1jOYPFyOtG9G1nF9yfumLAcNrrs27k
+
+File: YF2Oeqm9iuHerfTqEMiVog.bin
+Put that file in public/shares/ (npm run share:add does it for you), then commit and push to main.
+
+This link carries the only key to the chapter. Anyone who has it can read it.
