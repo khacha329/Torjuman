@@ -4119,26 +4119,29 @@ console.log('\n=== A translation that stops early is caught, not shown as comple
 
   // ---- output ceilings ---------------------------------------------------
   //
-  // Sonnet 5 and Opus 5 accept 128K output tokens and this app streams, which
-  // is what the SDK requires at that size. The shared 32,000 default was
+  // The current Claude models accept 128K output tokens and this app streams,
+  // which is what the SDK requires at that size. The shared 32,000 default was
   // capping every long passage at the same budget and leaving the retry after a
   // truncation nowhere to grow.
-  check('Sonnet 5 gets its real ceiling', outputCeilingFor('claude-sonnet-5'), 128_000);
-  check('  and so does Opus 5', outputCeilingFor('claude-opus-5'), 128_000);
+  check('Sonnet 5.5 gets its real ceiling', outputCeilingFor('claude-sonnet-5-5'), 128_000);
+  check('  and so does Opus 5.5', outputCeilingFor('claude-opus-5-5'), 128_000);
+  check('  and Haiku 5.5', outputCeilingFor('claude-haiku-5-5'), 128_000);
+  check('  and Fable 5.1', outputCeilingFor('claude-fable-5-1'), 128_000);
+  check('Haiku 4.5 keeps its own, lower ceiling', outputCeilingFor('claude-haiku-4-5'), 64_000);
   check(
     'an unverified model keeps the conservative default',
-    outputCeilingFor('claude-haiku-4-5'),
+    outputCeilingFor('some-unreleased-model'),
     MAX_TOKENS_CEILING,
   );
   const long = 'ا'.repeat(200_000);
   expect(
     'a long passage is budgeted above the old cap on a model that allows it',
-    maxTokensFor(long, 4, 'claude-sonnet-5') > MAX_TOKENS_CEILING,
+    maxTokensFor(long, 4, 'claude-sonnet-5-5') > MAX_TOKENS_CEILING,
     '',
   );
   check(
     '  but never above what the model accepts',
-    maxTokensFor(long, 4, 'claude-sonnet-5'),
+    maxTokensFor(long, 4, 'claude-sonnet-5-5'),
     128_000,
   );
   check(
@@ -4147,6 +4150,140 @@ console.log('\n=== A translation that stops early is caught, not shown as comple
     MAX_TOKENS_CEILING,
   );
   check('  with no model named, the default still applies', maxTokensFor(long), MAX_TOKENS_CEILING);
+}
+
+console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, prices ===');
+
+{
+  const models = await import('../src/translation/models');
+  const { costOf } = await import('../src/translation/providers/AnthropicProvider');
+  const { parseJsonObject } = await import('../src/translation/parseSegments');
+  const { EMIT_TRANSLATION_TOOL, GEMINI_RESPONSE_SCHEMA, answerWithTool } = await import(
+    '../src/translation/schema'
+  );
+
+  // ---- the offered models ------------------------------------------------
+  check(
+    'the offered Claude models, in order',
+    models.ANTHROPIC_MODELS.map((model) => model.id),
+    ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5', 'claude-fable-5-1'],
+  );
+  check('Sonnet 5.5 is the default', models.ANTHROPIC_DEFAULT_MODEL, 'claude-sonnet-5-5');
+  expect(
+    'Fable is labelled for the hardest texts only',
+    /hardest texts only/.test(
+      models.ANTHROPIC_MODELS.find((model) => model.id === 'claude-fable-5-1')?.label ?? '',
+    ),
+    '',
+  );
+  check('the key check runs on Haiku 5.5', models.ANTHROPIC_KEY_CHECK_MODEL, 'claude-haiku-5-5');
+  check('the Meaning lookup runs on Haiku 5.5', models.ANTHROPIC_GLOSS_MODEL, 'claude-haiku-5-5');
+  check(
+    'Explain falls back to Sonnet 5.5',
+    models.ANTHROPIC_EXPLAIN_FALLBACK_MODEL,
+    'claude-sonnet-5-5',
+  );
+
+  // ---- saved profiles move forward; cards do not -------------------------
+  check('a Sonnet 5 profile moves to Sonnet 5.5', models.successorModel('claude-sonnet-5'), 'claude-sonnet-5-5');
+  check('a Haiku 4.5 profile moves to Haiku 5.5', models.successorModel('claude-haiku-4-5'), 'claude-haiku-5-5');
+  check('an Opus 5 profile moves to Opus 5.5', models.successorModel('claude-opus-5'), 'claude-opus-5-5');
+  check('a current model is left alone', models.successorModel('claude-opus-5-5'), 'claude-opus-5-5');
+  check('a Gemini model is left alone', models.successorModel('gemini-3.7-flash'), 'gemini-3.7-flash');
+  check(
+    'an old card still shows which model wrote it',
+    models.findModelOption('anthropic', 'claude-sonnet-5')?.label,
+    'Sonnet 5',
+  );
+
+  // ---- effort --------------------------------------------------------------
+  // Opus 5.5 defaults to medium, a level below Opus 5. Set explicitly.
+  check('Opus 5.5 runs at high effort', models.outputConfigFor('claude-opus-5-5'), { effort: 'high' });
+  check('  every other model keeps its default', models.outputConfigFor('claude-sonnet-5-5'), undefined);
+
+  // ---- prices ----------------------------------------------------------------
+  const million = { inputTokens: 1_000_000, outputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  check('Sonnet 5 is $2 in + $10 out, not $3 + $15', costOf('claude-sonnet-5', million), 12);
+  check('Sonnet 5.5: $2 + $10', costOf('claude-sonnet-5-5', million), 12);
+  check('Opus 5.5: $4 + $20', costOf('claude-opus-5-5', million), 24);
+  check('Fable 5.1: $10 + $50', costOf('claude-fable-5-1', million), 60);
+  check('Opus 5 is unchanged: $5 + $25', costOf('claude-opus-5', million), 30);
+  check('Haiku 4.5 is unchanged: $1 + $5', costOf('claude-haiku-4-5', million), 6);
+
+  const reads = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 1_000_000, cacheWriteTokens: 0 };
+  check('a Sonnet 5.5 cache read is 0.05x input', costOf('claude-sonnet-5-5', reads), 0.1);
+  check('an Opus 5.5 cache read is 0.05x input', costOf('claude-opus-5-5', reads), 0.2);
+  check('a Fable 5.1 cache read is 0.025x input', costOf('claude-fable-5-1', reads), 0.25);
+  check('a Sonnet 5 cache read is still 0.1x input', costOf('claude-sonnet-5', reads), 0.2);
+
+  const writes = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 1_000_000 };
+  check('a 1-hour cache write is 2x input', costOf('claude-opus-5-5', writes), 8);
+
+  const short = { inputTokens: 10_000, outputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  const long = { inputTokens: 150_000, outputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  check('Haiku 5.5 under 100K prompt tokens: $0.10 + $0.50', costOf('claude-haiku-5-5', short), 0.501);
+  check('  and over it: $0.50 + $2.50', costOf('claude-haiku-5-5', long), 2.575);
+
+  // ---- strict tool schemas -------------------------------------------------
+  // Strict mode wants additionalProperties: false on every object, and Gemini's
+  // responseSchema does not take the keyword. The two share SEGMENT_PROPERTIES.
+  function objectsWithout(schema: unknown, path = '$'): string[] {
+    if (typeof schema !== 'object' || schema === null) return [];
+    const record = schema as Record<string, unknown>;
+    const here = record.type === 'object' && record.additionalProperties !== false ? [path] : [];
+    return [
+      ...here,
+      ...Object.entries(record).flatMap(([key, value]) => objectsWithout(value, `${path}.${key}`)),
+    ];
+  }
+  function mentions(schema: unknown, key: string): boolean {
+    return JSON.stringify(schema).includes(`"${key}"`);
+  }
+  check('emit_translation is strict', EMIT_TRANSLATION_TOOL.strict, true);
+  check(
+    '  and closes every object',
+    objectsWithout(EMIT_TRANSLATION_TOOL.input_schema),
+    [],
+  );
+  expect(
+    "Gemini's responseSchema is untouched by it",
+    !mentions(GEMINI_RESPONSE_SCHEMA, 'additionalProperties'),
+    '',
+  );
+  expect(
+    'the prompt asks for the tool by name',
+    answerWithTool('SYSTEM', 'emit_gloss').includes('calling the emit_gloss tool'),
+    '',
+  );
+
+  // ---- a reply that skipped the tool --------------------------------------
+  check(
+    'JSON after a preamble is recovered',
+    parseJsonObject('Here is the gloss:\n{"meaning": "forgiveness", "root": "غ ف ر"}'),
+    { meaning: 'forgiveness', root: 'غ ف ر' },
+  );
+  check(
+    'fenced JSON is recovered',
+    parseJsonObject('```json\n{"explanation": "A concept."}\n```'),
+    { explanation: 'A concept.' },
+  );
+  check(
+    'a stray brace in the preamble does not hide the object',
+    parseJsonObject('Using {braces} loosely: {"meaning": "x"}'),
+    { meaning: 'x' },
+  );
+  check(
+    'braces inside strings do not end the object early',
+    parseJsonObject('{"note": "a } b", "meaning": "y"}'),
+    { note: 'a } b', meaning: 'y' },
+  );
+  check(
+    'nested arrays and objects survive',
+    parseJsonObject('{"explanation": "e", "webSources": [{"url": "https://a", "title": "t"}]}'),
+    { explanation: 'e', webSources: [{ url: 'https://a', title: 't' }] },
+  );
+  check('prose with no JSON gives null', parseJsonObject('It means forgiveness.'), null);
+  check('a bare array is not an object', parseJsonObject('[1, 2]'), null);
 }
 
 console.log('\n=== Bundled QUL resources seed themselves (Amendment 15 Part 1) ===');

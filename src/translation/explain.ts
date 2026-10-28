@@ -2,7 +2,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { LocalSourceRef, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
-import { maxTokensFor } from './models';
+import { maxTokensFor, outputConfigFor } from './models';
+import { parseJsonObject } from './parseSegments';
+import { answerWithTool } from './schema';
 import { TranslationError, type TranslationUsage } from './TranslationProvider';
 
 // "What does this phrase mean?" — a research question, not a translation one.
@@ -19,9 +21,14 @@ export interface ExplainResult {
   costUsd: number | null;
 }
 
+const EXPLAIN_TOOL_NAME = 'emit_explanation';
+
+// Strict, so a call's input always matches this schema; that requires
+// `additionalProperties: false` on every object, the nested source included.
 const EXPLAIN_TOOL = {
-  name: 'emit_explanation',
+  name: EXPLAIN_TOOL_NAME,
   description: 'Return the explanation and the sources it rests on.',
+  strict: true,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -50,10 +57,12 @@ const EXPLAIN_TOOL = {
             },
           },
           required: ['url', 'title', 'excerpt'],
+          additionalProperties: false,
         },
       },
     },
     required: ['explanation'],
+    additionalProperties: false,
   },
 };
 
@@ -144,8 +153,9 @@ export async function searchLibrary(
 }
 
 /**
- * Two passes, because a forced tool_choice prevents the model from calling the
- * web-search tool at all: research freely first, then structure the result.
+ * Two passes: research freely first, then structure the result. The split
+ * dates from forced tool_choice, which prevented the model from calling the
+ * web-search tool at all; it is kept as it is through the model upgrade.
  */
 export async function explainPhrase(options: {
   apiKey: string;
@@ -195,6 +205,7 @@ export async function explainPhrase(options: {
         system: SYSTEM,
         messages,
         tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
+        output_config: outputConfigFor(options.model),
       });
 
       let turnText = '';
@@ -217,11 +228,12 @@ export async function explainPhrase(options: {
       break;
     }
 
-    // Pass 2 — structure it. No search, tool forced.
+    // Pass 2 — structure it. No search; the prompt asks for the tool, since the
+    // current models reject a forced tool_choice.
     const structured = client.messages.stream({
       model: options.model,
       max_tokens: maxTokensFor(options.phrase, 6),
-      system: SYSTEM,
+      system: answerWithTool(SYSTEM, EXPLAIN_TOOL_NAME),
       messages: [
         {
           role: 'user',
@@ -229,7 +241,8 @@ export async function explainPhrase(options: {
         },
       ],
       tools: [EXPLAIN_TOOL],
-      tool_choice: { type: 'tool', name: 'emit_explanation' },
+      tool_choice: { type: 'auto' },
+      output_config: outputConfigFor(options.model),
     });
 
     const final = await structured.finalMessage();
@@ -237,19 +250,38 @@ export async function explainPhrase(options: {
 
     const call = final.content.find(
       (block): block is Anthropic.ToolUseBlock =>
-        block.type === 'tool_use' && block.name === 'emit_explanation',
+        block.type === 'tool_use' && block.name === EXPLAIN_TOOL_NAME,
     );
 
-    if (!call) {
+    // tool_choice auto cannot make the model call the tool. When it answers in
+    // text instead, it has usually written the same JSON there, and a reply
+    // that has been paid for is recovered rather than thrown away.
+    const text = final.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n');
+    const recovered = call ? null : parseJsonObject(text);
+    const fields = (call?.input ?? recovered) as Record<string, unknown> | null;
+
+    if (!fields || typeof fields.explanation !== 'string') {
       throw new TranslationError('parse', 'No structured explanation was returned.', {
-        raw: notes,
+        raw: text || notes,
       });
     }
 
-    const input = call.input as {
-      explanation?: string;
-      localSourceIds?: string[];
-      webSources?: WebSourceRef[];
+    const input = {
+      explanation: fields.explanation,
+      localSourceIds: Array.isArray(fields.localSourceIds)
+        ? fields.localSourceIds.filter((id): id is string => typeof id === 'string')
+        : undefined,
+      webSources: Array.isArray(fields.webSources)
+        ? (fields.webSources as unknown[]).filter(
+            (source): source is WebSourceRef =>
+              typeof source === 'object' &&
+              source !== null &&
+              typeof (source as WebSourceRef).url === 'string',
+          )
+        : undefined,
     };
 
     const usedIds = new Set(input.localSourceIds ?? []);
