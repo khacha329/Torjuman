@@ -5,6 +5,7 @@ import { newId } from '../../lib/id';
 import type { Block, ExplanationCard, TranslationCard } from '../../types';
 import { TranslationError } from '../../translation/TranslationProvider';
 import { explainPhrase, searchLibrary } from '../../translation/explain';
+import { ANTHROPIC_EXPLAIN_FALLBACK_MODEL, isClaudeModel } from '../../translation/models';
 import { isOnlineNow } from '../../app/useOnline';
 
 /**
@@ -91,7 +92,9 @@ export function useExplanations(bookId: string, blocks: Block[]) {
         webSources: [],
         status: 'loading',
         providerId: 'anthropic',
-        model: activeProfile.model.startsWith('claude') ? activeProfile.model : 'claude-sonnet-5',
+        model: isClaudeModel(activeProfile.model)
+          ? activeProfile.model
+          : ANTHROPIC_EXPLAIN_FALLBACK_MODEL,
       };
 
       upsert(card);

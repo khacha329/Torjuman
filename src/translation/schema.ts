@@ -7,8 +7,14 @@
 // blocks from the web-search tool sitting alongside the text.
 //
 // Declaring the output as a schema removes the whole class of failure. Anthropic
-// gets it as a forced tool call, Gemini as a responseSchema; both come back as
-// parsed data with no fences, preamble, or narration possible.
+// gets it as a strict tool, Gemini as a responseSchema; both come back as parsed
+// data with no fences, preamble, or narration possible.
+//
+// The current Claude models reject a forced tool_choice with a 400, so the tool
+// is offered with tool_choice auto and the system prompt tells the model to
+// answer by calling it. `strict: true` still guarantees that WHEN it is called,
+// its input matches the schema. The rare reply that skips the tool falls back
+// to the text parser rather than being thrown away.
 
 export const EMIT_TOOL_NAME = 'emit_translation';
 
@@ -36,10 +42,17 @@ const SEGMENT_PROPERTIES = {
   },
 } as const;
 
-/** Anthropic tool definition. Forced with tool_choice. */
+/**
+ * Anthropic tool definition, in strict mode.
+ *
+ * Strict mode requires `additionalProperties: false` on every object. It is
+ * added here, on the two Anthropic objects, and NOT to SEGMENT_PROPERTIES:
+ * that is shared with Gemini's responseSchema, which does not take the keyword.
+ */
 export const EMIT_TRANSLATION_TOOL = {
   name: EMIT_TOOL_NAME,
   description: 'Return the translated segments.',
+  strict: true,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -49,12 +62,25 @@ export const EMIT_TRANSLATION_TOOL = {
           type: 'object',
           properties: SEGMENT_PROPERTIES,
           required: ['type', 'arabic', 'english'],
+          additionalProperties: false,
         },
       },
     },
     required: ['segments'],
+    additionalProperties: false,
   },
 };
+
+/**
+ * Appended to the system prompt wherever a tool carries the answer. With
+ * tool_choice auto the model may otherwise answer in prose, so it is told.
+ */
+export function answerWithTool(systemPrompt: string, toolName: string): string {
+  return (
+    `${systemPrompt}\n\nGive your answer by calling the ${toolName} tool, exactly once. ` +
+    'Do not write the answer as text.'
+  );
+}
 
 /** Gemini generationConfig.responseSchema — the same shape, as a bare array. */
 export const GEMINI_RESPONSE_SCHEMA = {

@@ -373,16 +373,24 @@ though pages were missing.
 ## Structured output
 
 The model is no longer *asked* for JSON — the shape is enforced. Anthropic gets
-a forced tool call (`emit_translation`), Gemini a `responseSchema`; both come
-back as parsed data with no fences, preamble, or narration possible. The
-JSON-only instruction is stripped from the system prompt in flight on those
+a strict tool (`emit_translation`, `strict: true`), Gemini a `responseSchema`;
+both come back as parsed data with no fences, preamble, or narration possible.
+The JSON-only instruction is stripped from the system prompt in flight on those
 paths, since once the shape is enforced it merely invites the model to write the
-JSON out *twice*. The profile text on disk is never edited.
+JSON out as text. The profile text on disk is never edited.
 
-**Dig deeper runs as two passes**, because a forced `tool_choice` prevents the
-model from calling the search tool at all. Pass 1 searches and reasons in prose
-with `tool_choice: auto`; pass 2 turns those notes into segments with the tool
-forced and no search. Pass 2 is short in and short out.
+The current Claude models reject a forced `tool_choice` (`tool` or `any`) with a
+400, so every Anthropic call that wants a tool uses `tool_choice: auto` and the
+system prompt tells the model to answer by calling it. Strict mode guarantees a
+call's input matches the schema; it cannot guarantee the call happens. So every
+such path falls back to parsing JSON out of the reply's text before giving up —
+a reply that has been paid for is never thrown away.
+
+**Dig deeper runs as two passes.** Pass 1 searches and reasons in prose with
+`tool_choice: auto`; pass 2 turns those notes into segments with the tool and no
+search. Pass 2 is short in and short out. The split was needed when the tool was
+forced, since that prevented search entirely; with `auto` one pass would now
+work, but merging them is its own change.
 
 Text is read from **every** content block, never `content[0]` — with search
 enabled the array holds `server_tool_use` and `web_search_tool_result` blocks
@@ -444,7 +452,7 @@ Meaning above.
 
 It is a separate, minimal request — deliberately **not** routed through the
 translation profile, whose glossary alone would dominate the token cost of a
-lookup this small. Structured via forced tool use, a few hundred output tokens,
+lookup this small. Structured via a strict tool, a few hundred output tokens,
 and cached by normalized word form, so a repeated word is free and works offline
 afterwards. Lookups never write to the glossary.
 
@@ -460,7 +468,7 @@ from, and never modifies it. **The user's own library is searched first** —
 better material, offline, and citable to a ج/ص he can turn to — with web results
 below, marked unverified, every claim carrying its link and excerpts kept to a
 sentence or two. Two passes, per the structured-output rule: research with
-search on, then structure with the tool forced.
+search on, then structure with the tool.
 
 ## Selection actions
 
