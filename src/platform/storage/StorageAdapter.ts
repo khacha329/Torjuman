@@ -40,7 +40,8 @@ import type { StoredNarratorProfile } from '../../biography/narratorProfile';
  * block IDs are deterministic, this bundle restores cleanly onto a device where
  * the books were imported separately, which is the normal path to a new device.
  *
- * API keys are never included, in this or any other export.
+ * API keys are never included. The one file that can carry them is the
+ * whole-tablet transfer, and only when the user ticks the box that says so.
  */
 export interface WorkBundle {
   version: number;
@@ -238,4 +239,27 @@ export interface StorageAdapter {
   // Work backup — user work only, never book content and never API keys
   exportWork(): Promise<WorkBundle>;
   importWork(bundle: WorkBundle): Promise<WorkRestoreReport>;
+
+  // Whole-device transfer: every store, row for row, untouched. The file
+  // format lives in src/library/deviceTransfer.ts; these are the only storage
+  // operations it needs, kept generic so that file never names a store's
+  // backing technology.
+
+  /** The database schema version. A transfer is only read by the same one. */
+  readonly schemaVersion: number;
+  listStoreNames(): string[];
+  countStoreRows(store: string): Promise<number>;
+  /**
+   * Up to `limit` rows in key order, starting after `after` (exclusive), or
+   * from the start when it is undefined. `lastKey` is undefined when the store
+   * has no rows past `after`.
+   */
+  readStoreRows(
+    store: string,
+    after: unknown,
+    limit: number,
+  ): Promise<{ rows: unknown[]; lastKey: unknown }>;
+  putStoreRows(store: string, rows: unknown[]): Promise<void>;
+  /** Empty every store. Used only by a confirmed whole-device restore. */
+  clearAllStores(): Promise<void>;
 }

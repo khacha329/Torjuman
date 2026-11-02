@@ -4983,6 +4983,178 @@ console.log('\n=== Shared views ===');
     'A shared chapter cannot be exported.');
 }
 
+console.log('\n=== Moving a whole tablet to another, as one file ===');
+
+{
+  const {
+    exportDevice,
+    inspectDeviceFile,
+    restoreDevice,
+    DEVICE_TRANSFER_EXTENSION,
+  } = await import('../src/library/deviceTransfer');
+
+  // An in-memory stand-in for the storage operations the transfer uses. Rows
+  // are keyed by `id` and read back in key order, as IndexedDB does.
+  function makeDevice(schemaVersion: number, data: Record<string, AnyRecord[]>) {
+    const stores = new Map<string, Map<string, AnyRecord>>();
+    for (const [name, rows] of Object.entries(data)) {
+      stores.set(name, new Map(rows.map((row) => [String(row.id), row])));
+    }
+    const named = (store: string) => {
+      const found = stores.get(store);
+      if (!found) throw new Error(`no store ${store}`);
+      return found;
+    };
+    let clears = 0;
+    const storage = {
+      schemaVersion,
+      listStoreNames: () => [...stores.keys()],
+      countStoreRows: async (store: string) => named(store).size,
+      readStoreRows: async (store: string, after: unknown, limit: number) => {
+        const keys = [...named(store).keys()].sort().filter((key) => after === undefined || key > (after as string));
+        const page = keys.slice(0, limit);
+        return { rows: page.map((key) => named(store).get(key)), lastKey: page.at(-1) };
+      },
+      putStoreRows: async (store: string, rows: unknown[]) => {
+        for (const row of rows as AnyRecord[]) named(store).set(String(row.id), row);
+      },
+      clearAllStores: async () => {
+        clears++;
+        for (const store of stores.values()) store.clear();
+      },
+    };
+    const dump = () =>
+      Object.fromEntries([...stores].map(([name, rows]) => [name, [...rows.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)))]));
+    return { storage: storage as never, dump, clears: () => clears };
+  }
+
+  function makeLocal(initial: Record<string, string>) {
+    const items = new Map(Object.entries(initial));
+    return {
+      keys: () => [...items.keys()],
+      get: (key: string) => items.get(key) ?? null,
+      set: (key: string, value: string) => void items.set(key, value),
+      items,
+    };
+  }
+
+  // More rows than one batch, Arabic, and the page HTML transfer.ts drops.
+  const blocks = Array.from({ length: 600 }, (_, index) => ({
+    id: `b${String(index).padStart(4, '0')}`,
+    text: 'إنما الأعمال بالنيات',
+    normalized: 'انما الاعمال بالنيات',
+  }));
+  const source = makeDevice(11, {
+    books: [{ id: 'book-1', title: 'صحيح البخاري' }],
+    pages: [{ id: 'book-1:p1', rawHtml: '<div class="nass">…</div>' }],
+    blocks,
+    qulEntries: [{ id: 'q1', resourceId: 'tafsir', key: '1:1', text: 'تفسير' }],
+    narratorProfiles: [{ id: 'n1', name: 'مالك بن أنس' }],
+    glossary: [{ id: 'g1', arabic: 'عبادة', english: 'worship' }],
+    cards: [],
+  });
+  const sourceLocal = makeLocal({
+    'shamela-reader.onboarded': '1',
+    'shamela-reader.catalogOffered': '1',
+    'shamela-reader.anthropic-api-key': 'sk-ant-test',
+    'someone-else.flag': 'x',
+  });
+
+  const withKeys = await exportDevice(source.storage, { includeApiKeys: true, local: sourceLocal });
+  const withoutKeys = await exportDevice(source.storage, { includeApiKeys: false, local: sourceLocal });
+  expect('the file is named as a tablet transfer', (withKeys as File).name.endsWith(DEVICE_TRANSFER_EXTENSION), '');
+  const head = new Uint8Array(await withKeys.slice(0, 2).arrayBuffer());
+  expect('  and is gzip', head[0] === 0x1f && head[1] === 0x8b, '');
+
+  // Pass 1 reads everything and writes nothing.
+  const target = makeDevice(11, {
+    books: [{ id: 'old-book', title: 'something already here' }],
+    pages: [],
+    blocks: [],
+    qulEntries: [],
+    narratorProfiles: [],
+    glossary: [{ id: 'g-old', arabic: 'قديم', english: 'old' }],
+    cards: [{ id: 'c-old' }],
+  });
+  const summary = await inspectDeviceFile(withKeys, target.storage);
+  check('inspecting counts every record', summary.totalRows, 605);
+  check('  per store', summary.counts.blocks, 600);
+  check('  and says the file carries keys', summary.includesApiKeys, true);
+  check('  and writes nothing', target.clears(), 0);
+  expect('  and measures the unpacked size', summary.uncompressedBytes > withKeys.size, '');
+
+  // Pass 2 replaces the tablet with an exact copy.
+  const targetLocal = makeLocal({ 'shamela-reader.gemini-api-key': 'only-here' });
+  await restoreDevice(withKeys, target.storage, { local: targetLocal });
+  expect(
+    'the receiving tablet becomes an exact copy',
+    JSON.stringify(target.dump()) === JSON.stringify(source.dump()),
+    '',
+  );
+  check('  page HTML included', (target.dump().pages[0] as AnyRecord).rawHtml, '<div class="nass">…</div>');
+  check('  so nothing already there survives', target.dump().cards, []);
+  check('  the setup flags come across', targetLocal.items.get('shamela-reader.onboarded'), '1');
+  check('  the API key comes across when asked for', targetLocal.items.get('shamela-reader.anthropic-api-key'), 'sk-ant-test');
+  check('  a key only on this tablet is kept', targetLocal.items.get('shamela-reader.gemini-api-key'), 'only-here');
+  check('  another app’s storage is not copied', targetLocal.items.has('someone-else.flag'), false);
+
+  const keyless = makeLocal({});
+  const fresh = makeDevice(11, { books: [], pages: [], blocks: [], qulEntries: [], narratorProfiles: [], glossary: [], cards: [] });
+  check('without the box ticked the file says so', (await inspectDeviceFile(withoutKeys, fresh.storage)).includesApiKeys, false);
+  await restoreDevice(withoutKeys, fresh.storage, { local: keyless });
+  check('  and carries no key', keyless.items.has('shamela-reader.anthropic-api-key'), false);
+  check('  but still carries the flags', keyless.items.get('shamela-reader.catalogOffered'), '1');
+
+  // Everything that can be wrong with a file is caught before the tablet is
+  // touched.
+  async function refusal(file: Blob, storage = target.storage): Promise<string> {
+    try {
+      await inspectDeviceFile(file, storage);
+      return 'accepted';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  }
+  const raw = await new Response(withKeys.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const lines = raw.split('\n');
+
+  const cutBytes = withKeys.slice(0, Math.floor(withKeys.size / 2));
+  expect('a file cut off mid-transfer is refused', /incomplete/.test(await refusal(cutBytes)), await refusal(cutBytes));
+  const noEnd = new Blob([lines.slice(0, -2).join('\n') + '\n']);
+  expect('a file missing its end marker is refused', /incomplete/.test(await refusal(noEnd)), '');
+  const missingBatch = new Blob([[lines[0], ...lines.slice(2)].join('\n')]);
+  expect('a file missing a batch of rows is refused', /incomplete/.test(await refusal(missingBatch)), '');
+  check('  and none of that touched the tablet', target.clears(), 1);
+
+  const uncompressed = new Blob([raw]);
+  check('an uncompressed file is read by content, not name', (await inspectDeviceFile(uncompressed, target.storage)).totalRows, 605);
+
+  const older = makeDevice(10, { books: [] });
+  expect('a different app version is refused', /different versions/.test(await refusal(withKeys, older.storage)), '');
+  const fewerStores = makeDevice(11, { books: [], pages: [], blocks: [] });
+  expect('a store this tablet lacks is refused', /does not have/.test(await refusal(withKeys, fewerStores.storage)), '');
+  const bookFile = new Blob([JSON.stringify({ kind: 'header', version: 1, book: {}, toc: [], counts: {} }) + '\n']);
+  expect('a single-book file is told apart', /not a tablet transfer file/.test(await refusal(bookFile)), '');
+  expect('a work backup is told apart', /not a tablet transfer file/.test(await refusal(new Blob(['{"version":11,"cards":[]}\n']))), '');
+
+  // Rows added while the file is being written would make its header wrong.
+  const busy = makeDevice(11, { books: [{ id: 'a' }] });
+  const growing = busy.storage as unknown as { readStoreRows: (...args: unknown[]) => Promise<unknown> };
+  const read = growing.readStoreRows;
+  growing.readStoreRows = async (...args: unknown[]) => {
+    const result = await read(...args);
+    await (busy.storage as unknown as { putStoreRows: (s: string, r: unknown[]) => Promise<void> }).putStoreRows('books', [{ id: 'b' }]);
+    return result;
+  };
+  let busyError = '';
+  try {
+    await exportDevice(busy.storage, { includeApiKeys: false, local: makeLocal({}) });
+  } catch (error) {
+    busyError = (error as Error).message;
+  }
+  expect('an export that raced with new work says so', /changed while/.test(busyError), busyError);
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);
