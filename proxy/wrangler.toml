@@ -31,3 +31,16 @@ ALLOWED_ORIGINS = "https://khacha329.github.io,https://hashiya-staging.khacha.wo
 # and off again afterwards.
 [observability]
 enabled = false
+
+# Storage for the tablet-transfer relay (/transfer/ in worker.js): encrypted
+# pieces of a transfer file, each deleted after an hour. Created with
+#
+#   npx wrangler kv namespace create TRANSFERS
+#
+# The id is not a secret — it names the namespace and is useless without this
+# Cloudflare account's credentials. A fork with its own account replaces it
+# with the id that command prints. Removed, the relay answers "not set up" and
+# the rest of the Worker is unaffected.
+[[kv_namespaces]]
+binding = "TRANSFERS"
+id = "ff58e9da0e27463eb273aad76635514a"

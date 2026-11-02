@@ -84,7 +84,8 @@ is the indicator, so if it is still there, `PROXY_URL` did not arrive.
 
 ## What it will and will not do
 
-It forwards **GET only**, to **four hosts only** (shamela.ws, dorar.net,
+It forwards **GET only** (the tablet-transfer relay below is the one route
+that stores anything), to **four hosts only** (shamela.ws, dorar.net,
 api.quran.com, and api.sunnah.com if you enable it). The allowlist is the point:
 the Worker URL is inside a public build, so anyone can read it, and an open
 forwarder backed by your quota is not a thing to publish.
@@ -114,6 +115,41 @@ hop is acceptable.
 Your **Anthropic** key never touches this Worker at all. `api.anthropic.com`
 sends CORS headers, so the app calls it directly and it is not in the routing
 table.
+
+---
+
+## Tablet transfer relay (optional)
+
+**Settings → Move to another tablet → Send through the proxy** uploads the
+transfer file here in encrypted 8 MB pieces, and the other tablet fetches them
+back with a 16-character code. It exists because WebView-based browsers —
+DuckDuckGo on Android — cannot save a large file to Downloads: it comes out
+0 bytes, or the tab crashes. Plain `fetch()` works in them, so this route goes
+around the download manager entirely.
+
+What this Worker holds is ciphertext. The code is never sent here: the storage
+id is a hash of it, and the AES-GCM key is derived from it in the browser.
+Pieces expire after **one hour** whether or not they are collected, and the
+receiving tablet deletes them as soon as it has restored.
+
+It needs a KV namespace — free tier, no card:
+
+```bash
+cd proxy
+npx wrangler kv namespace create TRANSFERS
+```
+
+That prints an `id`. The `[[kv_namespaces]]` block at the bottom of
+`wrangler.toml` holds this repository's; replace it with yours if you deploy
+your own Worker. Then redeploy:
+
+```bash
+npx wrangler deploy
+```
+
+Without the binding, `/transfer/` answers "not set up on this proxy" and
+nothing else is affected. A transfer uses one KV write per 8 MB piece; the free tier allows
+1,000 writes and 1 GB a day, so a 100 MB library is 13 writes.
 
 ---
 

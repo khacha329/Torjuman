@@ -384,6 +384,18 @@ seeded or imported again. The receiving tablet is **replaced**, not merged.
   and redirects to `#/receive/shared`. A fresh tablet can also start from the
   onboarding screen's "Moving from another tablet?" link.
 
+**Through the proxy instead of a file.** WebView-based browsers — DuckDuckGo
+on Android — cannot save the file at all: a `blob:` download comes out 0 bytes
+because Android's download manager cannot read it, and a `data:` link the size
+of a library crashes the tab. So `Send through the proxy` uploads the same file
+to the Worker (`/transfer/` in `proxy/worker.js`) in 8 MB pieces with plain
+`fetch()`, and the other tablet enters a 16-character code to fetch it back,
+then checks and restores it exactly as above. The code yields both the storage
+id (a hash) and the AES-GCM key (HKDF), so the Worker holds only ciphertext and
+never sees the code; each piece is bound to its position, pieces expire after
+an hour, and the receiver deletes them once restored. It needs a KV namespace
+bound to the Worker — see `proxy/README.md`.
+
 The offline translation model lives in the browser cache, not the database,
 and is not carried; it downloads again on the new tablet.
 
