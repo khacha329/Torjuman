@@ -5,6 +5,7 @@ import { statsFor, type ShareBundle } from '../../share/bundle';
 import { buildBundle, chapterRange, orderRange, tocSubtree } from '../../share/buildBundle';
 import { generateShareKey, InsecureContextError, sealBundle, toBase64Url } from '../../share/crypto';
 import { shareFileName, shareLinkFor } from '../../share/shareLink';
+import { saveFile } from '../../lib/saveFile';
 import { AnchoredPanel } from './AnchoredPanel';
 import { Button, Spinner } from '../common';
 
@@ -59,27 +60,13 @@ function formatBytes(bytes: number): string {
  * found" — pointing at the link, which is fine, rather than at the download,
  * which is not.
  *
- * Which is exactly what happened. The anchor below used to be clicked without
- * being added to the document, and Android Chrome ignores `download` on a
- * detached element: it fell back to naming the file after the blob's own UUID.
- * The element therefore goes into the DOM before the click and comes out after,
- * which is the one arrangement every browser honours.
+ * Which is exactly what happened. The anchor used to be clicked without being
+ * added to the document, and Android Chrome ignores `download` on a detached
+ * element: it fell back to naming the file after the blob's own UUID. saveFile
+ * attaches it for the click — see src/lib/saveFile.ts.
  */
 function download(bytes: Uint8Array, filename: string): void {
-  const url = URL.createObjectURL(
-    new Blob([bytes as BlobPart], { type: 'application/octet-stream' }),
-  );
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = 'noopener';
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  // Revoked on a delay rather than immediately: some Android browsers have not
-  // started reading the blob by the time click() returns.
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  void saveFile(new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), filename);
 }
 
 /**
@@ -102,15 +89,7 @@ function downloadLink(id: string, link: string, title: string): void {
     `then commit and push to main.\n\n` +
     `This link carries the only key to the chapter. Anyone who has it can read it.\n`;
 
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${id}.link.txt`;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  void saveFile(new Blob([text], { type: 'text/plain' }), `${id}.link.txt`);
 }
 
 interface Sealed {

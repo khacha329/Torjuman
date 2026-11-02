@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { newId } from '../../lib/id';
 import { normalize } from '../../lib/arabic';
+import { saveFile } from '../../lib/saveFile';
 import { BidiText } from '../../components/BidiText';
 import { glossaryTokenEstimate } from '../../translation/prompt';
 import type { GlossaryEntry } from '../../types';
@@ -31,12 +32,7 @@ export function GlossaryTable() {
       note: entry.note,
     }));
     const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `glossary-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    void saveFile(blob, `glossary-${new Date().toISOString().slice(0, 10)}.json`);
   };
 
   /**

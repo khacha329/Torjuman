@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { exportDevice, type DeviceTransferProgress } from '../../library/deviceTransfer';
+import { saveFile } from '../../lib/saveFile';
 import { Button } from '../common';
 
 // The sending half of moving to another tablet: everything on this one, as a
@@ -54,15 +55,13 @@ export function DeviceTransfer() {
     }
   };
 
-  const save = () => {
+  const save = async () => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = file.name;
-    link.click();
-    // Revoked later rather than at once: the download is still reading it.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    try {
+      await saveFile(file, file.name);
+    } catch (error) {
+      setStatus(`Could not save the file: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   return (
@@ -101,7 +100,7 @@ export function DeviceTransfer() {
           </Button>
         )}
         {file && (
-          <Button variant={canShare ? 'default' : 'primary'} onClick={save}>
+          <Button variant={canShare ? 'default' : 'primary'} onClick={() => void save()}>
             Save to Downloads
           </Button>
         )}

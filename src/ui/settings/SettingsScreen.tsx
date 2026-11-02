@@ -8,6 +8,7 @@ import type { CloudProviderId } from '../../translation/TranslationProvider';
 import type { WorkBundle } from '../../platform/storage/StorageAdapter';
 import { DeviceTransfer } from './DeviceTransfer';
 import { LibraryTransfer } from './LibraryTransfer';
+import { saveFile } from '../../lib/saveFile';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
 import { Button, Field, inputClass, LinkButton, TopBar } from '../common';
@@ -493,7 +494,7 @@ function BackupSection() {
     setStatus('Preparing…');
     const bundle = await storage.exportWork();
 
-    download(
+    await saveFile(
       new Blob([JSON.stringify(bundle)], { type: 'application/json' }),
       `hashiya-work-${new Date().toISOString().slice(0, 10)}.json`,
     );
@@ -564,13 +565,4 @@ function BackupSection() {
       </p>
     </Section>
   );
-}
-
-function download(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }
