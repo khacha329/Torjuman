@@ -5465,6 +5465,42 @@ console.log('\n=== Moving a tablet through the proxy instead of a saved file ===
   check('the forwarding routes still take GET only', proxied.status, 405);
 }
 
+console.log('\n=== The card panel sits beside the text whenever both fit ===');
+
+{
+  const layout = await import('../src/ui/useLayoutMode');
+  const { RAIL_WIDTH } = await import('../src/ui/reader/SelectionRail');
+
+  check(
+    'the side-by-side threshold is the sum of what has to fit',
+    layout.SIDE_BY_SIDE_MIN_WIDTH,
+    RAIL_WIDTH + layout.MIN_READING_WIDTH + layout.DIVIDER_WIDTH + layout.PANEL_MIN_WIDTH,
+  );
+  expect('  which lands near 780px', Math.abs(layout.SIDE_BY_SIDE_MIN_WIDTH - 780) <= 10, `${layout.SIDE_BY_SIDE_MIN_WIDTH}px`);
+  check(
+    'the query: desktop width in any orientation, or a landscape screen past the threshold',
+    layout.SIDE_BY_SIDE_QUERY,
+    `(min-width: 1024px), (orientation: landscape) and (min-width: ${layout.SIDE_BY_SIDE_MIN_WIDTH}px)`,
+  );
+
+  check('auto follows the fit: room for both', layout.resolveLayoutMode('auto', true), 'beside');
+  check('  no room', layout.resolveLayoutMode('auto', false), 'sheet');
+  check('"beside the text" holds even without room', layout.resolveLayoutMode('beside', false), 'beside');
+  check('"bottom sheet" holds even with room', layout.resolveLayoutMode('sheet', true), 'sheet');
+
+  const textLeft = (panel: number, viewport: number) => viewport - RAIL_WIDTH - layout.DIVIDER_WIDTH - panel;
+  check('a desktop keeps a wide saved panel', layout.clampPanelWidth(700, 1920), 700);
+  check('  but not past the maximum', layout.clampPanelWidth(900, 2560), layout.PANEL_MAX_WIDTH);
+  const at900 = layout.clampPanelWidth(760, 900);
+  check('a desktop width saved at 760 is drawn at 45% on a 900px tablet', at900, 405);
+  expect('  leaving the Arabic its readable column', textLeft(at900, 900) >= layout.MIN_READING_WIDTH, `${textLeft(at900, 900)}px of text`);
+  const atThreshold = layout.clampPanelWidth(760, layout.SIDE_BY_SIDE_MIN_WIDTH);
+  check('at the threshold the panel is at its minimum', atThreshold, layout.PANEL_MIN_WIDTH);
+  check('  and the text gets exactly the readable column', textLeft(atThreshold, layout.SIDE_BY_SIDE_MIN_WIDTH), layout.MIN_READING_WIDTH);
+  check('a forced side panel on a phone never goes below the minimum', layout.clampPanelWidth(460, 400), layout.PANEL_MIN_WIDTH);
+  check('a narrow saved width is kept as it is', layout.clampPanelWidth(320, 1024), 320);
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);

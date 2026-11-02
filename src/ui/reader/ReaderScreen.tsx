@@ -54,26 +54,22 @@ import { peekSelection, readSelection, type SelectionAnchor } from './selection'
 import { RAIL_WIDTH, SelectionRail } from './SelectionRail';
 import { useDebounced } from './useAnimatedList';
 import { useTranslator } from './useTranslator';
-
-const WIDE_QUERY = '(min-width: 1024px)';
-
-function useIsWide(): boolean {
-  const [wide, setWide] = useState(() => window.matchMedia(WIDE_QUERY).matches);
-  useEffect(() => {
-    const media = window.matchMedia(WIDE_QUERY);
-    const update = () => setWide(media.matches);
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
-  return wide;
-}
+import {
+  clampPanelWidth,
+  DIVIDER_WIDTH,
+  useLayoutMode,
+  useViewportWidth,
+} from '../useLayoutMode';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
   // True only inside a shared view. Everything it gates is a control that
   // spends money, needs a key, or writes to a library the viewer does not own.
   const readOnly = useReadOnly();
-  const isWide = useIsWide();
+  // Beside the text or a bottom sheet — decided by whether both fit, not by
+  // device class, and switched live on rotation. See src/ui/useLayoutMode.ts.
+  const sideBySide = useLayoutMode() === 'beside';
+  const viewportWidth = useViewportWidth();
 
   const [book, setBook] = useState<Book | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -139,7 +135,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // Computed up here because the marker handler needs it: the panel being open
   // decides whether a marker tap scrolls the panel or opens a popover.
-  const panelVisible = isWide && !settings.panelCollapsed;
+  const panelVisible = sideBySide && !settings.panelCollapsed;
 
   /**
    * What the Visible scope reads, held still while the reader is moving.
@@ -486,10 +482,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       const card = await translator.translate({ anchor });
       if (card) {
         setActiveCardId(card.id);
-        if (!isWide) setSheetOpen(true);
+        if (!sideBySide) setSheetOpen(true);
       }
     },
-    [translator, isWide],
+    [translator, sideBySide],
   );
 
   /** "Translate the surrounding passage" from an entity sheet. */
@@ -506,10 +502,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       });
       if (card) {
         setActiveCardId(card.id);
-        if (!isWide) setSheetOpen(true);
+        if (!sideBySide) setSheetOpen(true);
       }
     },
-    [translator, isWide],
+    [translator, sideBySide],
   );
 
   // ------------------------------------------------------------ navigation
@@ -645,7 +641,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   useEffect(() => {
     const move = (event: PointerEvent) => {
       if (!dragging.current) return;
-      const width = Math.min(Math.max(window.innerWidth - event.clientX, 300), 760);
+      const width = clampPanelWidth(window.innerWidth - event.clientX, window.innerWidth);
       void updateSettings({ panelWidth: width });
     };
     const stop = () => {
@@ -786,7 +782,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             <Button onClick={() => setShowShare(true)}>Share</Button>
           </span>
         )}
-        {isWide && (
+        {sideBySide && (
           <Button
             onClick={() => void updateSettings({ panelCollapsed: !settings.panelCollapsed })}
             title="Ctrl/⌘ + \"
@@ -943,13 +939,16 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
                 dragging.current = true;
                 document.body.style.userSelect = 'none';
               }}
-              className="w-1.5 shrink-0 cursor-col-resize bg-rule/60 transition hover:bg-accent/40"
+              className="shrink-0 cursor-col-resize bg-rule/60 transition hover:bg-accent/40"
+              style={{ width: DIVIDER_WIDTH }}
               role="separator"
               aria-label="Resize card panel"
             />
             <aside
               className="shrink-0 border-l border-rule bg-parchment"
-              style={{ width: settings.panelWidth }}
+              // Clamped to what this screen can spare; the saved width is
+              // untouched, so a desktop's wide panel stays wide there.
+              style={{ width: clampPanelWidth(settings.panelWidth, viewportWidth) }}
             >
               {cardPanel}
             </aside>
@@ -960,7 +959,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             disappears along with the thing it controls is how a collapsed
             panel becomes a permanently collapsed one. The divider position is
             remembered, so reopening restores the width it had. */}
-        {isWide && settings.panelCollapsed && (
+        {sideBySide && settings.panelCollapsed && (
           <button
             onClick={() => void updateSettings({ panelCollapsed: false })}
             title="Show cards (Ctrl/⌘ + \)"
@@ -978,7 +977,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       </div>
 
       {/* Narrow / portrait: the panel becomes a bottom sheet. */}
-      {!isWide && (
+      {!sideBySide && (
         <>
           <button
             onClick={() => setSheetOpen((open) => !open)}

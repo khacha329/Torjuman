@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutMode } from '../useLayoutMode';
 
 // A panel anchored to a span of text — either a floating popover or, when the
 // content is long or the screen is narrow, a bottom sheet.
@@ -28,7 +29,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 // the viewport.
 // ---------------------------------------------------------------------------
 
-const WIDE_QUERY = '(min-width: 1024px)';
 const POPOVER_WIDTH = 400;
 const MARGIN = 12;
 
@@ -49,17 +49,12 @@ export function AnchoredPanel({
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [wide, setWide] = useState(() => window.matchMedia(WIDE_QUERY).matches);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
-  useEffect(() => {
-    const media = window.matchMedia(WIDE_QUERY);
-    const update = () => setWide(media.matches);
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
-
-  const asSheet = !wide || preferSheet;
+  // The same decision as the card panel's, so the two never disagree: where
+  // the panel sits beside the text there is room for a popover, and where it
+  // is a sheet, so is this. See src/ui/useLayoutMode.ts.
+  const asSheet = useLayoutMode() === 'sheet' || preferSheet;
 
   /** Re-measure the anchor and place the popover beside it. */
   const reposition = useCallback(() => {

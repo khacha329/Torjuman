@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lineHeight: 2.1,
   panelWidth: 460,
   panelCollapsed: false,
+  panelPosition: 'auto',
   // Visible is the working view: it tracks the reader continuously, so the
   // panel always reflects what is in front of the user and nothing else.
   panelScope: 'visible',
