@@ -11,6 +11,7 @@
     "share:add": "node scripts/share-add.mjs",
     "typecheck": "tsc -b --noEmit",
     "verify": "vite build --ssr scripts/verify-parsers.ts --outDir .verify --logLevel warn && node .verify/verify-parsers.js",
+    "verify:selection": "vite build --logLevel warn && node scripts/verify-selection.mjs",
     "glossary": "vite build --ssr scripts/build-glossary.ts --outDir .verify --logLevel warn && node .verify/build-glossary.js",
     "catalog": "vite build --ssr scripts/build-catalog.ts --outDir .verify --logLevel warn && node .verify/build-catalog.js"
   },
@@ -32,6 +33,7 @@
     "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^5.0.2",
     "jsdom": "^30.0.1",
+    "playwright": "1.63.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.5"
