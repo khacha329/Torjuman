@@ -8,6 +8,7 @@ import {
   type TransferProgress,
 } from '../../library/transfer';
 import type { Book } from '../../types';
+import { saveFile } from '../../lib/saveFile';
 import { Button } from '../common';
 
 // Moving crawled books between the user's own devices.
@@ -35,12 +36,7 @@ export function LibraryTransfer() {
     setStatus(null);
     try {
       const blob = await exportBook(storage, book, setProgress);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = exportFilename(book);
-      link.click();
-      URL.revokeObjectURL(url);
+      await saveFile(blob, exportFilename(book));
       setStatus(
         `Exported "${book.title}" — ${(blob.size / 1024 / 1024).toFixed(1)} MB compressed.`,
       );

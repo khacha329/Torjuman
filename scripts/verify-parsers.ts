@@ -5310,6 +5310,33 @@ console.log('\n=== Moving a whole tablet to another, as one file ===');
   expect('an export that raced with new work says so', /changed while/.test(busyError), busyError);
 }
 
+console.log('\n=== Saving a file works in WebView browsers too ===');
+
+{
+  const { needsDataUrl } = await import('../src/lib/saveFile');
+  // Representative user agents, written to each browser's documented shape
+  // rather than captured from a device. The WebView-based ones hand a link to
+  // Android's download manager, which cannot read a blob: URL and saves 0 bytes.
+  const chromeAndroid =
+    'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const chromeDesktop =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const duckDuckGo =
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Mobile DuckDuckGo/5 Safari/537.36';
+  const duckDuckGoNoName =
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Safari/537.36';
+  const webView =
+    'Mozilla/5.0 (Linux; Android 14; SM-X710 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Safari/537.36';
+  const firefox = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0';
+
+  check('Chrome on Android keeps the blob link', needsDataUrl(chromeAndroid), false);
+  check('  and so does desktop Chrome', needsDataUrl(chromeDesktop), false);
+  check('  and Firefox', needsDataUrl(firefox), false);
+  check('DuckDuckGo gets the file inside the link', needsDataUrl(duckDuckGo), true);
+  check('  even when it does not name itself', needsDataUrl(duckDuckGoNoName), true);
+  check('  as does any WebView', needsDataUrl(webView), true);
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);
