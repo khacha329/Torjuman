@@ -9,7 +9,14 @@ import {
   type DeviceTransferSummary,
 } from '../library/deviceTransfer';
 import { discardIncomingTransfer, takeIncomingTransfer } from '../library/incomingTransfer';
-import { Button, TopBar } from './common';
+import {
+  forgetRelay,
+  parseRelayCode,
+  RELAY_AVAILABLE,
+  receiveViaRelay,
+  type RelayProgress,
+} from '../library/relayTransfer';
+import { Button, inputClass, TopBar } from './common';
 
 // The receiving half of moving to another tablet.
 //
@@ -35,10 +42,12 @@ const LABELS: [store: string, one: string, many: string][] = [
   ['positions', 'reading position', 'reading positions'],
 ];
 
+/** `relayCode` when the file came through the proxy, so the copy there can be removed. */
 type State =
   | { step: 'choose' }
+  | { step: 'fetching'; progress: RelayProgress | null }
   | { step: 'checking'; progress: DeviceTransferProgress | null }
-  | { step: 'confirm'; file: File; summary: DeviceTransferSummary }
+  | { step: 'confirm'; file: File; summary: DeviceTransferSummary; relayCode?: string }
   | { step: 'restoring'; progress: DeviceTransferProgress | null }
   | { step: 'failed'; message: string };
 
@@ -48,13 +57,15 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
     shared ? { step: 'checking', progress: null } : { step: 'choose' },
   );
   const [booksHere, setBooksHere] = useState<number | null>(null);
+  const [typedCode, setTypedCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void storage.listBooks().then((books) => setBooksHere(books.length));
   }, [storage]);
 
-  const check = async (file: File) => {
+  const check = async (file: File, relayCode?: string) => {
     setState({ step: 'checking', progress: null });
     try {
       const summary = await inspectDeviceFile(file, storage, (progress) =>
@@ -62,7 +73,7 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
       );
       const noRoom = await roomFor(summary);
       if (noRoom) throw new Error(noRoom);
-      setState({ step: 'confirm', file, summary });
+      setState({ step: 'confirm', file, summary, relayCode });
     } catch (error) {
       setState({ step: 'failed', message: error instanceof Error ? error.message : String(error) });
     }
@@ -83,13 +94,34 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
     });
   }, [shared]);
 
-  const restore = async (file: File) => {
+  const fetchByCode = async () => {
+    const code = parseRelayCode(typedCode);
+    if (!code) {
+      setCodeError('A code is 16 letters and digits, like 7KQ2-9XMD-4TPA-RW3H.');
+      return;
+    }
+    setCodeError(null);
+    setState({ step: 'fetching', progress: null });
+    try {
+      const file = await receiveViaRelay(code, {
+        onProgress: (progress) => setState({ step: 'fetching', progress }),
+      });
+      await check(file, code);
+    } catch (error) {
+      setState({ step: 'failed', message: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
+  const restore = async (file: File, relayCode?: string) => {
     setState({ step: 'restoring', progress: null });
     try {
       await restoreDevice(file, storage, {
         onProgress: (progress) => setState({ step: 'restoring', progress }),
       });
       await discardIncomingTransfer();
+      // The relayed copy has done its job; it would expire within the hour,
+      // but there is no reason to leave it that long.
+      if (relayCode) await forgetRelay(relayCode);
       // A full reload, not a re-render: every screen holds state read from the
       // database that was just replaced, and the setup flags have changed.
       window.location.replace(import.meta.env.BASE_URL);
@@ -109,7 +141,9 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
   };
 
   const progress =
-    state.step === 'checking' || state.step === 'restoring' ? state.progress : null;
+    state.step === 'checking' || state.step === 'restoring' || state.step === 'fetching'
+      ? state.progress
+      : null;
 
   return (
     <div dir="ltr" className="ltr-isolate flex h-full flex-col">
@@ -142,15 +176,45 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
                 event.target.value = '';
               }}
             />
+
+            {RELAY_AVAILABLE && (
+              <form
+                className="mt-5 border-t border-rule pt-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void fetchByCode();
+                }}
+              >
+                <label className="mb-1 block text-sm font-medium" htmlFor="relay-code">
+                  Sent through the proxy? Enter the code
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    id="relay-code"
+                    className={`${inputClass} flex-1 font-mono uppercase tracking-wider`}
+                    value={typedCode}
+                    onChange={(event) => setTypedCode(event.target.value)}
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <Button type="submit">Fetch it</Button>
+                </div>
+                {codeError && <p className="mt-2 text-xs text-red-700">{codeError}</p>}
+              </form>
+            )}
           </section>
         )}
 
-        {(state.step === 'checking' || state.step === 'restoring') && (
+        {(state.step === 'fetching' || state.step === 'checking' || state.step === 'restoring') && (
           <section className="rounded-lg border border-rule bg-white p-5">
             <p className="mb-2 text-sm">
-              {state.step === 'checking'
-                ? 'Checking the file is complete. Nothing on this tablet is changed yet.'
-                : 'Restoring. Keep the app open until it finishes.'}
+              {state.step === 'fetching'
+                ? 'Fetching the transfer from your proxy. Nothing on this tablet is changed yet.'
+                : state.step === 'checking'
+                  ? 'Checking the file is complete. Nothing on this tablet is changed yet.'
+                  : 'Restoring. Keep the app open until it finishes.'}
             </p>
             <p className="mb-2 text-xs text-muted">{progress?.message ?? 'Starting…'}</p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
@@ -194,7 +258,7 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
             </p>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="danger" onClick={() => void restore(state.file)}>
+              <Button variant="danger" onClick={() => void restore(state.file, state.relayCode)}>
                 Replace this tablet
               </Button>
               <Button onClick={() => void cancel()}>Cancel</Button>

@@ -31,3 +31,15 @@ ALLOWED_ORIGINS = "https://khacha329.github.io,https://hashiya-staging.khacha.wo
 # and off again afterwards.
 [observability]
 enabled = false
+
+# Storage for the tablet-transfer relay (/transfer/ in worker.js): encrypted
+# pieces of a transfer file, each deleted after an hour. Create the namespace
+# once, then uncomment this block and paste in the id it prints:
+#
+#   npx wrangler kv namespace create TRANSFERS
+#
+# Left out, the relay answers "not set up" and the rest of the Worker is
+# unaffected.
+# [[kv_namespaces]]
+# binding = "TRANSFERS"
+# id = "paste the id here"

@@ -24,7 +24,8 @@
  * - It forwards no credentials of its own and copies no Cookie or Authorization
  *   header from the caller. The outbound header set is built from scratch below
  *   rather than cloned, so nothing can leak through by omission.
- * - It proxies GET only. Nothing here needs to write to anything.
+ * - It proxies GET only. The one exception is the tablet-transfer relay at
+ *   /transfer/, which stores encrypted pieces for an hour; see handleTransfer.
  * - It answers only for the four hosts named in ROUTES. An open forwarder with
  *   your Cloudflare quota behind it and your Worker URL published in a public
  *   repository is a bad combination; the allowlist is what keeps this a
@@ -110,6 +111,12 @@ export default {
     // strings and disclose nothing.
     const echo = requestOrigin ?? '*';
 
+    // The tablet-transfer relay has its own methods and its own storage, and
+    // is handled entirely apart from the forwarding below. See handleTransfer.
+    if (new URL(request.url).pathname.startsWith('/transfer/')) {
+      return handleTransfer(request, env, allow, echo);
+    }
+
     if (request.method === 'OPTIONS') {
       return allow ? preflight(allow) : fail(403, originRejected(requestOrigin), echo);
     }
@@ -175,6 +182,119 @@ export default {
     return new Response(upstream.body, { status: upstream.status, headers });
   },
 };
+
+// ---------------------------------------------------------------------------
+// Tablet transfer relay
+//
+// Moving a whole tablet to another goes through a file, and in WebView-based
+// browsers (DuckDuckGo on Android) a large file cannot be saved at all: the
+// download manager cannot read the page's blob, and a data: link the size of a
+// library crashes the tab. So the app can instead upload the transfer here in
+// pieces and the other tablet fetch them back — plain fetch() both ways, which
+// those browsers handle fine.
+//
+// The one place this Worker stores anything, and the only routes that accept
+// anything but GET. What it stores is ciphertext: each piece is AES-GCM
+// encrypted in the browser under a key derived from the code the user types
+// on the other tablet, and that code never reaches this Worker — the storage
+// id is a hash of it. So this Worker, and the Cloudflare account behind it,
+// hold opaque bytes that expire within the hour whether or not anyone collects
+// them. Nothing is logged, as everywhere else in this file.
+//
+// Needs a KV namespace bound as TRANSFERS (proxy/README.md). Without one, these
+// routes say so and everything else works as before.
+// ---------------------------------------------------------------------------
+
+/** `/transfer/<32 hex>` to delete, `/transfer/<32 hex>/<manifest|n>` to store or read. */
+const TRANSFER_PATH = /^\/transfer\/([0-9a-f]{32})(?:\/(manifest|\d{1,3}))?$/;
+/** Kept an hour, collected or not. */
+const TRANSFER_TTL_SECONDS = 60 * 60;
+/** The app sends 8 MiB pieces; the margin covers the IV and the GCM tag. */
+const TRANSFER_MAX_PART_BYTES = 9 * 1024 * 1024;
+/** About 1 GB in all — the free KV tier's whole storage allowance. */
+const TRANSFER_MAX_PARTS = 120;
+
+async function handleTransfer(request, env, allow, echo) {
+  if (request.method === 'OPTIONS') {
+    return allow ? transferPreflight(allow) : fail(403, originRejected(request.headers.get('Origin')), echo);
+  }
+  if (!allow) return fail(403, originRejected(request.headers.get('Origin')), echo);
+  if (!env.TRANSFERS) {
+    return fail(
+      501,
+      'Tablet transfer is not set up on this proxy: it needs a KV namespace bound as TRANSFERS. See proxy/README.md.',
+      allow,
+    );
+  }
+
+  const match = TRANSFER_PATH.exec(new URL(request.url).pathname);
+  if (!match) return fail(404, 'Not a transfer path.', allow);
+  const [, id, part] = match;
+  if (part !== undefined && part !== 'manifest' && Number(part) >= TRANSFER_MAX_PARTS) {
+    return fail(413, `A transfer can have at most ${TRANSFER_MAX_PARTS} pieces.`, allow);
+  }
+
+  if (request.method === 'DELETE' && part === undefined) {
+    const listed = await env.TRANSFERS.list({ prefix: `${id}/` });
+    await Promise.all(listed.keys.map((entry) => env.TRANSFERS.delete(entry.name)));
+    return transferDone(allow);
+  }
+
+  if (part === undefined) return fail(405, 'Use PUT or GET on a piece, or DELETE on the transfer.', allow);
+
+  if (request.method === 'PUT') {
+    const length = Number(request.headers.get('Content-Length'));
+    if (!length) return fail(411, 'A piece must say how long it is.', allow);
+    if (length > TRANSFER_MAX_PART_BYTES) return fail(413, 'That piece is too large.', allow);
+    // Streamed straight into KV rather than read into the Worker: an 8 MB
+    // body copied in JavaScript would use up the free tier's CPU allowance.
+    await env.TRANSFERS.put(`${id}/${part}`, request.body, {
+      expirationTtl: TRANSFER_TTL_SECONDS,
+    });
+    return transferDone(allow);
+  }
+
+  if (request.method === 'GET') {
+    const value = await env.TRANSFERS.get(`${id}/${part}`, { type: 'stream' });
+    if (value === null) {
+      return fail(
+        404,
+        'No transfer with that code. Check it — or it may have expired: a transfer is kept for an hour.',
+        allow,
+      );
+    }
+    return new Response(value, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': allow,
+        Vary: 'Origin',
+      },
+    });
+  }
+
+  return fail(405, 'Use PUT, GET or DELETE.', allow);
+}
+
+function transferPreflight(allow) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': allow,
+      'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      Vary: 'Origin',
+    },
+  });
+}
+
+function transferDone(allow) {
+  return new Response(null, {
+    status: 204,
+    headers: { 'Access-Control-Allow-Origin': allow, Vary: 'Origin' },
+  });
+}
 
 /**
  * The value for Access-Control-Allow-Origin, or null to refuse.

@@ -5337,6 +5337,134 @@ console.log('\n=== Saving a file works in WebView browsers too ===');
   check('  as does any WebView', needsDataUrl(webView), true);
 }
 
+console.log('\n=== Moving a tablet through the proxy instead of a saved file ===');
+
+{
+  const relay = await import('../src/library/relayTransfer');
+  // The real Worker, not a stand-in for it — only Cloudflare KV is faked.
+  const worker = (await import('../proxy/worker.js')).default as {
+    fetch: (request: Request, env: Record<string, unknown>) => Promise<Response>;
+  };
+
+  // ---- the code ------------------------------------------------------------
+  const codes = Array.from({ length: 200 }, () => relay.newRelayCode());
+  expect('a code is 16 characters of Crockford base32', codes.every((code) => /^[0-9A-HJKMNP-TV-Z]{16}$/.test(code)), '');
+  check('  and codes do not repeat', new Set(codes).size, 200);
+  check('it is shown in groups of four', relay.formatRelayCode('7KQ29XMD4TPARW3H'), '7KQ2-9XMD-4TPA-RW3H');
+  check('typing it back is forgiving', relay.parseRelayCode(' 7kq2-9xmd 4tpa-rw3h '), '7KQ29XMD4TPARW3H');
+  check('  O, I and L read as 0 and 1', relay.parseRelayCode('OIL0-0000-0000-0000'), '0110000000000000');
+  check('  but a short code is refused', relay.parseRelayCode('7KQ2-9XMD'), null);
+  check('  and so is a letter outside the alphabet', relay.parseRelayCode('UUUU-0000-0000-0000'), null);
+
+  // ---- an in-memory KV, wired to the Worker ---------------------------------
+  function makeKv() {
+    const store = new Map<string, { bytes: Uint8Array; ttl?: number }>();
+    return {
+      store,
+      async put(key: string, value: ReadableStream | Uint8Array, options?: { expirationTtl?: number }) {
+        const bytes = value instanceof Uint8Array ? value : new Uint8Array(await new Response(value).arrayBuffer());
+        store.set(key, { bytes, ttl: options?.expirationTtl });
+      },
+      async get(key: string) {
+        const found = store.get(key);
+        return found ? new Response(found.bytes).body : null;
+      },
+      async delete(key: string) {
+        store.delete(key);
+      },
+      async list({ prefix }: { prefix: string }) {
+        return { keys: [...store.keys()].filter((key) => key.startsWith(prefix)).map((name) => ({ name })) };
+      },
+    };
+  }
+  function relayTo(env: Record<string, unknown>): typeof fetch {
+    return (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      headers.set('Origin', 'https://khacha329.github.io');
+      // Browsers send a length with every body; Node's Request does not add one.
+      if (init?.body instanceof Uint8Array) headers.set('Content-Length', String(init.body.byteLength));
+      return worker.fetch(new Request(String(input), { ...init, headers }), env);
+    }) as typeof fetch;
+  }
+  const kv = makeKv();
+  const env = { TRANSFERS: kv, ALLOWED_ORIGINS: 'https://khacha329.github.io' };
+  const options = { base: 'https://proxy.example', fetch: relayTo(env) };
+
+  // ~20 MB of incompressible bytes: three pieces, the last one partial.
+  const payload = new Uint8Array(20 * 1024 * 1024 + 12345);
+  for (let i = 0; i < payload.length; i += 65536) crypto.getRandomValues(payload.subarray(i, i + 65536));
+  const sent = new File([payload], 'hashiya-tablet-2026-11-02.hashiya-device.gz', { type: 'application/gzip' });
+
+  const code = await relay.sendViaRelay(sent, options);
+  check('a 20 MB file goes up as three pieces and a manifest', kv.store.size, 4);
+  expect('  every piece expires in an hour', [...kv.store.values()].every((entry) => entry.ttl === 3600), '');
+  expect('  the Worker never sees the code', [...kv.store.keys()].every((key) => !key.includes(code) && /^[0-9a-f]{32}\//.test(key)), '');
+  const needle = payload.subarray(5000, 5032);
+  const holds = (hay: Uint8Array) => {
+    outer: for (let i = 0; i + needle.length <= hay.length; i += 1) {
+      for (let j = 0; j < needle.length; j++) if (hay[i + j] !== needle[j]) continue outer;
+      return true;
+    }
+    return false;
+  };
+  expect('  and stores only ciphertext', ![...kv.store.values()].some((entry) => holds(entry.bytes.subarray(0, 20000))), '');
+
+  const received = await relay.receiveViaRelay(code, options);
+  const back = new Uint8Array(await received.arrayBuffer());
+  expect('the other tablet gets back exactly the same bytes', back.length === payload.length && back.every((byte, i) => byte === payload[i]), '');
+  check('  under the same name', received.name, sent.name);
+
+  async function refusal(promise: Promise<unknown>): Promise<string> {
+    try {
+      await promise;
+      return 'accepted';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  }
+  const wrongCode = relay.newRelayCode();
+  expect('a wrong code finds nothing', /No transfer with that code/.test(await refusal(relay.receiveViaRelay(wrongCode, options))), '');
+
+  // Tampering with what the Worker holds is caught by the encryption.
+  const [id] = [...kv.store.keys()][0].split('/');
+  const original0 = kv.store.get(`${id}/0`)!;
+  const flipped = original0.bytes.slice();
+  flipped[100] ^= 1;
+  kv.store.set(`${id}/0`, { bytes: flipped });
+  expect('a damaged piece is refused', /could not be decrypted/.test(await refusal(relay.receiveViaRelay(code, options))), '');
+  kv.store.set(`${id}/0`, kv.store.get(`${id}/1`)!);
+  expect('  and so are pieces swapped round', /could not be decrypted/.test(await refusal(relay.receiveViaRelay(code, options))), '');
+  kv.store.set(`${id}/0`, original0);
+
+  await relay.forgetRelay(code, options);
+  check('once restored, the relayed copy is deleted', kv.store.size, 0);
+
+  // The Worker's own guards.
+  const noKv = await refusal(relay.sendViaRelay(new File([new Uint8Array(10)], 'x'), { base: 'https://proxy.example', fetch: relayTo({ ALLOWED_ORIGINS: env.ALLOWED_ORIGINS }) }));
+  expect('a proxy without storage says it is not set up', /not set up on this proxy/.test(noKv), noKv);
+  const strangers = await worker.fetch(
+    new Request(`https://proxy.example/transfer/${'a'.repeat(32)}/0`, { method: 'GET', headers: { Origin: 'https://evil.example' } }),
+    env,
+  );
+  check('another site is turned away', strangers.status, 403);
+  const tooBig = await worker.fetch(
+    new Request(`https://proxy.example/transfer/${'a'.repeat(32)}/0`, {
+      method: 'PUT',
+      headers: { Origin: 'https://khacha329.github.io', 'Content-Length': String(10 * 1024 * 1024) },
+      body: new Uint8Array(1),
+    }),
+    env,
+  );
+  check('an oversized piece is refused', tooBig.status, 413);
+  const preflight = await worker.fetch(
+    new Request(`https://proxy.example/transfer/${'a'.repeat(32)}/0`, { method: 'OPTIONS', headers: { Origin: 'https://khacha329.github.io' } }),
+    env,
+  );
+  expect('the preflight allows PUT and DELETE', /PUT/.test(preflight.headers.get('Access-Control-Allow-Methods') ?? '') && /DELETE/.test(preflight.headers.get('Access-Control-Allow-Methods') ?? ''), '');
+  const proxied = await worker.fetch(new Request('https://proxy.example/shamela/book/1', { method: 'PUT', headers: { Origin: 'https://khacha329.github.io' } }), env);
+  check('the forwarding routes still take GET only', proxied.status, 405);
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);
