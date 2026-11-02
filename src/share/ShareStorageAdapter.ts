@@ -478,6 +478,33 @@ export class ShareStorageAdapter implements StorageAdapter {
   async importWork(): Promise<WorkRestoreReport> {
     throw new Error('Work cannot be restored into a shared chapter.');
   }
+
+  // A whole-device transfer is refused for the same reason as a work backup:
+  // in share mode the "device" is partly somebody else's chapter.
+
+  get schemaVersion(): number {
+    return this.own.schemaVersion;
+  }
+
+  listStoreNames(): string[] {
+    throw new Error('A shared chapter cannot be transferred.');
+  }
+
+  async countStoreRows(): Promise<number> {
+    throw new Error('A shared chapter cannot be transferred.');
+  }
+
+  async readStoreRows(): Promise<{ rows: unknown[]; lastKey: unknown }> {
+    throw new Error('A shared chapter cannot be transferred.');
+  }
+
+  async putStoreRows(): Promise<void> {
+    throw new Error('A transfer cannot be restored into a shared chapter.');
+  }
+
+  async clearAllStores(): Promise<void> {
+    throw new Error('A transfer cannot be restored into a shared chapter.');
+  }
 }
 
 /**

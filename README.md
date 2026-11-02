@@ -344,10 +344,48 @@ Backups are split accordingly, because one monolithic file is impractical —
 - **Library transfer** (`Settings → Library transfer`) — one file per book,
   `.hashiya.gz`.
 
-The normal path to a new device is: import the books there, then restore the
-work backup on top. It binds correctly because the IDs match.
+For picking things up piecemeal — a few books onto a second device — import
+the books there, then restore the work backup on top. It binds correctly
+because the IDs match. **API keys are never in either file.**
 
-**API keys are never in either file.**
+### Moving a whole tablet
+
+`Settings → Move to another tablet` is the other case: the same person, a
+second tablet, and everything carried across in one file — books, QUL
+resources, Itqan narrator profiles, dictionaries, biographies, glossary,
+cards, marks, positions, settings, and the setup flags — so nothing is fetched,
+seeded or imported again. The receiving tablet is **replaced**, not merged.
+
+- **A copy, not an export.** Every IndexedDB store travels row for row,
+  untouched — including `Page.rawHtml`, which the per-book transfer drops, so
+  the receiving tablet can re-parse exactly as the sending one could. Nothing
+  is recomputed on arrival. Gzipped NDJSON, streamed batch by batch in both
+  directions so a large library never sits in memory.
+- **Checked before anything is touched.** Restoring reads the file twice. The
+  first pass proves it complete — per-store counts in the header, an end
+  marker, gzip read to the end — and checks storage quota, writing nothing.
+  Only after the user confirms does the second pass clear the database and
+  write. A file cut short in transit is refused with the tablet untouched.
+- **Same app version on both.** The header records the database schema
+  version and a mismatch is refused, rather than writing rows shaped for
+  another schema.
+- **API keys only when asked.** A checkbox, on by default for this one file,
+  says plainly that the file then holds them as plain text. Keys entered only
+  on the receiving tablet are never removed.
+- **Sent from the Files app.** Chrome's Web Share API sends only an allowlist
+  of file types (images, audio, video, PDF, text — Chromium's
+  `third_party/blink/renderer/modules/webshare/FILE_TYPES.md`) and gzip is not
+  on it, so the main action is `Save to Downloads`, and the file goes over
+  Quick Share or Drive from the Files app. A `Send…` button appears by itself
+  wherever `navigator.canShare` accepts the file. On the receiving side, the
+  installed app is a **share target** for the file: the manifest's
+  `share_target` POSTs it to `receive-transfer`, which
+  `public/share-target.js` (pulled into the service worker) parks in a cache
+  and redirects to `#/receive/shared`. A fresh tablet can also start from the
+  onboarding screen's "Moving from another tablet?" link.
+
+The offline translation model lives in the browser cache, not the database,
+and is not carried; it downloads again on the new tablet.
 
 ### The transfer format
 

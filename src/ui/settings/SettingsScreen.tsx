@@ -6,6 +6,7 @@ import { allProviders, providerFor } from '../../translation/registry';
 import { defaultModelFor, modelsFor } from '../../translation/models';
 import type { CloudProviderId } from '../../translation/TranslationProvider';
 import type { WorkBundle } from '../../platform/storage/StorageAdapter';
+import { DeviceTransfer } from './DeviceTransfer';
 import { LibraryTransfer } from './LibraryTransfer';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
@@ -47,6 +48,7 @@ export function SettingsScreen() {
           <ProfileEditor />
           <GlossaryTable />
           <PublishedShares />
+          <DeviceTransfer />
           <BackupSection />
           <LibraryTransfer />
           {/* Next to the build panel on purpose: a bug report is the version
@@ -557,7 +559,8 @@ function BackupSection() {
         Book content is <strong>not</strong> in this file — it moves separately, per book,
         under Library transfer below. Because block IDs are derived from the book rather
         than allocated, work restored here binds correctly to books imported independently
-        on this device. API keys are never included in any export.
+        on this device. API keys are never in this file. To move everything, keys
+        included if you choose, use Move to another tablet above.
       </p>
     </Section>
   );

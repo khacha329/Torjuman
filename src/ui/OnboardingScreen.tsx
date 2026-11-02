@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { secrets } from '../app/secrets';
+import { navigate } from '../app/router';
 import { providerFor } from '../translation/registry';
 import type { CloudProviderId } from '../translation/TranslationProvider';
 import { Button, inputClass } from './common';
@@ -179,9 +180,19 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
         </div>
 
         <p className="mt-4 text-xs text-muted">
-          Your key is stored on this device only, and is never included in a backup file.
+          Your key is stored on this device only. It leaves only if you choose to carry it
+          to another tablet.
           You can add the other provider later in Settings and switch between them per
           passage.
+        </p>
+
+        <p className="mt-4 border-t border-rule pt-3 text-sm">
+          <button
+            className="underline hover:text-ink"
+            onClick={() => navigate({ name: 'receive', shared: false })}
+          >
+            Moving from another tablet? Bring everything across instead
+          </button>
         </p>
       </div>
     </div>
