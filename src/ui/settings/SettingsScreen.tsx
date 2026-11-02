@@ -9,6 +9,12 @@ import type { WorkBundle } from '../../platform/storage/StorageAdapter';
 import { DeviceTransfer } from './DeviceTransfer';
 import { LibraryTransfer } from './LibraryTransfer';
 import { saveFile } from '../../lib/saveFile';
+import {
+  DESKTOP_MIN_WIDTH,
+  SIDE_BY_SIDE_MIN_WIDTH,
+  useLayoutMode,
+} from '../useLayoutMode';
+import type { PanelPosition } from '../../types';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
 import { Button, Field, inputClass, LinkButton, TopBar } from '../common';
@@ -40,6 +46,7 @@ export function SettingsScreen() {
           <OfflineTranslation />
           <KeysSection />
           <ReadingSection />
+          <DisplaySection />
           <QuranSection />
           <HadithSourceSection />
           <EntitySection />
@@ -393,6 +400,41 @@ function ReadingSection() {
       >
         وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِنْ شَكَرْتُمْ لَأَزِيدَنَّكُمْ وَلَئِنْ كَفَرْتُمْ إِنَّ عَذَابِي لَشَدِيدٌ
       </p>
+    </Section>
+  );
+}
+
+/**
+ * Where the card panel goes, for when the automatic choice is wrong on a
+ * particular screen. Per device, like the collapsed-panel state: a tablet and
+ * a desktop can each keep their own.
+ */
+function DisplaySection() {
+  const { settings, updateSettings } = useApp();
+  const layout = useLayoutMode();
+
+  return (
+    <Section title="Display">
+      <Field
+        label="Panel position"
+        hint={
+          settings.panelPosition === 'auto'
+            ? `Beside the text when this screen is landscape and at least ${SIDE_BY_SIDE_MIN_WIDTH}px wide, or ${DESKTOP_MIN_WIDTH}px in any orientation; otherwise a bottom sheet. Right now: ${layout === 'beside' ? 'beside the text' : 'bottom sheet'}.`
+            : 'Fixed on this device, whatever the screen size or orientation.'
+        }
+      >
+        <select
+          className={inputClass}
+          value={settings.panelPosition}
+          onChange={(event) =>
+            void updateSettings({ panelPosition: event.target.value as PanelPosition })
+          }
+        >
+          <option value="auto">Auto</option>
+          <option value="beside">Beside the text</option>
+          <option value="sheet">Bottom sheet</option>
+        </select>
+      </Field>
     </Section>
   );
 }

@@ -22,6 +22,13 @@ export type StructureProfile = 'generic' | 'hadith-commentary';
 export type PanelScope = 'visible' | 'section' | 'all';
 
 /**
+ * Where the card panel goes. 'auto' decides by whether the text and the panel
+ * both fit side by side (src/ui/useLayoutMode.ts); the other two force it.
+ * Persisted per device, like `panelCollapsed`.
+ */
+export type PanelPosition = 'auto' | 'beside' | 'sheet';
+
+/**
  * One recommended work — a pointer to a book, never the book.
  *
  * ---------------------------------------------------------------------------
@@ -848,8 +855,14 @@ export interface AppSettings {
   fontFamily: string;
   fontSize: number;
   lineHeight: number;
-  panelWidth: number; // px, persisted divider position
+  /**
+   * px, persisted divider position. Drawn clamped to what this screen can
+   * spare (clampPanelWidth), but stored as set, so a width chosen on a desktop
+   * survives a visit to a narrower screen.
+   */
+  panelWidth: number;
   panelCollapsed: boolean;
+  panelPosition: PanelPosition;
   /**
    * Which cards the panel shows.
    *

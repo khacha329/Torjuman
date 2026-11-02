@@ -7,6 +7,7 @@ import {
 } from '../../translation/offline/OfflineProvider';
 import { Button } from '../common';
 import { formatRetrievalLog } from '../../app/retrievalLog';
+import { describeLayout } from '../useLayoutMode';
 
 // Which build is this, and what state is it in.
 //
@@ -28,7 +29,7 @@ function formatBuildTime(iso: string): string {
 }
 
 export function BuildSection() {
-  const { storage, seedOutcome } = useApp();
+  const { storage, seedOutcome, settings } = useApp();
   const [copied, setCopied] = useState(false);
   const [modelFiles, setModelFiles] = useState<string[] | null>(null);
 
@@ -62,6 +63,9 @@ export function BuildSection() {
       `agent        ${navigator.userAgent}`,
       `online       ${navigator.onLine}`,
       `standalone   ${window.matchMedia('(display-mode: standalone)').matches}`,
+      // Enough to diagnose a layout bug from a paste: the CSS-pixel viewport
+      // the layout actually decides on, not the device's advertised size.
+      `layout       ${describeLayout(settings.panelPosition)}`,
       ``,
       `books (${books.length})`,
       ...(books.length === 0
@@ -131,7 +135,7 @@ export function BuildSection() {
       // selectable prompt the reader can copy out by hand.
       window.prompt('Copy this into the bug report:', text);
     }
-  }, [modelFiles, seedOutcome, storage]);
+  }, [modelFiles, seedOutcome, settings.panelPosition, storage]);
 
   return (
     <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
