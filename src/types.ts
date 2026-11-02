@@ -765,7 +765,8 @@ export interface ReadingPosition {
  *
  * This is content, not a credential — it unlocks a chapter the author chose to
  * publish, and anyone holding the link already has it. It is emphatically not a
- * provider API key, which never enters any record or any export.
+ * provider API key, which never enters any record, and leaves the device only
+ * in a whole-tablet transfer the user has explicitly asked to carry it.
  * ---------------------------------------------------------------------------
  */
 export interface ShareRecord {

@@ -15,8 +15,10 @@ import {
 //   1. No key is embedded in the app. A key shipped inside a distributed client
 //      is trivially extractable and the resulting bill is unbounded. Every key
 //      here is the user's own.
-//   2. Keys are NOT part of AppSettings, so they never reach the backup file —
-//      which is a file the user will copy between devices.
+//   2. Keys are NOT part of AppSettings, so they never reach the work backup —
+//      which is a file the user will copy between devices. The one exception
+//      is the whole-device transfer (src/library/deviceTransfer.ts), and only
+//      when the user ticks the box that says the file will carry them.
 //   3. A key is never logged and never interpolated into an error message.
 //
 // The spec allows localStorage for the web phase. Under Capacitor these move to
@@ -29,6 +31,9 @@ const PROVIDER_KEYS: Record<CloudProviderId, string> = {
 };
 
 const SUNNAH_KEY = 'shamela-reader.sunnah-api-key';
+
+/** Every localStorage entry that holds a key, for the device transfer to recognise. */
+export const API_KEY_STORAGE_KEYS: readonly string[] = [...Object.values(PROVIDER_KEYS), SUNNAH_KEY];
 
 function read(key: string): string {
   try {

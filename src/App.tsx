@@ -8,6 +8,7 @@ import { ImportScreen } from './ui/ImportScreen';
 import { OnboardingScreen } from './ui/OnboardingScreen';
 import { ReaderScreen } from './ui/reader/ReaderScreen';
 import { ShareScreen } from './ui/share/ShareScreen';
+import { ReceiveTransferScreen } from './ui/ReceiveTransferScreen';
 import { SettingsScreen } from './ui/settings/SettingsScreen';
 import { UpdateBar } from './ui/UpdateBar';
 
@@ -52,6 +53,14 @@ function Routes() {
   // the normal introduction.
   if (route.name === 'share') {
     return <ShareScreen id={route.id} keyText={route.key} />;
+  }
+
+  // Receiving a whole tablet skips them too. It is what a new tablet does
+  // first, and the file brings both setup flags with it — asking for a key and
+  // a catalog choice beforehand would be setting up a tablet about to be
+  // replaced.
+  if (route.name === 'receive') {
+    return <ReceiveTransferScreen shared={route.shared} />;
   }
 
   if (!onboarded) {

@@ -199,6 +199,10 @@ export default defineConfig({
         // error page. Base-prefixed for the same reason as `scope` above.
         navigateFallback: `${base}index.html`,
         cleanupOutdatedCaches: true,
+        // Catches a tablet transfer file shared to the installed app; see
+        // share_target below. Relative to the service worker, which lives at
+        // `base`.
+        importScripts: ['share-target.js'],
         runtimeCaching: [
           {
             // Model weights are large and immutable; once fetched they stay.
@@ -227,6 +231,23 @@ export default defineConfig({
         id: base,
         scope: base,
         start_url: base,
+        // Puts the installed app in Android's share sheet for a tablet transfer
+        // file, so one sent by Quick Share or saved from Drive opens straight
+        // into the receive screen. Gzip is what the file is; octet-stream is
+        // what it often becomes once a sharing app has handled it.
+        share_target: {
+          action: `${base}receive-transfer`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              {
+                name: 'transfer',
+                accept: ['application/gzip', 'application/x-gzip', 'application/octet-stream', '.gz'],
+              },
+            ],
+          },
+        },
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },

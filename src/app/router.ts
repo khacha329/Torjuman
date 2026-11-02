@@ -19,6 +19,11 @@ export type Route =
    * an error on one screen rather than a router that can throw.
    */
   | { name: 'share'; id: string; key: string }
+  /**
+   * Receiving a whole-tablet transfer. `shared` when the file arrived through
+   * Android's share sheet (see public/share-target.js) rather than being picked.
+   */
+  | { name: 'receive'; shared: boolean }
   | { name: 'settings' };
 
 export function hrefFor(route: Route): string {
@@ -33,6 +38,8 @@ export function hrefFor(route: Route): string {
       return `#/read/${encodeURIComponent(route.bookId)}`;
     case 'share':
       return `#/share/${route.id}/${route.key}`;
+    case 'receive':
+      return route.shared ? '#/receive/shared' : '#/receive';
     case 'settings':
       return '#/settings';
   }
@@ -47,6 +54,8 @@ function parseHash(hash: string): Route {
   if (path === '/import') return { name: 'import' };
   if (path === '/catalog') return { name: 'catalog' };
   if (path === '/settings') return { name: 'settings' };
+  if (path === '/receive') return { name: 'receive', shared: false };
+  if (path === '/receive/shared') return { name: 'receive', shared: true };
 
   const reader = /^\/read\/(.+)$/.exec(path);
   if (reader) return { name: 'reader', bookId: decodeURIComponent(reader[1]) };

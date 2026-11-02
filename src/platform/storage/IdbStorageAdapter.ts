@@ -916,6 +916,69 @@ export class IdbStorageAdapter implements StorageAdapter {
     return this.handle.getAll('wordGlosses');
   }
 
+  // ------------------------------------------------------ device transfer
+  //
+  // Untyped on purpose: these move rows between this database and a file
+  // without interpreting them, so the per-store generics would add casts and
+  // no safety. The store name is checked against the live database instead.
+
+  get schemaVersion(): number {
+    return DB_VERSION;
+  }
+
+  listStoreNames(): string[] {
+    return Array.from(this.handle.objectStoreNames);
+  }
+
+  private untyped(store: string): IDBPDatabase {
+    const db = this.handle as unknown as IDBPDatabase;
+    if (!db.objectStoreNames.contains(store)) {
+      throw new Error(`This database has no "${store}" store.`);
+    }
+    return db;
+  }
+
+  async countStoreRows(store: string): Promise<number> {
+    return this.untyped(store).count(store);
+  }
+
+  async readStoreRows(
+    store: string,
+    after: unknown,
+    limit: number,
+  ): Promise<{ rows: unknown[]; lastKey: unknown }> {
+    const db = this.untyped(store);
+    const range =
+      after === undefined ? undefined : IDBKeyRange.lowerBound(after as IDBValidKey, true);
+    // One transaction for both reads, so the keys and the rows describe the
+    // same snapshot and line up index for index.
+    const tx = db.transaction(store, 'readonly');
+    const [keys, rows] = await Promise.all([
+      tx.store.getAllKeys(range, limit),
+      tx.store.getAll(range, limit),
+    ]);
+    await tx.done;
+    return { rows, lastKey: keys.length > 0 ? keys[keys.length - 1] : undefined };
+  }
+
+  async putStoreRows(store: string, rows: unknown[]): Promise<void> {
+    if (rows.length === 0) return;
+    const db = this.untyped(store);
+    const tx = db.transaction(store, 'readwrite');
+    await Promise.all(rows.map((row) => tx.store.put(row)));
+    await tx.done;
+    this.searchIndex.clear();
+  }
+
+  async clearAllStores(): Promise<void> {
+    const db = this.handle as unknown as IDBPDatabase;
+    const names = Array.from(db.objectStoreNames);
+    const tx = db.transaction(names, 'readwrite');
+    await Promise.all(names.map((name) => tx.objectStore(name).clear()));
+    await tx.done;
+    this.searchIndex.clear();
+  }
+
   // ---------------------------------------------------------- work backup
 
   async exportWork(): Promise<WorkBundle> {
