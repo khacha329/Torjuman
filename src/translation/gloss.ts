@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { BlockType, WordGloss } from '../types';
 import { normalize } from '../lib/arabic';
+import { parseJsonObject } from './parseSegments';
+import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
 
 // "What does this word mean here, in English?"
@@ -15,9 +17,13 @@ import { TranslationError } from './TranslationProvider';
 // afterwards. It never writes to the glossary — these are transient lookups,
 // not terminology decisions.
 
+const GLOSS_TOOL_NAME = 'emit_gloss';
+
+// Strict, so a call's input always matches this schema.
 const GLOSS_TOOL = {
-  name: 'emit_gloss',
+  name: GLOSS_TOOL_NAME,
   description: 'Return the meaning of the word as used in this sentence.',
+  strict: true,
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -38,6 +44,7 @@ const GLOSS_TOOL = {
       },
     },
     required: ['word', 'root', 'meaning', 'isTechnicalTerm'],
+    additionalProperties: false,
   },
 };
 
@@ -98,9 +105,14 @@ export async function glossWord(
   try {
     const message = await client.messages.create({
       model: request.model,
-      // A few hundred tokens is the whole budget: small in, small out.
-      max_tokens: 600,
-      system: SYSTEM,
+      // Small in, small out. The answer itself is a few hundred tokens, but
+      // Haiku 5.5 thinks by default and thinking counts against this limit,
+      // so it leaves room for some. Billing is on what is actually generated.
+      max_tokens: 2000,
+      // A glance, not an article: the least thinking that does the job. Haiku
+      // 5.5's own default is `medium`.
+      output_config: { effort: 'low' },
+      system: answerWithTool(SYSTEM, GLOSS_TOOL_NAME),
       messages: [
         {
           role: 'user',
@@ -110,21 +122,31 @@ export async function glossWord(
         },
       ],
       tools: [GLOSS_TOOL],
-      tool_choice: { type: 'tool', name: 'emit_gloss' },
+      // The current models reject a forced tool_choice; the prompt asks for it.
+      tool_choice: { type: 'auto' },
     });
 
     const call = message.content.find(
       (block): block is Anthropic.ToolUseBlock =>
-        block.type === 'tool_use' && block.name === 'emit_gloss',
+        block.type === 'tool_use' && block.name === GLOSS_TOOL_NAME,
     );
-    if (!call) throw new TranslationError('parse', 'No gloss was returned.');
 
-    const input = call.input as {
-      word?: string;
-      root?: string;
-      meaning?: string;
-      note?: string;
-      isTechnicalTerm?: boolean;
+    // Without a forced call the model can answer in text instead, usually with
+    // the same JSON written out. Recover it before giving up on a paid reply.
+    const text = message.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n');
+    const fields = (call?.input ?? parseJsonObject(text)) as Record<string, unknown> | null;
+    if (!fields || typeof fields.meaning !== 'string' || !fields.meaning.trim()) {
+      throw new TranslationError('parse', 'No gloss was returned.', { raw: text });
+    }
+
+    const input = {
+      root: typeof fields.root === 'string' ? fields.root : undefined,
+      meaning: fields.meaning,
+      note: typeof fields.note === 'string' ? fields.note : undefined,
+      isTechnicalTerm: fields.isTechnicalTerm === true,
     };
 
     const gloss: WordGloss = {

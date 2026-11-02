@@ -14,6 +14,7 @@ import { BiographySheet } from './BiographySheet';
 import { ensureBiographyIndexes } from '../../biography/service';
 import { ensureNarratorSources } from '../../biography/narratorService';
 import { glossWord } from '../../translation/gloss';
+import { ANTHROPIC_GLOSS_MODEL } from '../../translation/models';
 import {
   loadDictionary,
   type Dictionary,
@@ -213,7 +214,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       try {
         const found = await glossWord(storage, {
           apiKey: secrets.getProviderKey('anthropic'),
-          model: 'claude-haiku-4-5',
+          model: ANTHROPIC_GLOSS_MODEL,
           word,
           sentence,
           blockType,

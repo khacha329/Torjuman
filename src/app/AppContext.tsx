@@ -15,6 +15,7 @@ import { Crawler } from '../ingest/crawler';
 import { CatalogImportBatch } from '../catalog/importBatch';
 import type { AppSettings, GlossaryEntry, TranslationProfile } from '../types';
 import { createDefaultProfile, DEFAULT_PROFILE_ID } from '../translation/profiles';
+import { isClaudeModel, successorModel } from '../translation/models';
 import { DEFAULT_PROVIDER_ID } from '../translation/registry';
 import { DEFAULT_TRANSLATION_ID, DEFAULT_TRANSLATION_NAME } from '../retrieval/quran';
 import { seedQulResources, type SeedOutcome, type SeedProgress } from '../qul/seed';
@@ -131,15 +132,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Profiles written before providers existed have a model but no
       // providerId. Infer it from the model rather than dropping them onto the
       // default provider, which would leave a Claude model pinned to Gemini.
+      //
+      // A profile pinned to a superseded Claude model moves to that model's
+      // successor (Sonnet 5 → Sonnet 5.5, and so on). Only the profile moves:
+      // cards keep the model that wrote them, since that is history.
       const migrated = await Promise.all(
         allProfiles.map(async (profile) => {
-          if (profile.providerId) return profile;
-          const inferred: TranslationProfile = {
-            ...profile,
-            providerId: profile.model?.startsWith('claude') ? 'anthropic' : 'gemini',
-          };
-          await services.storage.putProfile(inferred);
-          return inferred;
+          const providerId =
+            profile.providerId ?? (isClaudeModel(profile.model) ? 'anthropic' : 'gemini');
+          const model = successorModel(profile.model);
+          if (providerId === profile.providerId && model === profile.model) return profile;
+          const updated: TranslationProfile = { ...profile, providerId, model };
+          await services.storage.putProfile(updated);
+          return updated;
         }),
       );
       allProfiles = migrated;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BidiText } from '../../components/BidiText';
 import type { ProviderId, TranslatedSegment, TranslationCard } from '../../types';
-import { modelsFor } from '../../translation/models';
+import { findModelOption } from '../../translation/models';
 import { OFFLINE_MODELS } from '../../translation/offline/OfflineProvider';
 import { allProviders, badgeFor, providerFor } from '../../translation/registry';
 import { Spinner } from '../common';
@@ -285,7 +285,7 @@ function ProviderBadge({ card }: { card: TranslationCard }) {
   const badge = badgeFor(card.providerId);
   const option = offline
     ? OFFLINE_MODELS.find((entry) => entry.id === card.model)
-    : modelsFor(card.providerId).find((entry) => entry.id === card.model);
+    : findModelOption(card.providerId, card.model);
   const modelName = option ? option.label.split(' — ')[0] : card.model;
 
   // An offline card must never be mistaken for a Sonnet card when preparing a

@@ -10,16 +10,23 @@ import {
 } from '../TranslationProvider';
 import {
   ANTHROPIC_DEFAULT_MODEL,
+  ANTHROPIC_KEY_CHECK_MODEL,
   ANTHROPIC_MODELS,
   CACHE_READ_MULTIPLIER,
   CACHE_WRITE_MULTIPLIER,
   maxTokensFor,
   outputCeilingFor,
+  outputConfigFor,
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
 import { coerceSegments, parseSegments } from '../parseSegments';
-import { EMIT_TOOL_NAME, EMIT_TRANSLATION_TOOL, stripJsonInstruction } from '../schema';
+import {
+  answerWithTool,
+  EMIT_TOOL_NAME,
+  EMIT_TRANSLATION_TOOL,
+  stripJsonInstruction,
+} from '../schema';
 
 // Anthropic, via the official SDK.
 //
@@ -29,8 +36,8 @@ import { EMIT_TOOL_NAME, EMIT_TRANSLATION_TOOL, stripJsonInstruction } from '../
 // to api.anthropic.com and nowhere else, is never logged, and never appears in
 // an error message.
 //
-// Output shape is enforced by a forced tool call rather than requested in
-// prose — see schema.ts for why.
+// Output shape is enforced by a strict tool rather than requested in prose —
+// see schema.ts for why, and for why the tool is not forced.
 
 const WEB_SEARCH_TOOL = {
   type: 'web_search_20260209' as const,
@@ -57,7 +64,7 @@ export class AnthropicProvider implements TranslationProvider {
     if (!key.trim()) return false;
     try {
       await this.client(key).messages.create({
-        model: 'claude-haiku-4-5',
+        model: ANTHROPIC_KEY_CHECK_MODEL,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'hi' }],
       });
@@ -81,10 +88,11 @@ export class AnthropicProvider implements TranslationProvider {
     const client = this.client(key);
     const usage = emptyUsage();
 
-    // Dig deeper runs as two passes. A forced tool_choice stops the model
-    // calling the search tool at all, so research and structuring cannot happen
-    // in one request — the first pass searches and reasons in prose, the second
-    // turns that into segments. Pass 2 is short input, short output, no search.
+    // Dig deeper runs as two passes: the first searches and reasons in prose,
+    // the second turns that into segments. Pass 2 is short input, short output,
+    // no search. The split dates from forced tool_choice, which stopped the
+    // model calling the search tool at all; tool_choice auto would now allow
+    // one pass, but merging them is a separate change from the model upgrade.
     let research: string | null = null;
     if (request.allowExternalLookup) {
       research = await this.research(client, request, usage, onChunk);
@@ -126,6 +134,7 @@ export class AnthropicProvider implements TranslationProvider {
         ],
         messages,
         tools: [WEB_SEARCH_TOOL],
+        output_config: outputConfigFor(request.model),
       });
 
       let turnText = '';
@@ -154,7 +163,7 @@ export class AnthropicProvider implements TranslationProvider {
     return notes;
   }
 
-  /** Pass 2 (or the only pass): forced tool call, no search, structured out. */
+  /** Pass 2 (or the only pass): strict tool, no search, structured out. */
   private async structure(
     client: Anthropic,
     request: TranslationRequest,
@@ -167,8 +176,8 @@ export class AnthropicProvider implements TranslationProvider {
         'Now produce the translation, using the notes above where they help.'
       : renderUser(request);
 
-    // Sized against THIS model's ceiling rather than the shared default:
-    // Sonnet 5 and Opus 5 accept 128K output tokens, and this call streams,
+    // Sized against THIS model's ceiling rather than the shared default: the
+    // current Claude models accept 128K output tokens, and this call streams,
     // which is what the SDK requires for a budget that large.
     const ceiling = outputCeilingFor(request.model);
     let budget = maxTokensFor(request.targetText, 4, request.model);
@@ -182,14 +191,17 @@ export class AnthropicProvider implements TranslationProvider {
             type: 'text',
             // The JSON-only instruction is stripped here: with the shape
             // enforced by the tool, leaving it in encourages the model to write
-            // the JSON out as text as well as calling the tool.
-            text: stripJsonInstruction(renderSystem(request)),
+            // the JSON out as text instead of calling the tool. In its place,
+            // an instruction to answer through the tool, which tool_choice can
+            // no longer force on the current models.
+            text: answerWithTool(stripJsonInstruction(renderSystem(request)), EMIT_TOOL_NAME),
             cache_control: { type: 'ephemeral', ttl: '1h' },
           },
         ],
         messages: [{ role: 'user', content: userContent }],
         tools: [EMIT_TRANSLATION_TOOL],
-        tool_choice: { type: 'tool', name: EMIT_TOOL_NAME },
+        tool_choice: { type: 'auto' },
+        output_config: outputConfigFor(request.model),
       });
 
       // The tool's arguments stream as input_json deltas rather than text, so
@@ -244,8 +256,9 @@ export class AnthropicProvider implements TranslationProvider {
         };
       }
 
-      // The tool was forced, so this should not happen — but a paid response is
-      // never thrown away. Fall back to the tolerant text parser.
+      // The model was told to call the tool but tool_choice auto cannot make it,
+      // and a paid response is never thrown away. Fall back to the tolerant
+      // text parser.
       const text = textOf(message);
       const parsed = parseSegments(text || partial);
       if (parsed.ok) {
@@ -263,7 +276,7 @@ export class AnthropicProvider implements TranslationProvider {
   }
 }
 
-/** Read the forced tool call's arguments. */
+/** Read the tool call's arguments. */
 function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | null {
   for (const block of message.content) {
     if (block.type !== 'tool_use' || block.name !== EMIT_TOOL_NAME) continue;
@@ -301,15 +314,29 @@ function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void {
   total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
 }
 
-/** USD estimate from the token counts the API reported. */
+/**
+ * USD estimate from the token counts the API reported.
+ *
+ * `usage` can be the sum of several requests (dig deeper, Explain). A model
+ * with long-context pricing is priced at the higher rate when the summed prompt
+ * crosses its threshold, which is exact for one request and an upper bound for
+ * several. Only Haiku 5.5 has such a tier, at 100,000 prompt tokens.
+ */
 export function costOf(model: string, usage: TranslationUsage): number | null {
   const price = PRICES[model];
   if (!price) return null;
 
-  const input = usage.inputTokens * price.inputPerMTok;
-  const cacheRead = usage.cacheReadTokens * price.inputPerMTok * CACHE_READ_MULTIPLIER;
-  const cacheWrite = usage.cacheWriteTokens * price.inputPerMTok * CACHE_WRITE_MULTIPLIER;
-  const output = usage.outputTokens * price.outputPerMTok;
+  const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
+  const rates =
+    price.longContext && promptTokens > price.longContext.overPromptTokens
+      ? price.longContext
+      : price;
+  const cacheReadMultiplier = price.cacheReadMultiplier ?? CACHE_READ_MULTIPLIER;
+
+  const input = usage.inputTokens * rates.inputPerMTok;
+  const cacheRead = usage.cacheReadTokens * rates.inputPerMTok * cacheReadMultiplier;
+  const cacheWrite = usage.cacheWriteTokens * rates.inputPerMTok * CACHE_WRITE_MULTIPLIER;
+  const output = usage.outputTokens * rates.outputPerMTok;
 
   return (input + cacheRead + cacheWrite + output) / 1_000_000;
 }

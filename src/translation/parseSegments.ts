@@ -52,18 +52,57 @@ export function coerceSegments(value: unknown): TranslatedSegment[] {
   return value.map(coerceSegment).filter((s): s is TranslatedSegment => s !== null);
 }
 
-/** Strip markdown fences, then take the outermost bracketed array. */
-function extractArray(raw: string): string | null {
-  const unfenced = raw
+/**
+ * A JSON object written into a reply's text, for the paths that expected a
+ * tool call and did not get one.
+ *
+ * With tool_choice auto the model can answer in text instead of calling the
+ * tool, and when it does it usually writes the tool's arguments out as JSON —
+ * fenced, after a sentence of preamble, or both. Every `{` is tried in turn, so
+ * a stray brace in the preamble does not hide the object after it. Null when
+ * there is genuinely nothing to recover.
+ */
+export function parseJsonObject(raw: string): Record<string, unknown> | null {
+  const unfenced = unfence(raw);
+  for (let start = unfenced.indexOf('{'); start !== -1; start = unfenced.indexOf('{', start + 1)) {
+    const candidate = extractBalanced(unfenced, start, '{', '}');
+    if (candidate === null) continue;
+    try {
+      const parsed: unknown = JSON.parse(candidate);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Not this brace. Try the next.
+    }
+  }
+  return null;
+}
+
+function unfence(raw: string): string {
+  return raw
     .replace(/^\s*```(?:json)?\s*/i, '')
     .replace(/\s*```\s*$/i, '')
     .trim();
+}
 
+/** Strip markdown fences, then take the outermost bracketed array. */
+function extractArray(raw: string): string | null {
+  const unfenced = unfence(raw);
   const start = unfenced.indexOf('[');
   if (start === -1) return null;
+  return extractBalanced(unfenced, start, '[', ']');
+}
 
+/** From an opening bracket at `start`, the text up to its matching close. */
+function extractBalanced(
+  unfenced: string,
+  start: number,
+  open: '[' | '{',
+  close: ']' | '}',
+): string | null {
   // Scan for the matching bracket rather than using lastIndexOf, so a trailing
-  // sentence after the array does not break the parse.
+  // sentence after the JSON does not break the parse.
   let depth = 0;
   let inString = false;
   let escaped = false;
@@ -85,8 +124,8 @@ function extractArray(raw: string): string | null {
     }
     if (inString) continue;
 
-    if (ch === '[') depth++;
-    else if (ch === ']') {
+    if (ch === open) depth++;
+    else if (ch === close) {
       depth--;
       if (depth === 0) return unfenced.slice(start, i + 1);
     }
@@ -94,7 +133,7 @@ function extractArray(raw: string): string | null {
 
   // Unterminated — the stream may have been cut off. Try closing it.
   if (depth > 0) {
-    const repaired = unfenced.slice(start) + ']'.repeat(depth);
+    const repaired = unfenced.slice(start) + close.repeat(depth);
     try {
       JSON.parse(repaired);
       return repaired;
