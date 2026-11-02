@@ -15,9 +15,9 @@ export interface SelectionAnchor {
   sourceText: string;
 }
 
-const BLOCK_ATTRIBUTE = 'data-block-id';
+export const BLOCK_ATTRIBUTE = 'data-block-id';
 
-function blockElementFor(node: Node | null): HTMLElement | null {
+export function blockElementFor(node: Node | null): HTMLElement | null {
   let current: Node | null = node;
   while (current) {
     if (current instanceof HTMLElement && current.hasAttribute(BLOCK_ATTRIBUTE)) {
@@ -56,9 +56,15 @@ function offsetWithin(blockElement: HTMLElement, node: Node, offset: number): nu
  * virtualized, so a Range held across a scroll can point at unmounted nodes,
  * and resolving fresh at the moment the user taps sidesteps that entirely. It
  * also means a range still being adjusted with the native handles is never read
- * half-finished.
+ * half-finished. (The endpoint blocks themselves are kept mounted for as long
+ * as the selection lives — see selectionPins.ts.)
+ *
+ * `blocks` is the book's stored text. A selection across several blocks takes
+ * its text from there rather than from the DOM: only its two endpoint blocks
+ * are guaranteed to be mounted, so selection.toString() would silently skip
+ * every block in between that has scrolled out of the virtualized range.
  */
-export function readSelection(): SelectionAnchor | null {
+export function readSelection(blocks: Block[] = []): SelectionAnchor | null {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
 
@@ -67,16 +73,45 @@ export function readSelection(): SelectionAnchor | null {
   const endBlock = blockElementFor(range.endContainer);
   if (!startBlock || !endBlock) return null;
 
-  const sourceText = selection.toString();
+  const startBlockId = startBlock.getAttribute(BLOCK_ATTRIBUTE)!;
+  const startOffset = offsetWithin(startBlock, range.startContainer, range.startOffset);
+  const endBlockId = endBlock.getAttribute(BLOCK_ATTRIBUTE)!;
+  const endOffset = offsetWithin(endBlock, range.endContainer, range.endOffset);
+
+  const sourceText =
+    startBlockId === endBlockId
+      ? selection.toString()
+      : (storedText(blocks, startBlockId, startOffset, endBlockId, endOffset) ??
+        selection.toString());
   if (sourceText.trim() === '') return null;
 
-  return {
-    startBlockId: startBlock.getAttribute(BLOCK_ATTRIBUTE)!,
-    startOffset: offsetWithin(startBlock, range.startContainer, range.startOffset),
-    endBlockId: endBlock.getAttribute(BLOCK_ATTRIBUTE)!,
-    endOffset: offsetWithin(endBlock, range.endContainer, range.endOffset),
-    sourceText,
-  };
+  return { startBlockId, startOffset, endBlockId, endOffset, sourceText };
+}
+
+/**
+ * A multi-block selection's text, from storage.
+ *
+ * Joined with a blank line, which is what Chrome's selection.toString() puts
+ * between two of these paragraphs — so a card made this way reads exactly as
+ * one made when every block happened to be mounted. Null when either end is
+ * not in `blocks`, and the caller falls back to the DOM.
+ */
+function storedText(
+  blocks: Block[],
+  startBlockId: string,
+  startOffset: number,
+  endBlockId: string,
+  endOffset: number,
+): string | null {
+  const covered = blocksInRange(blocks, startBlockId, endBlockId);
+  if (covered.length < 2) return null;
+  const first = covered[0];
+  const last = covered[covered.length - 1];
+  return [
+    first.text.slice(startOffset),
+    ...covered.slice(1, -1).map((block) => block.text),
+    last.text.slice(0, endOffset),
+  ].join('\n\n');
 }
 
 /**

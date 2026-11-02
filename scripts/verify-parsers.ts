@@ -5501,6 +5501,66 @@ console.log('\n=== The card panel sits beside the text whenever both fit ===');
   check('a narrow saved width is kept as it is', layout.clampPanelWidth(320, 1024), 320);
 }
 
+console.log('\n=== A selection survives its blocks scrolling out of the virtualized range ===');
+
+{
+  const { readSelection } = await import('../src/ui/reader/selection');
+  const { pinnedBlockIds, trackSelectionPins } = await import('../src/ui/reader/selectionPins');
+  const page = dom.window.document;
+  const selection = dom.window.getSelection()!;
+  const fire = () => page.dispatchEvent(new dom.window.Event('selectionchange'));
+
+  const stored = [0, 1, 2, 3].map((i) => ({
+    id: `v:p1:${i}`,
+    text: `الفقرة ${i} من الكتاب`,
+  })) as unknown as Parameters<typeof readSelection>[0];
+
+  // Only the two endpoints are mounted, as when the blocks between them have
+  // scrolled out of the virtualized range: 1 and 2 are not in the DOM at all.
+  page.body.innerHTML = `
+    <div class="reader-surface">
+      <p data-block-id="v:p1:0">${stored[0].text}</p>
+      <p data-block-id="v:p1:3">${stored[3].text}</p>
+    </div>`;
+  const first = page.querySelector('[data-block-id="v:p1:0"]')!.firstChild!;
+  const last = page.querySelector('[data-block-id="v:p1:3"]')!.firstChild!;
+  const range = page.createRange();
+  range.setStart(first, 3);
+  range.setEnd(last, 6);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  const across = readSelection(stored);
+  check(
+    'with the middle unmounted, the text still comes from every block in the range',
+    across?.sourceText,
+    [stored[0].text.slice(3), stored[1].text, stored[2].text, stored[3].text.slice(0, 6)].join('\n\n'),
+  );
+  check('  and the anchors are unchanged', [across?.startBlockId, across?.startOffset, across?.endBlockId, across?.endOffset], ['v:p1:0', 3, 'v:p1:3', 6]);
+  expect('  where the DOM alone would have skipped the middle', !selection.toString().includes(stored[1].text), '');
+  check(
+    'without the stored blocks it falls back to the DOM',
+    readSelection()?.sourceText,
+    selection.toString(),
+  );
+
+  // ---- the pins --------------------------------------------------------------
+  const stop = trackSelectionPins();
+  fire();
+  check('the selection’s two endpoint blocks are pinned', pinnedBlockIds(), ['v:p1:0', 'v:p1:3']);
+
+  // The start block unmounts anyway (as it would without pinning): the range's
+  // start moves to the parent, and the pin must survive that.
+  page.querySelector('[data-block-id="v:p1:0"]')!.remove();
+  fire();
+  check('  and stay pinned when an endpoint can no longer be resolved', pinnedBlockIds(), ['v:p1:0', 'v:p1:3']);
+
+  selection.removeAllRanges();
+  fire();
+  check('a collapsed selection clears the pins', pinnedBlockIds(), []);
+  stop();
+}
+
 // ------------------------------------------------------------------ done
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);

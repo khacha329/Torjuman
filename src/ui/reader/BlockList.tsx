@@ -1,18 +1,26 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, type Ref } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
+import {
+  defaultRangeExtractor,
+  useVirtualizer,
+  type Range as VirtualRange,
+} from '@tanstack/react-virtual';
 import type { Block, BlockType, Entity, EntityRange, MarkRange } from '../../types';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';
 import { toArabicNumerals } from '../../lib/arabic';
 import { isDivider } from '../../shamela/structure';
 import { BlockText } from './BlockText';
 import type { CardMarker, VisibleRange } from './cardLayout';
+import { pinnedBlockIds, trackSelectionPins } from './selectionPins';
 
 // Virtualized reading surface.
 //
 // Six volumes is ~50,000 paragraphs. Mounting them all would freeze the tablet,
 // so only what is on screen (plus a margin) is in the DOM. The overscan is
-// deliberately generous: a selection can only span mounted blocks, and a reader
-// selecting "this paragraph and the next" must not hit an unmounted node.
+// deliberately generous, so "this paragraph and the next" is always mounted
+// while it is being selected. Beyond that, the blocks a live selection starts
+// and ends in are pinned — kept mounted wherever the reader scrolls — because
+// unmounting a selection's endpoint re-anchors the whole selection. See
+// selectionPins.ts.
 //
 // Margin layout. Both gutters live in the container's padding via absolute
 // positioning, never in the flow, so nothing here narrows the Arabic column:
@@ -125,6 +133,36 @@ export function BlockList({
     [entitiesByBlock, onEntityTap],
   );
 
+  // Pins are recorded the instant a selection starts — see selectionPins.ts.
+  useEffect(() => trackSelectionPins(), []);
+
+  const indexById = useMemo(
+    () => new Map(blocks.map((block, index) => [block.id, index])),
+    [blocks],
+  );
+
+  /**
+   * Indices mounted only because they are pinned, outside the range that would
+   * be mounted anyway. Kept so the visible range below can ignore them: a
+   * pinned block fifty paragraphs away is in the DOM, not on screen.
+   */
+  const pinnedOnly = useRef<Set<number>>(new Set());
+
+  /** The usual range, plus the selection's endpoint blocks wherever they are. */
+  const rangeExtractor = useCallback(
+    (range: VirtualRange) => {
+      const base = defaultRangeExtractor(range);
+      const first = base[0] ?? 0;
+      const last = base[base.length - 1] ?? -1;
+      const extra = pinnedBlockIds()
+        .map((id) => indexById.get(id))
+        .filter((index): index is number => index !== undefined && (index < first || index > last));
+      pinnedOnly.current = new Set(extra);
+      return extra.length === 0 ? base : [...base, ...extra].sort((a, b) => a - b);
+    },
+    [indexById],
+  );
+
   const virtualizer = useVirtualizer({
     count: blocks.length,
     getScrollElement: () => scrollRef.current,
@@ -140,6 +178,7 @@ export function BlockList({
     ),
     measureElement: (element) => element.getBoundingClientRect().height,
     overscan: 12,
+    rangeExtractor,
     getItemKey: useCallback((index: number) => blocks[index]?.id ?? index, [blocks]),
   });
 
@@ -160,9 +199,11 @@ export function BlockList({
   );
 
   // The topmost visible block drives the ج/ص margin and the saved position;
-  // the full visible range drives which cards the panel scopes to.
-  const topIndex = items[0]?.index;
-  const bottomIndex = items[items.length - 1]?.index;
+  // the full visible range drives which cards the panel scopes to. Pinned
+  // blocks are left out of both: they are mounted, not in view.
+  const inRange = items.filter((item) => !pinnedOnly.current.has(item.index));
+  const topIndex = inRange[0]?.index;
+  const bottomIndex = inRange[inRange.length - 1]?.index;
 
   useEffect(() => {
     onVisibleBlockChange(topIndex === undefined ? null : (blocks[topIndex] ?? null));

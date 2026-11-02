@@ -427,7 +427,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   /** Run an action against the selection as it stands right now. */
   const withSelection = useCallback(
     (act: (anchor: SelectionAnchor) => void) => {
-      const resolved = readSelection();
+      const resolved = readSelection(blocks);
       if (!resolved) return;
       act(resolved);
       window.getSelection()?.removeAllRanges();
@@ -438,7 +438,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         centerY: null,
       });
     },
-    [],
+    [blocks],
   );
 
   /**
@@ -454,7 +454,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       const target = event.target as HTMLElement | null;
       if (!target?.closest?.('[data-block-id]')) return;
 
-      const found = readSelection();
+      const found = readSelection(blocks);
       if (!found || !isSingleWord(found.sourceText)) return;
 
       const element = target.closest('[data-block-id]');
@@ -475,7 +475,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
     document.addEventListener('dblclick', onDoubleClick);
     return () => document.removeEventListener('dblclick', onDoubleClick);
-  }, [dictionary, lookUpWord]);
+  }, [blocks, dictionary, lookUpWord]);
 
   const runTranslate = useCallback(
     async (anchor: SelectionAnchor) => {
