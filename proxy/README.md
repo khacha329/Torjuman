@@ -139,15 +139,16 @@ cd proxy
 npx wrangler kv namespace create TRANSFERS
 ```
 
-That prints an `id`. In `wrangler.toml`, uncomment the `[[kv_namespaces]]`
-block at the bottom and paste it in, then redeploy:
+That prints an `id`. The `[[kv_namespaces]]` block at the bottom of
+`wrangler.toml` holds this repository's; replace it with yours if you deploy
+your own Worker. Then redeploy:
 
 ```bash
 npx wrangler deploy
 ```
 
-Until then `/transfer/` answers "not set up on this proxy" and nothing else is
-affected. A transfer uses one KV write per 8 MB piece; the free tier allows
+Without the binding, `/transfer/` answers "not set up on this proxy" and
+nothing else is affected. A transfer uses one KV write per 8 MB piece; the free tier allows
 1,000 writes and 1 GB a day, so a 100 MB library is 13 writes.
 
 ---
