@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { LocalSourceRef, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
-import { maxTokensFor, outputConfigFor } from './models';
+import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError, type TranslationUsage } from './TranslationProvider';
@@ -232,7 +232,7 @@ export async function explainPhrase(options: {
     // current models reject a forced tool_choice.
     const structured = client.messages.stream({
       model: options.model,
-      max_tokens: maxTokensFor(options.phrase, 6),
+      max_tokens: explainStructureMaxTokens(options.phrase, options.model),
       system: answerWithTool(SYSTEM, EXPLAIN_TOOL_NAME),
       messages: [
         {

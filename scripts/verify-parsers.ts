@@ -4201,6 +4201,24 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
   check('Opus 5.5 runs at high effort', models.outputConfigFor('claude-opus-5-5'), { effort: 'high' });
   check('  every other model keeps its default', models.outputConfigFor('claude-sonnet-5-5'), undefined);
 
+  // Explain's second pass is sized from a short phrase, so it sits on the
+  // 2,048 floor; at high effort Opus 5.5 can spend that thinking.
+  check(
+    "Explain's structuring pass gives Opus 5.5 room to think",
+    models.explainStructureMaxTokens('حسن لغيره', 'claude-opus-5-5'),
+    16_000,
+  );
+  check(
+    '  and leaves other models on the usual sizing',
+    models.explainStructureMaxTokens('حسن لغيره', 'claude-sonnet-5-5'),
+    models.maxTokensFor('حسن لغيره', 6, 'claude-sonnet-5-5'),
+  );
+  check(
+    '  which still grows with a long phrase',
+    models.explainStructureMaxTokens('ا'.repeat(20_000), 'claude-opus-5-5'),
+    models.maxTokensFor('ا'.repeat(20_000), 6, 'claude-opus-5-5'),
+  );
+
   // ---- prices ----------------------------------------------------------------
   const million = { inputTokens: 1_000_000, outputTokens: 1_000_000, cacheReadTokens: 0, cacheWriteTokens: 0 };
   check('Sonnet 5 is $2 in + $10 out, not $3 + $15', costOf('claude-sonnet-5', million), 12);

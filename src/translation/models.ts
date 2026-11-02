@@ -222,6 +222,25 @@ export function maxTokensFor(targetText: string, multiplier = 4, model?: string)
 }
 
 /**
+ * Floor for Explain's structuring pass, where a model thinks at length first.
+ *
+ * That pass is sized from the phrase, which is short, so it nearly always lands
+ * on maxTokensFor's 2,048 floor. Thinking counts against max_tokens, and Opus
+ * 5.5 runs at `high` effort here (see EFFORT), so 2,048 can be spent thinking
+ * before the tool call is written — a reply cut off with nothing to show for
+ * it. Billing is on what is generated, so the higher floor costs nothing when
+ * it goes unused.
+ */
+const EXPLAIN_STRUCTURE_FLOOR: Record<string, number> = {
+  [CLAUDE_OPUS_5_5]: 16_000,
+};
+
+/** max_tokens for Explain's second pass: the usual sizing, raised where needed. */
+export function explainStructureMaxTokens(phrase: string, model: string): number {
+  return Math.max(maxTokensFor(phrase, 6, model), EXPLAIN_STRUCTURE_FLOOR[model] ?? 0);
+}
+
+/**
  * Ceiling for the automatic retry after a truncated answer.
  *
  * The naive estimate was too tight: every segment carries *both* the Arabic and
