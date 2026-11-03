@@ -545,6 +545,34 @@ The signal is `selectionchange` on `document`, debounced at 150 ms. It is not
 above the WebView, so dragging them delivers no pointer event to the page at
 all — a `pointerup` handler fires only on some later, unrelated tap.
 
+### The page scrolls, not a box inside it
+
+A selection several screens long has to be dragged with the native handles,
+and Android's handles only autoscroll the **document** — dragged to the edge of
+a nested scroller nothing moves, and they clip wrongly against its edges. So
+the reader is a window virtualizer (`useWindowVirtualizer`): the page itself
+scrolls, the header is `position: sticky`, and in side-by-side layout the card
+panel (and the search column) is a sticky column scrolling on its own; in
+portrait the cards sheet is held to the bottom of the screen.
+
+The margin is wide — 200 blocks either side of the screen stay mounted — so a
+finger-dragged selection of about 200 paragraphs never spans an unmounted
+block. Each paragraph renders with `content-visibility: auto` and a
+`contain-intrinsic-size` from the height estimate, so the browser skips laying
+out the off-screen ones and rows are memoized so a scroll frame does not
+rebuild them. Two things keep positions honest with that much off-screen text:
+
+- the estimate is the text's estimated height (from the column's real width)
+  **plus exactly the block type's margins and padding**, so a never-shown block
+  measures exactly its estimate and does not nudge the scroll position as it
+  mounts;
+- a jump (ج/ص, contents, search, read marks, the saved position on load)
+  checks where its target actually landed and repeats until it stays put.
+
+The endpoint pins (`selectionPins.ts`) stay as a safety net for a selection
+longer than the margin. Checked in Chromium on touch profiles by
+`npm run verify:selection` and `npm run verify:reader`.
+
 Selectability is opt-in. Every non-text surface carries `user-select: none`, so
 aiming at a control never starts a selection and never summons the system bar
 over the app.

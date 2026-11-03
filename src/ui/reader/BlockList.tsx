@@ -1,7 +1,17 @@
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import {
   defaultRangeExtractor,
-  useVirtualizer,
+  useWindowVirtualizer,
   type Range as VirtualRange,
 } from '@tanstack/react-virtual';
 import type { Block, BlockType, Entity, EntityRange, MarkRange } from '../../types';
@@ -15,12 +25,33 @@ import { pinnedBlockIds, trackSelectionPins } from './selectionPins';
 // Virtualized reading surface.
 //
 // Six volumes is ~50,000 paragraphs. Mounting them all would freeze the tablet,
-// so only what is on screen (plus a margin) is in the DOM. The overscan is
-// deliberately generous, so "this paragraph and the next" is always mounted
-// while it is being selected. Beyond that, the blocks a live selection starts
-// and ends in are pinned — kept mounted wherever the reader scrolls — because
-// unmounting a selection's endpoint re-anchors the whole selection. See
-// selectionPins.ts.
+// so only what is on screen (plus a margin) is in the DOM.
+//
+// ---------------------------------------------------------------------------
+// The document scrolls, not a box inside it
+//
+// The reader used to scroll inside its own overflow container. Android's
+// native selection handles only autoscroll the *document* — drag a handle to
+// the edge of a nested scroller and nothing moves, and the handles are clipped
+// wrongly against its edges — so a selection could never be dragged further
+// than one screen. The list is therefore a window virtualizer: the page itself
+// scrolls, the reader's header is sticky, and the side panel is a sticky
+// column with its own scrolling (ReaderScreen).
+//
+// The margin is wide: OVERSCAN blocks either side of the screen stay mounted,
+// so a finger-dragged selection several screens long never spans an unmounted
+// block. Each block's text renders with content-visibility: auto, so the
+// browser skips laying out and painting the ones off screen and the larger
+// window stays cheap. The blocks a live selection starts and ends in are also
+// pinned — kept mounted wherever the reader scrolls — as a safety net for a
+// selection longer than the margin. See selectionPins.ts.
+// ---------------------------------------------------------------------------
+
+/**
+ * Blocks kept mounted either side of the screen. Sized for a selection of
+ * about 200 paragraphs — several screens — dragged with a finger.
+ */
+export const OVERSCAN = 200;
 //
 // Margin layout. Both gutters live in the container's padding via absolute
 // positioning, never in the flow, so nothing here narrows the Arabic column:
@@ -38,6 +69,25 @@ const TYPE_CLASS: Record<BlockType, string> = {
   sharh: 'my-4',
   poetry: 'my-6 text-center whitespace-pre-line',
   body: 'my-4',
+};
+
+/**
+ * Each type's vertical margin and padding, in px — exactly what TYPE_CLASS
+ * puts around the text (Tailwind spacing is rem-based, 1rem = 16px). An item's
+ * estimated height is its estimated text plus this, so a block that has never
+ * been on screen — mounted, but skipped by content-visibility — measures
+ * exactly its estimate. Any difference is a resize for every one of the
+ * hundreds of mounted blocks, each nudging the scroll position as it lands.
+ * Keep in step with TYPE_CLASS.
+ */
+const TYPE_CHROME: Record<BlockType, number> = {
+  chapter_title: 80, // my-10
+  quran: 32, // my-4
+  hadith_matn: 64, // my-5 + py-3
+  takhrij: 16, // my-2
+  sharh: 32, // my-4
+  poetry: 48, // my-6
+  body: 32, // my-4
 };
 
 export interface BlockListHandle {
@@ -73,6 +123,12 @@ interface BlockListProps {
   onVisibleRangeChange: (range: VisibleRange) => void;
   onMarkerClick: (marker: CardMarker, anchor: HTMLElement) => void;
   handleRef: Ref<BlockListHandle>;
+  /**
+   * Height of the sticky header covering the top of the page. A jump lands
+   * just below it rather than under it, and a block hidden behind it does not
+   * count as the one being read.
+   */
+  topInset: number;
 }
 
 function pageIndexOf(block: Block): number {
@@ -98,8 +154,42 @@ export function BlockList({
   onVisibleRangeChange,
   onMarkerClick,
   handleRef,
+  topInset,
 }: BlockListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The list's distance from the top of the document — everything above it,
+   * header and notices included. The window virtualizer measures every block
+   * from the top of the page, so it needs this to know where block 0 begins.
+   * Re-measured whenever the screen's root changes size, which is what a
+   * notice or banner appearing or going, or the header wrapping onto a second
+   * line, does. The root, not the body: html and body are fixed at 100% of the
+   * viewport and the page overflows them, so the body never changes size and an
+   * observer on it never fires.
+   */
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useLayoutEffect(() => {
+    const element = listRef.current;
+    if (!element) return;
+    const measure = () => {
+      const next = Math.round(element.getBoundingClientRect().top + window.scrollY);
+      setScrollMargin((current) => (current === next ? current : next));
+    };
+    // The outermost element of this screen, directly under the app's mount.
+    let screenRoot: HTMLElement = element;
+    while (screenRoot.parentElement && screenRoot.parentElement.id !== 'root') {
+      screenRoot = screenRoot.parentElement;
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(screenRoot);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
 
   /**
    * Entity tap.
@@ -141,13 +231,6 @@ export function BlockList({
     [blocks],
   );
 
-  /**
-   * Indices mounted only because they are pinned, outside the range that would
-   * be mounted anyway. Kept so the visible range below can ignore them: a
-   * pinned block fifty paragraphs away is in the DOM, not on screen.
-   */
-  const pinnedOnly = useRef<Set<number>>(new Set());
-
   /** The usual range, plus the selection's endpoint blocks wherever they are. */
   const rangeExtractor = useCallback(
     (range: VirtualRange) => {
@@ -157,53 +240,129 @@ export function BlockList({
       const extra = pinnedBlockIds()
         .map((id) => indexById.get(id))
         .filter((index): index is number => index !== undefined && (index < first || index > last));
-      pinnedOnly.current = new Set(extra);
       return extra.length === 0 ? base : [...base, ...extra].sort((a, b) => a - b);
     },
     [indexById],
   );
 
-  const virtualizer = useVirtualizer({
+  /**
+   * The text column's width, for estimating how a paragraph will wrap. It
+   * changes with the panel, the search column, rotation and window size.
+   */
+  const [columnWidth, setColumnWidth] = useState(672);
+  useLayoutEffect(() => {
+    const element = listRef.current;
+    if (!element) return;
+    const update = () => {
+      const width = Math.round(element.getBoundingClientRect().width);
+      if (width > 0) setColumnWidth((current) => (current === width ? current : width));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  /**
+   * The text's height before it has been laid out. An Arabic character in
+   * these faces averages about 0.43em, which makes the 42rem desktop column
+   * the 60 characters a line this used to assume — but a portrait tablet's
+   * column, or one narrowed by the search panel, wraps far sooner, and an
+   * estimate that ignores that puts every jump in the wrong place.
+   */
+  const estimateTextHeight = useCallback(
+    (block: Block) => {
+      const charsPerLine = Math.max(8, columnWidth / (fontSize * 0.43));
+      const lines = Math.max(1, Math.ceil(block.text.length / charsPerLine));
+      return lines * fontSize * lineHeight;
+    },
+    [columnWidth, fontSize, lineHeight],
+  );
+
+  const virtualizer = useWindowVirtualizer({
     count: blocks.length,
-    getScrollElement: () => scrollRef.current,
+    scrollMargin,
+    scrollPaddingStart: topInset,
     estimateSize: useCallback(
       (index: number) => {
         const block = blocks[index];
-        if (!block) return 120;
-        const charsPerLine = 60;
-        const lines = Math.max(1, Math.ceil(block.text.length / charsPerLine));
-        return lines * fontSize * lineHeight + 28;
+        return block
+          ? Math.round(estimateTextHeight(block)) + TYPE_CHROME[block.type]
+          : 120;
       },
-      [blocks, fontSize, lineHeight],
+      [blocks, estimateTextHeight],
     ),
     measureElement: (element) => element.getBoundingClientRect().height,
-    overscan: 12,
+    overscan: OVERSCAN,
     rangeExtractor,
     getItemKey: useCallback((index: number) => blocks[index]?.id ?? index, [blocks]),
   });
 
   const items = virtualizer.getVirtualItems();
 
+  /**
+   * Scroll to a block and make sure it got there.
+   *
+   * A jump is computed from the heights the virtualizer knows, and most of the
+   * mounted blocks are off screen, skipped by content-visibility, holding an
+   * estimate or a height remembered from an earlier width. Landing draws the
+   * paragraphs around the target at their real size, which moves it. So the
+   * target is checked where it actually ended up, a couple of frames later,
+   * and the jump repeated until it stays put — each pass lays out more real
+   * text around it, so it converges within a few.
+   */
+  const settleOn = useCallback(
+    (index: number, align: 'start' | 'center') => {
+      let attempts = 0;
+      const attempt = () => {
+        virtualizer.scrollToIndex(index, { align });
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            attempts++;
+            const element = listRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`);
+            if (!element || attempts >= 8) return;
+            const rect = element.getBoundingClientRect();
+            const off =
+              align === 'start'
+                ? rect.top - topInset
+                : rect.top + rect.height / 2 - window.innerHeight / 2;
+            if (Math.abs(off) > 4) attempt();
+          }),
+        );
+      };
+      attempt();
+    },
+    [topInset, virtualizer],
+  );
+
   useImperativeHandle(
     handleRef,
     () => ({
       scrollToOrder: (order, align = 'start') => {
         const index = blocks.findIndex((block) => block.order >= order);
-        if (index >= 0) virtualizer.scrollToIndex(index, { align });
+        if (index >= 0) settleOn(index, align);
       },
       scrollToIndex: (index, align = 'start') => {
-        virtualizer.scrollToIndex(index, { align });
+        settleOn(index, align);
       },
     }),
-    [blocks, virtualizer],
+    [blocks, settleOn],
   );
 
   // The topmost visible block drives the ج/ص margin and the saved position;
-  // the full visible range drives which cards the panel scopes to. Pinned
-  // blocks are left out of both: they are mounted, not in view.
-  const inRange = items.filter((item) => !pinnedOnly.current.has(item.index));
-  const topIndex = inRange[0]?.index;
-  const bottomIndex = inRange[inRange.length - 1]?.index;
+  // the full visible range drives which cards the panel scopes to. Worked out
+  // from the scroll position rather than from what is mounted: with OVERSCAN
+  // blocks either side in the DOM, the first mounted block is far above the
+  // screen, and a pinned block can be anywhere. A block behind the sticky
+  // header is not counted as on screen — nor one showing less than a couple of
+  // pixels below it, which is what a jump to the next block leaves of the one
+  // before, once fractional positions are rounded.
+  const scrollOffset = virtualizer.scrollOffset ?? 0;
+  const viewTop = scrollOffset + topInset + 2;
+  const viewBottom = scrollOffset + (virtualizer.scrollRect?.height ?? window.innerHeight);
+  const onScreen = items.filter((item) => item.end > viewTop && item.start < viewBottom);
+  const topIndex = onScreen[0]?.index;
+  const bottomIndex = onScreen[onScreen.length - 1]?.index;
 
   useEffect(() => {
     onVisibleBlockChange(topIndex === undefined ? null : (blocks[topIndex] ?? null));
@@ -214,8 +373,29 @@ export function BlockList({
     onVisibleRangeChange({ startIndex: topIndex, endIndex: bottomIndex });
   }, [topIndex, bottomIndex, onVisibleRangeChange]);
 
+  // The handlers rows receive, held stable. BlockList renders on every scroll
+  // frame, and so does ReaderScreen whenever the top block changes; a row
+  // handed a new function each time could not skip rendering, and there are
+  // OVERSCAN of them either side of the screen. These always call the latest
+  // handler, so nothing is lost by keeping their identity fixed.
+  const latest = useRef({ onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer });
+  latest.current = { onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer };
+  const stableMarginTap = useCallback((block: Block) => latest.current.onMarginTap?.(block), []);
+  const stableMarginHold = useCallback(
+    (block: Block, anchor: HTMLElement) => latest.current.onMarginHold?.(block, anchor),
+    [],
+  );
+  const stableMarkerClick = useCallback(
+    (marker: CardMarker, anchor: HTMLElement) => latest.current.onMarkerClick(marker, anchor),
+    [],
+  );
+  const stableBlockClick = useCallback(
+    (event: React.MouseEvent<HTMLParagraphElement>) => latest.current.handleBlockPointer(event),
+    [],
+  );
+
   return (
-    <div ref={scrollRef} className="reader-surface h-full overflow-auto">
+    <div className="reader-surface">
       {/* Padding lives on the outer box and the measured height on the inner
           one: absolutely-positioned virtual items resolve against the padding
           box, so combining the two would push every block under the top edge
@@ -226,97 +406,40 @@ export function BlockList({
       {/* Small-screen padding is 48px so the 44px margin tap target fits
           inside it rather than overflowing the block. */}
       <div className="mx-auto w-full max-w-[52rem] px-12 py-10 sm:px-20">
-        <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+        <div ref={listRef} className="relative" style={{ height: virtualizer.getTotalSize() }}>
           {items.map((item) => {
             const block = blocks[item.index];
             if (!block) return null;
 
             const pageIndex = pageIndexOf(block);
-            const meta = pageMeta.get(pageIndex);
             const previous = blocks[item.index - 1];
             const startsPage = !previous || pageIndexOf(previous) !== pageIndex;
-            const marker = markers.get(block.id);
 
             return (
-              <div
+              <BlockRow
                 key={item.key}
-                data-index={item.index}
-                ref={virtualizer.measureElement}
-                className="absolute top-0 right-0 left-0"
-                style={{ transform: `translateY(${item.start}px)` }}
-              >
-                <div className="relative">
-                  {/* Margin tap target for block-scope marking, in the right
-                      margin — the start side in RTL, and where the hand rests.
-                      This is the high-frequency gesture, so it takes no text
-                      selection and is a full 44px wide. It sits below the card
-                      marker in the stack so the dot stays tappable. */}
-                  <MarginTarget
-                    block={block}
-                    marks={marksByBlock.get(block.id)}
-                    onTap={onMarginTap}
-                    onHold={onMarginHold}
-                  />
-                  {/* ج/ص citation, in the left margin and outside the
-                      selectable block so it can never be counted into a
-                      selection offset. */}
-                  {startsPage && meta && (
-                    <div
-                      className="pointer-events-none absolute top-1 -left-16 hidden w-12 text-right text-[11px] leading-tight text-muted select-none sm:block"
-                      aria-hidden
-                    >
-                      {meta.volume !== null && <div>ج{toArabicNumerals(meta.volume)}</div>}
-                      {meta.printPage !== null && (
-                        <div className="text-muted/70">ص{toArabicNumerals(meta.printPage)}</div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Subtle indication that this block is inside a translated
-                      range. Unchanged from before. */}
-                  {translatedBlockIds.has(block.id) && (
-                    <span
-                      className="pointer-events-none absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-accent/40 select-none"
-                      aria-hidden
-                    />
-                  )}
-
-                  {/* Card marker, in the right margin — the start side in RTL.
-                      Deliberately quiet: it sits beside text being read
-                      continuously, and anything high-contrast becomes a
-                      distraction within minutes. */}
-                  {marker && (
-                    <CardMarkerDot
-                      marker={marker}
-                      onOpen={(element) => onMarkerClick(marker, element)}
-                    />
-                  )}
-
-                  <p
-                    data-block-id={block.id}
-                    dir="rtl"
-                    lang="ar"
-                    onClick={handleBlockPointer}
-                    className={
-                      `arabic transition-colors ${TYPE_CLASS[block.type]} ` +
-                      (isDivider(block.text) ? 'text-center text-muted tracking-[0.5em] ' : '') +
-                      (flashBlockId === block.id ? 'bg-amber-100/70 ' : '')
-                    }
-                    style={{
-                      fontFamily: `'${fontFamily}', 'Amiri', serif`,
-                      fontSize,
-                      ['--reader-line-height' as string]: String(lineHeight),
-                    }}
-                  >
-                    <BlockText
-                      block={block}
-                      entities={entitiesByBlock.get(block.id)}
-                      marks={marksByBlock.get(block.id)}
-                      highlight={match?.blockId === block.id ? match.range : undefined}
-                    />
-                  </p>
-                </div>
-              </div>
+                index={item.index}
+                block={block}
+                // Positions are measured from the top of the page; the list
+                // itself starts scrollMargin further down.
+                offset={item.start - scrollMargin}
+                measureRef={virtualizer.measureElement}
+                pageStart={startsPage ? pageMeta.get(pageIndex) : undefined}
+                marker={markers.get(block.id)}
+                marks={marksByBlock.get(block.id)}
+                entities={entitiesByBlock.get(block.id)}
+                translated={translatedBlockIds.has(block.id)}
+                flash={flashBlockId === block.id}
+                highlight={match?.blockId === block.id ? match.range : undefined}
+                fontFamily={fontFamily}
+                fontSize={fontSize}
+                lineHeight={lineHeight}
+                intrinsicHeight={Math.round(estimateTextHeight(block))}
+                onMarginTap={onMarginTap ? stableMarginTap : undefined}
+                onMarginHold={onMarginHold ? stableMarginHold : undefined}
+                onMarkerClick={stableMarkerClick}
+                onBlockClick={stableBlockClick}
+              />
             );
           })}
         </div>
@@ -324,6 +447,142 @@ export function BlockList({
     </div>
   );
 }
+
+/**
+ * One paragraph and its margin furniture.
+ *
+ * Memoized: BlockList renders on every scroll frame, and with OVERSCAN blocks
+ * mounted either side of the screen, rebuilding every row each time is what
+ * made scrolling slow. A row's props only change when something about that
+ * row does — its position, its marks, its cards — so the rest skip rendering.
+ */
+const BlockRow = memo(function BlockRow({
+  index,
+  block,
+  offset,
+  measureRef,
+  pageStart,
+  marker,
+  marks,
+  entities,
+  translated,
+  flash,
+  highlight,
+  fontFamily,
+  fontSize,
+  lineHeight,
+  intrinsicHeight,
+  onMarginTap,
+  onMarginHold,
+  onMarkerClick,
+  onBlockClick,
+}: {
+  index: number;
+  block: Block;
+  offset: number;
+  measureRef: (element: HTMLElement | null) => void;
+  /** The page this block opens, if it opens one: its ج/ص goes in the margin. */
+  pageStart: PageMeta | undefined;
+  marker: CardMarker | undefined;
+  marks: MarkRange[] | undefined;
+  entities: EntityRange[] | undefined;
+  translated: boolean;
+  flash: boolean;
+  highlight: [number, number] | undefined;
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  /** Estimated text height, used until the paragraph is first laid out. */
+  intrinsicHeight: number;
+  onMarginTap?: (block: Block) => void;
+  onMarginHold?: (block: Block, anchor: HTMLElement) => void;
+  onMarkerClick: (marker: CardMarker, anchor: HTMLElement) => void;
+  onBlockClick: (event: React.MouseEvent<HTMLParagraphElement>) => void;
+}) {
+  return (
+    <div
+      data-index={index}
+      ref={measureRef}
+      className="absolute top-0 right-0 left-0"
+      style={{ transform: `translateY(${offset}px)` }}
+    >
+      <div className="relative">
+        {/* Margin tap target for block-scope marking, in the right
+            margin — the start side in RTL, and where the hand rests.
+            This is the high-frequency gesture, so it takes no text
+            selection and is a full 44px wide. It sits below the card
+            marker in the stack so the dot stays tappable. */}
+        <MarginTarget block={block} marks={marks} onTap={onMarginTap} onHold={onMarginHold} />
+        {/* ج/ص citation, in the left margin and outside the
+            selectable block so it can never be counted into a
+            selection offset. */}
+        {pageStart && (
+          <div
+            className="pointer-events-none absolute top-1 -left-16 hidden w-12 text-right text-[11px] leading-tight text-muted select-none sm:block"
+            aria-hidden
+          >
+            {pageStart.volume !== null && <div>ج{toArabicNumerals(pageStart.volume)}</div>}
+            {pageStart.printPage !== null && (
+              <div className="text-muted/70">ص{toArabicNumerals(pageStart.printPage)}</div>
+            )}
+          </div>
+        )}
+
+        {/* Subtle indication that this block is inside a translated
+            range. Unchanged from before. */}
+        {translated && (
+          <span
+            className="pointer-events-none absolute -left-3 top-2 bottom-2 w-0.5 rounded bg-accent/40 select-none"
+            aria-hidden
+          />
+        )}
+
+        {/* Card marker, in the right margin — the start side in RTL.
+            Deliberately quiet: it sits beside text being read
+            continuously, and anything high-contrast becomes a
+            distraction within minutes. */}
+        {marker && (
+          <CardMarkerDot marker={marker} onOpen={(element) => onMarkerClick(marker, element)} />
+        )}
+
+        <p
+          data-block-id={block.id}
+          dir="rtl"
+          lang="ar"
+          onClick={onBlockClick}
+          className={
+            `arabic transition-colors ${TYPE_CLASS[block.type]} ` +
+            (isDivider(block.text) ? 'text-center text-muted tracking-[0.5em] ' : '') +
+            (flash ? 'bg-amber-100/70 ' : '')
+          }
+          style={{
+            fontFamily: `'${fontFamily}', 'Amiri', serif`,
+            fontSize,
+            ['--reader-line-height' as string]: String(lineHeight),
+            // Off screen, the browser skips laying out and painting
+            // this text, which is what makes OVERSCAN affordable. It
+            // is on the paragraph rather than the item, because it
+            // brings paint containment, and the item's margin
+            // furniture (ج/ص, card dot, tap target) sits outside its
+            // box and would be clipped. Until first laid out the
+            // paragraph takes its estimated height; `auto` then
+            // remembers the real one, so measureElement sees the
+            // estimate only for text that has never been on screen —
+            // as it did when such text was simply not mounted.
+            contentVisibility: 'auto',
+            containIntrinsicSize: `auto ${intrinsicHeight}px`,
+            // Harakāt above the first line and descenders below the
+            // last can ink past the box; paint containment would
+            // otherwise shave them off.
+            overflowClipMargin: '0.75em',
+          }}
+        >
+          <BlockText block={block} entities={entities} marks={marks} highlight={highlight} />
+        </p>
+      </div>
+    </div>
+  );
+});
 
 /**
  * The block-scope marking target in the right margin.
