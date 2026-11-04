@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../app/secrets';
@@ -112,6 +112,14 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   } | null>(null);
 
   const listRef = useRef<BlockListHandle>(null);
+
+  /**
+   * The sticky header's height. The page scrolls (see BlockList), so the
+   * header stays put over the top of it: jumps land below it, and the side
+   * columns start under it and fill the rest of the screen.
+   */
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const restoredRef = useRef(false);
   const shareButtonRef = useRef<HTMLSpanElement>(null);
   const [showShare, setShowShare] = useState(false);
@@ -656,6 +664,22 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     };
   }, [updateSettings]);
 
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const update = () => setHeaderHeight(header.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [loading, book]);
+
+  /**
+   * A side column that stays on screen while the page scrolls: it starts under
+   * the sticky header and fills the rest of the screen, scrolling on its own.
+   */
+  const stickyColumn = { top: headerHeight, height: `calc(100dvh - ${headerHeight}px)` };
+
   // ----------------------------------------------------------------- render
 
   if (loading) {
@@ -727,11 +751,19 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   return (
     // The app shell is English. Only the reading surface itself is RTL, and it
     // sets that on its own blocks — direction is never inherited across here.
-    <div dir="ltr" className="ltr-isolate flex h-full flex-col">
+    //
+    // min-h-full, not h-full: the page grows with the text and the document
+    // scrolls (see BlockList for why). A fixed-height root would also stop
+    // the sticky header and side columns sticking after the first screen,
+    // since a sticky element never leaves its parent's box.
+    <div dir="ltr" className="ltr-isolate flex min-h-full flex-col">
       {/* Amendment 18: "No API key required or requested." A visitor was sent a
           chapter to read, not invited to set up a translation provider. */}
       {!hasKey && !readOnly && <NoKeyBanner />}
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-rule bg-white/85 px-3 py-2 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-30 flex shrink-0 flex-wrap items-center gap-2 border-b border-rule bg-white/85 px-3 py-2 backdrop-blur"
+      >
         {/* A shared link is a chapter, not a door into the app.
             Someone sent this to read; the library behind it is not theirs and
             holds nothing for them. With the banner's exit gone too, a shared
@@ -854,7 +886,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         </p>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex flex-1">
         {/* The rail's width, reserved rather than floated over.
             The Arabic column must measure the same with a selection as
             without one — text that reflows the moment you select it is worse
@@ -914,12 +946,13 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               onVisibleRangeChange={setVisibleRange}
               onMarkerClick={handleMarkerClick}
               handleRef={listRef}
+              topInset={headerHeight}
             />
           )}
         </div>
 
         {showSearch && (
-          <div className="w-[min(24rem,80vw)] shrink-0">
+          <div className="sticky w-[min(24rem,80vw)] shrink-0 self-start" style={stickyColumn}>
             <SearchPanel
               bookId={bookId}
               pageMeta={pageMeta}
@@ -939,16 +972,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
                 dragging.current = true;
                 document.body.style.userSelect = 'none';
               }}
-              className="shrink-0 cursor-col-resize bg-rule/60 transition hover:bg-accent/40"
-              style={{ width: DIVIDER_WIDTH }}
+              className="sticky shrink-0 cursor-col-resize self-start bg-rule/60 transition hover:bg-accent/40"
+              style={{ ...stickyColumn, width: DIVIDER_WIDTH }}
               role="separator"
               aria-label="Resize card panel"
             />
             <aside
-              className="shrink-0 border-l border-rule bg-parchment"
-              // Clamped to what this screen can spare; the saved width is
-              // untouched, so a desktop's wide panel stays wide there.
-              style={{ width: clampPanelWidth(settings.panelWidth, viewportWidth) }}
+              className="sticky shrink-0 self-start overflow-hidden border-l border-rule bg-parchment"
+              // A sticky column, scrolling on its own: the page scrolls the
+              // text, and the cards must not scroll away with it. Clamped to
+              // what this screen can spare; the saved width is untouched, so a
+              // desktop's wide panel stays wide there.
+              style={{ ...stickyColumn, width: clampPanelWidth(settings.panelWidth, viewportWidth) }}
             >
               {cardPanel}
             </aside>
@@ -964,7 +999,8 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             onClick={() => void updateSettings({ panelCollapsed: false })}
             title="Show cards (Ctrl/⌘ + \)"
             aria-label="Show cards"
-            className="group flex w-5 shrink-0 cursor-pointer items-center justify-center border-l border-rule bg-parchment transition hover:bg-accent/10"
+            className="group sticky flex w-5 shrink-0 cursor-pointer items-center justify-center self-start border-l border-rule bg-parchment transition hover:bg-accent/10"
+            style={stickyColumn}
           >
             <span className="flex flex-col items-center gap-1.5 text-[10px] text-muted group-hover:text-accent">
               <span aria-hidden>‹</span>
@@ -976,9 +1012,11 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         )}
       </div>
 
-      {/* Narrow / portrait: the panel becomes a bottom sheet. */}
+      {/* Narrow / portrait: the panel becomes a bottom sheet, held to the
+          bottom of the screen — the page is as long as the book, and the end
+          of it is not where the cards belong. */}
       {!sideBySide && (
-        <>
+        <div className="sticky bottom-0 z-30 flex flex-col">
           <button
             onClick={() => setSheetOpen((open) => !open)}
             className="shrink-0 border-t border-rule bg-white py-2 text-sm text-muted"
@@ -990,7 +1028,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               {cardPanel}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {selection.active && (

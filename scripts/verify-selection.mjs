@@ -11,6 +11,8 @@
 // The bug: the reader is virtualized, so once the block a selection STARTED in
 // scrolls more than the overscan away it unmounts, the selection's start
 // boundary moves to its parent, and the selection re-anchors somewhere else.
+// The page itself scrolls (BlockList), so scrolling here is the window's; the
+// distances are past the 200-block overscan, so the pins are what is tested.
 // A finger drag on the native handles cannot be simulated, so the same thing
 // is done programmatically: select, scroll the start block far out of the
 // mounted range, scroll back (or extend the selection the way a dragged handle
@@ -20,15 +22,16 @@
 // sourceText that readSelection produced. No API key is spent and no test hook
 // exists in the app.
 //
-// Runs every case on a desktop profile and on a touch-tablet profile.
+// Runs every case on a desktop profile and on touch-tablet profiles in
+// landscape and portrait (hasTouch + isMobile).
 // Against a running build:  VERIFY_URL=http://localhost:4173/ node scripts/verify-selection.mjs
 // Otherwise it builds nothing itself; `npm run verify:selection` builds first.
 
-import { chromium, devices } from 'playwright';
+import { chromium } from 'playwright';
 import { preview } from 'vite';
 
 const BOOK = 'shamela-424242';
-const BLOCKS = 240;
+const BLOCKS = 1200;
 
 let failures = 0;
 let checks = 0;
@@ -138,33 +141,35 @@ async function extendTo(page, to, toOffset) {
   );
 }
 
-/** Scroll the reader until `index` is mounted, in steps, as a reader would. */
+/** Scroll the page until `index` is on screen, in steps, as a reader would. */
 async function scrollUntilMounted(page, index) {
-  for (let step = 0; step < 400; step++) {
-    if (await page.locator(`[data-block-id="${blockId(index)}"]`).count()) {
-      await page.locator(`[data-block-id="${blockId(index)}"]`).scrollIntoViewIfNeeded();
-      await page.waitForTimeout(150);
+  for (let step = 0; step < 600; step++) {
+    const there = await page.evaluate((id) => {
+      const element = document.querySelector(`[data-block-id="${id}"]`);
+      if (!element) return false;
+      element.scrollIntoView({ block: 'center' });
+      return true;
+    }, blockId(index));
+    if (there) {
+      await page.waitForTimeout(250);
       return;
     }
-    await page.evaluate(() => {
-      document.querySelector('.reader-surface').scrollBy(0, 600);
-    });
+    await page.evaluate(() => window.scrollBy(0, 1200));
     await page.waitForTimeout(30);
   }
   throw new Error(`could not scroll to block ${index}`);
 }
 
 async function scrollToTop(page) {
-  for (let step = 0; step < 400; step++) {
+  for (let step = 0; step < 600; step++) {
     const top = await page.evaluate(() => {
-      const surface = document.querySelector('.reader-surface');
-      surface.scrollBy(0, -600);
-      return surface.scrollTop;
+      window.scrollBy(0, -1500);
+      return window.scrollY;
     });
     await page.waitForTimeout(30);
     if (top === 0) break;
   }
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
 }
 
 /** The lowest-numbered block in the DOM — how far the start has been left behind. */
@@ -265,8 +270,9 @@ async function runProfile(browser, base, name, contextOptions, screenshot) {
   await page.locator(`[data-block-id="${blockId(5)}"]`).waitFor();
 
   // ---- block 5 → block 8, then scroll 5 far out of range and back --------
+  // 500 is more than OVERSCAN past 5: without its pin, 5 would unmount.
   await select(page, blockId(5), 4, blockId(8), 6);
-  await scrollUntilMounted(page, 80);
+  await scrollUntilMounted(page, 500);
   const left = await lowestMounted(page);
   console.log(`  (scrolled away: lowest block in the DOM ${left === 5 ? 'is the pinned 5' : `is ${left}`})`);
   // A pinned block is mounted, not in view: the saved reading position must
@@ -303,26 +309,52 @@ async function runProfile(browser, base, name, contextOptions, screenshot) {
   );
   check('  and its text is the whole stored range', short?.sourceText ?? null, expectedText(5, 4, 8, 6));
 
-  // ---- block 5 → block 65: the far handle dragged sixty blocks down ------
+  // ---- block 5 → block 65 selected, 5 scrolled off screen and back ---------
+  await clearCards(page);
+  await page.evaluate(() => window.getSelection().removeAllRanges());
+  await scrollToTop(page);
+  await select(page, blockId(5), 4, blockId(65), 6);
+  await scrollUntilMounted(page, 500);
+  await scrollToTop(page);
+  const sixty = await translateAndRead(page);
+  check(
+    'a selection from block 5 to block 65, scrolled away and back, is unchanged',
+    anchorsOf(sixty),
+    { startBlockId: blockId(5), startOffset: 4, endBlockId: blockId(65), endOffset: 6 },
+  );
+  check(
+    '  and complete, every block in between included',
+    Array.from({ length: 59 }, (_, i) => textOf(6 + i)).every(
+      (text) => sixty?.sourceText?.includes(text) ?? false,
+    ),
+    true,
+  );
+  check('  exactly', sixty?.sourceText ?? null, expectedText(5, 4, 65, 6));
+
+  // ---- block 5 → block 185: the far handle dragged ~180 blocks down -------
+  // Within OVERSCAN, so every block it spans stays mounted and the native
+  // selection itself (not only the stored-text rebuild) holds the whole range.
   await clearCards(page);
   await page.evaluate(() => window.getSelection().removeAllRanges());
   await scrollToTop(page);
   await select(page, blockId(5), 4, blockId(5), 10);
-  await scrollUntilMounted(page, 65);
-  await extendTo(page, blockId(65), 6);
+  await scrollUntilMounted(page, 185);
+  await extendTo(page, blockId(185), 6);
+  const domComplete = await page.evaluate(
+    (texts) => {
+      const text = window.getSelection().toString();
+      return texts.every((t) => text.includes(t));
+    },
+    Array.from({ length: 179 }, (_, i) => textOf(6 + i)),
+  );
+  check('a selection dragged across ~180 blocks spans only mounted blocks', domComplete, true);
   const long = await translateAndRead(page);
   check(
-    'a selection dragged from block 5 to block 65 keeps both ends',
+    '  and keeps both ends',
     anchorsOf(long),
-    { startBlockId: blockId(5), startOffset: 4, endBlockId: blockId(65), endOffset: 6 },
+    { startBlockId: blockId(5), startOffset: 4, endBlockId: blockId(185), endOffset: 6 },
   );
-  const middle = Array.from({ length: 59 }, (_, i) => textOf(6 + i));
-  check(
-    '  and its text includes every block in between',
-    middle.every((text) => long?.sourceText?.includes(text) ?? false),
-    true,
-  );
-  check('  exactly', long?.sourceText ?? null, expectedText(5, 4, 65, 6));
+  check('  with the whole text', long?.sourceText ?? null, expectedText(5, 4, 185, 6));
 
   // ---- a selection inside one block is unchanged --------------------------
   await clearCards(page);
@@ -343,9 +375,18 @@ const base = process.env.VERIFY_URL ?? own.resolvedUrls.local[0];
 const browser = await chromium.launch();
 try {
   await runProfile(browser, base, 'Desktop', { viewport: { width: 1280, height: 800 } });
-  await runProfile(browser, base, 'Touch tablet (Galaxy Tab S4, landscape)', {
-    ...devices['Galaxy Tab S4 landscape'],
+  await runProfile(browser, base, 'Touch tablet, landscape 960×600', {
+    viewport: { width: 960, height: 600 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 2,
   }, process.env.SELECTION_SCREENSHOT);
+  await runProfile(browser, base, 'Touch tablet, portrait 600×960', {
+    viewport: { width: 600, height: 960 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 2,
+  });
 } finally {
   await browser.close();
   await own?.close();
