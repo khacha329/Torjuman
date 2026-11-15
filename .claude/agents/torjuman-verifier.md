@@ -34,7 +34,7 @@ L layers ......... <files, edges, dirs in a cycle, mutual pairs, file cycles>; r
 S selection ...... PASS 30/30 | FAIL <each failing check line verbatim>
 R reader ......... PASS 28/28 | FAIL <each failing check line verbatim>
 V verify ......... not run here (needs fixtures/) | <result>
-Performance (R) .. <the report lines: frames/s, long tasks, DOM nodes>
+Performance (R) .. <the report lines: px scrolled and seconds, long tasks, DOM nodes, mounted blocks>
 ```
 
 Quote failing lines verbatim. If a check fails, run it once more to see

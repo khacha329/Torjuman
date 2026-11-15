@@ -18,8 +18,9 @@ build itself is unaffected. Phase 1 asks (Q4) whether to add them when it adds
 ## 2. README "How it fits together" was stale (2026-11-15, fixed in Phase 0)
 
 It named a `translate/` directory (the code is in `translation/`), omitted
-`app`, `biography`, `catalog`, `dictionary`, `library`, `qul`, `quran`,
-`share` and `components`, and said `platform/http/` is the only place that
+ten directories (`app`, `biography`, `catalog`, `components`, `dictionary`,
+`lib`, `library`, `qul`, `quran`, `share`) — the Phase 0 commit message says
+nine — and said `platform/http/` is the only place that
 calls `fetch` against an external host. That is not true: the Gemini provider
 (`translation/providers/GeminiProvider.ts`, `qul/compile.ts`) calls the Gemini
 API directly, and `library/relayTransfer.ts` calls the Worker directly with binary
@@ -35,3 +36,22 @@ PC, and the cloud container can never run it. This is documented and
 deliberate (public repository), but it means every restructure step that moves
 a module `scripts/verify-parsers.ts` imports is verified by reading until the
 owner runs it. Not a bug; recorded so the gap stays visible.
+
+## 4. Provider and model knowledge outside its home (2026-11-15, measured)
+
+Found by the Phase 0 review.
+
+- `translation/registry.ts:10` says it is "The only place outside the
+  settings screen that names a provider". Not so: `app/AppContext.tsx`,
+  `translation/profiles.ts`, `qul/compile.ts`, `ui/OnboardingScreen.tsx`,
+  `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and
+  `ui/settings/OfflineTranslation.tsx` all do.
+- A model ID outside `models.ts`: `ui/settings/OfflineTranslation.tsx:210`
+  saves `model: 'gemini-3.7-flash'` inline.
+- Call parameters outside `models.ts`: `translation/gloss.ts:111,114` sets
+  `max_tokens: 2000` and `output_config: { effort: 'low' }` inline (with
+  comments saying why).
+
+Left as is: Phase 3 (provider seams) is where these move, as structure. The
+comment in `registry.ts` is corrected when the registry moves in Phase 1 step
+1h only if the plan names it; otherwise in Phase 3.

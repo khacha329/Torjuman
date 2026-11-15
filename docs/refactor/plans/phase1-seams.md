@@ -25,7 +25,7 @@ every step has a reviewer verdict of PASS or PASS WITH NOTES.
 
 ## Current state (at `56a412c`)
 
-Seven small things hold the cycle together (from `phase0/layers.txt`):
+Six small things hold the cycle together (from `phase0/layers.txt`):
 
 | Edge | Through | Kind |
 | --- | --- | --- |
@@ -76,11 +76,11 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | --- | --- | --- | --- | --- |
 | 1a | Provider-id types to `types.ts`; `isCloudProvider` to `lib/providers.ts` | `types.ts`, `translation/TranslationProvider.ts`, new `lib/providers.ts`, their importers (up to 16 files) | T B L X | low |
 | 1b | Narrator profile types to `types.ts` | `biography/narratorProfile.ts`, `types.ts`, storage ×2, share, importers | T B L X | low |
-| 1c | `app/retrievalLog.ts` → `services/retrievalLog.ts`; `services` (and Q4) on the workflow's list | 1 file moved, ~8 importers, `deploy.yml` | T B L X | low |
+| 1c | `app/retrievalLog.ts` → `services/retrievalLog.ts`; `services` (and Q4) on the workflow's list | 1 file moved, 9 importers (7 domain, `ui/settings/BuildSection.tsx`, `RetrievalSection.tsx`), `deploy.yml` | T B L X | low |
 | 1d | `app/activity.ts` → `services/activity.ts` | 1 file moved, importers, **`scripts/verify-parsers.ts`** | T B L X; V owed | low |
 | 1e | `app/secrets.ts` → `services/secrets.ts` | 1 file moved, importers | T B L X | low |
 | 1f | `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | 1 file moved, 2 importers | T B L X | low |
-| 1g | `RAIL_WIDTH` (with its comment) → `ui/useLayoutMode.ts` | `SelectionRail.tsx`, `useLayoutMode.ts`, `ReaderScreen.tsx` | T B L **S R** X | low |
+| 1g | `RAIL_WIDTH` (with its comment) → `ui/useLayoutMode.ts` | `SelectionRail.tsx`, `useLayoutMode.ts`, `ReaderScreen.tsx`, **`scripts/verify-parsers.ts`** | T B L **S R** X; V owed | low |
 | 1h | `translation/registry.ts` → `translation/providers/registry.ts` | 1 file moved, 6 importers | T B L X | low |
 | 1i | `types.ts` → `types/index.ts` (pure rename) | 1 file; `deploy.yml` list (`types`) | T B L X | low |
 | 1j | split out `types/book.ts` (book content) and `types/catalog.ts` | `types/index.ts` | T B L X | low |
@@ -109,8 +109,10 @@ so `--check` passes after every commit:
 `translation/TranslationProvider.ts` to `types.ts`, and `isCloudProvider` to
 `lib/providers.ts`. `TranslationProvider.ts` imports them back for its own use.
 Every importer of these five names switches to the new place.
-`types.ts` loses its only import. Adaptations: (a), (b), and a header comment on
-`lib/providers.ts` (c).
+`types.ts` loses its only import, and the re-export `export type { ProviderId,
+TranslationUsage };` (`types.ts:13`) is deleted, since the types are now
+declared there — an adaptation this plan names. Adaptations: (a), (b), that
+deletion, and a header comment on `lib/providers.ts` (c).
 
 **1b.** Moves `FieldSource`, `SourcedValue`, `ScholarStatement`,
 `NarratorProfile`, `StoredNarratorProfile` from `biography/narratorProfile.ts` to
@@ -118,7 +120,9 @@ Every importer of these five names switches to the new place.
 `FIELD_LABELS` stay. Importers of the types switch to `types`.
 
 **1c–1f.** `git mv`, then every importer updated, found with
-`grep -rn "app/retrievalLog\|app/activity\|app/secrets\|catalog/useCatalogImport" src scripts`.
+`grep -rn "retrievalLog'\|activity'\|secrets'\|useCatalogImport'" src scripts`
+— by file name, not `app/…`, so same-directory imports such as
+`app/pwaUpdate.ts`'s `from './activity'` are found too.
 The moved file is byte-identical except import paths. 1c also adds `services` to
 the workflow's "source tree arrived intact" list (trap T-b).
 1d: `scripts/verify-parsers.ts` imports `../src/app/activity` — updated in the
@@ -127,7 +131,11 @@ same commit; V is owed for it.
 
 **1g.** `RAIL_WIDTH` and its comment move verbatim into `ui/useLayoutMode.ts`
 next to the other layout constants. `SelectionRail.tsx` and `ReaderScreen.tsx`
-import it from there. S and R run because the reader imports change.
+import it from there, and so does `scripts/verify-parsers.ts:5472`
+(`await import('../src/ui/reader/SelectionRail')` → `useLayoutMode`): left
+alone it would read `undefined` and fail its checks on the owner's PC only,
+since the script is not typechecked. V is owed. S and R run because the
+reader imports change.
 
 **1h.** `git mv`; importers: `app/AppContext.tsx`, `ui/OnboardingScreen.tsx`,
 `ui/settings/SettingsScreen.tsx`, `ui/settings/ProfileEditor.tsx`,
@@ -157,7 +165,9 @@ become `import type` lines. Groups and their current lines in `types.ts`:
 
 (Line numbers before 1a/1b; the step's PROGRESS section gives the offsets.)
 Types-only changes produce no JavaScript, so B must show **byte-identical
-JS** for 1a, 1b and 1i–1m — a stronger check than ±2 KB.
+JS** for 1b and 1i–1m — a stronger check than ±2 KB. 1a is the exception: it
+moves a function (`isCloudProvider`) into a new module, so its bundle may
+shift within the usual ±2 KB.
 
 **1n.** Adds the step `npm run layers -- --check` to `deploy.yml` after
 `npm ci` (Q3).
@@ -167,6 +177,7 @@ JS** for 1a, 1b and 1i–1m — a stronger check than ±2 KB.
 ## Checks
 
 T, B and L after every commit; S and R after 1g and at the end of the phase;
+V owed by 1d, 1g and 1i–1m;
 X (reviewer) after every commit (Q7). V on the owner's PC before merging —
 1d and 1i–1m touch modules `scripts/verify-parsers.ts` builds. M is not needed
 for this phase (no UI or storage change), unless the owner wants it.

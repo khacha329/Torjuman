@@ -157,7 +157,7 @@ lines.push(`directories in a cycle: ${unitCycles.reduce((sum, c) => sum + c.leng
 lines.push(`directory pairs importing each other: ${mutual.length}`);
 lines.push(`file-level cycles: ${fileCycles.length}`);
 lines.push('');
-lines.push('== imports, by directory (value imports + type-only imports, in files) ==');
+lines.push('== imports, by directory (value + type-only import statements) ==');
 for (const unit of units) {
   const targets = [...adjacency.get(unit)].sort();
   if (targets.length === 0) {

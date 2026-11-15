@@ -36,9 +36,10 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
 
 - **Commit book or third-party data.** The repository is public. No
   `fixtures/`, `qul/`, `glossary-sources/`, share links (`*.link.txt`), book
-  text in tests or screenshots beyond what is already committed. Anchor every
-  new `.gitignore` pattern with a leading slash (see the comment at the top of
-  `.gitignore` — `qul/` once excluded `src/qul/`).
+  text in tests or screenshots beyond what is already committed. A new
+  `.gitignore` pattern that names a top-level directory gets a leading slash
+  (see the comment at the top of `.gitignore` — `qul/` once excluded
+  `src/qul/`); extension patterns like `*.pem` stay unanchored.
 - **Let an API key leave `localStorage`.** Keys live only behind
   `app/secrets.ts`. Never in `AppSettings`, a backup, a log, the retrieval
   log, an error message or a URL. The one exception is the whole-tablet
@@ -58,7 +59,7 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
   come from the `claude-api` skill (or the provider's docs), never memory, and
-  live only in `src/translation/models.ts`.
+  belong in `src/translation/models.ts` (known exceptions: FOUND_ISSUES 4).
 - **Skip, weaken or delete a check** to get green.
 
 ## Working pattern
@@ -127,11 +128,13 @@ scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 
 ## Traps
 
-Things that have already gone wrong once. Each has a README section.
+Things that have already gone wrong once. Most have a README section; 5, 6,
+10 and 12 are recorded only here and in the code.
 
 1. **`.gitignore` without a leading slash matches at every level.** And the
-   deploy workflow's "source tree arrived intact" list names each `src/`
-   directory — a new top-level `src/` directory goes on that list.
+   deploy workflow's "source tree arrived intact" list names `src/`
+   directories — a new top-level `src/` directory goes on that list
+   (`biography` and `share` are missing from it today: FOUND_ISSUES 1).
 2. **API keys** — see Never. `app/secrets.ts` is the only reader and writer.
 3. **Public repo** — see Never. Screenshots for a PR use the synthetic books
    the Playwright scripts build, not a real imported book.
@@ -139,8 +142,9 @@ Things that have already gone wrong once. Each has a README section.
    `auto` plus a prompt instruction plus `strict: true` tools, and strict needs
    `additionalProperties: false` on every object in the schema. Every call has
    a text fallback (`parseSegments.ts`). Opus 5.5 takes `output_config.effort`.
-   All IDs, prices (with per-model cache-read multipliers and Haiku 5.5's long
-   context tier), output ceilings and effort live in `translation/models.ts`.
+   IDs, prices (with per-model cache-read multipliers and Haiku 5.5's long
+   context tier), output ceilings and effort belong in `translation/models.ts`;
+   the few that are still inline elsewhere are listed in FOUND_ISSUES 4.
    Saved profiles are migrated when a model is retired (`successorModel`).
 5. **Translation cache keys** (`cacheKeyFor` in `translation/prompt.ts`) are
    a hash of selection, profile id and version, glossary hash, provider and
@@ -162,9 +166,12 @@ Things that have already gone wrong once. Each has a README section.
    (`selectionPins.ts`) and `readSelection` takes text from stored blocks, not
    the DOM. Run both Playwright checks after any reader change.
 8. **WebView browsers (DuckDuckGo on Android).** `blob:` downloads come out
-   0 B, `data:` URLs over ~2 MB crash the tab, and the Web Share API refuses
-   gzip files. Large files go through the relay (`library/relayTransfer.ts`
-   and the Worker's `/transfer/` route); `lib/saveFile.ts` decides.
+   0 B, a `data:` link the size of a library crashes the tab, and the Web
+   Share API refuses gzip files. `lib/saveFile.ts` (`needsDataUrl`) picks
+   `blob:` or `data:` for a download; for a whole library the owner uses
+   "Send through the proxy" instead (`library/relayTransfer.ts` and the
+   Worker's `/transfer/` route), which the transfer screen promotes in those
+   browsers.
 9. **Plain-HTTP LAN dev** has no `crypto.subtle` or `crypto.randomUUID`;
    `lib/hash.ts` and `lib/id.ts` are plain JS for that reason.
 10. **The PWA** uses `registerType: 'prompt'`; the update bar appears on

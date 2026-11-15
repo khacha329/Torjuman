@@ -31,16 +31,19 @@ Measured on `56a412c` by `npm run layers` (full output in
     `ui/reader/SelectionRail.tsx`, while ten reader files import `ui/`.
 - **Provider knowledge is spread out.** "Anthropic or Gemini" is decided in
   `models.ts`, `app/secrets.ts`, Settings, Onboarding, `AppContext`,
-  `profiles.ts` and `qul/compile.ts`, besides the registry. The Anthropic
+  `profiles.ts`, `qul/compile.ts`, `ReaderScreen.tsx`, `useExplanations.ts`
+  and `OfflineTranslation.tsx`, besides the registry. The Anthropic
   client and its error mapping are built four times (`AnthropicProvider`,
   `explain.ts`, `gloss.ts`, `qul/compile.ts`), Gemini's twice.
 - **Repeated pieces**: gzip in three places, the progress bar nine times, the
-  settings-section shell in all 16 sections, `delay` and `formatBytes` twice
-  each, the proxy base URL computed twice.
-- **Eight files over 450 lines** carry several jobs each: `ReaderScreen.tsx`
-  (1,348), `IdbStorageAdapter.ts` (1,059), `types.ts` (899), `EntitySheet.tsx`
-  (756), `BlockList.tsx` (728), `SettingsScreen.tsx` (610),
-  `ShareStorageAdapter.ts` (547), `useTranslator.ts` (466).
+  settings-section shell in all 16 sections, `delay` twice, a byte formatter four times (`formatBytes` ×2,
+  `sizeOf`, `mb`), the proxy base URL computed twice.
+- **Thirteen files over 450 lines**, the biggest carrying several jobs each:
+  `ReaderScreen.tsx` (1,348), `IdbStorageAdapter.ts` (1,059), `types.ts`
+  (899), `EntitySheet.tsx` (756), `BlockList.tsx` (728), `SettingsScreen.tsx`
+  (610), `ShareStorageAdapter.ts` (547), `quranIndex.ts` (544),
+  `TranslationCardView.tsx` (539), `qul/read.ts` (515), `deviceTransfer.ts`
+  (494), `detectEntities.ts` (479), `useTranslator.ts` (466).
 - **The IndexedDB schema is written twice**, once per upgrade branch, and the
   two must agree by hand.
 
@@ -114,8 +117,9 @@ The project-wide traps are in `CLAUDE.md`. These are the ones a restructure
 walks into:
 
 - **T-a. The scripts import `src/` by path** — about sixty modules across
-  `scripts/verify-parsers.ts`, `verify-selection.mjs` and the build tools,
-  `app/activity` among them. Moving one of them breaks `npm run verify`, which only runs on the
+  `scripts/verify-parsers.ts`, `build-catalog.ts` and `build-glossary.ts`,
+  `app/activity` and `ui/reader/SelectionRail` among them, some by dynamic
+  `await import(…)`. Moving one of them breaks `npm run verify`, which only runs on the
   owner's PC; `tsc -b` will not notice. Grep `scripts/` on every move.
 - **T-b. The deploy workflow lists `src/` directories by name.** A new
   top-level directory (`services/`, `types/`) is added to that list in the step
@@ -189,10 +193,14 @@ So the phases keep this in view, without building the features early:
 - **Phase 2** and **Phase 5** move ḥadīth-only UI (sheet tabs, margin actions,
   card kinds) behind named components, so a kind can leave them out without
   editing the reader.
-- **A short Phase 5b** (proposed) turns the profile into a **book-kind
-  descriptor**: one entry per kind saying which parsers' structure rules,
-  entity detectors, sheet tabs, selection actions and card types apply. A new
-  kind is then one descriptor plus its own feature modules. Its plan is
+- **A short Phase 5b** (proposed) turns the profile into **one folder per
+  genre**, as the owner suggested: `src/genres/<genre>/` (e.g. `hadith/`,
+  `aqidah/`, `generic/`), each holding a descriptor — which structure rules,
+  entity detectors, sheet tabs, selection actions and card types the genre
+  uses — and the feature modules only that genre needs. Features shared by
+  several genres stay in their domain directories and a genre switches them
+  on by name. A new genre is then one new folder, with no edits inside the
+  reader. The layer rules get one more: no genre folder imports another. Its plan is
   written with the owner's list of creed-book features in hand, so the
   descriptor fits the real features rather than guessed ones.
 

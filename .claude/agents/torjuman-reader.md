@@ -38,7 +38,7 @@ README sections "Selection actions", "The page scrolls, not a box inside it",
   `torjuman-verifier` agent. A change to anything they do not cover gets a
   new check in the same change, written to fail on the old code first.
 - Report performance against the last numbers in `docs/refactor/PROGRESS.md`
-  (frames/s while scrolling, long tasks, DOM nodes).
+  (scrolling speed (px scrolled / seconds), long tasks, DOM nodes).
 - Screenshots for the PR at 960×600 and 600×960 touch, from the synthetic
   books the scripts build — never a real book (public repo).
 - Arabic: harakāt must not be clipped (`overflow-clip-margin` on block text);

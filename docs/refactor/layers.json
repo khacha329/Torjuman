@@ -1,4 +1,4 @@
 {
-  "comment": "Directory imports that must not exist. Read by `npm run layers -- --check` (scripts/check-layers.mjs). `from` and `to` are regular expressions over directory units as the report prints them (e.g. `ui/reader`, `types`, `(root)`). `typesAllowed: true` lets type-only imports through. A rule is added in the restructure step that makes it true — see docs/refactor/RESTRUCTURE.md §2 and the phase plans.",
+  "comment": "Directory imports that must not exist. Read by `npm run layers -- --check` (scripts/check-layers.mjs). `from` and `to` are regular expressions over directory units as the report prints them (e.g. `ui/reader`, `types`; the root unit must be written `\\(root\\)`, since parentheses are regex groups). `typesAllowed: true` lets type-only imports through. A rule is added in the restructure step that makes it true — see docs/refactor/RESTRUCTURE.md §2 and the phase plans.",
   "forbidden": []
 }

@@ -62,7 +62,7 @@ scripts/             verify-*, check-layers, build tools
 fixtures/            unmodified HTML fetched from shamela.ws (not committed)
 ```
 
-`IdbStorageAdapter.ts` is the only file that mentions IndexedDB, and
+`IdbStorageAdapter.ts` is the only file that uses the IndexedDB API, and
 `platform/http/` is the only place that calls `fetch` through the proxy.
 A few modules fetch directly, on purpose, because they need what
 `HttpClient` — text `GET`s only — does not do or because their host allows
@@ -70,7 +70,11 @@ browser requests: the Gemini API (`GeminiProvider.ts`, `qul/compile.ts`), the
 transfer relay's binary `PUT`/`GET`/`DELETE` (`library/relayTransfer.ts`), and
 static files — the optional remote catalog (`catalog/catalogService.ts`),
 shared-chapter bundles (`share/loadShare.ts`), and the app's own bundled
-assets (`qul/seed.ts`, `quran/quranIndex.ts`).
+assets (`qul/seed.ts`, `quran/quranIndex.ts`). Two libraries make their own
+requests: the Anthropic SDK calls the Anthropic API from the browser
+(`AnthropicProvider.ts`, `explain.ts`, `gloss.ts`, `qul/compile.ts`), and
+transformers.js downloads the offline model's weights from the Hugging Face
+Hub (`translation/offline/OfflineProvider.ts`).
 
 `npm run layers` prints the actual dependency graph by directory. The code is
 being restructured into clean layers, one approved phase at a time; the plan,

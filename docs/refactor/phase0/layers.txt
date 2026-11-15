@@ -4,7 +4,7 @@ directories in a cycle: 15 (in 2 components)
 directory pairs importing each other: 7
 file-level cycles: 1
 
-== imports, by directory (value imports + type-only imports, in files) ==
+== imports, by directory (value + type-only import statements) ==
 (root): app 4, ui 6, ui/reader 1, ui/settings 1, ui/share 1
 app: catalog 1, ingest 1, platform/http 1+1t, platform/storage 1+1t, qul 1, retrieval 1, translation 4, types 0+1t
 biography: app 2, platform/storage 0+2t, retrieval 6, types 0+6t
@@ -91,3 +91,6 @@ ui ↔ ui/reader
 
 == file-level cycles ==
 {translation/TranslationProvider.ts, types.ts}
+
+== rules (0 in docs/refactor/layers.json) ==
+all hold
