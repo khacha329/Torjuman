@@ -528,8 +528,8 @@ Both import from `lib/format`. Edges exist. U: the three seeded rows.
 V owed: the SSR build bundles `WebHttpClient` and `relayTransfer`. M later:
 the owner's staged build is the only place `PROXY_URL` is a real Worker.
 
-**2e — gzip.** As Design §4, five call sites (two compress, three
-decompress). The diff must show only: the new import, `typeof …` →
+**2e — gzip.** As Design §4, six call sites (three compress, three
+decompress; corrected after the 2e review). The diff must show only: the new import, `typeof …` →
 `!canGzip()` / `!canGunzip()`, and `.pipeThrough(new …Stream('gzip'))` →
 `gzipStream(…)` / `gunzipStream(…)`. Every message, fallback and comment
 stays. U's two export states cross `canGzip` and `gzipStream` in the browser
@@ -609,7 +609,10 @@ report saved as `docs/refactor/phase2/layers.txt`.
   half-imported book, Settings scrolled through every section in both
   orientations, a book export and a tablet transfer started (progress bars),
   Receive, and the proxy-only paths (relay, import), which U sees only with a
-  fake proxy.
+  fake proxy. **And one book exported and imported back** (added after the 2e
+  review): book export and import go through `lib/gzip` and no automated
+  check covers them — V does not import `library/transfer.ts`, and U only
+  holds the export mid-compression.
 
 ## Risks
 

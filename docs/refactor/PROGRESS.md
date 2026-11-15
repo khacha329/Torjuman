@@ -530,7 +530,8 @@ fifteen answers as recommended**.
 | 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review PASS WITH NOTES | `6e3bea2` |
 | review notes: 18f2a5d and 2c | applied | `ede0a6e` |
 | 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review PASS | `93d0b9a` |
-| 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review pending | this commit |
+| 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review PASS WITH NOTES | `2680fdd` |
+| review notes: 2e | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -676,6 +677,14 @@ holds)
   CSS byte-identical. **L**: 129 edges (library and share → lib already
   existed); rules hold. **U** PASS 160/160, including both "Compressing…"
   export states.
+
+- **Review of 2e: PASS WITH NOTES**, nothing to fix in code. Evaluation order
+  checked site by site. **Gap found:** book export and import
+  (`library/transfer.ts`) are covered by no automated check — V does not
+  import that file, U holds the export mid-compression — so the plan's tablet
+  check M now includes exporting one book and importing it back. Plan text
+  corrected: six call sites, not five; the helpers' types (recorded above)
+  differ from §4's sketch.
 
 ## Open
 
