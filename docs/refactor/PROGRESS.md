@@ -533,7 +533,8 @@ fifteen answers as recommended**.
 | 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review PASS WITH NOTES | `2680fdd` |
 | review notes: 2e | applied | `0feb5ae` |
 | 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review PASS | `5e92294` |
-| 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review pending | `c5f4f6e` |
+| 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review PASS WITH NOTES | `c5f4f6e`, `60f7ebe` |
+| 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -722,6 +723,31 @@ holds)
   **U** PASS 160/160. **S** PASS 30/30. **R** PASS 28/28, performance as the
   baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904 DOM
   nodes; 0 long tasks).
+
+- **Review of 2g: PASS WITH NOTES**, nothing to fix. Notes: the kit header
+  read as a description of today's imports and promised an `export … from`
+  line that did not exist yet — both fixed in 2h, which adds the first one.
+  For 2k: CLAUDE.md's "ten rules" (now 11), its rules paragraph (the kit
+  exception), the map (`ui/kit/`).
+
+**Step 2h, measured 2026-11-15**
+- New `ui/kit/ProgressBar.tsx` (plan §6, with a header), re-exported from
+  `ui/kit/index.tsx` by its first `export { … } from` line; the kit header now
+  says what the kit *may* import and how new pieces are added (2g review).
+- The seven identical track-and-fill pairs replaced, each by one
+  `<ProgressBar percent={…} />` with the width expression moved unchanged from
+  the `style` template into `percent`: `LibraryScreen`, `CatalogScreen`
+  (`className="mt-2"`), `ReceiveTransferScreen`, `DeviceTransfer` ×2,
+  `LibraryTransfer`, `OfflineTranslation`. Three long ones wrapped. Each file
+  appends `ProgressBar` to its existing kit import. `ImportScreen` and
+  `BatchTranslateBar` untouched; their differences are FOUND_ISSUES 9.
+- **T** exit 0. **B** exit 0; main chunk 791,438 → 790,661 B (−777);
+  `compare-bundles`: only `index.js`; CSS byte-identical (every class token is
+  still in `src/`). **L**: 133 edges, no cycles, 11 rules hold. **U** PASS
+  160/160 — the seven bars' captures (library, catalog-importing,
+  receive-fetching, device-transfer-exporting, device-transfer-relay,
+  library-transfer-exporting, offline-downloading) render the same DOM and
+  pixels. V not owed (no module the verify script builds).
 
 ## Open
 

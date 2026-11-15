@@ -10,7 +10,7 @@ import {
 import { useCatalogImport, type EntryState } from './useCatalogImport';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
 import type { CatalogEntry } from '../types';
-import { Button, Spinner } from './kit';
+import { Button, Spinner, ProgressBar } from './kit';
 
 // The suggested library.
 //
@@ -319,9 +319,7 @@ function ProgressRow({ row }: { row: EntryState }) {
       </div>
 
       {(row.status === 'importing' || row.status === 'done') && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-rule">
-          <div className="h-full bg-accent transition-all" style={{ width: `${percent}%` }} />
-        </div>
+        <ProgressBar className="mt-2" percent={percent} />
       )}
 
       {row.error && <p className="mt-1.5 text-[11px] text-red-700">{row.error}</p>}

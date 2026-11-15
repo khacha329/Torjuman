@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { navigate } from '../app/router';
 import type { Book } from '../types';
-import { Button, LinkButton, Spinner, TopBar } from './kit';
+import { Button, LinkButton, Spinner, TopBar, ProgressBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 import { useCatalogImport } from './useCatalogImport';
 
@@ -160,12 +160,7 @@ export function LibraryScreen() {
 
                 {book.importStatus !== 'complete' && (
                   <div className="mb-3">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-                      <div
-                        className="h-full bg-accent transition-all"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
+                    <ProgressBar percent={percent} />
                     <p className="mt-1 text-xs text-muted">
                       {isCrawling ? 'Importing…' : `Import incomplete — ${percent}%`}
                     </p>

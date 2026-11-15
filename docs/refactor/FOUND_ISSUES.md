@@ -123,3 +123,18 @@ them would change text the owner sees (owner's answer to Phase 2 Q6: not now):
 
 Left as is. A later, visible change can pick one format. Found in Phase 2
 planning, step 2c and its review.
+
+## 9. Two progress bars look different from the other seven (2026-11-15, measured)
+
+Phase 2 step 2h put the seven identical progress bars (`h-1.5`, rule-coloured
+track, accent fill) on `ui/kit/ProgressBar`. Two differ, and keep their own
+markup (owner's answer to Phase 2 Q5):
+
+- `ui/ImportScreen.tsx` (~287), the crawl panel: taller (`h-2`) with a bottom
+  margin (`mb-2`).
+- `ui/reader/BatchTranslateBar.tsx` (~99), the batch translation bar:
+  thinner (`h-1`) with `mt-1.5`, no `w-full`, and a width-only, 300 ms
+  transition (`transition-[width] duration-300`).
+
+Left as is; making them match would change what the owner sees. Found in
+Phase 2 planning.

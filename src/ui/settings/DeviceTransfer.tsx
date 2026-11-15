@@ -9,7 +9,7 @@ import {
   sendViaRelay,
   type RelayProgress,
 } from '../../library/relayTransfer';
-import { Button } from '../kit';
+import { Button, ProgressBar } from '../kit';
 
 // The sending half of moving to another tablet: everything on this one, as a
 // single file, saved to Downloads or sent through the proxy. The receiving
@@ -155,28 +155,18 @@ export function DeviceTransfer() {
       {progress && (
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{progress.message}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{
-                width: `${progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            percent={progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}
+          />
         </div>
       )}
 
       {relayProgress && (
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{relayProgress.message}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{
-                width: `${relayProgress.total > 0 ? Math.round((relayProgress.done / relayProgress.total) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            percent={relayProgress.total > 0 ? Math.round((relayProgress.done / relayProgress.total) * 100) : 0}
+          />
         </div>
       )}
 
