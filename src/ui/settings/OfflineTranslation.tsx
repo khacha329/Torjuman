@@ -14,7 +14,7 @@ import {
   type OfflineDtype,
   type OfflineLoadDiagnostics,
 } from '../../translation/offline/OfflineProvider';
-import { Button, Field, inputClass } from '../common';
+import { Button, Field, inputClass } from '../kit';
 
 // Downloading, choosing and removing the on-device translation model.
 //

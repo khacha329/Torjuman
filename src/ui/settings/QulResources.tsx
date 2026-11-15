@@ -5,7 +5,7 @@ import { QulFormatError } from '../../qul/read';
 import { liveSqlJsRuntimes } from '../../qul/sqlite';
 import { SEED_APPROX_BYTES, SEED_MANIFEST, type SeedProgress } from '../../qul/seed';
 import type { QulResource } from '../../types';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // Settings → QUL resources.
 //

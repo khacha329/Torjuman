@@ -6,7 +6,7 @@ import { saveFile } from '../../lib/saveFile';
 import { BidiText } from '../../components/BidiText';
 import { glossaryTokenEstimate } from '../../translation/prompt';
 import type { GlossaryEntry } from '../../types';
-import { Button, inputClass } from '../common';
+import { Button, inputClass } from '../kit';
 
 /** One row of an imported file. Both key spellings are accepted. */
 interface ImportedRow {

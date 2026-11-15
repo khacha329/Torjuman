@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import type { ShareRecord } from '../../types';
 import { shareFileName, shareLinkFromKeyText } from '../../share/shareLink';
-import { Button } from '../common';
+import { Button } from '../kit';
 import { formatBytes } from '../../lib/format';
 
 // Chapters this device has published, and the honest limits of that list.

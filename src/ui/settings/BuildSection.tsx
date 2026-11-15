@@ -5,7 +5,7 @@ import {
   lastOfflineLoad,
   OFFLINE_DTYPE,
 } from '../../translation/offline/OfflineProvider';
-import { Button } from '../common';
+import { Button } from '../kit';
 import { formatRetrievalLog } from '../../services/retrievalLog';
 import { describeLayout } from '../useLayoutMode';
 

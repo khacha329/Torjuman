@@ -4,7 +4,7 @@ import { navigate } from '../app/router';
 import { createBookFromPreview, fetchBookPreview, type BookPreview } from '../ingest/importer';
 import { parseBookInput } from '../shamela/urls';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
-import { Button, Field, inputClass, LinkButton, Spinner, TopBar } from './common';
+import { Button, Field, inputClass, LinkButton, Spinner, TopBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 
 /** The three roles a book can be imported into, and how they are described. */

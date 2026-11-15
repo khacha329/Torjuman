@@ -16,7 +16,7 @@ import {
 import type { CloudProviderId, PanelPosition } from '../../types';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
-import { Button, Field, inputClass, LinkButton, TopBar } from '../common';
+import { Button, Field, inputClass, LinkButton, TopBar } from '../kit';
 import { EntitySection } from './EntitySection';
 import { GlossaryTable } from './GlossaryTable';
 import { HadithSourceSection } from './HadithSourceSection';

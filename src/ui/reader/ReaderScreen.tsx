@@ -36,7 +36,7 @@ import {
   estimateBatch,
   type BatchEstimate,
 } from '../../translation/hadithRange';
-import { Button, LinkButton, Spinner } from '../common';
+import { Button, LinkButton, Spinner } from '../kit';
 import { BlockList, type BlockListHandle } from './BlockList';
 import { CardPanel, type PanelScope } from './CardPanel';
 import { CardPopover } from './CardPopover';

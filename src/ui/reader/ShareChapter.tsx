@@ -8,7 +8,7 @@ import { shareFileName, shareLinkFor } from '../../share/shareLink';
 import { saveFile } from '../../lib/saveFile';
 import { formatBytes } from '../../lib/format';
 import { AnchoredPanel } from './AnchoredPanel';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // Export a chapter — or a run of them — as a link.
 //

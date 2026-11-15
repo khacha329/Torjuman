@@ -1,7 +1,7 @@
 import type { BatchEstimate } from '../../translation/hadithRange';
 import { formatCost } from '../../translation/hadithRange';
 import type { BatchProgress } from './useBatchTranslate';
-import { Button } from '../common';
+import { Button } from '../kit';
 
 // The confirmation before a batch run, and the progress of one.
 //

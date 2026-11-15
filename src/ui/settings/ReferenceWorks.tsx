@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { buildRootIndex, MISBAH_SHAMELA_ID } from '../../dictionary/dictionaryService';
 import type { Book } from '../../types';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // Consulted works live here rather than in the reading library. Two kinds, and
 // the difference matters at lookup time: a dictionary is keyed by root and

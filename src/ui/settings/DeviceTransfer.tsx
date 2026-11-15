@@ -9,7 +9,7 @@ import {
   sendViaRelay,
   type RelayProgress,
 } from '../../library/relayTransfer';
-import { Button } from '../common';
+import { Button } from '../kit';
 
 // The sending half of moving to another tablet: everything on this one, as a
 // single file, saved to Downloads or sent through the proxy. The receiving

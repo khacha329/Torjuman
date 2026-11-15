@@ -9,7 +9,7 @@ import {
 } from '../../library/transfer';
 import type { Book } from '../../types';
 import { saveFile } from '../../lib/saveFile';
-import { Button } from '../common';
+import { Button } from '../kit';
 
 // Moving crawled books between the user's own devices.
 //

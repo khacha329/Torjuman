@@ -16,7 +16,7 @@ import {
   receiveViaRelay,
   type RelayProgress,
 } from '../library/relayTransfer';
-import { Button, inputClass, TopBar } from './common';
+import { Button, inputClass, TopBar } from './kit';
 
 // The receiving half of moving to another tablet.
 //

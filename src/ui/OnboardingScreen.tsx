@@ -3,7 +3,7 @@ import { secrets } from '../services/secrets';
 import { navigate } from '../app/router';
 import { providerFor } from '../translation/providers/registry';
 import type { CloudProviderId } from '../types';
-import { Button, inputClass } from './common';
+import { Button, inputClass } from './kit';
 
 // First run.
 //

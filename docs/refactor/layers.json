@@ -28,8 +28,8 @@
     },
     {
       "from": "ui",
-      "to": "ui/.+",
-      "why": "top-level ui (screens, shared hooks) does not reach into a screen's folder (Phase 1 step 1g)"
+      "to": "ui/(?!kit$).+",
+      "why": "top-level ui does not reach into a screen's folder; the shared kit is not a screen (Phase 1 step 1g, Phase 2 step 2g)"
     },
     {
       "from": "translation",
@@ -50,6 +50,11 @@
       "from": "(?!\\(root\\)$).*",
       "to": "\\(root\\)",
       "why": "nothing outside the root imports main.tsx or App.tsx (Phase 1 step 1n)"
+    },
+    {
+      "from": "ui/kit",
+      "to": "(?!(app|lib|types)$).*",
+      "why": "the kit imports no screen, no domain code and no service; app only for the router — held by review, as the tool works per directory (Phase 2 step 2g)"
     }
   ]
 }

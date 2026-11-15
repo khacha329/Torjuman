@@ -1,7 +1,7 @@
 import { BidiText } from '../../components/BidiText';
 import { toArabicNumerals } from '../../lib/arabic';
 import type { ExplanationCard } from '../../types';
-import { Spinner } from '../common';
+import { Spinner } from '../kit';
 import { useReadOnly } from '../../app/readOnly';
 
 // An answer to "what does this phrase mean as a concept", attached beneath the

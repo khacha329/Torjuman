@@ -10,7 +10,7 @@ import {
 import { useCatalogImport, type EntryState } from './useCatalogImport';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
 import type { CatalogEntry } from '../types';
-import { Button, Spinner } from './common';
+import { Button, Spinner } from './kit';
 
 // The suggested library.
 //

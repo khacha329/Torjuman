@@ -7,7 +7,7 @@ import type { BiographyHit, BiographyLookup } from '../../biography/lookup';
 import { lookupNarrator, type NarratorCandidate } from '../../biography/narratorService';
 import { NarratorCard } from './NarratorCard';
 import { AnchoredPanel } from './AnchoredPanel';
-import { Spinner } from '../common';
+import { Spinner } from '../kit';
 
 // The sheet that opens when a selected name is looked up.
 //

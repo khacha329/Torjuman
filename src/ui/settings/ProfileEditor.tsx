@@ -5,7 +5,7 @@ import { DEFAULT_PROFILE_ID } from '../../translation/profiles';
 import { providerFor } from '../../translation/providers/registry';
 import { modelsFor } from '../../translation/models';
 import type { TranslationProfile } from '../../types';
-import { Button, Field, inputClass } from '../common';
+import { Button, Field, inputClass } from '../kit';
 
 export function ProfileEditor() {
   const { profiles, activeProfile, saveProfile, deleteProfile, settings, updateSettings } =

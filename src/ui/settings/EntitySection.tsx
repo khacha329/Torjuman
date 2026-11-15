@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { regenerateEntities, summarize, type EntityBuildResult } from '../../quran/entityService';
 import { loadQuranIndex } from '../../quran/quranIndex';
 import type { Book } from '../../types';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // Re-running detection over a book.
 //

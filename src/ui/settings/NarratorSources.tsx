@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { importItqanFile } from '../../biography/narratorService';
 import { isItqanShard } from '../../biography/itqan';
-import { Button } from '../common';
+import { Button } from '../kit';
 
 // Installing narrator data.
 //

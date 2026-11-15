@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { probeDorar } from '../../retrieval/dorar';
 import { HADITH_SOURCES } from '../../retrieval/HadithSource';
-import { Button } from '../common';
+import { Button } from '../kit';
 
 // Settings → Ḥadīth source.
 //

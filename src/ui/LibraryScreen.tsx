@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { navigate } from '../app/router';
 import type { Book } from '../types';
-import { Button, LinkButton, Spinner, TopBar } from './common';
+import { Button, LinkButton, Spinner, TopBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 import { useCatalogImport } from './useCatalogImport';
 
