@@ -148,7 +148,7 @@ walks into:
 | Id | What | Pass | Where |
 | --- | --- | --- | --- |
 | **T** | `npm run typecheck` | exit 0 | here |
-| **B** | `npm run build`; sizes of `dist/assets/*` | builds; main chunk within ±2 KB of the previous step unless the step explains it; no dynamic chunk merged in | here |
+| **B** | `npm run build`; sizes of `dist/assets/*`; for a types-only step, `node scripts/compare-bundles.mjs <before> <after>` on copies of `dist/assets` | builds; main chunk within ±2 KB of the previous step unless the step explains it; no dynamic chunk merged in; a types-only step's JS identical once the build time and chunk hashes are masked | here |
 | **L** | `npm run layers` (and `--check`) | a move adds no directory edge the plan does not name; the step's target edge is gone; all rules hold | here |
 | **S** | `npm run verify:selection` | 30/30 | here |
 | **R** | `npm run verify:reader` | 28/28; performance report within noise of the baseline | here |
