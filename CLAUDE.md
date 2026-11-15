@@ -106,7 +106,8 @@ src/
                        (secrets), retrieval log, activity
   platform/http/       HttpClient + WebHttpClient (proxy routing)
   platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
-  lib/                 pure helpers: arabic, hash, id, saveFile, takhrij
+  lib/                 pure helpers: arabic, hash, id, saveFile, takhrij,
+                       providers (isCloudProvider)
   components/          BidiText
   shamela/             HTML parsers for shamela.ws pages
   ingest/              book import + resumable crawler
@@ -129,11 +130,13 @@ scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 
 `npm run layers` prints the real dependency graph; trust it over this map.
 Since Phase 1 it has no cycle, and `npm run layers -- --check` (also run by
-the deploy workflow) fails on any cycle or any import the rules in
-`docs/refactor/layers.json` forbid: `lib`, `types` import nothing else;
-`platform`, `services`, `components` import only `lib` and `types`; domain
-directories import neither `app` nor the UI; `app` does not import the UI;
-nothing imports `main.tsx` or `App.tsx`.
+the deploy workflow) fails on any cycle or any import the ten rules in
+`docs/refactor/layers.json` forbid: `types` imports nothing and `lib` only
+`types`; `platform`, `services` and `components` import only `lib` and
+`types`; domain directories import neither `app` nor the UI (`components`
+included); `app` does not import the UI; top-level `ui` does not reach into a
+screen folder (`ui/reader` …); the translation core does not import its
+providers; and nothing outside the root imports `main.tsx` or `App.tsx`.
 
 ## Traps
 

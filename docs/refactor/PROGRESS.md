@@ -80,7 +80,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | review notes: 1m | applied | `495d497` |
 | 1n. `layers.json` complete; `npm run layers -- --check` in the deploy workflow | L pass; review PASS WITH NOTES | `e11cf04` |
 | review notes: 1n | applied | `566b84a` |
-| 1o. docs, maps, agents, stale path pointers; end-of-phase S R | T B L S R pass; review pending | this commit |
+| 1o. docs, maps, agents, stale path pointers; end-of-phase S R | T B L S R pass; review PASS WITH NOTES | `2e0b417` |
+| review notes: 566b84a and 1o | applied | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -482,6 +483,17 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   the baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904 DOM
   nodes; 404 / 406 blocks; 0 long tasks). **L** `--check` exit 0, 10 rules.
   The end-of-phase report is [`phase1/layers.txt`](phase1/layers.txt).
+
+- **Reviews of 566b84a and 1o: PASS WITH NOTES; "Phase 1 ready for PR", with
+  the owner's `npm run verify` the one gate missing.** Applied: CLAUDE.md's
+  rules paragraph lists all ten rules exactly; the `lib/` map lines name
+  `providers`; README's `app/` line names the read-only context (missing since
+  before Phase 1); the `(root)` rule says "nothing outside the root"; the plan's
+  1n row names the script change; RESTRUCTURE no longer calls Phase 0 done
+  while PR #8 is open. Left: under `--check` a cycle is printed in three places
+  (cosmetic). The reviewer notes the plan's Goal said S and R "at every step"
+  while its Checks section scheduled them after 1g and at the end, which is
+  what was done.
 
 ## Phase 1 result
 

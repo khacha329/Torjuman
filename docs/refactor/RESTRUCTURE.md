@@ -1,8 +1,8 @@
 # Restructuring Ḥāshiya
 
-Status: Phase 0 done (PR khacha329/Torjuman#8). Phase 1 done on
-`claude/restructure-phase-1`, awaiting the owner's `npm run verify` and
-merge. Base commit `56a412c` (`main`, v0.6.14).
+Status: Phase 0 in PR khacha329/Torjuman#8 and Phase 1 on
+`claude/restructure-phase-1`, both complete and awaiting the owner's
+`npm run verify` and merge. Base commit `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
 
@@ -175,8 +175,8 @@ mechanical, high-payoff work first; the owner's data last but one.
 
 | Phase | What | Risk | Checks |
 | --- | --- | --- | --- |
-| **0** | **Done.** `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
-| **1** | **Done.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
+| **0** | **Complete (PR #8).** `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
+| **1** | **Complete.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
 | **2** | **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the 16 settings sections on the shared shell | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Provider seams**: one Anthropic client and error mapping used by all four call sites; one Gemini call; provider descriptors in the registry (key field, placeholder, models, default) so Settings, Onboarding, secrets and models stop naming providers | medium: cache keys and requests must be byte-identical | T B L X; V (cache keys, `maxTokensFor`); a recorded-request check built first |
 | **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |

@@ -49,7 +49,7 @@
     {
       "from": "(?!\\(root\\)$).*",
       "to": "\\(root\\)",
-      "why": "nothing imports main.tsx or App.tsx (Phase 1 step 1n)"
+      "why": "nothing outside the root imports main.tsx or App.tsx (Phase 1 step 1n)"
     }
   ]
 }

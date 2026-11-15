@@ -87,7 +87,7 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | 1k | split out `types/book.ts`, `types/catalog.ts` | same | T B L X | low |
 | 1l | split out `types/cards.ts`, `types/qul.ts` | same | T B L X | low |
 | 1m | split out `types/persistence.ts`, `types/share.ts`, `types/biography.ts`, `types/settings.ts` | same | T B L X | low |
-| 1n | `layers.json` complete; `npm run layers -- --check` in the workflow (Q3) | `layers.json`, `deploy.yml` | L | low |
+| 1n | `layers.json` complete; `npm run layers -- --check` in the workflow (Q3) | `layers.json`, `deploy.yml`; after its review, `scripts/check-layers.mjs` (`--check` also fails on any cycle or a missing rules file) | L | low |
 | 1o | README map, CLAUDE.md map, `.claude/agents/torjuman-planner.md`, RESTRUCTURE §1 pointers and T-a, CLAUDE.md's `app/secrets.ts` mentions, README's prose mention (~178), `.claude/agents/torjuman-llm.md`, path pointers in source comments made stale by 1c–1e (e.g. `types.ts` "app/secrets.ts"), FOUND_ISSUES 4's `translation/registry.ts:10` (now `translation/providers/registry.ts:7`), PROGRESS | docs and comments | X | none |
 
 Each layer rule is added to `layers.json` **in the step that makes it true**,

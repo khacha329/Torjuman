@@ -36,12 +36,13 @@ src/
   main.tsx, App.tsx  mount, PWA registration, route switch + onboarding gates
   types/             the domain types, one file per area; import `types`
   app/               composition root (AppContext), hash router, PWA update,
-                     online state
+                     online state, read-only context
   services/          shared singletons: API keys, retrieval log, activity
   platform/          the two swap points for Capacitor
     http/            HttpClient interface + WebHttpClient (uses the proxy)
     storage/         StorageAdapter interface + IdbStorageAdapter
-  lib/               pure helpers: arabic, hash, id, saveFile, takhrij
+  lib/               pure helpers: arabic, hash, id, saveFile, takhrij,
+                     providers
   components/        BidiText
   shamela/           parsers: parseBook, parsePage, structure, quranRefs, urls
   ingest/            importer (metadata, TOC, block building) + crawler
