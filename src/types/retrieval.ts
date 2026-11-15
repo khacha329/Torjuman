@@ -1,5 +1,5 @@
 // Retrieved Qurʾān verses and ḥadīth records.
-// Re-exported by index.ts: import them from `types`, not from this file.
+// Re-exported by index.ts: outside types/, import them from `types`.
 
 /** Cached Qurʾān verse, keyed by "surah:ayah". */
 export interface QuranVerse {

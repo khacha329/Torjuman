@@ -1,5 +1,5 @@
-// Verses and ḥadīth found in the text, and translated segments.
-// Re-exported by index.ts: import them from `types`, not from this file.
+// Verses, ḥadīth and names found in the text, and translated segments.
+// Re-exported by index.ts: outside types/, import them from `types`.
 
 /**
  * A quoted verse or hadith, located in the text and resolved to a reference.

@@ -72,7 +72,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review PASS WITH NOTES | `89f6784` |
 | 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review PASS WITH NOTES | `ef2e930` |
 | 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review PASS WITH NOTES | `b6794da` |
-| 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review pending | this commit |
+| 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review PASS WITH NOTES | `8d71a48` |
+| review notes: 1j | applied | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -328,6 +329,18 @@ builds identical, exit 0; a one-character edit reported, exit 1.
 - **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
   exit 0; `compare-bundles` 1i → 1j: every JS file identical. **L**: 146 files,
   128 edges, no cycles (file-level included); rules hold.
+
+- **Review of 1j: PASS WITH NOTES.** Verbatim and in order (the reviewer
+  matched each file to exact old line ranges); 62 names exported before and
+  after, none twice. The plan change is "an acceptable sequencing detail,
+  recorded openly", to be named in the phase PR. Fixed: the order paragraph
+  (`qul` uses only `translation`; seven groups are leaves, not four; a missing
+  paragraph break), the `entities.ts` header (names too), `translation.ts`
+  (word glosses); every group header now says "outside types/, import them
+  from `types`", since group files import each other from 1k on.
+  **For the owner before 1m:** the splitter would carry the detached
+  `AppSettings` comment (FOUND_ISSUES 5) into `biography.ts`, because it sits
+  above `BiographyEntry`.
 
 ## Open
 

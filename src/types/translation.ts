@@ -1,5 +1,5 @@
-// Providers, usage, profiles and the glossary.
-// Re-exported by index.ts: import them from `types`, not from this file.
+// Providers, usage, profiles, the glossary and word glosses.
+// Re-exported by index.ts: outside types/, import them from `types`.
 
 /**
  * `offline` labels a card produced by the on-device model. It is a label, not a

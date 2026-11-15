@@ -1,5 +1,5 @@
 // How a book is structured and how the card panel is shown.
-// Re-exported by index.ts: import them from `types`, not from this file.
+// Re-exported by index.ts: outside types/, import them from `types`.
 
 export type StructureProfile = 'generic' | 'hadith-commentary';
 
