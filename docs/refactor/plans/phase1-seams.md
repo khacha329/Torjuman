@@ -1,6 +1,6 @@
 # Phase 1: seams — break the dependency cycle
 
-Status: draft — awaiting the owner's approval
+Status: **approved by the owner, 2026-11-15** (answers below)
 Base commit: `56a412c` (`main`, v0.6.14), with Phase 0 on top
 Branch: `claude/restructure-phase-1`
 
@@ -42,12 +42,12 @@ imports `isCloudProvider`, `CloudProviderId`, `ProviderId` from
 
 A simulation of the steps below on the real import graph (same patterns as
 `check-layers.mjs`) gives **no cycle and no mutual pair**. Resulting edges:
-`core` → nothing; `types` → nothing; `platform/storage` → `lib`, `types`;
+`services` → nothing; `types` → nothing; `platform/storage` → `lib`, `types`;
 `translation` → `lib`, `platform/storage`, `types`.
 
 ## Design
 
-A new layer-1 directory `src/core/` holds the three module singletons that
+A new layer-1 directory `src/services/` holds the three module singletons that
 domain code needs and that do not belong to the composition root:
 `retrievalLog`, `activity`, `secrets`. Each is a **whole-file move** (`git mv`)
 with every importer updated — never a copy, because each is a singleton
@@ -67,7 +67,7 @@ under `types/`, with `index.ts` re-exporting all of them. No importer changes
 `types.ts` (Q5, Q6).
 
 Rejected: leaving re-exports at the old paths (`app/retrievalLog.ts`
-re-exporting `core/retrievalLog.ts`). It would keep the singletons single, but
+re-exporting `services/retrievalLog.ts`). It would keep the singletons single, but
 it would keep the old edges in the graph, and nothing would ever remove them.
 
 ## Steps
@@ -76,9 +76,9 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | --- | --- | --- | --- | --- |
 | 1a | Provider-id types to `types.ts`; `isCloudProvider` to `lib/providers.ts` | `types.ts`, `translation/TranslationProvider.ts`, new `lib/providers.ts`, their importers (up to 16 files) | T B L X | low |
 | 1b | Narrator profile types to `types.ts` | `biography/narratorProfile.ts`, `types.ts`, storage ×2, share, importers | T B L X | low |
-| 1c | `app/retrievalLog.ts` → `core/retrievalLog.ts`; `core` (and Q4) on the workflow's list | 1 file moved, ~8 importers, `deploy.yml` | T B L X | low |
-| 1d | `app/activity.ts` → `core/activity.ts` | 1 file moved, importers, **`scripts/verify-parsers.ts`** | T B L X; V owed | low |
-| 1e | `app/secrets.ts` → `core/secrets.ts` | 1 file moved, importers | T B L X | low |
+| 1c | `app/retrievalLog.ts` → `services/retrievalLog.ts`; `services` (and Q4) on the workflow's list | 1 file moved, ~8 importers, `deploy.yml` | T B L X | low |
+| 1d | `app/activity.ts` → `services/activity.ts` | 1 file moved, importers, **`scripts/verify-parsers.ts`** | T B L X; V owed | low |
+| 1e | `app/secrets.ts` → `services/secrets.ts` | 1 file moved, importers | T B L X | low |
 | 1f | `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | 1 file moved, 2 importers | T B L X | low |
 | 1g | `RAIL_WIDTH` (with its comment) → `ui/useLayoutMode.ts` | `SelectionRail.tsx`, `useLayoutMode.ts`, `ReaderScreen.tsx` | T B L **S R** X | low |
 | 1h | `translation/registry.ts` → `translation/providers/registry.ts` | 1 file moved, 6 importers | T B L X | low |
@@ -97,7 +97,7 @@ so `--check` passes after every commit:
 | --- | --- |
 | 1a | `types` imports nothing; `lib` imports only `types` |
 | 1b | `platform/.*` imports only `lib`, `types` |
-| 1e | `core` imports only `lib`, `types`; no domain directory imports `app` or `ui.*` |
+| 1e | `services` imports only `lib`, `types`; no domain directory imports `app` or `ui.*` |
 | 1f | (the domain rule now covers `catalog` too) |
 | 1g | `ui` imports no `ui/.+` |
 | 1h | `translation` does not import `translation/providers` |
@@ -119,7 +119,7 @@ Every importer of these five names switches to the new place.
 
 **1c–1f.** `git mv`, then every importer updated, found with
 `grep -rn "app/retrievalLog\|app/activity\|app/secrets\|catalog/useCatalogImport" src scripts`.
-The moved file is byte-identical except import paths. 1c also adds `core` to
+The moved file is byte-identical except import paths. 1c also adds `services` to
 the workflow's "source tree arrived intact" list (trap T-b).
 1d: `scripts/verify-parsers.ts` imports `../src/app/activity` — updated in the
 same commit; V is owed for it.
@@ -176,7 +176,7 @@ for this phase (no UI or storage change), unless the owner wants it.
 - **R1. A missed importer in `scripts/`.** `tsc -b` does not compile
   `scripts/`. Caught by grepping `scripts/` in every step, and by V.
 - **R2. Module evaluation order.** Moving the singletons changes file paths,
-  not who imports them first; `core/` modules have no import-time side effects
+  not who imports them first; `services/` modules have no import-time side effects
   beyond module-level state (`secrets` reads `localStorage` lazily — verified
   in 1e by reading). The reviewer checks it.
 - **R3. Directory index resolution.** `'../types'` → `types/index.ts` relies
@@ -188,12 +188,12 @@ for this phase (no UI or storage change), unless the owner wants it.
 
 ## Questions
 
-1. **Q1. The name of the new layer-1 directory.** Recommended: `core/`.
+1. **Q1. The name of the new layer-1 directory.** Recommended: `services/`.
    Alternatives: `services/`, `shared/`.
 2. **Q2. Where `isCloudProvider` goes.** Recommended: `lib/providers.ts`
    (a pure helper; `types` stays types-only). Alternative: keep it in
    `TranslationProvider.ts` and leave `secrets.ts` importing it, which keeps
-   `core → translation` — a layer-1 module depending on layer 2.
+   `services → translation` — a layer-1 module depending on layer 2.
 3. **Q3. Run `npm run layers -- --check` in the deploy workflow?**
    Recommended: yes — a few hundred milliseconds, and it stops a tag whose
    code re-tangles the graph. The alternative is a local check only.
@@ -210,6 +210,15 @@ for this phase (no UI or storage change), unless the owner wants it.
 8. **Q8. One PR for the whole phase**, merged by the owner after V on the PC?
    Recommended: yes.
 
-## Owner's answers
+## Owner's answers (2026-11-15)
 
-(empty)
+| Q | Answer |
+| --- | --- |
+| Q1 | **`services/`** (not the recommended `core/`; the plan uses `services/` throughout) |
+| Q2 | as recommended: `lib/providers.ts` |
+| Q3 | yes: `npm run layers -- --check` in the deploy workflow |
+| Q4 | yes: add `biography` and `share` to the workflow's list in 1c |
+| Q5 | yes: split `types.ts` in this phase |
+| Q6 | yes: importers keep `'../types'` |
+| Q7 | the reviewer after every commit |
+| Q8 | yes: one PR for the phase, merged by the owner after V on the PC |

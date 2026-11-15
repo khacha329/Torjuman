@@ -13,7 +13,7 @@ Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 | 0b. `scripts/check-layers.mjs` + `npm run layers`, `docs/refactor/layers.json` (no rules yet) | done | this branch |
 | 0c. Baselines T B L S R on `56a412c` | done; **V waiting on the owner** | this branch |
 | 0d. README "How it fits together" corrected (docs only) | done | this branch |
-| 0e. Phase 1 plan written | done; **awaiting approval** | this branch |
+| 0e. Phase 1 plan written | done; **approved 2026-11-15** (answers in the plan) | this branch |
 
 ### Baselines, measured 2026-11-15 on `56a412c` (`main`, v0.6.14), cloud container
 
@@ -54,8 +54,7 @@ Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 ## Open
 
 - V baseline count from the owner's PC.
-- The owner's answers to the Phase 1 questions
-  ([`plans/phase1-seams.md`](plans/phase1-seams.md)).
+- The owner's list of creed-book features (for the Phase 5b plan).
 
 ## Later
 

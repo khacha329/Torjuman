@@ -51,7 +51,7 @@ Layers, bottom to top. Each may import only from layers below it.
 | Layer | Directories | Knows about |
 | --- | --- | --- |
 | 0 | `lib/`, `types/` | nothing (types only from `types/`) |
-| 1 | `platform/http`, `platform/storage`, `core/` (new: retrieval log, activity, secrets) | layer 0 |
+| 1 | `platform/http`, `platform/storage`, `services/` (new: retrieval log, activity, secrets) | layer 0 |
 | 2 | domain: `shamela`, `ingest`, `dictionary`, `quran`, `biography`, `retrieval`, `qul`, `translation` (+ `providers`, `offline`), `library`, `share`, `catalog` | layers 0–1, and each other without cycles |
 | 3 | `app/` (composition root, router, React context) | layers 0–2 |
 | 4 | `ui/` (`ui/kit` for shared primitives, then screens) | layers 0–3 |
@@ -118,7 +118,7 @@ walks into:
   `app/activity` among them. Moving one of them breaks `npm run verify`, which only runs on the
   owner's PC; `tsc -b` will not notice. Grep `scripts/` on every move.
 - **T-b. The deploy workflow lists `src/` directories by name.** A new
-  top-level directory (`core/`, `types/`) is added to that list in the step
+  top-level directory (`services/`, `types/`) is added to that list in the step
   that creates it. (`biography` and `share` are already missing:
   FOUND_ISSUES 1.)
 - **T-c. Singletons.** `retrievalLog`, `activity` and `secrets` are module
@@ -165,12 +165,36 @@ mechanical, high-payoff work first; the owner's data last but one.
 | Phase | What | Risk | Checks |
 | --- | --- | --- | --- |
 | **0** | `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
-| **1** | **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `core/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
+| **1** | **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
 | **2** | **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the 16 settings sections on the shared shell | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Provider seams**: one Anthropic client and error mapping used by all four call sites; one Gemini call; provider descriptors in the registry (key field, placeholder, models, default) so Settings, Onboarding, secrets and models stop naming providers | medium: cache keys and requests must be byte-identical | T B L X; V (cache keys, `maxTokensFor`); a recorded-request check built first |
 | **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
 | **5** | **Big UI files**: `ReaderScreen` into hooks (position, navigation, panel divider, gloss) and parts (header, sheets host); `EntitySheet` into `QuranSheet`, `CompileTab`, `HadithSheet`; `SettingsScreen` inline sections into files; `BlockList` estimates and `settleOn` into a module; `useTranslator` steps into named functions | medium: the reader is the app | S R on every step; T B L X; screenshots; M |
 | **6** | **Docs**: `docs/EXTENDING.md` (how to add a provider, a source, a store, a route, a setting, a sheet tab), README map and links, CLAUDE.md map updated | none | X |
+
+### Coming after the restructure: book kinds
+
+The owner's next features add **kinds of book** unlike the ḥadīth collections
+the app was built around — first books of creed (ʿaqīdah) — with features of
+their own that must not switch on for other kinds, and ḥadīth features that
+need not switch on for creed books. Today the only seam for this is
+`StructureProfile` (`'generic' | 'hadith-commentary'`, in `types.ts`, used by
+the parsers and a few UI files), and ḥadīth assumptions (takhrīj, narrators,
+sharḥ, dorar) are wired into the reader directly.
+
+So the phases keep this in view, without building the features early:
+
+- **Phase 1** keeps `StructureProfile` where Phase 1's type split puts it
+  (`types/reader.ts`) and changes nothing about it.
+- **Phase 2** and **Phase 5** move ḥadīth-only UI (sheet tabs, margin actions,
+  card kinds) behind named components, so a kind can leave them out without
+  editing the reader.
+- **A short Phase 5b** (proposed) turns the profile into a **book-kind
+  descriptor**: one entry per kind saying which parsers' structure rules,
+  entity detectors, sheet tabs, selection actions and card types apply. A new
+  kind is then one descriptor plus its own feature modules. Its plan is
+  written with the owner's list of creed-book features in hand, so the
+  descriptor fits the real features rather than guessed ones.
 
 Phases 2–5 are proposals at this level of detail; each one's plan can change
 them, and the owner can drop or reorder any.
