@@ -39,7 +39,8 @@ src/
                      online state, read-only context
   services/          shared singletons: API keys, retrieval log, activity
   platform/          the two swap points for Capacitor
-    http/            HttpClient interface + WebHttpClient (uses the proxy)
+    http/            HttpClient interface + WebHttpClient (uses the proxy),
+                     and proxyUrl, the Worker's address
     storage/         StorageAdapter interface + IdbStorageAdapter
   lib/               pure helpers: arabic, hash, id, saveFile, takhrij,
                      providers, delay, format, gzip

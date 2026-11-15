@@ -2,7 +2,8 @@
 
 Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9 and Phase 2 on
 `claude/restructure-phase-2`, all complete and awaiting the owner's
-`npm run verify`, the tablet check after Phase 2, and merge. Base commit `56a412c` (`main`, v0.6.14).
+`npm run verify`, the tablet check after Phase 2, and merge. Base commit
+`56a412c` (`main`, v0.6.14).
 
 ## 1. Why
 

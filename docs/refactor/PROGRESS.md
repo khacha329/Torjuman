@@ -539,7 +539,8 @@ fifteen answers as recommended**.
 | 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review PASS WITH NOTES | `4f9ff79` |
 | review notes: 3db8af1 and 2i | applied | `06b20c7` |
 | 2j. `SettingsSection` in `ui/kit`, 15 copies | T B L U pass; review PASS WITH NOTES | `6d840a8` |
-| 2k. docs, maps, FOUND_ISSUES 10; end-of-phase checks | T B L U S R pass; review pending | `41fd1f2`, this commit |
+| 2k. docs, maps, FOUND_ISSUES 10; end-of-phase checks | T B L U S R pass; review PASS WITH NOTES | `41fd1f2`, `f4b0a44` |
+| review notes: 2k and the phase | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -814,6 +815,14 @@ holds)
   cycles, 11 rules hold. **U** PASS 160/160. **S** PASS 30/30. **R** PASS
   28/28, performance as the Phase 0 baseline (240,000 px in 33.3 s / 175,800
   px in 24.4 s; 1,905 / 1,904 DOM nodes; 404 / 406 blocks; 0 long tasks).
+
+- **Review of 2k and of Phase 2 as a whole: PASS WITH NOTES; "ready for PR",
+  merged only after V and M.** Layer report at HEAD byte-identical to
+  `phase2/layers.txt`; −2,400 B checked step by step; no stale `ui/common` or
+  old-helper pointer in live docs. Applied: RESTRUCTURE status re-wrapped;
+  CLAUDE.md says top-level `ui` imports `./kit`; README's map names
+  `proxyUrl`; FOUND_ISSUES 10 adds Onboarding's card shell and the build
+  script's `delay`; FOUND_ISSUES 8's line refs updated.
 
 ## Phase 2 result
 

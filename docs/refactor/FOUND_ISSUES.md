@@ -110,15 +110,15 @@ those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
 whole kilobytes, one decimal for megabytes). The others differ, so merging
 them would change text the owner sees (owner's answer to Phase 2 Q6: not now):
 
-- `ui/settings/DeviceTransfer.tsx` `sizeOf` (~221): never shows bytes —
+- `ui/settings/DeviceTransfer.tsx` `sizeOf` (~212): never shows bytes —
   anything under 1 MB is at least "1 KB", kilobytes rounded and with a
   thousands separator (just under 1 MB reads "1,000 KB" where `formatBytes`
   says "1000 KB", at most "1,024 KB"); megabytes as `formatBytes`.
-- `library/deviceTransfer.ts` `mb` (~392), in the "not enough space" message:
+- `library/deviceTransfer.ts` `mb` (~393), in the "not enough space" message:
   megabytes only, rounded **up**, with a separator ("1,024 MB").
 - `ui/settings/LibraryTransfer.tsx` (~41), the export status: megabytes only,
   one decimal ("0.3 MB" for 300 KB).
-- `ui/settings/OfflineTranslation.tsx` (~63, ~230), the storage-usage line:
+- `ui/settings/OfflineTranslation.tsx` (~63, ~225), the storage-usage line:
   whole megabytes, no separator (`usageMB.toFixed(0)`).
 
 Left as is. A later, visible change can pick one format. Found in Phase 2
@@ -155,8 +155,11 @@ Found while planning Phase 2, real duplicates but deferred:
   with `blockIdFor` in `ingest/importer.ts`, a larger question.
 - `toLine` — `library/transfer.ts` (~85) and `library/deviceTransfer.ts`
   (~398), the same body with different parameter types and comments.
-- The plain card shell in `ui/ReceiveTransferScreen.tsx` (four places), like
-  the settings shell but without `dir`/`ltr-isolate`.
+- The plain card shell in `ui/ReceiveTransferScreen.tsx` (four places) and
+  `ui/OnboardingScreen.tsx` (~54), like the settings shell but without
+  `dir`/`ltr-isolate`.
+- A third `delay`, in a different form, in `scripts/build-catalog.ts` (~212):
+  a build script, outside `src/` (found by the Phase 2 end review).
 - `title`/`description` props on `SettingsSection` (Phase 2 step 2j′, owner's
   Q3: not now).
 

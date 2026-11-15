@@ -128,7 +128,8 @@ src/
   catalog/             recommended books + batch import
   ui/                  screens; reader/ and settings/ hold most of the UI
     kit/               shared pieces: Button, Field, TopBar, Spinner, …,
-                       ProgressBar, SettingsSection — import `../kit`
+                       ProgressBar, SettingsSection — import the directory
+                       (`../kit`, or `./kit` from top-level `ui`)
 proxy/                 Cloudflare Worker: CORS proxy + transfer relay (KV)
 scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 ```
