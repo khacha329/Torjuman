@@ -61,7 +61,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | harness: `scripts/compare-bundles.mjs` (check B, identical JS) | baselined on `19a4267` | `04604c9` |
 | 1b. Narrator profile types → `types.ts` | T B L pass; review FAIL (import order) → fixed in the review-notes commit | `6a99c2e` |
 | review notes: harness and 1b | applied | `7ca8087` |
-| 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review pending | this commit |
+| 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review PASS WITH NOTES | `902758d` |
+| review notes: 7ca8087 and 1c | applied | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -149,6 +150,12 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   5 → **3** (`app ↔ qul`, `app ↔ retrieval` gone). Rules hold. (The
   `services` rule is added in 1e, when `secrets` has arrived, as the plan
   says.)
+
+- **Reviews of 7ca8087 and 1c: PASS WITH NOTES**, nothing to fix before 1d.
+  Applied in the next commit: compare-bundles' header quotes RESTRUCTURE's
+  rule correctly; FOUND_ISSUES 1 reflowed; CLAUDE.md trap 1 and RESTRUCTURE
+  T-b no longer say `biography`/`share` are missing; plan step 1o names the
+  planner agent and RESTRUCTURE §1's pointers.
 
 ## Open
 

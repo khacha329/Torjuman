@@ -88,7 +88,7 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | 1l | split out `types/translation.ts`, `types/retrieval.ts`, `types/qul.ts` | same | T B L X | low |
 | 1m | split out `types/persistence.ts`, `types/share.ts`, `types/biography.ts`, `types/settings.ts`, `types/reader.ts` | same | T B L X | low |
 | 1n | `layers.json` complete; `npm run layers -- --check` in the workflow (Q3) | `layers.json`, `deploy.yml` | L | low |
-| 1o | README map, CLAUDE.md map, PROGRESS | docs | X | none |
+| 1o | README map, CLAUDE.md map, `.claude/agents/torjuman-planner.md`, RESTRUCTURE §1 pointers, PROGRESS | docs | X | none |
 
 Each layer rule is added to `layers.json` **in the step that makes it true**,
 so `--check` passes after every commit:

@@ -133,8 +133,8 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
 
 1. **`.gitignore` without a leading slash matches at every level.** And the
    deploy workflow's "source tree arrived intact" list names `src/`
-   directories — a new top-level `src/` directory goes on that list
-   (`biography` and `share` are missing from it today: FOUND_ISSUES 1).
+   directories — a new top-level `src/` directory goes on that list (it
+   missed `biography` and `share` until Phase 1: FOUND_ISSUES 1).
 2. **API keys** — see Never. `app/secrets.ts` is the only reader and writer.
 3. **Public repo** — see Never. Screenshots for a PR use the synthetic books
    the Playwright scripts build, not a real imported book.

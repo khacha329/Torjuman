@@ -14,7 +14,7 @@
 //     (`./node.browser-DK-RoPgf.js`), which Vite does not keep stable across
 //     builds even when the chunk itself is unchanged.
 //
-// This is check B's "byte-identical JS" rule in docs/refactor/RESTRUCTURE.md:
+// This is check B's identical-JS rule in docs/refactor/RESTRUCTURE.md §5:
 // a step that only moves types must emit the same JavaScript. Exit 0 when every
 // file matches, 1 otherwise, printing where the first difference is.
 
