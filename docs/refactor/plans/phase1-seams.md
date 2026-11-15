@@ -164,8 +164,9 @@ become `import type` lines. Groups and their current lines in `types.ts`:
 | `settings.ts` | AppSettings | 847–899 |
 
 (Line numbers before 1a/1b; the step's PROGRESS section gives the offsets.)
-Types-only changes produce no JavaScript, so B must show **byte-identical
-JS** for 1b and 1i–1m — a stronger check than ±2 KB. 1a is the exception: it
+Types-only changes produce no JavaScript, so B must show **identical JS**
+(`scripts/compare-bundles.mjs`, which masks the build time and chunk hashes)
+for 1b and 1i–1m — a stronger check than ±2 KB. 1a is the exception: it
 moves a function (`isCloudProvider`) into a new module, so its bundle may
 shift within the usual ±2 KB.
 
@@ -195,11 +196,11 @@ for this phase (no UI or storage change), unless the owner wants it.
   build of `scripts/verify-parsers.ts` uses the same resolver. Caught by T, B
   and V.
 - **R4. A type move changes emitted JS.** It should not; caught by B's
-  byte-identical rule.
+  identical-JS rule (`compare-bundles.mjs`).
 
 ## Questions
 
-1. **Q1. The name of the new layer-1 directory.** Recommended: `services/`.
+1. **Q1. The name of the new layer-1 directory.** Recommended: `core/`.
    Alternatives: `services/`, `shared/`.
 2. **Q2. Where `isCloudProvider` goes.** Recommended: `lib/providers.ts`
    (a pure helper; `types` stays types-only). Alternative: keep it in

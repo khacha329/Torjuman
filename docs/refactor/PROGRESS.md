@@ -59,7 +59,7 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | --- | --- | --- |
 | 1a. Provider-id types → `types.ts`; `isCloudProvider` → `lib/providers.ts` | T B L pass; review PASS WITH NOTES | `19a4267` |
 | harness: `scripts/compare-bundles.mjs` (check B, identical JS) | baselined on `19a4267` | `04604c9` |
-| 1b. Narrator profile types → `types.ts` | T B L pass; review pending | this commit |
+| 1b. Narrator profile types → `types.ts` | T B L pass; review FAIL (import order) → fixed in the review-notes commit | `6a99c2e` |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -112,6 +112,22 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   `share → biography`); directories in a cycle 13 → 11; mutual pairs 6 → 5
   (`biography ↔ platform/storage` gone). Rule added: `platform/.*` imports
   only `lib` and `types`. All hold.
+
+- **Review harness: PASS WITH NOTES.** Applied: two files sharing an
+  unhashed name now count as a difference instead of one being dropped; the
+  chunk-hash mask no longer matches inside `.json` names
+  (`ar-tafsir-muyassar.json`); the header says the masking holds for local
+  builds (on CI the version also carries the commit). The PROGRESS row came
+  one commit late; noted.
+- **Review 1b: FAIL** on rules, not code (JS identical). The import merge
+  re-sorted the specifier lists in `StorageAdapter.ts` and
+  `IdbStorageAdapter.ts` — unmoved code reformatted, which §3 rule 2 forbids.
+  Fixed in the review-notes commit: the original order restored, with
+  `StoredNarratorProfile` added at the end. From now on merged specifiers are
+  appended, never re-sorted. Also applied: the new comment no longer says
+  `narratorProfile.ts` "builds them" (`taqrib.ts`/`itqan.ts` parse them); the
+  plan's wording follows RESTRUCTURE ("identical JS" via compare-bundles), and
+  Q1's text is restored to what was asked.
 
 ## Open
 

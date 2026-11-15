@@ -872,7 +872,7 @@ export interface BiographyEntry {
 }
 
 // Narrator profiles. Why every field is nullable and carries its source is
-// explained at the top of biography/narratorProfile.ts, which builds them.
+// explained at the top of biography/narratorProfile.ts.
 
 export type FieldSource = 'taqrib' | 'itqan';
 

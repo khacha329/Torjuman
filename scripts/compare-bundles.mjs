@@ -5,7 +5,8 @@
 // Each directory is a copy of `dist/assets` from one build. Every `.js` file is
 // matched by its name with the content hash removed (`index-DvQ3iiT-.js` →
 // `index.js`) and compared after masking the two things that differ between
-// two builds of identical source:
+// two local `npm run build` runs of identical source (on CI the version string
+// also carries the commit, which this does not mask):
 //
 //   - the build time, which the bundle carries twice — in the diagnostics text
 //     and in Settings → Build — as a millisecond ISO timestamp, and
@@ -27,21 +28,31 @@ if (!dirA || !dirB) {
 }
 
 const HASHED = /^(.*)-[A-Za-z0-9_-]{8}\.js$/;
-const byName = (dir) =>
-  new Map(
-    readdirSync(dir)
-      .filter((name) => name.endsWith('.js'))
-      .map((name) => [name.replace(HASHED, '$1.js'), join(dir, name)]),
-  );
+let different = 0;
+
+/** Unhashed name → path. Two files sharing an unhashed name cannot be paired, so they count as a difference. */
+function byName(dir) {
+  const files = new Map();
+  for (const name of readdirSync(dir).filter((entry) => entry.endsWith('.js')).sort()) {
+    const key = name.replace(HASHED, '$1.js');
+    if (files.has(key)) {
+      console.log(`${key}: more than one in ${dir} — cannot pair them by name`);
+      different += 1;
+    }
+    files.set(key, join(dir, name));
+  }
+  return files;
+}
 
 const mask = (text) =>
   text
     .replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z/g, '<time>')
-    .replace(/([A-Za-z0-9_.]+)-[A-Za-z0-9_-]{8}\.js/g, '$1-<hash>.js');
+    // The lookahead keeps names like `ar-tafsir-muyassar.json` out: "muyassar"
+    // is eight characters and ".json" starts with ".js".
+    .replace(/([A-Za-z0-9_.]+)-[A-Za-z0-9_-]{8}\.js(?![A-Za-z0-9])/g, '$1-<hash>.js');
 
 const a = byName(dirA);
 const b = byName(dirB);
-let different = 0;
 
 for (const name of [...new Set([...a.keys(), ...b.keys()])].sort()) {
   if (!a.has(name) || !b.has(name)) {
