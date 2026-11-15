@@ -522,7 +522,8 @@ fifteen answers as recommended**.
 
 | Step | State | Commit |
 | --- | --- | --- |
-| 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review pending | this commit |
+| 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review FAIL (harness wait) → fixed | `3b15ef3` |
+| review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; review pending | `c6d2998`, `c30e388`, this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -537,11 +538,9 @@ holds)
   device-transfer-exporting, offline-downloading, catalog-importing,
   receive-fetching, device-transfer-relay, import-crawling.
 - Masks: the "Built" time; the storage-usage line; React `useId` ids; the
-  **order and text** of Settings → Retrieval's log rows (two boot lookups race;
-  the QUL seed's row counts pending resources by timing — the text mask was
-  added here after the agent's baseline failed 159/160 on its first rerun with
-  "2 pending" vs "3 pending"; the rows' elements and attributes are still
-  compared).
+  **order** of Settings → Retrieval's log rows (two boot lookups race). A text
+  mask on those rows, added for a "2 pending"/"3 pending" flake, was removed
+  after the review found the real cause (below).
 - Deviations from §9, each in the script's header: more environment pinned
   (`GITHUB_REF_NAME`, `GITHUB_SHA`, `npm_package_version`); untracked
   `qul/` files answer 404 so the owner's licensed files cannot change the
@@ -559,6 +558,32 @@ holds)
   15 s (builds ~6.5 s each).
 - **T** exit 0 (agent); the production CSS is byte-identical with the new
   script present (Tailwind finds no new class in it).
+
+- **Review of 2a: FAIL**, on the harness, not the app. The wait before the
+  reload passed an async predicate to `page.waitForFunction`, which does not
+  await it, so it waited for nothing; the reload could interrupt the first
+  boot's seed of `matching-ayah`, and the next boot (correctly, by design)
+  reported 3 pending instead of 2 — the flake. Fixed in `c6d2998`: a Node-side
+  poll with a 30 s timeout that throws; the Retrieval text mask removed; the
+  header's two false claims corrected; `VERIFY_OUT` refused outside
+  `.verify/` (checked before the builds; tested: exit 2); the dev-server
+  proxy paths aborted. FOUND_ISSUES 7 withdrawn and replaced by the cosmetic
+  wording issue it really is. Notes kept for later steps: `lib/gzip` (2e) must
+  look `CompressionStream` up at call time, as the export captures stub it
+  after load; the gap list below.
+- **Re-proof after the fix** (manifest in `c30e388`), `src/` unchanged:
+  manifest rewritten from a fresh run; **three runs, each PASS 160/160**; the
+  class swap in `LibraryScreen.tsx:163` → exit 1, 158/160, `library.html` at
+  both sizes; the added space in Published chapters' description → exit 1,
+  154/160, `settings--published-chapters`, `settings`, `settings-proxy` at
+  both sizes; both files restored (`cmp` equal, `git diff --quiet -- src`).
+- **Not captured, so read by the reviewer** (beyond the plan's three
+  exceptions): the reader's sheets and cards that use `ui/common`
+  (`BiographySheet`, `DictionarySheet`, `EntitySheet`, `ExplanationCardView`,
+  `SearchPanel`, `TranslationCardView`, `NarratorCard`, `SelectionRail`,
+  `ReaderScreen` beyond its header), `ShareScreen`'s loading and success
+  states, `LibraryScreen`'s "Deleting…" spinner. All of them change only an
+  import path in 2g, where S and R also run.
 
 ## Open
 
