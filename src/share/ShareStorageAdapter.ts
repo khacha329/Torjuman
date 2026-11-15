@@ -18,12 +18,12 @@ import type {
   ReadingPosition,
   ShareRecord,
   SharhCard,
+  StoredNarratorProfile,
   TocNode,
   TranslationCard,
   TranslationProfile,
   WordGloss,
 } from '../types';
-import type { StoredNarratorProfile } from '../biography/narratorProfile';
 import type {
   PageMeta,
   SearchHit,

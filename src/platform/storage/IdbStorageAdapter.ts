@@ -8,10 +8,9 @@ import type {
   DictionaryEntry,
   Entity,
   ExplanationCard,
-  SharhCard,
   GlossaryEntry,
-  Mark,
   HadithRecord,
+  Mark,
   Page,
   QulCompilation,
   QulEntry,
@@ -19,12 +18,13 @@ import type {
   QuranVerse,
   ReadingPosition,
   ShareRecord,
+  SharhCard,
+  StoredNarratorProfile,
   TocNode,
   TranslationCard,
   TranslationProfile,
   WordGloss,
 } from '../../types';
-import type { StoredNarratorProfile } from '../../biography/narratorProfile';
 import { letterFold } from '../../lib/arabic';
 import type {
   PageMeta,

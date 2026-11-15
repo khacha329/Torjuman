@@ -7,11 +7,9 @@ import type {
   DictionaryEntry,
   Entity,
   ExplanationCard,
-  SharhCard,
   GlossaryEntry,
-  Mark,
-  WordGloss,
   HadithRecord,
+  Mark,
   Page,
   QulCompilation,
   QulEntry,
@@ -19,11 +17,13 @@ import type {
   QuranVerse,
   ReadingPosition,
   ShareRecord,
+  SharhCard,
+  StoredNarratorProfile,
   TocNode,
   TranslationCard,
   TranslationProfile,
+  WordGloss,
 } from '../../types';
-import type { StoredNarratorProfile } from '../../biography/narratorProfile';
 
 // The only interface the app knows about for persistence.
 //

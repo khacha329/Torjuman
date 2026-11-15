@@ -10,6 +10,11 @@
       "from": "lib",
       "to": "(?!types$).*",
       "why": "lib imports only types (layer 0; Phase 1 step 1a)"
+    },
+    {
+      "from": "platform/.*",
+      "to": "(?!(lib|types)$).*",
+      "why": "platform imports only lib and types (layer 1; Phase 1 step 1b)"
     }
   ]
 }

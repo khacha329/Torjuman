@@ -57,7 +57,9 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 
 | Step | State | Commit |
 | --- | --- | --- |
-| 1a. Provider-id types → `types.ts`; `isCloudProvider` → `lib/providers.ts` | T B L pass; review pending | this commit |
+| 1a. Provider-id types → `types.ts`; `isCloudProvider` → `lib/providers.ts` | T B L pass; review PASS WITH NOTES | `19a4267` |
+| harness: `scripts/compare-bundles.mjs` (check B, identical JS) | baselined on `19a4267` | `04604c9` |
+| 1b. Narrator profile types → `types.ts` | T B L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -74,6 +76,42 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
   cycles 1 → **0**; `types` → nothing; new edges `lib → types` (type) and
   `app → lib` (secrets → `lib/providers`), both expected; mutual pairs 7 → 6.
   Rules added: `types` imports nothing; `lib` imports only `types`. All hold.
+
+- **Review 1a: PASS WITH NOTES**, nothing to fix. Notes: `registry.ts:1` keeps
+  `import { type TranslationProvider }` (the minimal edit; under
+  `verbatimModuleSyntax` it keeps the old side-effect import), and the moved
+  `ProviderId` comment says "see registry.ts" without a directory. Both left
+  as they are: verbatim.
+
+**Harness, 2026-11-15.** Check B's "byte-identical JS" rule could not be run
+with `cmp`: two builds of the same source differ in the build time (a
+millisecond ISO timestamp, twice) and in imported chunks' hashed names.
+`scripts/compare-bundles.mjs` masks those two. Baseline on `19a4267`: two
+builds identical, exit 0; a one-character edit reported, exit 1.
+
+**Step 1b, measured 2026-11-15**
+- Moved verbatim from `biography/narratorProfile.ts` to `types.ts`, before
+  `AppSettings` (after `BiographyEntry`, so step 1m takes them into
+  `types/biography.ts` together): `FieldSource`, `SourcedValue`,
+  `ScholarStatement`, `NarratorProfile`, `StoredNarratorProfile`, with their
+  comments. `narratorProfile.ts` keeps its header comment, `FIELD_LABELS`,
+  `emptyProfile`, `mergeProfiles`, `hasContent`, and imports the three types
+  it uses back from `types`.
+- **Not verbatim:** a two-line comment above the moved group in `types.ts`
+  pointing to `narratorProfile.ts`'s header, which explains why every field
+  is nullable and carries its source — the moved types would otherwise lose
+  that explanation. New text, claimed here.
+- Importers switched (9): `biography/itqan.ts`, `taqrib.ts`,
+  `narratorService.ts`, `platform/storage/StorageAdapter.ts`,
+  `IdbStorageAdapter.ts`, `share/bundle.ts`, `buildBundle.ts`,
+  `ShareStorageAdapter.ts`, `ui/reader/NarratorCard.tsx`.
+  `scripts/verify-parsers.ts:3963` imports only `mergeProfiles` and
+  `hasContent`, which stay — unchanged.
+- **T** exit 0. **B** exit 0; `compare-bundles` 19a4267 → 1b: every file
+  identical. **L**: 142 files, 121 edges (−2: `platform/storage → biography`,
+  `share → biography`); directories in a cycle 13 → 11; mutual pairs 6 → 5
+  (`biography ↔ platform/storage` gone). Rule added: `platform/.*` imports
+  only `lib` and `types`. All hold.
 
 ## Open
 

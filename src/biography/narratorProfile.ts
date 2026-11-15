@@ -1,3 +1,5 @@
+import type { SourcedValue, ScholarStatement, NarratorProfile } from '../types';
+
 // A narrator's card: discrete fields, every one of them retrieved.
 //
 // ---------------------------------------------------------------------------
@@ -31,71 +33,6 @@
 // two into one unattributed string would destroy the distinction a reader needs
 // in order to cite anything.
 // ---------------------------------------------------------------------------
-
-export type FieldSource = 'taqrib' | 'itqan';
-
-export interface SourcedValue {
-  value: string;
-  source: FieldSource;
-}
-
-/** One scholar's statement about a narrator. */
-export interface ScholarStatement {
-  /** Which work it is drawn from — «تقريب التهذيب», «الكاشف», … */
-  work: string;
-  /** The verdict as that work words it. Never paraphrased. */
-  verdict: string;
-  source: FieldSource;
-}
-
-/**
- * The card's fields, in the order the reference layout prints them.
- *
- * Keyed rather than positional so a source can contribute any subset, and the
- * renderer can walk a label table without knowing which source filled what.
- */
-export interface NarratorProfile {
-  /** Folded, for lookup. */
-  key: string;
-  /** As printed, for display. */
-  fullName: string;
-
-  kunya: SourcedValue | null;
-  /** The nasab paragraph — the lineage as the source writes it. */
-  lineage: SourcedValue | null;
-  /** Laqab or the nisba a man is generally known by. */
-  knownAs: SourcedValue | null;
-  /** الطبقة — which generation. */
-  generation: SourcedValue | null;
-  residence: SourcedValue | null;
-  birth: SourcedValue | null;
-  death: SourcedValue | null;
-  placeOfBirth: SourcedValue | null;
-  placeOfDeath: SourcedValue | null;
-  /** حكم ابن حجر — his own grading, from Taqrīb. */
-  ibnHajar: SourcedValue | null;
-
-  /** أقوال العلماء — every scholar's statement, unmerged. */
-  statements: ScholarStatement[];
-  /** المصادر — the entry text each source contributed, verbatim. */
-  sources: { work: string; text: string; source: FieldSource }[];
-  /** Name forms this narrator is cited under, for matching. */
-  namings: string[];
-}
-
-/**
- * A profile as stored.
- *
- * `namings` is indexed multiEntry, which is why lookup does not load the store:
- * 37,000 profiles with their statements is far too much to hold in memory for
- * a tap, unlike the TOC-derived index, which is a few thousand short rows.
- */
-export interface StoredNarratorProfile extends NarratorProfile {
-  /** Unique. `itqan:<profile id>` for an imported shard. */
-  id: string;
-  /** The file it came from, so removing a shard removes exactly its rows. */
-  shard: string;
-}
 
 /** The Arabic labels, in the reference layout's order. */
 export const FIELD_LABELS: [keyof NarratorProfile, string, string][] = [

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FIELD_LABELS, type NarratorProfile } from '../../biography/narratorProfile';
+import { FIELD_LABELS } from '../../biography/narratorProfile';
+import type { NarratorProfile } from '../../types';
 import type { NarratorCandidate } from '../../biography/narratorService';
 
 // The structured narrator card.
