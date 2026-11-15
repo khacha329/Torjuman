@@ -123,8 +123,8 @@ walks into:
   owner's PC; `tsc -b` will not notice. Grep `scripts/` on every move.
 - **T-b. The deploy workflow lists `src/` directories by name.** A new
   top-level directory (`services/`, `types/`) is added to that list in the step
-  that creates it. (`biography` and `share` are already missing:
-  FOUND_ISSUES 1.)
+  that creates it. (`biography` and `share` were missing until Phase 1
+  step 1c: FOUND_ISSUES 1.)
 - **T-c. Singletons.** `retrievalLog`, `activity` and `secrets` are module
   singletons. A copy left behind at the old path would make two of them;
   moves are whole-file moves with every importer updated, never a duplicate.
