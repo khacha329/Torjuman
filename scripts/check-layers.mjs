@@ -36,8 +36,11 @@ function walk(dir, out = []) {
 
 /**
  * `src/ui/reader/BlockList.tsx` → `ui/reader`; `src/App.tsx` → `(root)`.
- * `src/types.ts` is its own unit: everything imports it, so folding it into
- * `(root)` with App.tsx would put every directory in one cycle through App.
+ * The types are their own unit, `types`: everything imports them, so folding
+ * them into `(root)` with App.tsx would put every directory in one cycle
+ * through App. Since Phase 1 step 1i they live in `src/types/`, which maps to
+ * `types` like any directory; the `types.ts` case below is for running this
+ * script on commits from before that step.
  */
 function unitOf(file) {
   const parts = relative(ROOT, file).split(sep);

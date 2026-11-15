@@ -77,7 +77,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1k. split out `types/book.ts`, `types/catalog.ts` | T B L pass; V owed; review PASS | `415066c` |
 | 1l. split out `types/cards.ts`, `types/qul.ts` | T B L pass; V owed; review PASS | `d2ce992` |
 | 1m. split out `types/persistence.ts`, `share.ts`, `biography.ts`, `settings.ts` | T B L pass; V owed; review PASS WITH NOTES | `8065948` |
-| review notes: 1m | applied | this commit |
+| review notes: 1m | applied | `495d497` |
+| 1n. `layers.json` complete; `npm run layers -- --check` in the deploy workflow | L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -422,6 +423,21 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   ("app/secrets.ts"), the maps, the planner agent; and the `index.ts` header,
   which now heads a file that declares nothing — one added line saying it
   re-exports the group files.
+
+**Step 1n, measured 2026-11-15**
+- Two last rules, both already true: `app` imports no `ui`, `components`
+  imports only `lib` and `types`. With the seven from 1a–1h, `layers.json`
+  holds 9 rules, one for each boundary in RESTRUCTURE §2 that holds today.
+- `deploy.yml`: a step "Check the layer rules" (`npm run layers -- --check`)
+  after `npm ci`, before the build (owner's answer to Q3), with a comment
+  saying what it guards. YAML parses (PyYAML and js-yaml).
+- **Negative test:** a temporary rule forbidding `ui → app` made
+  `--check` exit 1 with "13 forbidden imports"; the rule was then removed and
+  the file restored byte for byte.
+- `scripts/check-layers.mjs`: the unit comment no longer says `src/types.ts`
+  exists; the `types.ts` branch is kept on purpose, so the script still reads
+  commits from before step 1i (as it did for the 1h edge comparison).
+- No source change; T, B, S, R not affected.
 
 ## Open
 

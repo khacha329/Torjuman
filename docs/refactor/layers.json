@@ -35,6 +35,16 @@
       "from": "translation",
       "to": "translation/providers",
       "why": "the translation core does not know its providers; the registry lives with them (Phase 1 step 1h)"
+    },
+    {
+      "from": "app",
+      "to": "ui(/.*)?",
+      "why": "the composition root does not import the UI (layer 3 below layer 4; Phase 1 step 1n)"
+    },
+    {
+      "from": "components",
+      "to": "(?!(lib|types)$).*",
+      "why": "shared components import only lib and types (Phase 1 step 1n)"
     }
   ]
 }

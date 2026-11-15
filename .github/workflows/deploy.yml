@@ -70,6 +70,13 @@ jobs:
 
       - run: npm ci
 
+      # The import graph by directory must keep the layer rules in
+      # docs/refactor/layers.json: no cycle back through the composition root,
+      # no domain code importing the UI, and the rest. A tag whose code breaks
+      # one stops here, before anything is deployed. See docs/refactor/.
+      - name: Check the layer rules
+        run: npm run layers -- --check
+
       # `npm run build` is `tsc -b && vite build`, so this is the typecheck gate
       # as well as the build.
       #
