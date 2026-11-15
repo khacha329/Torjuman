@@ -74,7 +74,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review PASS WITH NOTES | `b6794da` |
 | 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review PASS WITH NOTES | `8d71a48` |
 | review notes: 1j | applied | `ac7129e` |
-| 1k. split out `types/book.ts`, `types/catalog.ts` | T B L pass; V owed; review pending | this commit |
+| 1k. split out `types/book.ts`, `types/catalog.ts` | T B L pass; V owed; review PASS | `415066c` |
+| 1l. split out `types/cards.ts`, `types/qul.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -358,6 +359,32 @@ builds identical, exit 0; a one-character edit reported, exit 1.
 - **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
   exit 0; `compare-bundles` 1j → 1k: every JS file identical. **L**: 148 files,
   no cycles; rules hold.
+
+- **Reviews of ac7129e and 1k: both PASS.** The reviewer matched `book.ts`
+  and `catalog.ts` to exact old line ranges and found 62 names exported before
+  and after. (Cosmetic notes: one over-long line in the plan's Order
+  paragraph; 1k's L line left out the edge count — 128.) The container was
+  restarted after this review; the scratchpad survived.
+- **Owner's decision for 1m (2026-11-15):** the detached comment above
+  `BiographyEntry` that belongs to `AppSettings` (FOUND_ISSUES 5) moves, word
+  for word, to just above `AppSettings` in `types/settings.ts`. Its "two API
+  keys" wording stays for a later fix.
+
+**Step 1l, measured 2026-11-15**
+- Same script. `types/cards.ts` (CardBase, CardStatus, TranslationCard, Mark,
+  MarkRange, NoteCard, LocalSourceRef, WebSourceRef, ExplanationCard,
+  SharhCard, Card) imports `TranslatedSegment` from `./entities` and
+  `ProviderId`, `TranslationErrorKind`, `TranslationUsage` from
+  `./translation`; `types/qul.ts` (the "QUL" section banner, QulResourceKind …
+  QulCompilation) imports `ProviderId`, `TranslationUsage`. `index.ts` drops
+  its `./entities` import and keeps only `ProviderId` from `./translation`
+  (what `AppSettings` uses); two `export *` lines appended.
+- Line multiset: every old non-blank line present; new lines are the two
+  headers, the group files' imports, the shortened `./translation` import and
+  the two `export *` lines.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
+  exit 0; `compare-bundles` 1k → 1l: every JS file identical. **L**: 150 files,
+  128 edges, no cycles; rules hold.
 
 ## Open
 
