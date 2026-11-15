@@ -514,7 +514,7 @@ before the next began. **Owed before merge: `npm run verify` on the owner's
 PC** (steps 1d, 1g and 1i–1m touch modules its script builds; here only its
 SSR build could run, and it resolved at every step).
 
-## Phase 2: shared pieces (planning, branch `claude/restructure-phase-2`)
+## Phase 2: shared pieces (complete, branch `claude/restructure-phase-2`)
 
 Plan: [`plans/phase2-shared-pieces.md`](plans/phase2-shared-pieces.md), written
 by the `torjuman-planner` agent on `146dc62`; **approved 2026-11-15, all
@@ -538,7 +538,8 @@ fifteen answers as recommended**.
 | review notes: 2h | applied | `3db8af1` |
 | 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review PASS WITH NOTES | `4f9ff79` |
 | review notes: 3db8af1 and 2i | applied | `06b20c7` |
-| 2j. `SettingsSection` in `ui/kit`, 15 copies | T B L U pass; review pending | this commit |
+| 2j. `SettingsSection` in `ui/kit`, 15 copies | T B L U pass; review PASS WITH NOTES | `6d840a8` |
+| 2k. docs, maps, FOUND_ISSUES 10; end-of-phase checks | T B L U S R pass; review pending | `41fd1f2`, this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -795,6 +796,41 @@ holds)
   cycles, rules hold. **U** PASS 160/160 — all 21 `settings--*` captures, the
   whole Settings screen, `settings-proxy`, and the three in-progress Settings
   states.
+
+- **Reviews of 06b20c7 and 2j: PASS WITH NOTES**, nothing to fix in code.
+  The swapped tag is the one each section component returns; no `<section>`
+  is left in `ui/settings`; RESTRUCTURE §2's promise for settings sections now
+  holds. Notes applied in 2k (comments only).
+
+**Step 2k, measured 2026-11-15**
+- Docs as the plan lists them (`41fd1f2`): CLAUDE.md map and its rules
+  paragraph (eleven rules, the `ui/kit` exception), README map, RESTRUCTURE
+  status, §1 counts, Phase 2 marked complete; FOUND_ISSUES 10 (duplicates
+  deferred by Q10, and 2j′). Two comment notes from the 2i and 2j reviews.
+  End-of-phase report: [`phase2/layers.txt`](phase2/layers.txt).
+- **End of phase:** **T** exit 0. **B** exit 0, main chunk 789,438 B; CSS
+  byte-identical to 2j's base (the doc text names no new class). SSR build of
+  `verify-parsers.ts` resolves. **L** `--check`: 160 files, 134 edges, no
+  cycles, 11 rules hold. **U** PASS 160/160. **S** PASS 30/30. **R** PASS
+  28/28, performance as the Phase 0 baseline (240,000 px in 33.3 s / 175,800
+  px in 24.4 s; 1,905 / 1,904 DOM nodes; 404 / 406 blocks; 0 long tasks).
+
+## Phase 2 result
+
+| | Phase 1 end | Phase 2 end |
+| --- | --- | --- |
+| shared helpers | — | `lib/delay`, `lib/format` (`formatBytes`, `percentOf`), `lib/gzip`, `platform/http/proxyUrl` |
+| shared UI | `ui/common.tsx` | `ui/kit/` with `ProgressBar` (7 bars) and `SettingsSection` (15 shells, 21 sections) |
+| main JS chunk | 791,838 B | 789,438 B (−2,400) |
+| layer rules | 10 | 11 |
+| screens (check U, 80 captures × HTML + PNG) | — | identical to the Phase 1 code at every step |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began; the one FAIL (2a's harness
+wait) was fixed and re-reviewed. **Owed before merge:** `npm run verify` on the
+owner's PC (steps 2b, 2d, 2e, 2f touch modules it builds), and **M** on the
+tablet with `npm run stage` — including one book exported and imported back,
+which no automated check covers.
 
 ## Open
 
