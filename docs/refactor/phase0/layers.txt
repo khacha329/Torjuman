@@ -1,0 +1,93 @@
+files: 141
+directory edges: 122
+directories in a cycle: 15 (in 2 components)
+directory pairs importing each other: 7
+file-level cycles: 1
+
+== imports, by directory (value imports + type-only imports, in files) ==
+(root): app 4, ui 6, ui/reader 1, ui/settings 1, ui/share 1
+app: catalog 1, ingest 1, platform/http 1+1t, platform/storage 1+1t, qul 1, retrieval 1, translation 4, types 0+1t
+biography: app 2, platform/storage 0+2t, retrieval 6, types 0+6t
+catalog: app 2, ingest 1+1t, platform/http 0+1t, platform/storage 0+1t, types 0+2t
+components: (nothing)
+dictionary: lib 3, platform/storage 0+1t, types 0+1t
+ingest: dictionary 2, lib 2, platform/http 0+2t, platform/storage 0+2t, quran 2, shamela 6, types 0+1t
+lib: (nothing)
+library: app 1, dictionary 1, lib 2, platform/storage 0+2t, quran 1, share 1, types 0+1t
+platform/http: (nothing)
+platform/storage: biography 0+2t, lib 1, types 0+2t
+qul: app 1, lib 2, platform/storage 0+3t, quran 0+1t, shamela 1, translation 2, types 0+4t
+quran: app 1, biography 3, lib 3, platform/storage 0+1t, retrieval 1, shamela 1, types 0+2t
+retrieval: app 3, lib 4, platform/http 0+5t, platform/storage 0+5t, types 0+6t
+shamela: lib 3, types 0+3t
+share: biography 0+3t, lib 1, platform/storage 0+3t, types 0+3t
+translation: lib 4, platform/storage 0+2t, translation/providers 2, types 0+8t
+translation/offline: lib 1, quran 0+1t, translation 1+1t, types 0+1t
+translation/providers: translation 10, types 0+1t
+types: translation 0+1t
+ui: app 13, catalog 3, ingest 1+1t, library 3, platform/http 2, shamela 1, translation 1+1t, types 0+3t, ui/reader 1
+ui/reader: app 31, biography 5+2t, components 6, dictionary 2+1t, lib 11, platform/storage 0+4t, qul 3, quran 4+1t, retrieval 5+1t, shamela 1, share 4, translation 15+1t, translation/offline 3, translation/providers 1, types 0+25t, ui 11
+ui/settings: app 21, biography 2, components 1, dictionary 1, lib 7, library 3, platform/storage 0+1t, qul 4, quran 2, retrieval 3, share 1, translation 6+1t, translation/offline 2, types 0+8t, ui 16
+ui/share: app 2, share 3+1t, ui 1, ui/reader 1
+
+== directory cycles (strongly connected components) ==
+{app, biography, catalog, dictionary, ingest, platform/storage, qul, quran, retrieval, shamela, translation, translation/providers, types}
+{ui, ui/reader}
+
+== directory pairs importing each other ==
+app ↔ catalog
+    app/AppContext.tsx → catalog/importBatch.ts
+    catalog/importBatch.ts → app/activity.ts
+    catalog/useCatalogImport.ts → app/AppContext.tsx
+app ↔ qul
+    app/AppContext.tsx → qul/seed.ts
+    qul/seed.ts → app/retrievalLog.ts
+app ↔ retrieval
+    app/AppContext.tsx → retrieval/quran.ts
+    retrieval/dorar.ts → app/retrievalLog.ts
+    retrieval/quran.ts → app/retrievalLog.ts
+    retrieval/sharh.ts → app/retrievalLog.ts
+biography ↔ platform/storage
+    biography/narratorService.ts → platform/storage/StorageAdapter.ts
+    biography/service.ts → platform/storage/StorageAdapter.ts
+    platform/storage/IdbStorageAdapter.ts → biography/narratorProfile.ts
+    platform/storage/StorageAdapter.ts → biography/narratorProfile.ts
+translation ↔ translation/providers
+    translation/providers/AnthropicProvider.ts → translation/TranslationProvider.ts
+    translation/providers/AnthropicProvider.ts → translation/models.ts
+    translation/providers/AnthropicProvider.ts → translation/parseSegments.ts
+    translation/providers/AnthropicProvider.ts → translation/prompt.ts
+    translation/providers/AnthropicProvider.ts → translation/schema.ts
+    translation/providers/GeminiProvider.ts → translation/TranslationProvider.ts
+    translation/providers/GeminiProvider.ts → translation/models.ts
+    translation/providers/GeminiProvider.ts → translation/parseSegments.ts
+    translation/providers/GeminiProvider.ts → translation/prompt.ts
+    translation/providers/GeminiProvider.ts → translation/schema.ts
+    translation/registry.ts → translation/providers/AnthropicProvider.ts
+    translation/registry.ts → translation/providers/GeminiProvider.ts
+translation ↔ types
+    translation/TranslationProvider.ts → types.ts
+    translation/coverage.ts → types.ts
+    translation/explain.ts → types.ts
+    translation/gloss.ts → types.ts
+    translation/hadithRange.ts → types.ts
+    translation/parseSegments.ts → types.ts
+    translation/profiles.ts → types.ts
+    translation/prompt.ts → types.ts
+    types.ts → translation/TranslationProvider.ts
+ui ↔ ui/reader
+    ui/reader/AnchoredPanel.tsx → ui/useLayoutMode.ts
+    ui/reader/BatchTranslateBar.tsx → ui/common.tsx
+    ui/reader/BiographySheet.tsx → ui/common.tsx
+    ui/reader/DictionarySheet.tsx → ui/common.tsx
+    ui/reader/EntitySheet.tsx → ui/common.tsx
+    ui/reader/ExplanationCardView.tsx → ui/common.tsx
+    ui/reader/ReaderScreen.tsx → ui/common.tsx
+    ui/reader/ReaderScreen.tsx → ui/useLayoutMode.ts
+    ui/reader/SearchPanel.tsx → ui/common.tsx
+    ui/reader/ShareChapter.tsx → ui/common.tsx
+    ui/reader/TranslationCardView.tsx → ui/common.tsx
+    ui/useLayoutMode.ts → ui/reader/SelectionRail.tsx
+
+== file-level cycles ==
+{translation/TranslationProvider.ts, types.ts}

@@ -10,6 +10,7 @@
     "stage": "node scripts/stage.mjs",
     "share:add": "node scripts/share-add.mjs",
     "typecheck": "tsc -b --noEmit",
+    "layers": "node scripts/check-layers.mjs",
     "verify": "vite build --ssr scripts/verify-parsers.ts --outDir .verify --logLevel warn && node .verify/verify-parsers.js",
     "verify:selection": "vite build --logLevel warn && node scripts/verify-selection.mjs",
     "verify:reader": "vite build --logLevel warn && node scripts/verify-reader-scroll.mjs",
