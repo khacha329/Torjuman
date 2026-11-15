@@ -527,7 +527,8 @@ fifteen answers as recommended**.
 | review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | `fe6065e` |
 | 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review PASS WITH NOTES | `c121141` |
 | review notes: fe6065e and 2b | applied | `18f2a5d` |
-| 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review pending | this commit |
+| 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review PASS WITH NOTES | `6e3bea2` |
+| review notes: 18f2a5d and 2c | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -627,6 +628,11 @@ holds)
   and `ui/reader → lib` already existed); rules hold. **U** PASS 160/160 — the
   Published chapters capture shows all three branches ("512 B", "300 KB",
   "2.5 MB"). V not owed (no module the verify script builds).
+
+- **Reviews of 18f2a5d and 2c: PASS WITH NOTES.** Applied: `lib/delay.ts` and
+  `lib/format.ts` headers re-wrapped (comments only); FOUND_ISSUES 8's
+  impossible "1,234 KB" example replaced by a real one ("1,000 KB" vs "1000
+  KB"), and a fifth format added (Offline translation's storage line).
 
 ## Open
 
