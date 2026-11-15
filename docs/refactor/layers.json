@@ -23,8 +23,8 @@
     },
     {
       "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share|catalog)",
-      "to": "(app|ui(/.*)?)",
-      "why": "domain code imports neither the composition root nor the UI (layer 2; Phase 1 steps 1e, 1f)"
+      "to": "(app|ui(/.*)?|components)",
+      "why": "domain code imports neither the composition root nor the UI, shared components included (layer 2; Phase 1 steps 1e, 1f, 1n)"
     },
     {
       "from": "ui",
@@ -38,13 +38,18 @@
     },
     {
       "from": "app",
-      "to": "ui(/.*)?",
-      "why": "the composition root does not import the UI (layer 3 below layer 4; Phase 1 step 1n)"
+      "to": "(ui(/.*)?|components)",
+      "why": "the composition root does not import the UI, shared components included (layer 3 below layer 4; Phase 1 step 1n)"
     },
     {
       "from": "components",
       "to": "(?!(lib|types)$).*",
       "why": "shared components import only lib and types (Phase 1 step 1n)"
+    },
+    {
+      "from": "(?!\\(root\\)$).*",
+      "to": "\\(root\\)",
+      "why": "nothing imports main.tsx or App.tsx (Phase 1 step 1n)"
     }
   ]
 }

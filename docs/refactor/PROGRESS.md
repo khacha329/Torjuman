@@ -78,7 +78,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1l. split out `types/cards.ts`, `types/qul.ts` | T B L pass; V owed; review PASS | `d2ce992` |
 | 1m. split out `types/persistence.ts`, `share.ts`, `biography.ts`, `settings.ts` | T B L pass; V owed; review PASS WITH NOTES | `8065948` |
 | review notes: 1m | applied | `495d497` |
-| 1n. `layers.json` complete; `npm run layers -- --check` in the deploy workflow | L pass; review pending | this commit |
+| 1n. `layers.json` complete; `npm run layers -- --check` in the deploy workflow | L pass; review PASS WITH NOTES | `e11cf04` |
+| review notes: 1n | applied | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -427,7 +428,7 @@ builds identical, exit 0; a one-character edit reported, exit 1.
 **Step 1n, measured 2026-11-15**
 - Two last rules, both already true: `app` imports no `ui`, `components`
   imports only `lib` and `types`. With the seven from 1a–1h, `layers.json`
-  holds 9 rules, one for each boundary in RESTRUCTURE §2 that holds today.
+  holds 9 rules (10 after the review notes below).
 - `deploy.yml`: a step "Check the layer rules" (`npm run layers -- --check`)
   after `npm ci`, before the build (owner's answer to Q3), with a comment
   saying what it guards. YAML parses (PyYAML and js-yaml).
@@ -438,6 +439,26 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   exists; the `types.ts` branch is kept on purpose, so the script still reads
   commits from before step 1i (as it did for the 1h edge comparison).
 - No source change; T, B, S, R not affected.
+
+- **Review of 495d497 (PASS) and 1n (PASS WITH NOTES).** The reviewer found
+  three boundaries that hold but had no rule, and that `--check` ignored a new
+  cycle among domain directories (e.g. `retrieval → quran`, while
+  `quran → retrieval` exists) — so "no cycles" was kept only where a rule
+  happened to cover it. Applied:
+  - the domain and `app` rules also forbid `components`; a new rule says
+    nothing imports `(root)` (`main.tsx`, `App.tsx`): 10 rules, all hold;
+  - `--check` now also fails on any directory or file-level cycle, and when
+    `layers.json` is missing (it passed silently before), and lists each
+    problem on stderr;
+  - the workflow comment says exactly that.
+  Negative tests, each undone afterwards: a temporary
+  `src/retrieval/zzNegativeTest.ts` importing `quran/quranIndex` → exit 1,
+  "directory cycle: {biography, quran, retrieval}"; `layers.json` moved away
+  → exit 1, "missing"; a temporary `ui → app` rule → exit 1, 13 problems
+  listed; a temporary `src/ui/zzNegativeTest.ts` importing `App` → exit 1,
+  a cycle and the new `(root)` rule. (Restoring after the third test with
+  `git checkout` also dropped the uncommitted rule edits; they were re-applied
+  and checked against the diff.)
 
 ## Open
 
