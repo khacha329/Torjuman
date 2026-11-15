@@ -41,7 +41,8 @@ owner runs it. Not a bug; recorded so the gap stays visible.
 
 Found by the Phase 0 review.
 
-- `translation/registry.ts:10` says it is "The only place outside the
+- `translation/registry.ts:10` (since Phase 1 step 1h
+  `translation/providers/registry.ts:7`) says it is "The only place outside the
   settings screen that names a provider". Not so: `app/AppContext.tsx`,
   `translation/profiles.ts`, `qul/compile.ts`, `ui/OnboardingScreen.tsx`,
   `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and

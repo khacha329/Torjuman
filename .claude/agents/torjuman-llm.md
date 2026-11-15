@@ -17,8 +17,10 @@ and the code disagree, say so — do not silently pick one.
 
 ## Where things are
 
-- `translation/TranslationProvider.ts` — the contract and `ProviderId`.
-- `translation/registry.ts` — providers available to the UI (offline is
+- `translation/TranslationProvider.ts` — the contract; `ProviderId`,
+  `CloudProviderId`, `TranslationUsage` are in `types/translation.ts`, and
+  `isCloudProvider` in `lib/providers.ts`.
+- `translation/providers/registry.ts` — providers available to the UI (offline is
   deliberately outside it; see its comment).
 - `translation/models.ts` — the only place model IDs, prices
   (`PRICES`, `cacheReadMultiplier`, `longContext`), output ceilings,
@@ -32,7 +34,8 @@ and the code disagree, say so — do not silently pick one.
 - `translation/explain.ts` (two-pass), `translation/gloss.ts`,
   `qul/compile.ts` — further Anthropic/Gemini call sites.
 - `translation/offline/` — transformers.js, dynamically imported.
-- `app/secrets.ts` — keys; `app/AppContext.tsx` — profile migration at load.
+- `services/secrets.ts` — keys; `app/AppContext.tsx` — profile migration at
+  load.
 
 Provider names are still hard-coded outside the registry (models.ts lists,
 secrets, Settings and Onboarding key fields, compile.ts). Until the Phase 3

@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 in progress on `claude/restructure-phase-1` — the import graph is acyclic since step 1h
+## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 done on `claude/restructure-phase-1`, awaiting the owner's `npm run verify` and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -79,7 +79,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1m. split out `types/persistence.ts`, `share.ts`, `biography.ts`, `settings.ts` | T B L pass; V owed; review PASS WITH NOTES | `8065948` |
 | review notes: 1m | applied | `495d497` |
 | 1n. `layers.json` complete; `npm run layers -- --check` in the deploy workflow | L pass; review PASS WITH NOTES | `e11cf04` |
-| review notes: 1n | applied | this commit |
+| review notes: 1n | applied | `566b84a` |
+| 1o. docs, maps, agents, stale path pointers; end-of-phase S R | T B L S R pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -459,6 +460,47 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   a cycle and the new `(root)` rule. (Restoring after the third test with
   `git checkout` also dropped the uncommitted rule edits; they were re-applied
   and checked against the diff.)
+
+**Step 1o, measured 2026-11-15**
+- Maps: CLAUDE.md and README now show `types/` (one file per area),
+  `services/` (secrets, retrieval log, activity), `app/` without them, and the
+  registry under `translation/providers/`. CLAUDE.md states the layer rules
+  `--check` enforces, and lists `compare-bundles.mjs` among the commands.
+- Pointers: CLAUDE.md's Never list and trap 2 (`services/secrets.ts`); README's
+  Capacitor note; the planner and llm agents (`types/translation.ts`,
+  `types/retrieval.ts`, `services/*`, `translation/providers/registry.ts`,
+  `lib/providers.ts`); RESTRUCTURE's status line, a note that §1 records the
+  starting point, T-a's examples (and the SSR build as the here-runnable half
+  of V), T-d, the book-kinds paragraph, the phase table; FOUND_ISSUES 4's
+  registry path.
+- Source comments, path pointers only: `types/settings.ts` ("see
+  services/secrets.ts", reflowed), `ui/reader/cardLayout.ts` ("in
+  types/reader.ts", reflowed), and one added sentence in `types/index.ts`'s
+  header saying the file declares nothing and re-exports the group files.
+- **T** exit 0. **B** exit 0; `compare-bundles` 1m → 1o: every JS file
+  identical (comments only). **S** PASS 30/30. **R** PASS 28/28, performance as
+  the baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904 DOM
+  nodes; 404 / 406 blocks; 0 long tasks). **L** `--check` exit 0, 10 rules.
+  The end-of-phase report is [`phase1/layers.txt`](phase1/layers.txt).
+
+## Phase 1 result
+
+| | Phase 0 (`56a412c`) | Phase 1 end |
+| --- | --- | --- |
+| directories in a cycle | 13 + 2 | **0** |
+| directory pairs importing each other | 7 | **0** |
+| file-level cycles | 1 | **0** |
+| layer rules, enforced in the deploy workflow | 0 | **10** |
+| largest types file | 899 lines (`types.ts`) | 197 (`types/cards.ts`) |
+| main JS chunk | 791,844 B | 791,838 B (−6, the 1g reorder) |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step's JavaScript was identical to the step before except 1a (a
+function moved to a new module, same size) and 1g (one module emitted earlier,
+−6 B, shown by the reviewer to be a pure reorder). Every step was reviewed
+before the next began. **Owed before merge: `npm run verify` on the owner's
+PC** (steps 1d, 1g and 1i–1m touch modules its script builds; here only its
+SSR build could run, and it resolved at every step).
 
 ## Open
 

@@ -24,7 +24,8 @@ its progress log.
 | `npm run verify` | ~5,500 lines of checks over real Shamela pages and QUL data | **owner's PC only** — needs the gitignored `fixtures/` and `qul/` |
 | `npm run verify:selection` | Playwright: touch selection across scrolling, 3 profiles | anywhere (Chromium is in the cloud container) |
 | `npm run verify:reader` | Playwright: every scroll-dependent reader feature | anywhere |
-| `npm run layers` | import graph by directory, cycles, layer rules | anywhere |
+| `npm run layers` | import graph by directory, cycles, layer rules (`-- --check` to fail on a break) | anywhere |
+| `node scripts/compare-bundles.mjs <a> <b>` | are two copies of `dist/assets` the same JS, build time and chunk hashes masked | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -41,7 +42,7 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   (see the comment at the top of `.gitignore` — `qul/` once excluded
   `src/qul/`); extension patterns like `*.pem` stay unanchored.
 - **Let an API key leave `localStorage`.** Keys live only behind
-  `app/secrets.ts`. Never in `AppSettings`, a backup, a log, the retrieval
+  `services/secrets.ts`. Never in `AppSettings`, a backup, a log, the retrieval
   log, an error message or a URL. The one exception is the whole-tablet
   transfer, and only when its "Include my API keys" box is ticked.
 - **Add a dependency** without the owner's OK. Name it, its size, and why the
@@ -98,9 +99,11 @@ change is in its area, and always closes a step with the reviewer.
 ```
 src/
   main.tsx, App.tsx    mount, PWA registration, route switch + onboarding gates
-  types.ts             the domain types (to be split, Phase 1)
-  app/                 composition root (AppContext), hash router, secrets,
-                       retrieval log, activity, PWA update, online state
+  types/               the domain types, one file per area; import `types`
+  app/                 composition root (AppContext), hash router, PWA update,
+                       online state, read-only context
+  services/            module singletons the lower layers share: API keys
+                       (secrets), retrieval log, activity
   platform/http/       HttpClient + WebHttpClient (proxy routing)
   platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
   lib/                 pure helpers: arabic, hash, id, saveFile, takhrij
@@ -112,9 +115,9 @@ src/
   biography/           narrator names, rijāl profiles (itqan, taqrīb)
   retrieval/           quran.com, sunnah.com, dorar.net, sharḥ, enrichment
   qul/                 Qurʾān Universal Library resources (seed, read, compile)
-  translation/         provider contract, registry, models, profiles, prompt,
-                       schema, parsing, Explain, gloss
-    providers/         AnthropicProvider, GeminiProvider
+  translation/         provider contract, models, profiles, prompt, schema,
+                       parsing, Explain, gloss
+    providers/         AnthropicProvider, GeminiProvider, the registry
     offline/           on-device model (transformers.js)
   library/             per-book transfer, whole-tablet transfer, relay, share target
   share/               encrypted shared chapters
@@ -125,6 +128,12 @@ scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 ```
 
 `npm run layers` prints the real dependency graph; trust it over this map.
+Since Phase 1 it has no cycle, and `npm run layers -- --check` (also run by
+the deploy workflow) fails on any cycle or any import the rules in
+`docs/refactor/layers.json` forbid: `lib`, `types` import nothing else;
+`platform`, `services`, `components` import only `lib` and `types`; domain
+directories import neither `app` nor the UI; `app` does not import the UI;
+nothing imports `main.tsx` or `App.tsx`.
 
 ## Traps
 
@@ -135,7 +144,8 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    deploy workflow's "source tree arrived intact" list names `src/`
    directories — a new top-level `src/` directory goes on that list (it
    missed `biography` and `share` until Phase 1: FOUND_ISSUES 1).
-2. **API keys** — see Never. `app/secrets.ts` is the only reader and writer.
+2. **API keys** — see Never. `services/secrets.ts` is the only reader and
+   writer.
 3. **Public repo** — see Never. Screenshots for a PR use the synthetic books
    the Playwright scripts build, not a real imported book.
 4. **Claude API.** Current models reject forced `tool_choice`; the code uses

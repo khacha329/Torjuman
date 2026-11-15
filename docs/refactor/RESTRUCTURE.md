@@ -1,7 +1,8 @@
 # Restructuring Ḥāshiya
 
-Status: Phase 0 (this document, the agents, the baselines) — awaiting the
-owner's review. Base commit `56a412c` (`main`, v0.6.14).
+Status: Phase 0 done (PR khacha329/Torjuman#8). Phase 1 done on
+`claude/restructure-phase-1`, awaiting the owner's `npm run verify` and
+merge. Base commit `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
 
@@ -9,7 +10,9 @@ The app works and is well documented, but adding a feature means touching
 places nobody would guess, and an upgrade (a model, a provider, a schema
 version) has to be threaded through files that should not know about it.
 Measured on `56a412c` by `npm run layers` (full output in
-[`phase0/layers.txt`](phase0/layers.txt)):
+[`phase0/layers.txt`](phase0/layers.txt)). This section records that starting
+point; the paths in it are as they were then. Phase 1 resolved the cycle and
+every misplaced file listed below — see [`PROGRESS.md`](PROGRESS.md):
 
 - **13 of the 24 directory units are one dependency cycle**: `app`,
   `biography`, `catalog`, `dictionary`, `ingest`, `platform/storage`, `qul`,
@@ -118,9 +121,12 @@ walks into:
 
 - **T-a. The scripts import `src/` by path** — about sixty modules across
   `scripts/verify-parsers.ts`, `build-catalog.ts` and `build-glossary.ts`,
-  `app/activity` and `ui/reader/SelectionRail` among them, some by dynamic
-  `await import(…)`. Moving one of them breaks `npm run verify`, which only runs on the
-  owner's PC; `tsc -b` will not notice. Grep `scripts/` on every move.
+  `services/activity` and `ui/useLayoutMode` among them (both moved there in
+  Phase 1), some by dynamic `await import(…)`. Moving one of them breaks
+  `npm run verify`, which only runs on the owner's PC; `tsc -b` will not
+  notice. Grep `scripts/` on every move; the SSR build half of
+  `npm run verify` (`vite build --ssr scripts/verify-parsers.ts`) runs here
+  and fails on an unresolved path.
 - **T-b. The deploy workflow lists `src/` directories by name.** A new
   top-level directory (`services/`, `types/`) is added to that list in the step
   that creates it. (`biography` and `share` were missing until Phase 1
@@ -128,9 +134,10 @@ walks into:
 - **T-c. Singletons.** `retrievalLog`, `activity` and `secrets` are module
   singletons. A copy left behind at the old path would make two of them;
   moves are whole-file moves with every importer updated, never a duplicate.
-- **T-d. `types.ts` is imported by nearly every file.** Splitting it goes
-  through a barrel (`types.ts` re-exporting from `types/*.ts`) first, so no
-  importer has to change in the same step.
+- **T-d. The types are imported by nearly every file.** Splitting them went
+  through a barrel (`types/index.ts` re-exporting `types/*.ts`, Phase 1 steps
+  1i–1m), so no importer changed; group files import each other, never the
+  barrel.
 - **T-e. `ShareStorageAdapter` implements the whole `StorageAdapter`.** Any
   interface reshuffle has to keep it compiling *and* keep its throw-on-write
   behaviour.
@@ -168,8 +175,8 @@ mechanical, high-payoff work first; the owner's data last but one.
 
 | Phase | What | Risk | Checks |
 | --- | --- | --- | --- |
-| **0** | `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
-| **1** | **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
+| **0** | **Done.** `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
+| **1** | **Done.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
 | **2** | **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the 16 settings sections on the shared shell | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Provider seams**: one Anthropic client and error mapping used by all four call sites; one Gemini call; provider descriptors in the registry (key field, placeholder, models, default) so Settings, Onboarding, secrets and models stop naming providers | medium: cache keys and requests must be byte-identical | T B L X; V (cache keys, `maxTokensFor`); a recorded-request check built first |
 | **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
@@ -182,7 +189,7 @@ The owner's next features add **kinds of book** unlike the ḥadīth collections
 the app was built around — first books of creed (ʿaqīdah) — with features of
 their own that must not switch on for other kinds, and ḥadīth features that
 need not switch on for creed books. Today the only seam for this is
-`StructureProfile` (`'generic' | 'hadith-commentary'`, in `types.ts`, used by
+`StructureProfile` (`'generic' | 'hadith-commentary'`, in `types/reader.ts`, used by
 the parsers and a few UI files), and ḥadīth assumptions (takhrīj, narrators,
 sharḥ, dorar) are wired into the reader directly.
 

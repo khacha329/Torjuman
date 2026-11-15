@@ -34,9 +34,10 @@ ID generation are written in plain JS for exactly this reason
 ```
 src/
   main.tsx, App.tsx  mount, PWA registration, route switch + onboarding gates
-  types.ts           the domain types
-  app/               composition root (AppContext), hash router, secrets,
-                     retrieval log, activity, PWA update, online state
+  types/             the domain types, one file per area; import `types`
+  app/               composition root (AppContext), hash router, PWA update,
+                     online state
+  services/          shared singletons: API keys, retrieval log, activity
   platform/          the two swap points for Capacitor
     http/            HttpClient interface + WebHttpClient (uses the proxy)
     storage/         StorageAdapter interface + IdbStorageAdapter
@@ -49,9 +50,9 @@ src/
   biography/         narrator names and rijāl profiles
   retrieval/         quran.com, sunnah.com, dorar.net, sharḥ, enrichment
   qul/               Qurʾān Universal Library resources
-  translation/       provider contract and registry, models, profiles,
-                     prompt, schema, parsing, Explain, word gloss
-    providers/       Anthropic, Gemini
+  translation/       provider contract, models, profiles, prompt, schema,
+                     parsing, Explain, word gloss
+    providers/       Anthropic, Gemini, and the registry of both
     offline/         the on-device model
   library/           moving a book or a whole tablet, the relay
   share/             encrypted shared chapters
@@ -175,7 +176,7 @@ enough for four screens and keeps the app working from a file path.
 Both keys live in `localStorage` (per the spec's web-phase allowance) and are
 deliberately excluded from `AppSettings`, so the backup JSON never carries a
 billable key. Under Capacitor they move to encrypted preferences; only
-`src/app/secrets.ts` changes.
+`src/services/secrets.ts` changes.
 
 ## The glossary sources
 

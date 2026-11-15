@@ -7,8 +7,9 @@ import type { ProviderId } from './translation';
 
 /**
  * Everything except the two API keys, which live in localStorage (see
- * app/secrets.ts). Keeping them out of this record keeps them out of the
- * backup file, which the user may well copy between devices or email himself.
+ * services/secrets.ts). Keeping them out of this record keeps them out of
+ * the backup file, which the user may well copy between devices or email
+ * himself.
  */
 export interface AppSettings {
   /**
