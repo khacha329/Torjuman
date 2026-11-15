@@ -4,7 +4,8 @@ import { parsePage } from '../shamela/parsePage';
 import { pageUrl } from '../shamela/urls';
 import { regenerateEntities } from '../quran/entityService';
 import { buildRootIndex } from '../dictionary/dictionaryService';
-import { delay, storePage, TocIndex } from './importer';
+import { storePage, TocIndex } from './importer';
+import { delay } from '../lib/delay';
 
 // Resumable page crawler.
 //

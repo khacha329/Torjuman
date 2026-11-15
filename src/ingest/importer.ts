@@ -7,6 +7,7 @@ import { detectBlockType } from '../shamela/structure';
 import { bookIdFor, bookUrl, pageUrl, tocChildrenUrl } from '../shamela/urls';
 import { normalize } from '../lib/arabic';
 import { sha256 } from '../lib/hash';
+import { delay } from '../lib/delay';
 import { hadithCollectionFor } from '../quran/detectEntities';
 import { MISBAH_SHAMELA_ID } from '../dictionary/dictionaryService';
 
@@ -292,8 +293,4 @@ export class TocIndex {
     }
     return found;
   }
-}
-
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

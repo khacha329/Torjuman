@@ -524,7 +524,8 @@ fifteen answers as recommended**.
 | --- | --- | --- |
 | 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review FAIL (harness wait) → fixed | `3b15ef3` |
 | review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; re-review PASS WITH NOTES | `c6d2998`, `c30e388`, `059266f` |
-| review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | this commit |
+| review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | `fe6065e` |
+| 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -592,6 +593,19 @@ holds)
   re-wrapped; FOUND_ISSUES 7 says "in the deployed build". Kept for later: the
   poll hard-codes `db.version === 11`, so Phase 4's schema work must update it
   (it fails loudly otherwise).
+
+**Step 2b, measured 2026-11-15**
+- `delay` moved verbatim from `ingest/importer.ts` (its last function) to the
+  new `lib/delay.ts`, with a three-line header (new text). `importer.ts`
+  imports it from there; `crawler.ts` takes it from `../lib/delay` instead of
+  `./importer` (its other two names stay); `GeminiProvider.ts` deletes its
+  identical private copy and imports it. No re-export left in `importer.ts`.
+  No script imports `delay`.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**
+  (`ingest/importer` is in it). **B** exit 0; main chunk 791,838 → 791,787 B
+  (−51, the second copy gone); `compare-bundles`: only `index.js` differs;
+  `index-*.css` byte-identical. **L**: 155 files, 128 edges, no cycles; rules
+  hold. **U** PASS 160/160.
 
 ## Open
 
