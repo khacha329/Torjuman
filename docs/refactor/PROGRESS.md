@@ -75,7 +75,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review PASS WITH NOTES | `8d71a48` |
 | review notes: 1j | applied | `ac7129e` |
 | 1k. split out `types/book.ts`, `types/catalog.ts` | T B L pass; V owed; review PASS | `415066c` |
-| 1l. split out `types/cards.ts`, `types/qul.ts` | T B L pass; V owed; review pending | this commit |
+| 1l. split out `types/cards.ts`, `types/qul.ts` | T B L pass; V owed; review PASS | `d2ce992` |
+| 1m. split out `types/persistence.ts`, `share.ts`, `biography.ts`, `settings.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -384,6 +385,31 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   the two `export *` lines.
 - **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
   exit 0; `compare-bundles` 1k → 1l: every JS file identical. **L**: 150 files,
+  128 edges, no cycles; rules hold.
+
+- **Review of 1l: PASS** (exact contiguous old line ranges; the QUL banner
+  belongs to the QUL group; nothing carried across a boundary).
+
+**Step 1m, measured 2026-11-15**
+- Same script: `types/persistence.ts` (CrawlState, ReadingPosition),
+  `types/share.ts` (ShareRecord), `types/biography.ts` (BiographyEntry and,
+  from 1b, the "Narrator profiles" pointer, FieldSource, SourcedValue,
+  ScholarStatement, NarratorProfile, StoredNarratorProfile),
+  `types/settings.ts` (AppSettings, importing PanelPosition, PanelScope,
+  HadithSourceId, ProviderId).
+- **Not verbatim in position, by the owner's decision:** the five-line comment
+  "Everything except the two API keys …" (FOUND_ISSUES 5), which sat between
+  `StoredNarratorProfile`'s predecessor and `BiographyEntry`'s own doc comment,
+  moves word for word from `biography.ts` to directly above `AppSettings` in
+  `settings.ts`, which had no doc comment of its own. Its text (including "two
+  API keys" and "app/secrets.ts") is unchanged.
+- `index.ts` is now its header comment and twelve `export *` lines: 18 lines,
+  from 899 in `types.ts` at Phase 0. The largest group file is `cards.ts`
+  (197 lines).
+- Line multiset: every old non-blank line present; new lines are the four
+  headers and the four `export *` lines.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
+  exit 0; `compare-bundles` 1l → 1m: every JS file identical. **L**: 154 files,
   128 edges, no cycles; rules hold.
 
 ## Open

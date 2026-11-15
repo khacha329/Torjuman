@@ -63,9 +63,10 @@ API keys … (see app/secrets.ts)" belongs to `AppSettings`, but sits before the
 next interface's doc comment (`BiographyEntry`), far from it — already so at
 `810b059`, before the restructure. It also says "two API keys", and README
 (~174) says "Both keys": `services/secrets.ts` holds three (Anthropic, Gemini,
-sunnah.com). Left as is: comments in unmoved code. Step 1m moves
-`AppSettings` into `types/settings.ts`; whether the comment goes with it is
-for the owner (Phase 1 end). Found by the 1e review.
+sunnah.com). Found by the 1e review. **Placement fixed in Phase 1 step 1m** by the owner's
+decision: the comment now sits directly above `AppSettings` in
+`types/settings.ts`, word for word. The "two API keys" wording (and README's
+"Both keys") is left for a later fix.
 
 Related, not a defect: since Phase 1 step 1e the key store is in layer 1,
 which every domain directory may import. "Only `secrets.ts` reads and writes
