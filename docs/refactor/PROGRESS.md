@@ -534,7 +534,8 @@ fifteen answers as recommended**.
 | review notes: 2e | applied | `0feb5ae` |
 | 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review PASS | `5e92294` |
 | 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review PASS WITH NOTES | `c5f4f6e`, `60f7ebe` |
-| 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review pending | this commit |
+| 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review PASS WITH NOTES | `c748f5d` |
+| review notes: 2h | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -748,6 +749,12 @@ holds)
   receive-fetching, device-transfer-exporting, device-transfer-relay,
   library-transfer-exporting, offline-downloading) render the same DOM and
   pixels. V not owed (no module the verify script builds).
+
+- **Review of 2h: PASS WITH NOTES**, nothing to fix in code. All seven width
+  expressions are numbers; a null `progress` gives 0 in both versions.
+  Applied: `ProgressBar.tsx`'s header says "seven bars on six screens" and
+  names the model download; FOUND_ISSUES 9 adds BatchTranslateBar's missing
+  zero-total guard.
 
 ## Open
 
