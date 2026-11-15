@@ -71,5 +71,5 @@ Related, not a defect: since Phase 1 step 1e the key store is in layer 1,
 which every domain directory may import. "Only `secrets.ts` reads and writes
 keys" still holds, but by convention; a `layers.json` rule could restrict
 which files import `services/secrets.ts` (today: `App.tsx`,
-`ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, five reader and
+`ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
 settings files). For the owner to decide.

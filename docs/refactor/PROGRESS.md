@@ -67,7 +67,7 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | review notes: 1d | applied | `45bedbb` |
 | 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review PASS WITH NOTES | `16e16a3` |
 | review notes: 1e | applied | `ce1aefa` |
-| 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review pending | this commit |
+| 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review PASS | `394c3ea` |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -225,6 +225,9 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   **4**; mutual pairs 3 → **2** (`app ↔ catalog` gone; left:
   `translation ↔ translation/providers` for 1h, `ui ↔ ui/reader` for 1g).
   Rules hold.
+
+- **Reviews of ce1aefa (PASS WITH NOTES: FOUND_ISSUES 5 said five files, it is
+  six — fixed) and 1f (PASS).**
 
 ## Open
 
