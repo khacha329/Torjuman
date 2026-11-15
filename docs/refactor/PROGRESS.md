@@ -531,7 +531,8 @@ fifteen answers as recommended**.
 | review notes: 18f2a5d and 2c | applied | `ede0a6e` |
 | 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review PASS | `93d0b9a` |
 | 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review PASS WITH NOTES | `2680fdd` |
-| review notes: 2e | applied | this commit |
+| review notes: 2e | applied | `0feb5ae` |
+| 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -685,6 +686,18 @@ holds)
   check M now includes exporting one book and importing it back. Plan text
   corrected: six call sites, not five; the helpers' types (recorded above)
   differ from §4's sketch.
+
+**Step 2f, measured 2026-11-15** (optional step, included by the owner's Q10)
+- `share/crypto.ts`'s `subtle()` gains `export` (adaptation (b));
+  `library/relayTransfer.ts` deletes its character-identical copy (under its
+  "crypto" banner, which stays) and imports `subtle` from `../share/crypto`.
+  `InsecureContextError` leaves the relay's import: only the deleted copy used
+  it there. The error the relay throws without WebCrypto is the same class
+  from the same module as before.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves (it imports the
+  relay, ~5343); **V owed**. **B** exit 0; main chunk 791,514 → 791,438 B (−76);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 129 edges
+  (`library → share` already existed); rules hold. **U** PASS 160/160.
 
 ## Open
 

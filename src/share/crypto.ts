@@ -89,7 +89,7 @@ export class InsecureContextError extends Error {
   }
 }
 
-function subtle(): SubtleCrypto {
+export function subtle(): SubtleCrypto {
   const available = globalThis.crypto?.subtle;
   if (!available) throw new InsecureContextError();
   return available;

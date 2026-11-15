@@ -1,4 +1,4 @@
-import { InsecureContextError, randomBytes } from '../share/crypto';
+import { randomBytes, subtle } from '../share/crypto';
 import { PROXY_URL } from '../platform/http/proxyUrl';
 
 // Moving a tablet through the proxy instead of through a saved file.
@@ -98,12 +98,6 @@ export function parseRelayCode(typed: string): string | null {
 }
 
 // ------------------------------------------------------------------ crypto
-
-function subtle(): SubtleCrypto {
-  const available = globalThis.crypto?.subtle;
-  if (!available) throw new InsecureContextError();
-  return available;
-}
 
 async function idFor(code: string): Promise<string> {
   const digest = await subtle().digest(
