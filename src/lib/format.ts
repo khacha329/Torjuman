@@ -11,8 +11,9 @@ export function formatBytes(bytes: number): string {
 
 /**
  * Whole percent of `done` out of `total`, and 0 when there is no total yet —
- * the guard every progress line needs while a job is still being sized. Six
- * screens wrote this expression out; restructure Phase 2 step 2i named it. The
+ * the guard a progress line needs while a job is still being sized. Six
+ * progress lines wrote this expression out; restructure Phase 2 step 2i named
+ * it. The
  * catalog row (capped at 99 until done) and the batch bar (no guard) compute
  * theirs differently and do not use it.
  */

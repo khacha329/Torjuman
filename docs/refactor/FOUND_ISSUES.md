@@ -137,7 +137,8 @@ markup (owner's answer to Phase 2 Q5):
   transition (`transition-[width] duration-300`). Its percentage (~65) also
   has no zero-total guard: `(done + failed) / total` with `total` 0 gives
   `NaN%`, where the other bars write 0. A batch always has at least one
-  selection, so it is not known to show.
+  block (`useBatchTranslate.ts` returns early on an empty range), so it is not
+  known to show.
 
 Left as is; making them match would change what the owner sees. Found in
 Phase 2 planning.

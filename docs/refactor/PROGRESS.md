@@ -536,7 +536,8 @@ fifteen answers as recommended**.
 | 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review PASS WITH NOTES | `c5f4f6e`, `60f7ebe` |
 | 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review PASS WITH NOTES | `c748f5d` |
 | review notes: 2h | applied | `3db8af1` |
-| 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review pending | this commit |
+| 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review PASS WITH NOTES | `4f9ff79` |
+| review notes: 3db8af1 and 2i | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -771,6 +772,12 @@ holds)
   `ui → lib`: the top-level screens had not imported `lib` before; allowed);
   no cycles; rules hold. **U** PASS 160/160 (the library's "Import incomplete —
   40%", the crawl panel's 40%, every bar width).
+
+- **Reviews of 3db8af1 and 2i: PASS WITH NOTES**, nothing to fix in code. The
+  Receive rewrite gives the same value for every input (`progress` is an
+  object or null). Applied: `ProgressBar.tsx` header re-wrapped;
+  `percentOf`'s comment says "six progress lines" and "a progress line";
+  FOUND_ISSUES 9 says "at least one block". Comments and docs only.
 
 ## Open
 
