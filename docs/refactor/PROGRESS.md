@@ -70,7 +70,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review PASS | `394c3ea` |
 | review notes: ce1aefa and 1f | applied | `cf5f8c0` |
 | 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review PASS WITH NOTES | `89f6784` |
-| 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review pending | this commit |
+| 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review PASS WITH NOTES | `ef2e930` |
+| 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -281,6 +282,25 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   `translation/providers → lib`), −2 (`translation → translation/providers`,
   `ui → translation`): 126 → 128. **Directories in a cycle 0, mutual pairs 0,
   file-level cycles 0** — the phase's goal. 7 rules hold.
+
+- **Review of 1h: PASS WITH NOTES**, nothing to fix. The registry builds both
+  providers at load; neither has a constructor or module-level side effect,
+  and the identical bundle shows evaluation order unchanged. Note applied: 1o
+  also updates FOUND_ISSUES 4's path to the registry.
+
+**Step 1i, measured 2026-11-15**
+- `git mv src/types.ts src/types/index.ts` and nothing else in source: the
+  88 files that import `…/types` resolve it to the directory's `index.ts`
+  (`moduleResolution: "bundler"`, and Vite's resolver). No script or config
+  names `types.ts`. `scripts/check-layers.mjs` still maps the file to the unit
+  `types` (first path segment); its special case for a root `types.ts` is now
+  unused but harmless.
+- `deploy.yml`'s source-tree list gains `types` (trap T-b); it matches
+  `ls src` exactly.
+- **T** exit 0. The SSR build of `scripts/verify-parsers.ts` resolves (exit 0);
+  **V owed** (the script's modules import `types`). **B** exit 0;
+  `compare-bundles` 1h → 1i: every JS file identical. **L**: unchanged (142
+  files, 128 edges, no cycles); rules hold.
 
 ## Open
 

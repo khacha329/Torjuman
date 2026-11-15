@@ -56,7 +56,7 @@ jobs:
           missing=0
           for dir in app biography catalog components dictionary ingest lib \
                      library platform qul quran retrieval services shamela \
-                     share translation ui; do
+                     share translation types ui; do
             if [ ! -d "src/$dir" ]; then
               echo "::error::src/$dir is missing from the repository."
               missing=1
