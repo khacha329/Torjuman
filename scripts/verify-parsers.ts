@@ -2817,7 +2817,7 @@ console.log('\n=== Book 21812 parses as a hadith commentary ===');
 console.log('\n=== Update prompt and activity gating ===');
 
 {
-  const { beginActivity, isBusy } = await import('../src/app/activity');
+  const { beginActivity, isBusy } = await import('../src/services/activity');
 
   check('idle to begin with', isBusy(), false);
   const endImport = beginActivity();
@@ -2843,7 +2843,7 @@ console.log('\n=== Update prompt and activity gating ===');
   check('  back to idle', isBusy(), false);
 
   // Subscribers see transitions, which is what releases a queued update notice.
-  const { subscribeActivity } = await import('../src/app/activity');
+  const { subscribeActivity } = await import('../src/services/activity');
   const seen: boolean[] = [];
   const off = subscribeActivity((busy) => seen.push(busy));
   check('subscribing reports the current state at once', seen, [false]);

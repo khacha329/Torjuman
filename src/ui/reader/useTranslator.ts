@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { beginActivity } from '../../app/activity';
+import { beginActivity } from '../../services/activity';
 import { coverageOf } from '../../translation/coverage';
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../app/secrets';

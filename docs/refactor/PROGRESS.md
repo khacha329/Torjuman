@@ -62,7 +62,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1b. Narrator profile types → `types.ts` | T B L pass; review FAIL (import order) → fixed in the review-notes commit | `6a99c2e` |
 | review notes: harness and 1b | applied | `7ca8087` |
 | 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review PASS WITH NOTES | `902758d` |
-| review notes: 7ca8087 and 1c | applied | this commit |
+| review notes: 7ca8087 and 1c | applied | `fd6c5e4`, `0a2d1a1` |
+| 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -156,6 +157,21 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   rule correctly; FOUND_ISSUES 1 reflowed; CLAUDE.md trap 1 and RESTRUCTURE
   T-b no longer say `biography`/`share` are missing; plan step 1o names the
   planner agent and RESTRUCTURE §1's pointers.
+
+**Step 1d, measured 2026-11-15**
+- `git mv src/app/activity.ts src/services/activity.ts`, byte-identical (it
+  imports nothing). Importers, specifier only: `catalog/importBatch.ts`,
+  `ui/reader/useBatchTranslate.ts`, `ui/reader/useTranslator.ts`,
+  `app/pwaUpdate.ts` (`./activity` → `../services/activity`), and
+  **`scripts/verify-parsers.ts:2820, 2846`** (two dynamic imports).
+- The script is not typechecked and cannot run here, but its SSR build
+  (`vite build --ssr scripts/verify-parsers.ts`, the first half of
+  `npm run verify`) resolves and inlines both dynamic imports: exit 0. **V is
+  owed** to run the checks themselves.
+- **T** exit 0. **B** exit 0; `compare-bundles` 1c → 1d: every JS file
+  identical. **L**: 125 edges (+3: `app`, `catalog`, `ui/reader` → `services`;
+  `catalog → app` stays until 1f); directories in a cycle 6; mutual pairs 3.
+  Rules hold.
 
 ## Open
 
