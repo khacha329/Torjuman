@@ -68,6 +68,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review PASS WITH NOTES | `16e16a3` |
 | review notes: 1e | applied | `ce1aefa` |
 | 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review PASS | `394c3ea` |
+| review notes: ce1aefa and 1f | applied | `cf5f8c0` |
+| 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -228,6 +230,31 @@ builds identical, exit 0; a one-character edit reported, exit 1.
 
 - **Reviews of ce1aefa (PASS WITH NOTES: FOUND_ISSUES 5 said five files, it is
   six — fixed) and 1f (PASS).**
+
+**Step 1g, measured 2026-11-15**
+- `RAIL_WIDTH` and its one-line doc comment move verbatim from
+  `ui/reader/SelectionRail.tsx` to `ui/useLayoutMode.ts`, placed first among
+  the layout constants it is summed with. The rail's long header comment
+  (why the rail's width is reserved) stays in `SelectionRail.tsx`, which is
+  about the rail.
+- Importers: `useLayoutMode.ts` drops its import of `./reader/SelectionRail`;
+  `SelectionRail.tsx` gains `import { RAIL_WIDTH } from '../useLayoutMode'`
+  (after its existing imports); `ReaderScreen.tsx` takes `RAIL_WIDTH` from its
+  existing `../useLayoutMode` import (appended, not re-sorted) and keeps
+  `SelectionRail` from `./SelectionRail`; **`scripts/verify-parsers.ts:5472`**
+  imports it from `../src/ui/useLayoutMode`. The SSR build of the script
+  resolves (exit 0); **V owed**.
+- **B is not identical, as expected**: `SelectionRail` now imports
+  `useLayoutMode`, so `useLayoutMode`'s constants are emitted (and evaluated)
+  before the rail's component instead of after. Main chunk 791,844 → 791,838 B
+  (−6). `useLayoutMode` has no side effects at load (constants, a query
+  string, hooks). Dynamic chunks identical.
+- **T** exit 0. **S** PASS 30/30. **R** PASS 28/28; performance unchanged from
+  the baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904
+  DOM nodes; 404 / 406 blocks mounted; 0 long tasks). **L**: 126 edges;
+  directories in a cycle 4 → **2**; mutual pairs 2 → **1**
+  (`translation ↔ translation/providers`, for 1h). Rule added: `ui` imports no
+  `ui/.+`. All hold.
 
 ## Open
 

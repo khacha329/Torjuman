@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useReadOnly } from '../../app/readOnly';
+import { RAIL_WIDTH } from '../useLayoutMode';
 
 // Actions for the current selection, in a vertical rail on the left edge.
 //
@@ -30,9 +31,6 @@ import { useReadOnly } from '../../app/readOnly';
 // eventual Capacitor build can override `startActionMode` and suppress the
 // system chip entirely — at which point the rail stays, because it is better.
 // ---------------------------------------------------------------------------
-
-/** Comfortable on a tablet with an S Pen, and above the 44px floor. */
-export const RAIL_WIDTH = 52;
 
 export interface SelectionRailProps {
   /** True when the selection is exactly one word — enables the word actions. */

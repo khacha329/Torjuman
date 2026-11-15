@@ -5469,7 +5469,7 @@ console.log('\n=== The card panel sits beside the text whenever both fit ===');
 
 {
   const layout = await import('../src/ui/useLayoutMode');
-  const { RAIL_WIDTH } = await import('../src/ui/reader/SelectionRail');
+  const { RAIL_WIDTH } = await import('../src/ui/useLayoutMode');
 
   check(
     'the side-by-side threshold is the sum of what has to fit',

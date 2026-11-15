@@ -25,6 +25,11 @@
       "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share|catalog)",
       "to": "(app|ui(/.*)?)",
       "why": "domain code imports neither the composition root nor the UI (layer 2; Phase 1 steps 1e, 1f)"
+    },
+    {
+      "from": "ui",
+      "to": "ui/.+",
+      "why": "top-level ui (screens, shared hooks) does not reach into a screen's folder (Phase 1 step 1g)"
     }
   ]
 }
