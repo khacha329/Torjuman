@@ -13,9 +13,8 @@ export function formatBytes(bytes: number): string {
  * Whole percent of `done` out of `total`, and 0 when there is no total yet —
  * the guard a progress line needs while a job is still being sized. Six
  * progress lines wrote this expression out; restructure Phase 2 step 2i named
- * it. The
- * catalog row (capped at 99 until done) and the batch bar (no guard) compute
- * theirs differently and do not use it.
+ * it. The catalog row (capped at 99 until done) and the batch bar (no guard)
+ * compute theirs differently and do not use it.
  */
 export function percentOf(done: number, total: number): number {
   return total > 0 ? Math.round((done / total) * 100) : 0;

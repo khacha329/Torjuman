@@ -105,10 +105,12 @@ src/
                        online state, read-only context
   services/            module singletons the lower layers share: API keys
                        (secrets), retrieval log, activity
-  platform/http/       HttpClient + WebHttpClient (proxy routing)
+  platform/http/       HttpClient + WebHttpClient (proxy routing), proxyUrl (the
+                       Worker's URL, shared with the relay)
   platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
   lib/                 pure helpers: arabic, hash, id, saveFile, takhrij,
-                       providers (isCloudProvider)
+                       providers (isCloudProvider), delay, format
+                       (formatBytes, percentOf), gzip
   components/          BidiText
   shamela/             HTML parsers for shamela.ws pages
   ingest/              book import + resumable crawler
@@ -125,19 +127,23 @@ src/
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
   ui/                  screens; reader/ and settings/ hold most of the UI
+    kit/               shared pieces: Button, Field, TopBar, Spinner, …,
+                       ProgressBar, SettingsSection — import `../kit`
 proxy/                 Cloudflare Worker: CORS proxy + transfer relay (KV)
 scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 ```
 
 `npm run layers` prints the real dependency graph; trust it over this map.
 Since Phase 1 it has no cycle, and `npm run layers -- --check` (also run by
-the deploy workflow) fails on any cycle or any import the ten rules in
+the deploy workflow) fails on any cycle or any import the eleven rules in
 `docs/refactor/layers.json` forbid: `types` imports nothing and `lib` only
 `types`; `platform`, `services` and `components` import only `lib` and
 `types`; domain directories import neither `app` nor the UI (`components`
 included); `app` does not import the UI; top-level `ui` does not reach into a
-screen folder (`ui/reader` …); the translation core does not import its
-providers; and nothing outside the root imports `main.tsx` or `App.tsx`.
+screen folder (`ui/reader` …) except the shared `ui/kit`, which itself imports
+only `app` (the router), `lib` and `types`; the translation core does not
+import its providers; and nothing outside the root imports `main.tsx` or
+`App.tsx`.
 
 ## Traps
 

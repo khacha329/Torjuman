@@ -1,8 +1,8 @@
 # Restructuring Ḥāshiya
 
-Status: Phase 0 in PR khacha329/Torjuman#8 and Phase 1 on
-`claude/restructure-phase-1`, both complete and awaiting the owner's
-`npm run verify` and merge. Base commit `56a412c` (`main`, v0.6.14).
+Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9 and Phase 2 on
+`claude/restructure-phase-2`, all complete and awaiting the owner's
+`npm run verify`, the tablet check after Phase 2, and merge. Base commit `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
 
@@ -39,8 +39,9 @@ every misplaced file listed below — see [`PROGRESS.md`](PROGRESS.md):
   client and its error mapping are built four times (`AnthropicProvider`,
   `explain.ts`, `gloss.ts`, `qul/compile.ts`), Gemini's twice.
 - **Repeated pieces**: gzip in three places, the progress bar nine times, the
-  settings-section shell in all 16 sections, `delay` twice, a byte formatter four times (`formatBytes` ×2,
-  `sizeOf`, `mb`), the proxy base URL computed twice.
+  settings-section shell in fifteen places serving all 21 sections, `delay`
+  twice, byte sizes formatted five ways (only two of them alike), the proxy
+  base URL computed twice. (Counts corrected in Phase 2 planning.)
 - **Thirteen files over 450 lines**, the biggest carrying several jobs each:
   `ReaderScreen.tsx` (1,348), `IdbStorageAdapter.ts` (1,059), `types.ts`
   (899), `EntitySheet.tsx` (756), `BlockList.tsx` (728), `SettingsScreen.tsx`
@@ -178,7 +179,7 @@ mechanical, high-payoff work first; the owner's data last but one.
 | --- | --- | --- | --- |
 | **0** | **Complete (PR #8).** `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
 | **1** | **Complete.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
-| **2** | **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the 16 settings sections on the shared shell | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
+| **2** | **Complete.** **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the settings sections on the shared shell (21 sections, 15 shells) | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Provider seams**: one Anthropic client and error mapping used by all four call sites; one Gemini call; provider descriptors in the registry (key field, placeholder, models, default) so Settings, Onboarding, secrets and models stop naming providers | medium: cache keys and requests must be byte-identical | T B L X; V (cache keys, `maxTokensFor`); a recorded-request check built first |
 | **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
 | **5** | **Big UI files**: `ReaderScreen` into hooks (position, navigation, panel divider, gloss) and parts (header, sheets host); `EntitySheet` into `QuranSheet`, `CompileTab`, `HadithSheet`; `SettingsScreen` inline sections into files; `BlockList` estimates and `settleOn` into a module; `useTranslator` steps into named functions | medium: the reader is the app | S R on every step; T B L X; screenshots; M |

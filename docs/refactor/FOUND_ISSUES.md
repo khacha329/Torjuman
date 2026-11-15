@@ -142,3 +142,22 @@ markup (owner's answer to Phase 2 Q5):
 
 Left as is; making them match would change what the owner sees. Found in
 Phase 2 planning.
+
+## 10. Duplicates left for later (2026-11-15, by the owner's answer to Phase 2 Q10)
+
+Found while planning Phase 2, real duplicates but deferred:
+
+- `parseHtml` — `shamela/parsePage.ts` (~58) and `shamela/parseBook.ts` (~54),
+  identical; in the parsers `npm run verify` covers most heavily, so moved
+  only with V in hand.
+- `pageIndexOf` — `ui/reader/BlockList.tsx` (~134) and
+  `share/buildBundle.ts` (~84), identical; it parses block ids and belongs
+  with `blockIdFor` in `ingest/importer.ts`, a larger question.
+- `toLine` — `library/transfer.ts` (~85) and `library/deviceTransfer.ts`
+  (~398), the same body with different parameter types and comments.
+- The plain card shell in `ui/ReceiveTransferScreen.tsx` (four places), like
+  the settings shell but without `dir`/`ltr-isolate`.
+- `title`/`description` props on `SettingsSection` (Phase 2 step 2j′, owner's
+  Q3: not now).
+
+Not duplicates: the nine red error boxes, which all differ.
