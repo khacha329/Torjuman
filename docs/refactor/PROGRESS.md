@@ -532,7 +532,8 @@ fifteen answers as recommended**.
 | 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review PASS | `93d0b9a` |
 | 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review PASS WITH NOTES | `2680fdd` |
 | review notes: 2e | applied | `0feb5ae` |
-| 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review pending | this commit |
+| 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review PASS | `5e92294` |
+| 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review pending | `c5f4f6e` |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -698,6 +699,29 @@ holds)
   relay, ~5343); **V owed**. **B** exit 0; main chunk 791,514 → 791,438 B (−76);
   `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 129 edges
   (`library → share` already existed); rules hold. **U** PASS 160/160.
+
+- **Reviews of 0feb5ae and 2f: both PASS.**
+
+**Step 2g, measured 2026-11-15**
+- `git mv src/ui/common.tsx src/ui/kit/index.tsx`; its router import becomes
+  `../../app/router` (adaptation (a)); a header comment added (the plan names
+  it). The 30 importers change only `…/common` → `…/kit`. No script imports
+  it.
+- Layer rules: rule "top-level ui does not reach into a screen's folder" now
+  reads `ui/(?!kit$).+`; new rule: `ui/kit` imports only `app`, `lib`,
+  `types`. Before the rule change the old rule fired on the six top-level
+  screens, as the plan foresaw. **Negative tests**, each undone: a temporary
+  `ui/kit/zzNegativeTest.ts` importing `ui/reader/selection` → exit 1 (the new
+  rule and a `{ui, ui/kit, ui/reader}` cycle); a temporary rule forbidding
+  `ui → ui/kit` → exit 1, 6 problems (the six screens); `layers.json`
+  restored byte for byte.
+- **T** exit 0. **B** exit 0; main chunk 791,438 B, **unchanged**, and
+  `compare-bundles`: every file identical (a pure rename emits the same JS);
+  CSS byte-identical. SSR build resolves. **L**: 133 edges (129 + 5 − 1; the
+  plan's "132" was counted before 2d's edge), no cycles; 11 rules hold.
+  **U** PASS 160/160. **S** PASS 30/30. **R** PASS 28/28, performance as the
+  baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904 DOM
+  nodes; 0 long tasks).
 
 ## Open
 
