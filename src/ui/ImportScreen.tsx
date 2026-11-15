@@ -6,6 +6,7 @@ import { parseBookInput } from '../shamela/urls';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
 import { Button, Field, inputClass, LinkButton, Spinner, TopBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
+import { percentOf } from '../lib/format';
 
 /** The three roles a book can be imported into, and how they are described. */
 const ROLES: [role: 'reading' | 'dictionary' | 'reference', label: string][] = [
@@ -265,10 +266,7 @@ function CrawlPanel({ bookId }: { bookId: string }) {
     );
   }
 
-  const percent =
-    progress.totalPages > 0
-      ? Math.round((progress.fetchedPages / progress.totalPages) * 100)
-      : 0;
+  const percent = percentOf(progress.fetchedPages, progress.totalPages);
   const remaining = Math.max(0, progress.totalPages - progress.fetchedPages);
   const minutesLeft = Math.round((remaining * 0.9) / 60);
   const done = progress.status === 'complete';

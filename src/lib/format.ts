@@ -8,3 +8,14 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * Whole percent of `done` out of `total`, and 0 when there is no total yet —
+ * the guard every progress line needs while a job is still being sized. Six
+ * screens wrote this expression out; restructure Phase 2 step 2i named it. The
+ * catalog row (capped at 99 until done) and the batch bar (no guard) compute
+ * theirs differently and do not use it.
+ */
+export function percentOf(done: number, total: number): number {
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+}

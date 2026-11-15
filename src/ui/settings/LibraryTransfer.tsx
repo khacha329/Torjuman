@@ -10,6 +10,7 @@ import {
 import type { Book } from '../../types';
 import { saveFile } from '../../lib/saveFile';
 import { Button, ProgressBar } from '../kit';
+import { percentOf } from '../../lib/format';
 
 // Moving crawled books between the user's own devices.
 //
@@ -106,7 +107,7 @@ export function LibraryTransfer() {
         <div className="mb-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{progress.message}</p>
           <ProgressBar
-            percent={progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}
+            percent={percentOf(progress.done, progress.total)}
           />
         </div>
       )}

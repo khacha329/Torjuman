@@ -17,6 +17,7 @@ import {
   type RelayProgress,
 } from '../library/relayTransfer';
 import { Button, inputClass, TopBar, ProgressBar } from './kit';
+import { percentOf } from '../lib/format';
 
 // The receiving half of moving to another tablet.
 //
@@ -218,7 +219,7 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
             </p>
             <p className="mb-2 text-xs text-muted">{progress?.message ?? 'Starting…'}</p>
             <ProgressBar
-              percent={progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}
+              percent={progress ? percentOf(progress.done, progress.total) : 0}
             />
           </section>
         )}

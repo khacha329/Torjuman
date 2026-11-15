@@ -10,6 +10,7 @@ import {
   type RelayProgress,
 } from '../../library/relayTransfer';
 import { Button, ProgressBar } from '../kit';
+import { percentOf } from '../../lib/format';
 
 // The sending half of moving to another tablet: everything on this one, as a
 // single file, saved to Downloads or sent through the proxy. The receiving
@@ -156,7 +157,7 @@ export function DeviceTransfer() {
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{progress.message}</p>
           <ProgressBar
-            percent={progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}
+            percent={percentOf(progress.done, progress.total)}
           />
         </div>
       )}
@@ -165,7 +166,7 @@ export function DeviceTransfer() {
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{relayProgress.message}</p>
           <ProgressBar
-            percent={relayProgress.total > 0 ? Math.round((relayProgress.done / relayProgress.total) * 100) : 0}
+            percent={percentOf(relayProgress.done, relayProgress.total)}
           />
         </div>
       )}

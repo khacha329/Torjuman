@@ -535,7 +535,8 @@ fifteen answers as recommended**.
 | 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review PASS | `5e92294` |
 | 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review PASS WITH NOTES | `c5f4f6e`, `60f7ebe` |
 | 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review PASS WITH NOTES | `c748f5d` |
-| review notes: 2h | applied | this commit |
+| review notes: 2h | applied | `3db8af1` |
+| 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -755,6 +756,21 @@ holds)
   Applied: `ProgressBar.tsx`'s header says "seven bars on six screens" and
   names the model download; FOUND_ISSUES 9 adds BatchTranslateBar's missing
   zero-total guard.
+
+**Step 2i, measured 2026-11-15** (optional step, included by the owner's Q10)
+- `percentOf(done, total)` added to `lib/format.ts`:
+  `total > 0 ? Math.round((done / total) * 100) : 0`, with a doc comment.
+  Six sites now call it: `LibraryScreen` (book pages), `ImportScreen` (crawl
+  pages), `ReceiveTransferScreen` (`progress && …` became
+  `progress ? percentOf(…) : 0`, the same value for every input),
+  `DeviceTransfer` ×2, `LibraryTransfer`. `CatalogScreen` (capped at 99) and
+  `BatchTranslateBar` (no guard) compute theirs differently and stay. Each file
+  gains one import line after its imports.
+- **T** exit 0. **B** exit 0; main chunk 790,661 → 790,558 B (−103);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 134 edges (+1,
+  `ui → lib`: the top-level screens had not imported `lib` before; allowed);
+  no cycles; rules hold. **U** PASS 160/160 (the library's "Import incomplete —
+  40%", the crawl panel's 40%, every bar width).
 
 ## Open
 

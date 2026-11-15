@@ -5,6 +5,7 @@ import type { Book } from '../types';
 import { Button, LinkButton, Spinner, TopBar, ProgressBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 import { useCatalogImport } from './useCatalogImport';
+import { percentOf } from '../lib/format';
 
 export function LibraryScreen() {
   const { storage, crawler } = useApp();
@@ -115,10 +116,7 @@ export function LibraryScreen() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {books?.map((book) => {
             const isCrawling = progress?.bookId === book.id && progress.status === 'running';
-            const percent =
-              book.totalPages > 0
-                ? Math.round((book.fetchedPages / book.totalPages) * 100)
-                : 0;
+            const percent = percentOf(book.fetchedPages, book.totalPages);
 
             return (
               <div
