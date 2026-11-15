@@ -1,6 +1,6 @@
 import { normalize } from '../lib/arabic';
 import { surahName } from '../shamela/quranRefs';
-import { recordRetrieval } from '../app/retrievalLog';
+import { recordRetrieval } from '../services/retrievalLog';
 
 /**
  * The fold used for matching a quotation against the muṣḥaf.

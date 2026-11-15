@@ -12,8 +12,8 @@ dictionary ingest lib library platform qul quran retrieval shamela translation
 ui`. `src/biography/` and `src/share/` exist and are imported, but are not on
 the list, so a `.gitignore` accident that dropped either would surface as
 cryptic compiler errors — exactly what the check was written to prevent. The
-build itself is unaffected. Phase 1 asks (Q4) whether to add them when it adds
-`core`. Left as is. Found by the Phase 0 survey.
+build itself is unaffected. Found by the Phase 0 survey. **Fixed in Phase 1 step 1c** (owner's answer to
+Q4), when the list gained `services`.
 
 ## 2. README "How it fits together" was stale (2026-11-15, fixed in Phase 0)
 

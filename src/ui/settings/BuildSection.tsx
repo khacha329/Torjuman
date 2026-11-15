@@ -6,7 +6,7 @@ import {
   OFFLINE_DTYPE,
 } from '../../translation/offline/OfflineProvider';
 import { Button } from '../common';
-import { formatRetrievalLog } from '../../app/retrievalLog';
+import { formatRetrievalLog } from '../../services/retrievalLog';
 import { describeLayout } from '../useLayoutMode';
 
 // Which build is this, and what state is it in.

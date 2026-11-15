@@ -7,7 +7,7 @@ import {
   type BiographyIndexResult,
 } from './buildIndex';
 import { lookupBiography, type BiographyLookup } from './lookup';
-import { recordRetrieval } from '../app/retrievalLog';
+import { recordRetrieval } from '../services/retrievalLog';
 
 // Wiring the biographical index to storage.
 //

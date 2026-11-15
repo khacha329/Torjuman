@@ -60,6 +60,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1a. Provider-id types → `types.ts`; `isCloudProvider` → `lib/providers.ts` | T B L pass; review PASS WITH NOTES | `19a4267` |
 | harness: `scripts/compare-bundles.mjs` (check B, identical JS) | baselined on `19a4267` | `04604c9` |
 | 1b. Narrator profile types → `types.ts` | T B L pass; review FAIL (import order) → fixed in the review-notes commit | `6a99c2e` |
+| review notes: harness and 1b | applied | `7ca8087` |
+| 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -128,6 +130,25 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   `narratorProfile.ts` "builds them" (`taqrib.ts`/`itqan.ts` parse them); the
   plan's wording follows RESTRUCTURE ("identical JS" via compare-bundles), and
   Q1's text is restored to what was asked.
+
+**Step 1c, measured 2026-11-15**
+- `git mv src/app/retrievalLog.ts src/services/retrievalLog.ts`; the file is
+  byte-identical (it imports nothing). Nine importers: the specifier changes
+  from `…/app/retrievalLog` to `…/services/retrievalLog` and nothing else —
+  `biography/service.ts`, `narratorService.ts`, `retrieval/sharh.ts`,
+  `dorar.ts`, `quran.ts`, `qul/seed.ts`, `quran/quranIndex.ts`,
+  `ui/settings/RetrievalSection.tsx`, `BuildSection.tsx`. No script imports it.
+- `deploy.yml`, "Check the source tree arrived intact": the list gains
+  `services` (trap T-b) and `biography`, `share` (Q4, FOUND_ISSUES 1). Checked
+  with `bash -n` on the step's script and against `ls src`: every listed
+  directory exists, and every directory under `src/` is listed.
+- Left for 1o: `.claude/agents/torjuman-planner.md` and the maps in CLAUDE.md
+  and README still say `app/` holds the retrieval log.
+- **T** exit 0. **B** exit 0; `compare-bundles` 7ca8087 → 1c: every JS file
+  identical. **L**: 122 edges; directories in a cycle 11 → **6**; mutual pairs
+  5 → **3** (`app ↔ qul`, `app ↔ retrieval` gone). Rules hold. (The
+  `services` rule is added in 1e, when `secrets` has arrived, as the plan
+  says.)
 
 ## Open
 

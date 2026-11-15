@@ -7,7 +7,7 @@ import {
   type RetrievalKind,
   type RetrievalOutcome,
   type RetrievalRecord,
-} from '../../app/retrievalLog';
+} from '../../services/retrievalLog';
 import { Button } from '../common';
 
 // What retrieval did, on the device it did it on.

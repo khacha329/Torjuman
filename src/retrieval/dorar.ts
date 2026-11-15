@@ -2,7 +2,7 @@ import { normalize } from '../lib/arabic';
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { HadithAttribution } from '../types';
 import { narratorMatches } from './narrator';
-import { recordRetrieval, type RetrievalOutcome } from '../app/retrievalLog';
+import { recordRetrieval, type RetrievalOutcome } from '../services/retrievalLog';
 
 // dorar.net — grading and takhrīj, and nothing else.
 //

@@ -1,7 +1,7 @@
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { QuranVerse } from '../types';
-import { recordRetrieval } from '../app/retrievalLog';
+import { recordRetrieval } from '../services/retrievalLog';
 
 // Qurʾān retrieval from the quran.com v4 API.
 //

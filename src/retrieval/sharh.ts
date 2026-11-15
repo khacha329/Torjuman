@@ -1,7 +1,7 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book } from '../types';
 import { letterFold } from '../lib/arabic';
-import { recordRetrieval } from '../app/retrievalLog';
+import { recordRetrieval } from '../services/retrievalLog';
 
 // Finding a ḥadīth's commentary in an imported sharḥ, by its own words.
 //
