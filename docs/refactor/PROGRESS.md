@@ -523,7 +523,8 @@ fifteen answers as recommended**.
 | Step | State | Commit |
 | --- | --- | --- |
 | 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review FAIL (harness wait) → fixed | `3b15ef3` |
-| review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; review pending | `c6d2998`, `c30e388`, this commit |
+| review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; re-review PASS WITH NOTES | `c6d2998`, `c30e388`, `059266f` |
+| review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -584,6 +585,13 @@ holds)
   `ReaderScreen` beyond its header), `ShareScreen`'s loading and success
   states, `LibraryScreen`'s "Deleting…" spinner. All of them change only an
   import path in 2g, where S and R also run.
+
+- **Re-review of the 2a fix: PASS WITH NOTES.** The manifest changed in
+  exactly the six `.html` dumps holding the Retrieval section; no `[masked]`
+  text remains; the poll cannot pass on a timeout. Applied: a header line
+  re-wrapped; FOUND_ISSUES 7 says "in the deployed build". Kept for later: the
+  poll hard-codes `db.version === 11`, so Phase 4's schema work must update it
+  (it fails loudly otherwise).
 
 ## Open
 

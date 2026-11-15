@@ -92,8 +92,10 @@ step 2a.
 `qul/seed.ts` (~311) writes "N pending of 3 bundled resources" to the
 Retrieval log, but of the three entries in `SEED_MANIFEST` only
 `matching-ayah` is bundled; the other two are left out of the build by
-licence and always come back absent. So a fully seeded install reads "2
-pending of 3 bundled resources". Cosmetic. Left as is.
+licence and, in the deployed build, always come back absent. So a fully
+seeded install there reads "2 pending of 3 bundled resources" (a first boot
+legitimately reads 3; on the owner's PC, licensed files in `public/qul/`
+would be installed). Cosmetic. Left as is.
 
 The first version of this entry blamed timing in the app for the count
 varying between 2 and 3. That was wrong: the variation came from check U

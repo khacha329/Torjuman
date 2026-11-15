@@ -23,8 +23,8 @@
 // en-US, UTC, service workers blocked (so every request is visible to the
 // route below and the update bar stays out), Date pinned with page.clock. The
 // app is opened once so it creates its database and finishes seeding the one
-// bundled QUL resource (polled from Node until its row exists), synthetic rows are written straight into IndexedDB, and the page is
-// reloaded. Requests to anything but the preview server are held (the proxy,
+// bundled QUL resource (polled from Node until its row exists), synthetic
+// rows are written straight into IndexedDB, and the page is reloaded. Requests to anything but the preview server are held (the proxy,
 // the model host: so the screen stays in its in-progress state) or aborted
 // (everything else, which then fails the same way every run).
 //
