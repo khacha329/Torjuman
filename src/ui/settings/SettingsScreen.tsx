@@ -16,7 +16,7 @@ import {
 import type { CloudProviderId, PanelPosition } from '../../types';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
-import { Button, Field, inputClass, LinkButton, TopBar } from '../kit';
+import { Button, Field, inputClass, LinkButton, TopBar, SettingsSection } from '../kit';
 import { EntitySection } from './EntitySection';
 import { GlossaryTable } from './GlossaryTable';
 import { HadithSourceSection } from './HadithSourceSection';
@@ -78,11 +78,11 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">{title}</h2>
       {description && <p className="mt-0.5 mb-4 text-sm text-muted">{description}</p>}
       <div className={description ? '' : 'mt-4'}>{children}</div>
-    </section>
+    </SettingsSection>
   );
 }
 

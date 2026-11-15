@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { probeDorar } from '../../retrieval/dorar';
 import { HADITH_SOURCES } from '../../retrieval/HadithSource';
-import { Button } from '../kit';
+import { Button, SettingsSection } from '../kit';
 
 // Settings → Ḥadīth source.
 //
@@ -45,7 +45,7 @@ export function HadithSourceSection() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Ḥadīth source</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Which service is consulted when a ḥadīth is tapped. Every response is cached
@@ -114,6 +114,6 @@ export function HadithSourceSection() {
           {probe}
         </pre>
       )}
-    </section>
+    </SettingsSection>
   );
 }

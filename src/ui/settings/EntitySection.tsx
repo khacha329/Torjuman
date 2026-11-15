@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { regenerateEntities, summarize, type EntityBuildResult } from '../../quran/entityService';
 import { loadQuranIndex } from '../../quran/quranIndex';
 import type { Book } from '../../types';
-import { Button, Spinner } from '../kit';
+import { Button, Spinner, SettingsSection } from '../kit';
 
 // Re-running detection over a book.
 //
@@ -51,7 +51,7 @@ export function EntitySection() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Verse and ḥadīth detection</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Quoted verses are matched against the bundled muṣḥaf on this device — no model
@@ -132,6 +132,6 @@ export function EntitySection() {
         either short fragments below the four-word threshold or a sign the page was
         parsed badly.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

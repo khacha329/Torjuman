@@ -8,7 +8,7 @@ import {
   type RetrievalOutcome,
   type RetrievalRecord,
 } from '../../services/retrievalLog';
-import { Button } from '../kit';
+import { Button, SettingsSection } from '../kit';
 
 // What retrieval did, on the device it did it on.
 //
@@ -106,7 +106,7 @@ export function RetrievalSection() {
   const absent = records.filter((record) => record.outcome === 'data-absent').length;
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Retrieval</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         The last {records.length === 0 ? 'few' : records.length} lookups this session.
@@ -149,6 +149,6 @@ export function RetrievalSection() {
         from an imported book may appear, because seeing the wrong passage is
         usually the only way to recognise it.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

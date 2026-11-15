@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { buildRootIndex, MISBAH_SHAMELA_ID } from '../../dictionary/dictionaryService';
 import type { Book } from '../../types';
-import { Button, Spinner } from '../kit';
+import { Button, Spinner, SettingsSection } from '../kit';
 
 // Consulted works live here rather than in the reading library. Two kinds, and
 // the difference matters at lookup time: a dictionary is keyed by root and
@@ -71,7 +71,7 @@ export function ReferenceWorks() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Reference works</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Dictionaries for looking words up, and commentaries for Explain to cite. Both are
@@ -140,6 +140,6 @@ export function ReferenceWorks() {
           ))}
         </div>
       )}
-    </section>
+    </SettingsSection>
   );
 }

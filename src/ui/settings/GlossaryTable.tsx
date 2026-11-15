@@ -6,7 +6,7 @@ import { saveFile } from '../../lib/saveFile';
 import { BidiText } from '../../components/BidiText';
 import { glossaryTokenEstimate } from '../../translation/prompt';
 import type { GlossaryEntry } from '../../types';
-import { Button, inputClass } from '../kit';
+import { Button, inputClass, SettingsSection } from '../kit';
 
 /** One row of an imported file. Both key spellings are accepted. */
 interface ImportedRow {
@@ -109,7 +109,7 @@ export function GlossaryTable() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">
@@ -244,6 +244,6 @@ export function GlossaryTable() {
           Add
         </Button>
       </div>
-    </section>
+    </SettingsSection>
   );
 }

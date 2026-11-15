@@ -537,7 +537,8 @@ fifteen answers as recommended**.
 | 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review PASS WITH NOTES | `c748f5d` |
 | review notes: 2h | applied | `3db8af1` |
 | 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review PASS WITH NOTES | `4f9ff79` |
-| review notes: 3db8af1 and 2i | applied | this commit |
+| review notes: 3db8af1 and 2i | applied | `06b20c7` |
+| 2j. `SettingsSection` in `ui/kit`, 15 copies | T B L U pass; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -778,6 +779,22 @@ holds)
   object or null). Applied: `ProgressBar.tsx` header re-wrapped;
   `percentOf`'s comment says "six progress lines" and "a progress line";
   FOUND_ISSUES 9 says "at least one block". Comments and docs only.
+
+**Step 2j, measured 2026-11-15**
+- New `ui/kit/SettingsSection.tsx` (plan §7, the bare shell, with a header),
+  re-exported from `ui/kit/index.tsx`. All 15 copies were first checked to be
+  the exact tag `<section dir="ltr" className="ltr-isolate rounded-lg border
+  border-rule bg-white p-5">`, one per file. In each, only that opening tag and
+  its `</section>` became `<SettingsSection>` / `</SettingsSection>`; nothing
+  inside changed, nothing was re-indented. `SettingsScreen.tsx`'s local
+  `Section` keeps its name, props, `h2`, paragraph and wrapper `div`; only its
+  outer tag changed. Fourteen files appended `SettingsSection` to their kit
+  import; `OfflineCapabilities.tsx`, which had none, gained one import line.
+- **T** exit 0. **B** exit 0; main chunk 790,558 → 789,438 B (−1,120);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 134 edges, no
+  cycles, rules hold. **U** PASS 160/160 — all 21 `settings--*` captures, the
+  whole Settings screen, `settings-proxy`, and the three in-progress Settings
+  states.
 
 ## Open
 

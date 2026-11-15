@@ -5,7 +5,7 @@ import { DEFAULT_PROFILE_ID } from '../../translation/profiles';
 import { providerFor } from '../../translation/providers/registry';
 import { modelsFor } from '../../translation/models';
 import type { TranslationProfile } from '../../types';
-import { Button, Field, inputClass } from '../kit';
+import { Button, Field, inputClass, SettingsSection } from '../kit';
 
 export function ProfileEditor() {
   const { profiles, activeProfile, saveProfile, deleteProfile, settings, updateSettings } =
@@ -47,7 +47,7 @@ export function ProfileEditor() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Translation profiles</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         The conventions the model follows. Editing a profile bumps its version, which
@@ -159,6 +159,6 @@ export function ProfileEditor() {
           ?.label ?? activeProfile.model}
         . Change that in the Translation section at the top of this page.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

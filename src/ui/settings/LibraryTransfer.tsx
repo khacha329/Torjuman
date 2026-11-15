@@ -9,7 +9,7 @@ import {
 } from '../../library/transfer';
 import type { Book } from '../../types';
 import { saveFile } from '../../lib/saveFile';
-import { Button, ProgressBar } from '../kit';
+import { Button, ProgressBar, SettingsSection } from '../kit';
 import { percentOf } from '../../lib/format';
 
 // Moving crawled books between the user's own devices.
@@ -78,7 +78,7 @@ export function LibraryTransfer() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Library transfer</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Move a crawled book to another device as a file, instead of crawling it again.
@@ -143,6 +143,6 @@ export function LibraryTransfer() {
         page HTML, the search index and verse detection are all left out and rebuilt on
         arrival — they are derived, and together they are most of the bulk.
       </p>
-    </section>
+    </SettingsSection>
   );
 }
