@@ -62,8 +62,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1b. Narrator profile types → `types.ts` | T B L pass; review FAIL (import order) → fixed in the review-notes commit | `6a99c2e` |
 | review notes: harness and 1b | applied | `7ca8087` |
 | 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review PASS WITH NOTES | `902758d` |
-| review notes: 7ca8087 and 1c | applied | `fd6c5e4`, `0a2d1a1` |
-| 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review pending | this commit |
+| review notes: 7ca8087 and 1c | applied | `fd6c5e4`, `ee119ca` |
+| 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review PASS WITH NOTES | `2231573` |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -153,7 +153,7 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   says.)
 
 - **Reviews of 7ca8087 and 1c: PASS WITH NOTES**, nothing to fix before 1d.
-  Applied in the next commit: compare-bundles' header quotes RESTRUCTURE's
+  Applied in `fd6c5e4` and `ee119ca`: compare-bundles' header quotes RESTRUCTURE's
   rule correctly; FOUND_ISSUES 1 reflowed; CLAUDE.md trap 1 and RESTRUCTURE
   T-b no longer say `biography`/`share` are missing; plan step 1o names the
   planner agent and RESTRUCTURE §1's pointers.
@@ -172,6 +172,13 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   identical. **L**: 125 edges (+3: `app`, `catalog`, `ui/reader` → `services`;
   `catalog → app` stays until 1f); directories in a cycle 6; mutual pairs 3.
   Rules hold.
+
+- **Reviews of the notes commits and 1d: PASS WITH NOTES.** The SSR build is
+  a real resolution check: Rollup raises "unresolved import" for a relative
+  specifier, dynamic ones included. Notes: the PROGRESS hash fixed; 1o also
+  covers RESTRUCTURE T-a. Left verbatim: `activity.ts`'s header calls the batch
+  "an app-level service", though it lives in `catalog/` — true before the move
+  too.
 
 ## Open
 
