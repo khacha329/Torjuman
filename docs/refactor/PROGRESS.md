@@ -529,7 +529,8 @@ fifteen answers as recommended**.
 | review notes: fe6065e and 2b | applied | `18f2a5d` |
 | 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review PASS WITH NOTES | `6e3bea2` |
 | review notes: 18f2a5d and 2c | applied | `ede0a6e` |
-| 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review pending | this commit |
+| 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review PASS | `93d0b9a` |
+| 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -649,6 +650,32 @@ holds)
   `compare-bundles`: only `index.js` differs; CSS byte-identical. **L**: 129
   edges (+1, `library → platform/http`, as the plan says); no cycles; rules
   hold. **U** PASS 160/160, both builds.
+
+- **Reviews of ede0a6e (PASS) and 2d (PASS WITH NOTES, nothing to fix).** The
+  bundle now holds one copy of the proxy expression, aliased by both names.
+
+**Step 2e, measured 2026-11-15**
+- New `lib/gzip.ts`: `canGzip`, `canGunzip`, `gzipStream`, `gunzipStream`,
+  with a header (new text) saying why the globals are looked up per call (the
+  2a review's note: check U stubs `CompressionStream` after load). In
+  `library/transfer.ts`, `library/deviceTransfer.ts` and `share/crypto.ts`,
+  each `typeof CompressionStream === 'undefined'` became `!canGzip()`, each
+  `typeof DecompressionStream === 'undefined'` `!canGunzip()`, each
+  `x.pipeThrough(new …Stream('gzip'))` `gzipStream(x)` / `gunzipStream(x)`.
+  Fallbacks, error messages, detection and comments stay at the call sites;
+  statement and evaluation order unchanged (the stream is created before the
+  compressor in both versions).
+- Types: the DOM typings want `ReadableStream<BufferSource>` in and give
+  `ReadableStream<Uint8Array<ArrayBuffer>>` out; the helpers say so.
+- Round trip in Node 22 (same stream classes): 25,500 B of Arabic → 154 B,
+  magic `1f 8b`, decoded equal; deleting `CompressionStream` after import makes
+  `canGzip()` false (the per-call lookup).
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed** (seal and
+  open, device export and restore, book transfer are in it). **B** exit 0;
+  main chunk 791,661 → 791,514 B (−147); `compare-bundles`: only `index.js`;
+  CSS byte-identical. **L**: 129 edges (library and share → lib already
+  existed); rules hold. **U** PASS 160/160, including both "Compressing…"
+  export states.
 
 ## Open
 

@@ -1,4 +1,5 @@
 import { isShareBundle, type ShareBundle } from './bundle';
+import { canGunzip, canGzip, gunzipStream, gzipStream } from '../lib/gzip';
 
 // Encrypting a shared chapter, and why a static site still needs to.
 //
@@ -162,18 +163,16 @@ async function collect(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
  * share button that throws.
  */
 async function gzip(input: Uint8Array): Promise<{ bytes: Uint8Array; compressed: boolean }> {
-  if (typeof CompressionStream === 'undefined') return { bytes: input, compressed: false };
-  const stream = new Blob([input as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
+  if (!canGzip()) return { bytes: input, compressed: false };
+  const stream = gzipStream(new Blob([input as BlobPart]).stream());
   return { bytes: await collect(stream), compressed: true };
 }
 
 async function gunzip(input: Uint8Array): Promise<Uint8Array> {
-  if (typeof DecompressionStream === 'undefined') {
+  if (!canGunzip()) {
     throw new Error('This browser cannot read compressed shares.');
   }
-  const stream = new Blob([input as BlobPart])
-    .stream()
-    .pipeThrough(new DecompressionStream('gzip'));
+  const stream = gunzipStream(new Blob([input as BlobPart]).stream());
   return collect(stream);
 }
 
