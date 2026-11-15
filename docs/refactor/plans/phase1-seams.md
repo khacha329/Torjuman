@@ -83,10 +83,10 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | 1g | `RAIL_WIDTH` (with its comment) → `ui/useLayoutMode.ts` | `SelectionRail.tsx`, `useLayoutMode.ts`, `ReaderScreen.tsx`, **`scripts/verify-parsers.ts`** | T B L **S R** X; V owed | low |
 | 1h | `translation/registry.ts` → `translation/providers/registry.ts` | 1 file moved, 6 importers | T B L X | low |
 | 1i | `types.ts` → `types/index.ts` (pure rename) | 1 file; `deploy.yml` list (`types`) | T B L X | low |
-| 1j | split out `types/book.ts` (book content) and `types/catalog.ts` | `types/index.ts` | T B L X | low |
-| 1k | split out `types/entities.ts`, `types/cards.ts` | same | T B L X | low |
-| 1l | split out `types/translation.ts`, `types/retrieval.ts`, `types/qul.ts` | same | T B L X | low |
-| 1m | split out `types/persistence.ts`, `types/share.ts`, `types/biography.ts`, `types/settings.ts`, `types/reader.ts` | same | T B L X | low |
+| 1j | split out `types/reader.ts`, `types/translation.ts`, `types/retrieval.ts`, `types/entities.ts` (the groups that use no other group) | `types/index.ts` | T B L X | low |
+| 1k | split out `types/book.ts`, `types/catalog.ts` | same | T B L X | low |
+| 1l | split out `types/cards.ts`, `types/qul.ts` | same | T B L X | low |
+| 1m | split out `types/persistence.ts`, `types/share.ts`, `types/biography.ts`, `types/settings.ts` | same | T B L X | low |
 | 1n | `layers.json` complete; `npm run layers -- --check` in the workflow (Q3) | `layers.json`, `deploy.yml` | L | low |
 | 1o | README map, CLAUDE.md map, `.claude/agents/torjuman-planner.md`, RESTRUCTURE §1 pointers and T-a, CLAUDE.md's `app/secrets.ts` mentions, README's prose mention (~178), `.claude/agents/torjuman-llm.md`, path pointers in source comments made stale by 1c–1e (e.g. `types.ts` "app/secrets.ts"), FOUND_ISSUES 4's `translation/registry.ts:10` (now `translation/providers/registry.ts:7`), PROGRESS | docs and comments | X | none |
 
@@ -164,6 +164,17 @@ become `import type` lines. Groups and their current lines in `types.ts`:
 | `settings.ts` | AppSettings | 847–899 |
 
 (Line numbers before 1a/1b; the step's PROGRESS section gives the offsets.)
+
+**Order, changed during 1j (2026-11-15).** The groups use each other's types
+(`catalog` → `book` → `reader`; `cards` → `entities`, `translation`; `qul` →
+`book`, `translation`; `settings` → `reader`, `retrieval`, `translation`), with
+no cycle among them. A group file split out before a group it uses would have
+to import from `index.ts` while `index.ts` re-exports it — a file-level cycle.
+So the groups go leaves first: 1j the four that use no other group, then 1k,
+1l, 1m as above. Same groups, same number of commits; only which commit takes
+which group changed. Each group file imports what it uses from the other
+group files, never from `index.ts`; `index.ts` imports what its remaining
+declarations use.
 Types-only changes produce no JavaScript, so B must show **identical JS**
 (`scripts/compare-bundles.mjs`, which masks the build time and chunk hashes)
 for 1b and 1i–1m — a stronger check than ±2 KB. 1a is the exception: it

@@ -71,7 +71,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | review notes: ce1aefa and 1f | applied | `cf5f8c0` |
 | 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review PASS WITH NOTES | `89f6784` |
 | 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review PASS WITH NOTES | `ef2e930` |
-| 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review pending | this commit |
+| 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review PASS WITH NOTES | `b6794da` |
+| 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -301,6 +302,32 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   **V owed** (the script's modules import `types`). **B** exit 0;
   `compare-bundles` 1h → 1i: every JS file identical. **L**: unchanged (142
   files, 128 edges, no cycles); rules hold.
+
+- **Review of 1i: PASS WITH NOTES**, nothing to fix. All 88 importers are
+  `import type`/`export type`, so no runtime import of a directory remains.
+  Notes for 1n/1o: `check-layers.mjs`'s comment and special case still name
+  `src/types.ts`; `ui/reader/cardLayout.ts:110` says "in types.ts".
+
+**Step 1j, measured 2026-11-15**
+- **Plan order changed** (recorded in the plan, under the group table): the
+  groups use each other with no cycle, so they are split leaves first; 1j takes
+  the four that use no other group.
+- Cut by script (`split_types.py` in the session scratchpad, reading the
+  committed `index.ts`): each declaration with everything between the previous
+  declaration's end and its own end — its doc comment and any comment above
+  it — verbatim and in order. `types/reader.ts` (StructureProfile, PanelScope,
+  PanelPosition), `types/translation.ts` (ProviderId, CloudProviderId,
+  TranslationUsage, TranslationErrorKind, WordGloss, TranslationProfile,
+  GlossaryEntry), `types/retrieval.ts` (QuranVerse, HadithRecord,
+  HadithSourceId, HadithAttribution), `types/entities.ts` (Entity, EntityRange,
+  SegmentType, TranslatedSegment).
+- Checked by line multiset: every non-blank line of the old `index.ts` is in
+  the new five files; the only new lines are each file's two-line header
+  (new text, adaptation (c)), `index.ts`'s four `import type` lines for what
+  its remaining declarations use, and its four `export * from` lines.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
+  exit 0; `compare-bundles` 1i → 1j: every JS file identical. **L**: 146 files,
+  128 edges, no cycles (file-level included); rules hold.
 
 ## Open
 

@@ -4,56 +4,15 @@
 // (and, in v2, highlights and notes) anchor to block IDs, so a re-import that
 // renumbered blocks would orphan every annotation the user has made.
 
-/**
- * `offline` labels a card produced by the on-device model. It is a label, not a
- * member of the provider registry — see registry.ts for why the offline path is
- * deliberately not interchangeable with the cloud ones.
- */
-export type ProviderId = 'anthropic' | 'gemini' | 'offline';
+import type { TranslatedSegment } from './entities';
+import type { PanelPosition, PanelScope, StructureProfile } from './reader';
+import type { HadithSourceId } from './retrieval';
+import type { ProviderId, TranslationErrorKind, TranslationUsage } from './translation';
 
-/** The providers that talk to a network service and take an API key. */
-export type CloudProviderId = Exclude<ProviderId, 'offline'>;
-
-/** Token counts, normalized across providers. */
-export interface TranslationUsage {
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-}
-
-/**
- * Why a translation failed, in the terms the user needs.
- *
- * `auth` and `rate-limit` in particular must stay distinguishable: one means
- * "your key is wrong", the other means "wait a minute". A generic error message
- * sends the user hunting in entirely the wrong place.
- */
-export type TranslationErrorKind =
-  | 'auth'
-  | 'rate-limit'
-  | 'network'
-  | 'refusal'
-  | 'parse'
-  /** The token limit was reached mid-answer. A different remedy from a parse error. */
-  | 'truncated'
-  | 'api';
-
-export type StructureProfile = 'generic' | 'hadith-commentary';
-
-/**
- * The three card-panel scopes. Persisted in AppSettings, so it lives here
- * rather than in the panel that renders it; the scoping functions themselves
- * are in ui/reader/cardLayout.ts.
- */
-export type PanelScope = 'visible' | 'section' | 'all';
-
-/**
- * Where the card panel goes. 'auto' decides by whether the text and the panel
- * both fit side by side (src/ui/useLayoutMode.ts); the other two force it.
- * Persisted per device, like `panelCollapsed`.
- */
-export type PanelPosition = 'auto' | 'beside' | 'sheet';
+export * from './reader';
+export * from './translation';
+export * from './retrieval';
+export * from './entities';
 
 /**
  * One recommended work — a pointer to a book, never the book.
@@ -253,91 +212,6 @@ export interface Block {
 }
 
 /**
- * A quoted verse or hadith, located in the text and resolved to a reference.
- *
- * Entities are derived data, kept in their own store. Detection can be improved
- * and re-run for a whole book without touching blocks, cards, or annotations —
- * `regenerateEntities` is a supported operation, not a migration.
- */
-export interface Entity {
-  id: string;
-  bookId: string;
-  /**
-   * The same multi-block anchor shape translation cards use. A quotation can
-   * straddle a page break, and therefore a block boundary, so an entity is not
-   * confined to one block.
-   */
-  startBlockId: string;
-  startOffset: number; // within the start block's display text
-  endBlockId: string;
-  endOffset: number; // within the end block's display text
-  /**
-   * 'narrator' is the one pre-marked *name* in the app, and deliberately the
-   * only one. A ḥadīth's narrator sits in a structurally identifiable slot —
-   * after عن/حدثنا/أخبرنا inside a hadith_matn block — which makes it a
-   * high-precision, low-volume case: one per ḥadīth, in a known position.
-   * Every other name is looked up on demand from the selection rail, because
-   * tinting the hundreds a six-volume commentary mentions would bury the
-   * marks, verses and translated ranges already competing for the same
-   * visual channels.
-   */
-  /**
-   * 'person' is the second marked name layer, added in Amendment 17 Part 5, and
-   * it is the opposite trade to 'narrator': low precision of *identity* in
-   * exchange for coverage. A narrator is one man in a known slot; a person is
-   * any multi-word name that appears in an imported biographical index, marked
-   * without deciding which of the people bearing it is meant. Both open the
-   * same lookup, which shows every candidate — so marking is a claim that this
-   * is a name, never a claim about whose.
-   *
-   * It renders in colour rather than as a background tint, because names are
-   * frequent enough that another background layer would bury the marks, verses
-   * and translated ranges already competing for that channel.
-   */
-  type: 'quran' | 'hadith' | 'narrator' | 'person';
-  reference: string; // "2:255" | "2:255-2:257" | "riyadussalihin:412" | folded name
-  matchQuality: 'exact' | 'partial' | 'unresolved';
-  detectedAt: number;
-  /** Muṣḥaf text for a resolved verse, so the sheet needs no network at all. */
-  textUthmani?: string;
-  /** Human label, e.g. "al-Baqarah 255". */
-  label?: string;
-  /** Words matched against the muṣḥaf; drives the diagnostics view. */
-  matchedWords?: number;
-}
-
-/** One block's share of an entity, for rendering. */
-export interface EntityRange {
-  entity: Entity;
-  blockId: string;
-  start: number;
-  end: number;
-}
-
-export type SegmentType = 'quran' | 'hadith' | 'poetry' | 'prose';
-
-export interface TranslatedSegment {
-  type: SegmentType;
-  arabic: string;
-  english: string;
-  /**
-   * Where the English came from. `offline` marks output from the on-device
-   * translation model and must stay visually distinct from cloud output — a
-   * card produced offline should never be mistaken for a Sonnet card when
-   * preparing a lesson from it.
-   *
-   * `takhrij-table` marks a rendering taken from the fixed lookup table in
-   * lib/takhrij.ts. It is deliberately its own source rather than being folded
-   * into `model`: those thirty formulae are rendered identically on every path,
-   * at no cost, and the card should say so.
-   */
-  source?: 'quran.com' | 'sunnah.com' | 'model' | 'offline' | 'takhrij-table' | 'dorar.net';
-  reference?: string; // "2:255" or "Riyad as-Salihin 1"
-  note?: string; // e.g. "Poem summarized rather than translated"
-  uncertainTerms?: string[];
-}
-
-/**
  * Fields shared by everything that can appear in the right-hand panel.
  * v2 adds HighlightCard and NoteCard alongside TranslationCard; they anchor the
  * same way and render in the same list.
@@ -528,102 +402,6 @@ export interface SharhCard extends CardBase {
 }
 
 export type Card = TranslationCard | NoteCard | ExplanationCard | SharhCard;
-
-/**
- * An English gloss for a single word, in the sense it carries in its sentence.
- *
- * Cached by normalized word form, so a repeated word is free and works offline
- * afterwards. Deliberately separate from the glossary: these are transient
- * lookups, not terminology decisions, and they never write to it.
- */
-export interface WordGloss {
-  /** Normalized form — the cache key. */
-  word: string;
-  /** As it appeared, harakāt intact. */
-  display: string;
-  root: string;
-  meaning: string;
-  note: string | null;
-  isTechnicalTerm: boolean;
-  model: string;
-  createdAt: number;
-}
-
-export interface TranslationProfile {
-  id: string;
-  name: string;
-  version: number; // bump on ANY edit — invalidates cache
-  systemPrompt: string;
-  useTransliteration: boolean; // default: false
-  allowExternalLookup: boolean; // default: false
-  /** A profile pins both the service and the model it runs on. */
-  providerId: ProviderId;
-  model: string;
-}
-
-export interface GlossaryEntry {
-  id: string;
-  arabic: string;
-  english: string;
-  note: string | null;
-  addedAt: number;
-}
-
-/** Cached Qurʾān verse, keyed by "surah:ayah". */
-export interface QuranVerse {
-  reference: string; // "2:255"
-  arabic: string;
-  english: string;
-  translationName: string;
-  fetchedAt: number;
-}
-
-/** Cached hadith, keyed by a normalized "collection:number" reference. */
-export interface HadithRecord {
-  reference: string; // "riyadussalihin:1"
-  collection: string;
-  number: string;
-  arabic: string;
-  english: string;
-  grade: string | null;
-  sourceUrl: string | null;
-  fetchedAt: number;
-  /** Which HadithSource produced this record. */
-  sourceId?: HadithSourceId;
-  /**
-   * Every grading of THIS narration, in Arabic, as dorar states them.
-   *
-   * A list, never one. dorar is a full-text search, so a query returns every
-   * narration carrying that wording; the records kept here are the ones whose
-   * narrator matches the book's, and within those, several scholars grading the
-   * same narration differently is normal. That disagreement is information the
-   * user needs when preparing a lesson — merging it, averaging it, or picking a
-   * representative would resolve a scholarly dispute on his behalf.
-   *
-   * Empty means no record matched the narrator. That is shown as "no grading
-   * found", because an unmatched grading is worse than an absent one.
-   */
-  gradings?: HadithAttribution[];
-  /** The narrator read out of the book, which the gradings were matched on. */
-  narrator?: string | null;
-}
-
-export type HadithSourceId = 'sunnah' | 'dorar';
-
-export interface HadithAttribution {
-  /** الراوي — the companion who narrated it. */
-  rawi: string | null;
-  /** المحدث — the scholar whose grading this is. */
-  mohdith: string | null;
-  /** المصدر — the book the grading was printed in. */
-  book: string | null;
-  /** الصفحة أو الرقم */
-  numberOrPage: string | null;
-  /** خلاصة حكم المحدث — the grade itself. */
-  grade: string | null;
-  /** التخريج — where else it is reported. */
-  takhrij: string | null;
-}
 
 // ------------------------------------------------------------------ QUL
 //
