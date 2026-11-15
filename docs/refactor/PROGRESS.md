@@ -514,6 +514,12 @@ before the next began. **Owed before merge: `npm run verify` on the owner's
 PC** (steps 1d, 1g and 1i–1m touch modules its script builds; here only its
 SSR build could run, and it resolved at every step).
 
+## Phase 2: shared pieces (planning, branch `claude/restructure-phase-2`)
+
+Plan: [`plans/phase2-shared-pieces.md`](plans/phase2-shared-pieces.md), written
+by the `torjuman-planner` agent on `146dc62`, **awaiting the owner's
+approval** (Q1–Q15).
+
 ## Open
 
 - V baseline count from the owner's PC.
