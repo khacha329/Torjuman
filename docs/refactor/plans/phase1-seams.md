@@ -42,7 +42,7 @@ imports `isCloudProvider`, `CloudProviderId`, `ProviderId` from
 
 A simulation of the steps below on the real import graph (same patterns as
 `check-layers.mjs`) gives **no cycle and no mutual pair**. Resulting edges:
-`services` → nothing; `types` → nothing; `platform/storage` → `lib`, `types`;
+`services` → nothing but `lib` and `types` (once `secrets` arrives in 1e); `types` → nothing; `platform/storage` → `lib`, `types`;
 `translation` → `lib`, `platform/storage`, `types`.
 
 ## Design
@@ -88,7 +88,7 @@ it would keep the old edges in the graph, and nothing would ever remove them.
 | 1l | split out `types/translation.ts`, `types/retrieval.ts`, `types/qul.ts` | same | T B L X | low |
 | 1m | split out `types/persistence.ts`, `types/share.ts`, `types/biography.ts`, `types/settings.ts`, `types/reader.ts` | same | T B L X | low |
 | 1n | `layers.json` complete; `npm run layers -- --check` in the workflow (Q3) | `layers.json`, `deploy.yml` | L | low |
-| 1o | README map, CLAUDE.md map, `.claude/agents/torjuman-planner.md`, RESTRUCTURE §1 pointers and T-a, CLAUDE.md's `app/secrets.ts` mentions, path pointers in source comments made stale by 1c–1e (e.g. `types.ts` "app/secrets.ts"), PROGRESS | docs and comments | X | none |
+| 1o | README map, CLAUDE.md map, `.claude/agents/torjuman-planner.md`, RESTRUCTURE §1 pointers and T-a, CLAUDE.md's `app/secrets.ts` mentions, README's prose mention (~178), `.claude/agents/torjuman-llm.md`, path pointers in source comments made stale by 1c–1e (e.g. `types.ts` "app/secrets.ts"), PROGRESS | docs and comments | X | none |
 
 Each layer rule is added to `layers.json` **in the step that makes it true**,
 so `--check` passes after every commit:

@@ -55,3 +55,21 @@ Found by the Phase 0 review.
 Left as is: Phase 3 (provider seams) is where these move, as structure. The
 comment in `registry.ts` is corrected when the registry moves in Phase 1 step
 1h only if the plan names it; otherwise in Phase 3.
+
+## 5. A detached and miscounted comment about the API keys (2026-11-15, measured)
+
+`src/types.ts` (~824–828 at `16e16a3`): the comment "Everything except the two
+API keys … (see app/secrets.ts)" belongs to `AppSettings`, but sits before the
+next interface's doc comment (`BiographyEntry`), far from it — already so at
+`810b059`, before the restructure. It also says "two API keys", and README
+(~174) says "Both keys": `services/secrets.ts` holds three (Anthropic, Gemini,
+sunnah.com). Left as is: comments in unmoved code. Step 1m moves
+`AppSettings` into `types/settings.ts`; whether the comment goes with it is
+for the owner (Phase 1 end). Found by the 1e review.
+
+Related, not a defect: since Phase 1 step 1e the key store is in layer 1,
+which every domain directory may import. "Only `secrets.ts` reads and writes
+keys" still holds, but by convention; a `layers.json` rule could restrict
+which files import `services/secrets.ts` (today: `App.tsx`,
+`ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, five reader and
+settings files). For the owner to decide.

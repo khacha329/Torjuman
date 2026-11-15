@@ -64,7 +64,9 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review PASS WITH NOTES | `902758d` |
 | review notes: 7ca8087 and 1c | applied | `fd6c5e4`, `ee119ca` |
 | 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review PASS WITH NOTES | `2231573` |
-| 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review pending | this commit |
+| review notes: 1d | applied | `45bedbb` |
+| 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review PASS WITH NOTES | `16e16a3` |
+| review notes: 1e | applied | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -197,6 +199,16 @@ builds identical, exit 0; a one-character edit reported, exit 1.
 - **T** exit 0. **B** exit 0; `compare-bundles` 1d → 1e: every JS file
   identical. **L**: 128 edges; directories in a cycle 6; mutual pairs 3; 5 rules
   hold.
+
+- **Reviews of 45bedbb (PASS) and 1e (PASS WITH NOTES).** Edges vs 1d: +5
+  (`(root)`, `ui`, `library` → `services`; `services` → `lib`, `types`), −2
+  (`library → app`, the target; `app → lib`, which existed only through
+  `secrets`): 125 → 128. Applied: the plan's simulation sentence about
+  `services` corrected; 1o also covers README's prose mention and the llm
+  agent. Two pre-existing comment errors → FOUND_ISSUES 5. Open question for
+  the owner at the end of the phase, not a defect: with `secrets` in layer 1,
+  "only `secrets.ts` reads keys" is held by convention, not by a rule — a
+  `layers.json` rule could limit who imports it (see FOUND_ISSUES 5).
 
 ## Open
 
