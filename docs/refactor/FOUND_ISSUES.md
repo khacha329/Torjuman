@@ -87,11 +87,16 @@ therefore waits on the Library for "Importing…" before opening `#/import`. Not
 seen on the owner's tablet yet, as far as is known. Left as is. Found in Phase 2
 step 2a.
 
-## 7. The QUL seed reports resources pending that were just seeded (2026-11-15, measured)
+## 7. "N pending of 3 bundled resources" counts resources that are not bundled (2026-11-15, measured; first version withdrawn)
 
-Settings → Retrieval shows "3 pending of 3 bundled resources" after a reload
-that followed a completed seed of `matching-ayah` in some runs, and "2 pending"
-in others (`qul/seed.ts` ~311). The count depends on how far the previous
-load's seeding got, and possibly on how "pending" is computed. Harmless to the
-reader; check U masks the log's text for it. Left as is; worth a look. Found in
-Phase 2 step 2a.
+`qul/seed.ts` (~311) writes "N pending of 3 bundled resources" to the
+Retrieval log, but of the three entries in `SEED_MANIFEST` only
+`matching-ayah` is bundled; the other two are left out of the build by
+licence and always come back absent. So a fully seeded install reads "2
+pending of 3 bundled resources". Cosmetic. Left as is.
+
+The first version of this entry blamed timing in the app for the count
+varying between 2 and 3. That was wrong: the variation came from check U
+reloading the page while the first boot was still seeding (its wait did not
+wait), which the app survives by design — the next boot redoes the seed.
+Fixed in the check, not the app. Found in Phase 2 step 2a and its review.

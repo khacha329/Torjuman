@@ -18,11 +18,12 @@
 //
 // How. Two `vite build`s (no tsc) into .verify/markup-build/{plain,proxy} with
 // an explicit environment, each served with Vite's `preview`. Every capture
-// gets a fresh browser context: touch, 960×600 or 600×960, deviceScaleFactor 2,
+// gets a fresh browser context, except that Settings and its 21 sections are
+// captured from one: touch, 960×600 or 600×960, deviceScaleFactor 2,
 // en-US, UTC, service workers blocked (so every request is visible to the
 // route below and the update bar stays out), Date pinned with page.clock. The
-// app is opened once so it creates its database (and finishes the bundled QUL
-// seed), synthetic rows are written straight into IndexedDB, and the page is
+// app is opened once so it creates its database and finishes seeding the one
+// bundled QUL resource (polled from Node until its row exists), synthetic rows are written straight into IndexedDB, and the page is
 // reloaded. Requests to anything but the preview server are held (the proxy,
 // the model host: so the screen stays in its in-progress state) or aborted
 // (everything else, which then fails the same way every run).
@@ -44,15 +45,13 @@
 //     run has written so far, which varies with timing and the browser;
 //   - React useId ids («r0», :r0:, _r_0_): there are none today, the mask is
 //     there so a later one cannot make the check flaky;
-//   - the ORDER and the TEXT of Settings → Retrieval's log rows
-//     (RetrievalSection.tsx), found while taking the baseline: two lookups
-//     finish at boot (the QUL seed, the muṣḥaf) in either order, and the
-//     seed's row counts how many bundled resources were still pending, which
-//     depends on how far the previous load's seeding got. In the DOM the rows
-//     keep their elements and attributes, with each text node replaced by
-//     "[masked]", and are sorted; in screenshots the list is painted over.
-//     The rows' markup is still compared — the log's contents are this
-//     session's events, not markup a refactor can change.
+//   - the ORDER of Settings → Retrieval's log rows (RetrievalSection.tsx),
+//     found while taking the baseline: two lookups finish at boot (the QUL
+//     seed, the muṣḥaf) in either order. In the DOM the rows are kept, markup,
+//     text and all, and sorted; in screenshots the list is painted over.
+//     (A text mask was briefly added for a "2 pending"/"3 pending" flake; the
+//     cause was this script reloading mid-seed, fixed by a real poll, and the
+//     mask was removed.)
 //
 // Environment pinned beyond §9's list: GITHUB_REF_NAME and GITHUB_SHA are
 // removed and npm_package_version is set (the "Version" row reads them), and
@@ -87,7 +86,7 @@
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -95,6 +94,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = join(ROOT, 'docs/refactor/phase2/markup.sha256');
 const BUILD_ROOT = join(ROOT, '.verify/markup-build');
 const OUT = resolve(ROOT, process.env.VERIFY_OUT ?? '.verify/markup/current');
+// OUT is deleted and rewritten, so it must be inside .verify/: a mistyped
+// VERIFY_OUT must not be able to remove anything else.
+if (!OUT.startsWith(resolve(ROOT, '.verify') + sep)) {
+  console.error(`VERIFY_OUT must be inside .verify/ (got ${OUT})`);
+  process.exit(2);
+}
 const BASE_DUMP = join(ROOT, '.verify/markup/base');
 
 const PROXY = 'https://proxy.invalid';
@@ -224,6 +229,10 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
   await context.route('**/*', (route) => {
     const url = new URL(route.request().url());
     if (url.origin === origin) {
+      // The dev-server proxy paths (vite.config.ts); `preview` would forward
+      // them to the real hosts. A production build never asks for them, and
+      // aborting them keeps "no real network" true by construction.
+      if (/^\/(shamela|sunnah|quran-api|dorar)(\/|$)/.test(url.pathname)) return route.abort();
       const qul = /\/qul\/([^/]+)$/.exec(url.pathname);
       if (qul && !COMMITTED_QUL.has(qul[1])) return route.fulfill({ status: 404, body: 'Not found' });
       return route.continue();
@@ -272,9 +281,14 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
   if (seed) {
     // The app creates its database on boot (DB_VERSION 11) and then seeds the
     // bundled QUL resource, whose resource row is written last. Both are waited
-    // for, so the reload below never interrupts a first-boot write.
-    await page.waitForFunction(
-      async () => {
+    // for, so the reload below never interrupts a first-boot write — which the
+    // app survives by design (qul/seed.ts redoes a half-written seed), but
+    // which would make the next boot's Retrieval log say "3 pending" instead
+    // of "2". The poll runs here in Node: page.waitForFunction does not await
+    // an async predicate (a returned Promise is truthy), which is how the
+    // first version of this wait silently waited for nothing.
+    const seeded = () =>
+      page.evaluate(async () => {
         const known = await indexedDB.databases();
         if (!known.some((db) => db.name === 'shamela-reader' && db.version === 11)) return false;
         const db = await new Promise((resolve, reject) => {
@@ -292,10 +306,12 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
         } finally {
           db.close();
         }
-      },
-      null,
-      { timeout: 30_000, polling: 200 },
-    );
+      });
+    const deadline = Date.now() + 30_000;
+    while (!(await seeded())) {
+      if (Date.now() > deadline) throw new Error('the first boot did not finish seeding matching-ayah within 30 s');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
     await page.evaluate(async (rows) => {
       const db = await new Promise((resolve, reject) => {
         const request = indexedDB.open('shamela-reader');
@@ -375,12 +391,6 @@ async function serialize(page, element) {
       (el) => el.tagName === 'SECTION' && el.querySelector(':scope > h2')?.textContent === 'Retrieval',
     );
     for (const list of sections.flatMap((el) => [...el.querySelectorAll('ul')])) {
-      // The text too: the QUL seed's row says how many bundled resources were
-      // still pending, which depends on timing (found on the first rerun).
-      const walker = document.createTreeWalker(list, NodeFilter.SHOW_TEXT);
-      const texts = [];
-      while (walker.nextNode()) texts.push(walker.currentNode);
-      for (const text of texts) if (text.textContent.trim() !== '') text.textContent = '[masked]';
       const rows = [...list.children].sort((a, b) => (a.outerHTML < b.outerHTML ? -1 : a.outerHTML > b.outerHTML ? 1 : 0));
       for (const row of rows) list.appendChild(row);
     }
