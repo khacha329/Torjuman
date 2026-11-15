@@ -525,7 +525,8 @@ fifteen answers as recommended**.
 | 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review FAIL (harness wait) → fixed | `3b15ef3` |
 | review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; re-review PASS WITH NOTES | `c6d2998`, `c30e388`, `059266f` |
 | review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | `fe6065e` |
-| 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review pending | this commit |
+| 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review PASS WITH NOTES | `c121141` |
+| review notes: fe6065e and 2b | applied | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -606,6 +607,12 @@ holds)
   (−51, the second copy gone); `compare-bundles`: only `index.js` differs;
   `index-*.css` byte-identical. **L**: 155 files, 128 edges, no cycles; rules
   hold. **U** PASS 160/160.
+
+- **Reviews of fe6065e and 2b: PASS WITH NOTES.** The two `delay` copies were
+  character-identical; all four call sites get the same function; no rebinding.
+  Applied: `verify-markup.mjs`'s header line is now really re-wrapped (the
+  first attempt only moved the overflow); `lib/delay.ts`'s header names the
+  crawler's retry backoff too. Comments only.
 
 ## Open
 
