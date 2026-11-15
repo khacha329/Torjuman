@@ -26,6 +26,7 @@ its progress log.
 | `npm run verify:reader` | Playwright: every scroll-dependent reader feature | anywhere |
 | `npm run layers` | import graph by directory, cycles, layer rules (`-- --check` to fail on a break) | anywhere |
 | `node scripts/compare-bundles.mjs <a> <b>` | are two copies of `dist/assets` the same JS, build time and chunk hashes masked | anywhere |
+| `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing

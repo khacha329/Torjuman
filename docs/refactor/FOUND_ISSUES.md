@@ -75,3 +75,23 @@ keys" still holds, but by convention; a `layers.json` rule could restrict
 which files import `services/secrets.ts` (today: `App.tsx`,
 `ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
 settings files). For the owner to decide.
+
+## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured)
+
+`LibraryScreen.tsx` (~180): "Resume import" navigates to `#/import` first and
+starts the crawler second, and `ImportScreen` picks its stage once, on mount,
+from `crawler.isRunning`. When the screen mounts before the crawler has
+started, it shows the empty input form instead of the crawl panel, though the
+import is running. Reproduced at both tablet sizes while building check U, which
+therefore waits on the Library for "Importing…" before opening `#/import`. Not
+seen on the owner's tablet yet, as far as is known. Left as is. Found in Phase 2
+step 2a.
+
+## 7. The QUL seed reports resources pending that were just seeded (2026-11-15, measured)
+
+Settings → Retrieval shows "3 pending of 3 bundled resources" after a reload
+that followed a completed seed of `matching-ayah` in some runs, and "2 pending"
+in others (`qul/seed.ts` ~311). The count depends on how far the previous
+load's seeding got, and possibly on how "pending" is computed. Harmless to the
+reader; check U masks the log's text for it. Left as is; worth a look. Found in
+Phase 2 step 2a.

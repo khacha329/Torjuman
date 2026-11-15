@@ -520,6 +520,46 @@ Plan: [`plans/phase2-shared-pieces.md`](plans/phase2-shared-pieces.md), written
 by the `torjuman-planner` agent on `146dc62`; **approved 2026-11-15, all
 fifteen answers as recommended**.
 
+| Step | State | Commit |
+| --- | --- | --- |
+| 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review pending | this commit |
+
+**Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
+holds)
+- Built by a delegated agent from plan §9, checked and re-baselined here. Two
+  builds (no proxy; `VITE_PROXY_URL=https://proxy.invalid`), both tablet
+  profiles, fixed clock, en-US, UTC, service worker blocked; synthetic seed
+  only. **80 captures** (plain 32 per profile, proxy 8 per profile), each an
+  `.html` and a `.png`: 160 hashes in `docs/refactor/phase2/markup.sha256`.
+  **Screenshots are in the manifest** (byte-stable here; on the owner's PC
+  font rasterization may differ — then `--html-only` or `--compare`).
+- **All seven in-progress states captured**: library-transfer-exporting,
+  device-transfer-exporting, offline-downloading, catalog-importing,
+  receive-fetching, device-transfer-relay, import-crawling.
+- Masks: the "Built" time; the storage-usage line; React `useId` ids; the
+  **order and text** of Settings → Retrieval's log rows (two boot lookups race;
+  the QUL seed's row counts pending resources by timing — the text mask was
+  added here after the agent's baseline failed 159/160 on its first rerun with
+  "2 pending" vs "3 pending"; the rows' elements and attributes are still
+  compared).
+- Deviations from §9, each in the script's header: more environment pinned
+  (`GITHUB_REF_NAME`, `GITHUB_SHA`, `npm_package_version`); untracked
+  `qul/` files answer 404 so the owner's licensed files cannot change the
+  result; offline-downloading answers the size probes, `config.json` and
+  `generation_config.json`; import-crawling opens `#/import` after the Library
+  shows "Importing…" (FOUND_ISSUES 6); share-error shows the "link is
+  incomplete" error, not a 404.
+- **Proof.** Agent: two runs identical (160/160); a class swap in the first
+  progress bar's track in `LibraryScreen.tsx` → exit 1, 158/160, naming
+  `library.html` at both sizes (PNGs unchanged, as class order does not
+  render); an added space in Published chapters' description → exit 1,
+  154/160, naming that section, `settings.html`, `settings-proxy.html`; both
+  files restored byte for byte. Here, after the text mask: manifest rewritten
+  from a fresh run, then **three runs, each PASS 160/160**. Run time ≈ 2 min
+  15 s (builds ~6.5 s each).
+- **T** exit 0 (agent); the production CSS is byte-identical with the new
+  script present (Tailwind finds no new class in it).
+
 ## Open
 
 - V baseline count from the owner's PC.
