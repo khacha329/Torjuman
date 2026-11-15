@@ -66,7 +66,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review PASS WITH NOTES | `2231573` |
 | review notes: 1d | applied | `45bedbb` |
 | 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review PASS WITH NOTES | `16e16a3` |
-| review notes: 1e | applied | this commit |
+| review notes: 1e | applied | `ce1aefa` |
+| 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -209,6 +210,21 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   the owner at the end of the phase, not a defect: with `secrets` in layer 1,
   "only `secrets.ts` reads keys" is held by convention, not by a rule — a
   `layers.json` rule could limit who imports it (see FOUND_ISSUES 5).
+
+**Step 1f, measured 2026-11-15**
+- `git mv src/catalog/useCatalogImport.ts src/ui/useCatalogImport.ts` (a React
+  hook over `useApp`, which does not belong in a domain directory). Inside it,
+  the two specifiers of `./importBatch` (one `import type`, one
+  `export type … from`) become `../catalog/importBatch`; `../app/AppContext` is
+  unchanged. Importers, specifier only: `ui/LibraryScreen.tsx`,
+  `ui/CatalogScreen.tsx` (`../catalog/useCatalogImport` → `./useCatalogImport`).
+  No script imports it. Rename detected (2 lines changed).
+- The domain rule now includes `catalog`.
+- **T** exit 0. **B** exit 0; `compare-bundles` 1e → 1f: every JS file
+  identical. **L**: 127 edges (−`catalog → app`); directories in a cycle 6 →
+  **4**; mutual pairs 3 → **2** (`app ↔ catalog` gone; left:
+  `translation ↔ translation/providers` for 1h, `ui ↔ ui/reader` for 1g).
+  Rules hold.
 
 ## Open
 

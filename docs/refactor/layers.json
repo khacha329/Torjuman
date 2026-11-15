@@ -22,9 +22,9 @@
       "why": "services imports only lib and types (layer 1; Phase 1 step 1e)"
     },
     {
-      "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share)",
+      "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share|catalog)",
       "to": "(app|ui(/.*)?)",
-      "why": "domain code imports neither the composition root nor the UI (layer 2; Phase 1 step 1e — catalog joins in 1f)"
+      "why": "domain code imports neither the composition root nor the UI (layer 2; Phase 1 steps 1e, 1f)"
     }
   ]
 }

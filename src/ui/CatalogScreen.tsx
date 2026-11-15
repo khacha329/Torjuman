@@ -7,7 +7,7 @@ import {
   totalPages,
   type CatalogResult,
 } from '../catalog/catalogService';
-import { useCatalogImport, type EntryState } from '../catalog/useCatalogImport';
+import { useCatalogImport, type EntryState } from './useCatalogImport';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
 import type { CatalogEntry } from '../types';
 import { Button, Spinner } from './common';
