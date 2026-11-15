@@ -1,4 +1,5 @@
 import type { HttpClient, HttpRequestOptions, HttpResponse } from './HttpClient';
+import { PROXY_URL } from './proxyUrl';
 
 /**
  * Upstreams rewritten onto proxy paths. The prefixes are declared twice — in
@@ -73,9 +74,7 @@ export class ProxyUnavailableError extends Error {
  * Cloudflare and back would only add a network hop and a CORS preflight to
  * every page fetch while scraping a book.
  */
-const PROXY_BASE: string = import.meta.env.DEV
-  ? ''
-  : (import.meta.env.VITE_PROXY_URL ?? '').replace(/\/+$/, '');
+const PROXY_BASE: string = import.meta.env.DEV ? '' : PROXY_URL;
 
 /**
  * Whether the proxy-only upstreams can be reached at all: same-origin paths

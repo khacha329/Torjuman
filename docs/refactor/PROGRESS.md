@@ -528,7 +528,8 @@ fifteen answers as recommended**.
 | 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review PASS WITH NOTES | `c121141` |
 | review notes: fe6065e and 2b | applied | `18f2a5d` |
 | 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review PASS WITH NOTES | `6e3bea2` |
-| review notes: 18f2a5d and 2c | applied | this commit |
+| review notes: 18f2a5d and 2c | applied | `ede0a6e` |
+| 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -633,6 +634,21 @@ holds)
   `lib/format.ts` headers re-wrapped (comments only); FOUND_ISSUES 8's
   impossible "1,234 KB" example replaced by a real one ("1,000 KB" vs "1000
   KB"), and a fifth format added (Offline translation's storage line).
+
+**Step 2d, measured 2026-11-15**
+- New `platform/http/proxyUrl.ts`: `PROXY_URL`, the expression both files
+  computed (`(import.meta.env.VITE_PROXY_URL ?? '').replace(/\/+$/, '')`), with
+  a header (new text). `WebHttpClient.ts`: `PROXY_BASE = DEV ? '' :
+  PROXY_URL`, its comment kept; `relayTransfer.ts`: `RELAY_BASE = PROXY_URL`,
+  its comment kept. Both names and both values unchanged (empty in dev for the
+  client, the Worker's URL for the relay). `vite.config.ts`'s `define` comment
+  now says "Read by src/platform/http/proxyUrl.ts" (a pointer the plan names).
+- `scripts/verify-parsers.ts` imports `WebHttpClient` (`PROXIED_ORIGINS`,
+  ~4547) and `relayTransfer` (~5343): its SSR build resolves; **V owed**.
+- **T** exit 0. **B** exit 0; main chunk 791,674 → 791,661 B (−13);
+  `compare-bundles`: only `index.js` differs; CSS byte-identical. **L**: 129
+  edges (+1, `library → platform/http`, as the plan says); no cycles; rules
+  hold. **U** PASS 160/160, both builds.
 
 ## Open
 

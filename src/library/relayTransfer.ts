@@ -1,4 +1,5 @@
 import { InsecureContextError, randomBytes } from '../share/crypto';
+import { PROXY_URL } from '../platform/http/proxyUrl';
 
 // Moving a tablet through the proxy instead of through a saved file.
 //
@@ -21,7 +22,7 @@ import { InsecureContextError, randomBytes } from '../share/crypto';
 // off one screen and typed on another.
 
 /** Where the relay lives: the same Worker as the import proxy. */
-export const RELAY_BASE: string = (import.meta.env.VITE_PROXY_URL ?? '').replace(/\/+$/, '');
+export const RELAY_BASE: string = PROXY_URL;
 export const RELAY_AVAILABLE = RELAY_BASE !== '';
 
 /** Pieces of 8 MiB: well under the Worker's limits, few enough to stay quick. */
