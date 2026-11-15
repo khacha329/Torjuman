@@ -73,7 +73,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review PASS WITH NOTES | `ef2e930` |
 | 1i. `types.ts` → `types/index.ts` | T B L pass; V owed; review PASS WITH NOTES | `b6794da` |
 | 1j. split out `types/reader.ts`, `translation.ts`, `retrieval.ts`, `entities.ts` | T B L pass; V owed; review PASS WITH NOTES | `8d71a48` |
-| review notes: 1j | applied | this commit |
+| review notes: 1j | applied | `ac7129e` |
+| 1k. split out `types/book.ts`, `types/catalog.ts` | T B L pass; V owed; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -341,6 +342,22 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   **For the owner before 1m:** the splitter would carry the detached
   `AppSettings` comment (FOUND_ISSUES 5) into `biography.ts`, because it sits
   above `BiographyEntry`.
+
+**Step 1k, measured 2026-11-15**
+- Same script, `book` before `catalog`. `types/book.ts` (ImportStatus, Book,
+  DictionaryEntry, TocNode, Page, BlockType, InlineSpan, InlineSpanKind, Block)
+  imports `StructureProfile` from `./reader`; `types/catalog.ts` (CatalogEntry,
+  Catalog) imports `Book` from `./book`. `index.ts` no longer uses
+  `StructureProfile`, so that specifier leaves its `./reader` import; its
+  `export *` lines keep their order and gain `./book`, `./catalog` at the end
+  (the script was changed to keep existing lines in place after a first run
+  re-ordered them — that run was discarded).
+- Line multiset: every old non-blank line present; new lines are only the two
+  headers, the two group files' imports, the shortened `./reader` import and
+  the two `export *` lines.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**. **B**
+  exit 0; `compare-bundles` 1j → 1k: every JS file identical. **L**: 148 files,
+  no cycles; rules hold.
 
 ## Open
 
