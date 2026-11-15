@@ -102,3 +102,21 @@ varying between 2 and 3. That was wrong: the variation came from check U
 reloading the page while the first boot was still seeding (its wait did not
 wait), which the app survives by design — the next boot redoes the seed.
 Fixed in the check, not the app. Found in Phase 2 step 2a and its review.
+
+## 8. Byte sizes are written four different ways (2026-11-15, measured)
+
+Only two of the app's byte formatters were the same; Phase 2 step 2c merged
+those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
+whole kilobytes, one decimal for megabytes). The others differ, so merging
+them would change text the owner sees (owner's answer to Phase 2 Q6: not now):
+
+- `ui/settings/DeviceTransfer.tsx` `sizeOf` (~221): never shows bytes —
+  anything under 1 MB is at least "1 KB", kilobytes rounded and with a
+  thousands separator ("1,234 KB"); megabytes as `formatBytes`.
+- `library/deviceTransfer.ts` `mb` (~392), in the "not enough space" message:
+  megabytes only, rounded **up**, with a separator ("1,024 MB").
+- `ui/settings/LibraryTransfer.tsx` (~41), the export status: megabytes only,
+  one decimal ("0.3 MB" for 300 KB).
+
+Left as is. A later, visible change can pick one format. Found in Phase 2
+planning and step 2c.

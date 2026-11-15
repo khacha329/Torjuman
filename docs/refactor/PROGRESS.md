@@ -526,7 +526,8 @@ fifteen answers as recommended**.
 | review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; re-review PASS WITH NOTES | `c6d2998`, `c30e388`, `059266f` |
 | review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | `fe6065e` |
 | 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review PASS WITH NOTES | `c121141` |
-| review notes: fe6065e and 2b | applied | this commit |
+| review notes: fe6065e and 2b | applied | `18f2a5d` |
+| 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review pending | this commit |
 
 **Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -613,6 +614,19 @@ holds)
   Applied: `verify-markup.mjs`'s header line is now really re-wrapped (the
   first attempt only moved the overflow); `lib/delay.ts`'s header names the
   crawler's retry backoff too. Comments only.
+
+**Step 2c, measured 2026-11-15**
+- `formatBytes` moved verbatim from `ui/reader/ShareChapter.tsx` to the new
+  `lib/format.ts` (now `export`ed, adaptation (b)), with a header (new text).
+  `PublishedShares.tsx` deletes its identical copy; both import it from
+  `lib/format`. The three formatters that differ stay (owner's Q6): recorded as
+  FOUND_ISSUES 8 with their exact outputs. No script imports either file.
+- **T** exit 0. **B** exit 0; main chunk 791,787 → 791,674 B (−113);
+  `compare-bundles`: only `index.js` differs; CSS byte-identical (the new
+  FOUND_ISSUES text names no new class). **L**: 128 edges (`ui/settings → lib`
+  and `ui/reader → lib` already existed); rules hold. **U** PASS 160/160 — the
+  Published chapters capture shows all three branches ("512 B", "300 KB",
+  "2.5 MB"). V not owed (no module the verify script builds).
 
 ## Open
 

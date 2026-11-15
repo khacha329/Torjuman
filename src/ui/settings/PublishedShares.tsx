@@ -3,6 +3,7 @@ import { useApp } from '../../app/AppContext';
 import type { ShareRecord } from '../../types';
 import { shareFileName, shareLinkFromKeyText } from '../../share/shareLink';
 import { Button } from '../common';
+import { formatBytes } from '../../lib/format';
 
 // Chapters this device has published, and the honest limits of that list.
 //
@@ -28,12 +29,6 @@ import { Button } from '../common';
 // not have, and the failure would be silent: the author would believe a chapter
 // was withdrawn while its link kept working.
 // ---------------------------------------------------------------------------
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function PublishedShares() {
   const { storage } = useApp();
