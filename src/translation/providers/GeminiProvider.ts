@@ -4,8 +4,8 @@ import {
   type TranslationProvider,
   type TranslationRequest,
   type TranslationResult,
-  type TranslationUsage,
 } from '../TranslationProvider';
+import type { TranslationUsage } from '../../types';
 import {
   GEMINI_BASE,
   GEMINI_DEFAULT_MODEL,

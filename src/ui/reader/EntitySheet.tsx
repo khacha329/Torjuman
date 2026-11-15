@@ -25,7 +25,7 @@ import {
   type TafsirResult,
   type TopicResult,
 } from '../../qul/service';
-import { isCloudProvider } from '../../translation/TranslationProvider';
+import { isCloudProvider } from '../../lib/providers';
 import type {
   Book,
   Entity,

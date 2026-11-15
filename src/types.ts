@@ -4,13 +4,40 @@
 // (and, in v2, highlights and notes) anchor to block IDs, so a re-import that
 // renumbered blocks would orphan every annotation the user has made.
 
-import type {
-  ProviderId,
-  TranslationErrorKind,
-  TranslationUsage,
-} from './translation/TranslationProvider';
+/**
+ * `offline` labels a card produced by the on-device model. It is a label, not a
+ * member of the provider registry — see registry.ts for why the offline path is
+ * deliberately not interchangeable with the cloud ones.
+ */
+export type ProviderId = 'anthropic' | 'gemini' | 'offline';
 
-export type { ProviderId, TranslationUsage };
+/** The providers that talk to a network service and take an API key. */
+export type CloudProviderId = Exclude<ProviderId, 'offline'>;
+
+/** Token counts, normalized across providers. */
+export interface TranslationUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+/**
+ * Why a translation failed, in the terms the user needs.
+ *
+ * `auth` and `rate-limit` in particular must stay distinguishable: one means
+ * "your key is wrong", the other means "wait a minute". A generic error message
+ * sends the user hunting in entirely the wrong place.
+ */
+export type TranslationErrorKind =
+  | 'auth'
+  | 'rate-limit'
+  | 'network'
+  | 'refusal'
+  | 'parse'
+  /** The token limit was reached mid-answer. A different remedy from a parse error. */
+  | 'truncated'
+  | 'api';
 
 export type StructureProfile = 'generic' | 'hadith-commentary';
 

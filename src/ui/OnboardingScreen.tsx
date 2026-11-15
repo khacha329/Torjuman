@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { secrets } from '../app/secrets';
 import { navigate } from '../app/router';
 import { providerFor } from '../translation/registry';
-import type { CloudProviderId } from '../translation/TranslationProvider';
+import type { CloudProviderId } from '../types';
 import { Button, inputClass } from './common';
 
 // First run.

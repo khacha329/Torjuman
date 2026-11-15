@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phase 0 on branch `claude/restructure-phase-0`, awaiting the owner's review
+## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 in progress on `claude/restructure-phase-1`
 
 ## Phase 0: rules, agents, baselines
 
@@ -50,6 +50,30 @@ Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
   stops at `ENOENT fixtures/book-9260.html`, as expected without the
   gitignored data. **The owner's count on their PC is the baseline**; record
   it here.
+
+## Phase 1: seams (in progress, branch `claude/restructure-phase-1`)
+
+Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 1a. Provider-id types → `types.ts`; `isCloudProvider` → `lib/providers.ts` | T B L pass; review pending | this commit |
+
+**Step 1a, measured 2026-11-15**
+- Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
+  the place of its import block: `ProviderId` and `CloudProviderId` (with their
+  comments), `TranslationUsage`, `TranslationErrorKind` (with its comment). The
+  re-export `export type { ProviderId, TranslationUsage };` is deleted, as the
+  plan names. `isCloudProvider` moved verbatim to the new `lib/providers.ts`.
+- Importers switched (11 files): `models.ts`, `prompt.ts`, `explain.ts`,
+  `registry.ts`, both providers, `qul/compile.ts`, `app/secrets.ts`,
+  `EntitySheet.tsx`, `SettingsScreen.tsx`, `OnboardingScreen.tsx`. No script
+  imports any of the five names.
+- **T** exit 0. **B** exit 0; main chunk 791,844 B (baseline 791,844, hash
+  changed); dynamic chunks unchanged. **L**: 142 files, 123 edges; file-level
+  cycles 1 → **0**; `types` → nothing; new edges `lib → types` (type) and
+  `app → lib` (secrets → `lib/providers`), both expected; mutual pairs 7 → 6.
+  Rules added: `types` imports nothing; `lib` imports only `types`. All hold.
 
 ## Open
 

@@ -1,9 +1,6 @@
-import {
-  isCloudProvider,
-  type CloudProviderId,
-  type ProviderId,
-  type TranslationProvider,
-} from './TranslationProvider';
+import { type TranslationProvider } from './TranslationProvider';
+import { isCloudProvider } from '../lib/providers';
+import type { CloudProviderId, ProviderId } from '../types';
 import { AnthropicProvider } from './providers/AnthropicProvider';
 import { GeminiProvider } from './providers/GeminiProvider';
 

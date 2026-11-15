@@ -6,7 +6,8 @@
 // page. A stale ID returns an error whose message does not say "stale ID", so
 // this is deliberately the only place they appear.
 
-import type { ModelOption, ProviderId } from './TranslationProvider';
+import type { ModelOption } from './TranslationProvider';
+import type { ProviderId } from '../types';
 
 // ---------------------------------------------------------------- Anthropic
 

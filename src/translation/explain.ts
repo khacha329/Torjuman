@@ -1,11 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import type { LocalSourceRef, WebSourceRef } from '../types';
+import type { LocalSourceRef, TranslationUsage, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
 import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
-import { TranslationError, type TranslationUsage } from './TranslationProvider';
+import { TranslationError } from './TranslationProvider';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
