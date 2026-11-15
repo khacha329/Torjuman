@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { hrefFor } from '../../app/router';
 import { parseArabicNumber, toArabicNumerals } from '../../lib/arabic';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';

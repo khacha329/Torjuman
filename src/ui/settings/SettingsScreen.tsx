@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/AppContext';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { listEnglishTranslations, type TranslationResource } from '../../retrieval/quran';
 import { allProviders, providerFor } from '../../translation/registry';
 import { defaultModelFor, modelsFor } from '../../translation/models';

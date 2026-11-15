@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { secrets } from '../app/secrets';
+import { secrets } from '../services/secrets';
 import { navigate } from '../app/router';
 import { providerFor } from '../translation/registry';
 import type { CloudProviderId } from '../types';

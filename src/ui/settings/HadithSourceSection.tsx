@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../app/AppContext';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { probeDorar } from '../../retrieval/dorar';
 import { HADITH_SOURCES } from '../../retrieval/HadithSource';
 import { Button } from '../common';

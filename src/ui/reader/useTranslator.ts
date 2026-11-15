@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { beginActivity } from '../../services/activity';
 import { coverageOf } from '../../translation/coverage';
 import { useApp } from '../../app/AppContext';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
 import { knownReferencesIn } from '../../quran/entityService';

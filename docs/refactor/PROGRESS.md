@@ -64,6 +64,7 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | 1c. `app/retrievalLog.ts` → `services/retrievalLog.ts`; workflow list | T B L pass; review PASS WITH NOTES | `902758d` |
 | review notes: 7ca8087 and 1c | applied | `fd6c5e4`, `ee119ca` |
 | 1d. `app/activity.ts` → `services/activity.ts` | T B L pass; V owed; review PASS WITH NOTES | `2231573` |
+| 1e. `app/secrets.ts` → `services/secrets.ts`; services and domain rules | T B L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -179,6 +180,23 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   covers RESTRUCTURE T-a. Left verbatim: `activity.ts`'s header calls the batch
   "an app-level service", though it lives in `catalog/` — true before the move
   too.
+
+**Step 1e, measured 2026-11-15**
+- `git mv src/app/secrets.ts src/services/secrets.ts`, byte-identical: its two
+  imports (`../lib/providers`, `../types`) are the same relative paths from
+  `services/`. Importers, specifier only (9): `App.tsx`, `ui/OnboardingScreen.tsx`,
+  `library/deviceTransfer.ts`, `ui/reader/EntitySheet.tsx`,
+  `useExplanations.ts`, `useTranslator.ts`, `ReaderScreen.tsx`,
+  `ui/settings/SettingsScreen.tsx`, `HadithSourceSection.tsx`. No script imports it.
+- `lib/providers.ts`'s header (1a's new text) now names `services/secrets.ts`,
+  reflowed. A verbatim comment in `types.ts` (~826) still says
+  `app/secrets.ts`; the plan's step 1o now covers stale path pointers in
+  comments, so it is left here.
+- Rules added: `services` imports only `lib`, `types`; the domain directories
+  (all but `catalog`, which joins in 1f) import neither `app` nor `ui.*`.
+- **T** exit 0. **B** exit 0; `compare-bundles` 1d → 1e: every JS file
+  identical. **L**: 128 edges; directories in a cycle 6; mutual pairs 3; 5 rules
+  hold.
 
 ## Open
 

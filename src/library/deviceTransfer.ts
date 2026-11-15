@@ -1,5 +1,5 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import { API_KEY_STORAGE_KEYS } from '../app/secrets';
+import { API_KEY_STORAGE_KEYS } from '../services/secrets';
 
 // Moving everything on one tablet to another, as one file.
 //

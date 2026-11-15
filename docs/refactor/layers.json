@@ -15,6 +15,16 @@
       "from": "platform/.*",
       "to": "(?!(lib|types)$).*",
       "why": "platform imports only lib and types (layer 1; Phase 1 step 1b)"
+    },
+    {
+      "from": "services",
+      "to": "(?!(lib|types)$).*",
+      "why": "services imports only lib and types (layer 1; Phase 1 step 1e)"
+    },
+    {
+      "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share)",
+      "to": "(app|ui(/.*)?)",
+      "why": "domain code imports neither the composition root nor the UI (layer 2; Phase 1 step 1e — catalog joins in 1f)"
     }
   ]
 }
