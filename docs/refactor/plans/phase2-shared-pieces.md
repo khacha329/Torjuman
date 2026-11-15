@@ -1,6 +1,6 @@
 # Phase 2: shared pieces — one copy of each helper and UI shell
 
-Status: draft — awaiting the owner's approval
+Status: **approved by the owner, 2026-11-15** (answers at the end)
 Base commit: `146dc62` (Phase 1 complete; PRs #8 and #9 open, not merged)
 Branch: `claude/restructure-phase-2`
 
@@ -711,5 +711,24 @@ report saved as `docs/refactor/phase2/layers.txt`.
     import). Recommended: yes, as written. Alternative: move `hrefFor`/`Route`
     out of `app/router.ts`, which is not structure-only for this phase.
 
-## Owner's answers
+## Owner's answers (2026-11-15)
 
+**All fifteen as recommended** ("all as recommended, go ahead"):
+
+| Q | Answer |
+| --- | --- |
+| Q1 | `src/ui/kit/`, `common.tsx` → `index.tsx`, new pieces in their own files, imported as `'../kit'` |
+| Q2 | no split of `index.tsx` now |
+| Q3 | bare `SettingsSection` only (2j′ not done) |
+| Q4 | `SettingsSection` in `ui/kit` |
+| Q5 | the two differing progress bars stay as they are; recorded in FOUND_ISSUES |
+| Q6 | the differing byte formatters are not unified; recorded, decided later |
+| Q7 | `lib/gzip` in its minimal form |
+| Q8 | `platform/http/proxyUrl.ts` |
+| Q9 | ḥadīth-only UI not in Phase 2 (Phase 5) |
+| Q10 | include 2f `subtle()` and 2i `percentOf`; defer `parseHtml`, `pageIndexOf`, `toLine`, the Receive card shell |
+| Q11 | U commits only the SHA-256 manifest |
+| Q12 | U not in the deploy workflow |
+| Q13 | the reviewer after every commit |
+| Q14 | one PR, against `claude/restructure-phase-1` while #9 is open; the owner merges after V and M |
+| Q15 | the `ui/kit` rule allows `app` |

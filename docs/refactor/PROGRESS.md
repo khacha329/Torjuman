@@ -517,8 +517,8 @@ SSR build could run, and it resolved at every step).
 ## Phase 2: shared pieces (planning, branch `claude/restructure-phase-2`)
 
 Plan: [`plans/phase2-shared-pieces.md`](plans/phase2-shared-pieces.md), written
-by the `torjuman-planner` agent on `146dc62`, **awaiting the owner's
-approval** (Q1–Q15).
+by the `torjuman-planner` agent on `146dc62`; **approved 2026-11-15, all
+fifteen answers as recommended**.
 
 ## Open
 
