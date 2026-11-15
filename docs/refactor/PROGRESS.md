@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 in progress on `claude/restructure-phase-1`
+## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 in progress on `claude/restructure-phase-1` — the import graph is acyclic since step 1h
 
 ## Phase 0: rules, agents, baselines
 
@@ -69,7 +69,8 @@ Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md), approved 2026-11-15.
 | review notes: 1e | applied | `ce1aefa` |
 | 1f. `catalog/useCatalogImport.ts` → `ui/useCatalogImport.ts` | T B L pass; review PASS | `394c3ea` |
 | review notes: ce1aefa and 1f | applied | `cf5f8c0` |
-| 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review pending | this commit |
+| 1g. `RAIL_WIDTH` → `ui/useLayoutMode.ts` | T B L S R pass; V owed; review PASS WITH NOTES | `89f6784` |
+| 1h. `translation/registry.ts` → `translation/providers/registry.ts` | T B L pass; review pending | this commit |
 
 **Step 1a, measured 2026-11-15**
 - Moved verbatim from `translation/TranslationProvider.ts` to `types.ts`, in
@@ -255,6 +256,31 @@ builds identical, exit 0; a one-character edit reported, exit 1.
   directories in a cycle 4 → **2**; mutual pairs 2 → **1**
   (`translation ↔ translation/providers`, for 1h). Rule added: `ui` imports no
   `ui/.+`. All hold.
+
+- **Review of 1g: PASS WITH NOTES**, nothing to fix. The reviewer rebuilt
+  the old bundle in the new order and found the same 392,180 tokens up to a
+  consistent minifier rename: a pure reorder (the rail module moves later, to
+  where `ReaderScreen` imports it). Notes left for later: `verify-parsers.ts`
+  now imports `useLayoutMode` twice (5471–5472), tidy only with the owner's OK;
+  RESTRUCTURE T-a's `ui/reader/SelectionRail` example is stale (1o).
+
+**Step 1h, measured 2026-11-15**
+- `git mv src/translation/registry.ts src/translation/providers/registry.ts`.
+  Its five imports change only in path (`./TranslationProvider` →
+  `../TranslationProvider`, `../lib/providers` → `../../lib/providers`,
+  `../types` → `../../types`, `./providers/X` → `./X`); the rest is
+  byte-identical. Importers, specifier only (6): `app/AppContext.tsx`,
+  `ui/OnboardingScreen.tsx`, `ui/reader/useTranslator.ts`,
+  `ui/reader/TranslationCardView.tsx`, `ui/settings/SettingsScreen.tsx`,
+  `ui/settings/ProfileEditor.tsx`. No script imports it. Comments that say
+  "registry.ts" carry no directory and stay true.
+- Rule added: `translation` does not import `translation/providers`.
+- **T** exit 0. **B** exit 0; `compare-bundles` 1g → 1h: every JS file
+  identical. **L** (edges diffed against a worktree of `89f6784`): +4
+  (`app`, `ui`, `ui/settings` → `translation/providers`;
+  `translation/providers → lib`), −2 (`translation → translation/providers`,
+  `ui → translation`): 126 → 128. **Directories in a cycle 0, mutual pairs 0,
+  file-level cycles 0** — the phase's goal. 7 rules hold.
 
 ## Open
 

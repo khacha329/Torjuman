@@ -7,7 +7,7 @@ import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
 import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError } from '../../translation/TranslationProvider';
-import { providerFor } from '../../translation/registry';
+import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf, TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';

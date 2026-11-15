@@ -1,8 +1,8 @@
-import { type TranslationProvider } from './TranslationProvider';
-import { isCloudProvider } from '../lib/providers';
-import type { CloudProviderId, ProviderId } from '../types';
-import { AnthropicProvider } from './providers/AnthropicProvider';
-import { GeminiProvider } from './providers/GeminiProvider';
+import { type TranslationProvider } from '../TranslationProvider';
+import { isCloudProvider } from '../../lib/providers';
+import type { CloudProviderId, ProviderId } from '../../types';
+import { AnthropicProvider } from './AnthropicProvider';
+import { GeminiProvider } from './GeminiProvider';
 
 // The only place outside the settings screen that names a provider.
 //
