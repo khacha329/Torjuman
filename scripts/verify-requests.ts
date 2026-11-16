@@ -361,12 +361,22 @@ function plain(value: unknown): unknown {
   return out;
 }
 
+/** What a SyntaxError's message is recorded as (see describeError). */
+const SYNTAX_ERROR_MASK = '(masked: the JavaScript engine\'s JSON parser wording)';
+
 function describeError(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) return { thrown: String(error) };
   const record: Record<string, unknown> = { class: error.constructor.name, name: error.name };
   for (const field of ['kind', 'message', 'retryAfterSeconds', 'raw'] as const) {
     if (field in error) record[field] = plain((error as unknown as Record<string, unknown>)[field]);
   }
+  // A SyntaxError's message is the JavaScript engine's wording, not the app's,
+  // and it differs between Node versions ("Unexpected end of JSON input" in
+  // Node 22, "Unexpected token < in JSON at position 0" in Node 18). No step
+  // can change it while the class stays SyntaxError, and a change in how the
+  // app handles the error still shows in the class, name and kind. Masked so
+  // Q gives the same answer on the owner's PC, whatever its Node.
+  if (record.class === 'SyntaxError' && 'message' in record) record.message = SYNTAX_ERROR_MASK;
   return record;
 }
 
@@ -1697,7 +1707,10 @@ const scenarioCount = record.filter((entry) => 'requests' in entry).length;
 const requestCount = record.reduce((sum, entry) => sum + (Array.isArray(entry.requests) ? entry.requests.length : 0), 0);
 const recordFile = {
   check: 'Q — recorded requests (scripts/verify-requests.ts)',
-  masked: [...MASKED_HEADERS].map((name) => `${name}: ${MASK}`),
+  masked: [
+    ...[...MASKED_HEADERS].map((name) => `${name}: ${MASK}`),
+    `SyntaxError message: ${SYNTAX_ERROR_MASK}`,
+  ],
   pinned: {
     dateNow: new Date(FIXED_NOW).toISOString(),
     mathRandom: 0.5,

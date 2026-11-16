@@ -854,7 +854,8 @@ four call sites build a client per call — the basis of check Q.
 | 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review PASS WITH NOTES | `707095f` |
 | review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | `aacf81b` |
 | harness: check Q's coverage gaps closed, on the old code | Q proven; review PASS WITH NOTES | `9306ea6` |
-| harness: check Q's second-round gaps | Q proven; review pending | this commit |
+| harness: check Q's second-round gaps | Q proven; review PASS WITH NOTES | `33078d4` |
+| harness: SyntaxError messages masked in Q | applied | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -956,6 +957,17 @@ FOUND_ISSUES 11.
   and make Q report a false difference there. Gloss and compile's Anthropic
   usage with absent counts are not driven (no step moves their arithmetic).
 - Behaviours exposed: FOUND_ISSUES 15.
+
+- **Reviews of c64f411 (PASS) and 33078d4 (PASS WITH NOTES): "ready for
+  3b".** Applied: FOUND_ISSUES 15's wording (what the record shows and what
+  is by reading; a billing claim softened; `retry-after-ms` vs none).
+- **Harness, on the reviewer's recommendation:** a `SyntaxError`'s message is
+  now masked in Q's record (class, name and kind kept), because it is the
+  JavaScript engine's wording and differs between Node versions (Node 18
+  words it otherwise), so Q would fail falsely on the owner's PC. The only
+  record changes: the two `compile.gemini.200-*` messages and one `masked`
+  header line — the one deliberate exception to "earlier entries
+  byte-identical", made before 3b, after which §8 forbids any. Two runs PASS.
 
 ## Open
 
