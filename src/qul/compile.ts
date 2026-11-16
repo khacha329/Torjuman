@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { sha256 } from '../lib/hash';
 import { GEMINI_BASE } from '../translation/models';
 import { TranslationError } from '../translation/TranslationProvider';
-import { anthropicCallError } from '../translation/anthropic';
+import { anthropicCallError, anthropicClient } from '../translation/anthropic';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -148,7 +148,7 @@ async function compileWithAnthropic(
   apiKey: string,
   prompt: string,
 ): Promise<CompileResult> {
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const client = anthropicClient(apiKey);
 
   try {
     const message = await client.messages.create({

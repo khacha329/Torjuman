@@ -19,6 +19,7 @@ import {
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
+import { anthropicClient } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -27,13 +28,7 @@ import {
   stripJsonInstruction,
 } from '../schema';
 
-// Anthropic, via the official SDK.
-//
-// `dangerouslyAllowBrowser` is what makes the SDK send
-// `anthropic-dangerous-direct-browser-access: true`, required for browser calls
-// and correct here: a local, single-user, bring-your-own-key app. The key goes
-// to api.anthropic.com and nowhere else, is never logged, and never appears in
-// an error message.
+// Anthropic, via the official SDK. The client is built in ../anthropic.ts.
 //
 // Output shape is enforced by a strict tool rather than requested in prose —
 // see schema.ts for why, and for why the tool is not forced.
@@ -56,7 +51,7 @@ export class AnthropicProvider implements TranslationProvider {
   readonly fitFor = 'For passages you intend to teach from.';
 
   private client(key: string): Anthropic {
-    return new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+    return anthropicClient(key);
   }
 
   async validateKey(key: string): Promise<boolean> {

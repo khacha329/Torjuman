@@ -2,11 +2,22 @@ import Anthropic from '@anthropic-ai/sdk';
 import { TranslationError } from './TranslationProvider';
 
 // What every Claude call in the app shares, so the SDK is used the same way
-// everywhere. It sits in the translation core rather than under providers/
+// everywhere: the client (step 3d) and the short error mapping (3c). It sits in the translation core rather than under providers/
 // because Explain and gloss (here in translation/) and QUL compile use it as
 // well as the provider, and the translation core may not import its providers
 // (docs/refactor/layers.json). Restructure Phase 3 gave it one home; check Q
 // (scripts/verify-requests.ts) shows every call sends what it sent before.
+
+// `dangerouslyAllowBrowser` is what makes the SDK send
+// `anthropic-dangerous-direct-browser-access: true`, required for browser calls
+// and correct here: a local, single-user, bring-your-own-key app. The key goes
+// to api.anthropic.com and nowhere else, is never logged, and never appears in
+// an error message.
+
+/** The SDK client every Anthropic call uses; one per call, as before. */
+export function anthropicClient(apiKey: string): Anthropic {
+  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+}
 
 /**
  * The short error mapping Explain, gloss and compile use: a rejected key, a

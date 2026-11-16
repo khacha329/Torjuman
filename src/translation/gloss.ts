@@ -1,11 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { BlockType, WordGloss } from '../types';
 import { normalize } from '../lib/arabic';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError } from './anthropic';
+import { anthropicCallError, anthropicClient } from './anthropic';
 
 // "What does this word mean here, in English?"
 //
@@ -101,7 +101,7 @@ export async function glossWord(
     throw new TranslationError('auth', 'No API key is set. Add one in Settings.');
   }
 
-  const client = new Anthropic({ apiKey: request.apiKey, dangerouslyAllowBrowser: true });
+  const client = anthropicClient(request.apiKey);
 
   try {
     const message = await client.messages.create({

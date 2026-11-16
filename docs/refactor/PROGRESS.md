@@ -858,7 +858,8 @@ four call sites build a client per call — the basis of check Q.
 | harness: SyntaxError messages masked in Q | review PASS WITH NOTES | `f444b44` |
 | review notes: f444b44 — comment, plan text | applied | `2012536` |
 | 3b. U captures for the Claude side and the reader's cards | U proven; review PASS WITH NOTES | `da5d0f0` |
-| 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
+| 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `dc90a29` |
+| 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1026,6 +1027,29 @@ FOUND_ISSUES 11.
   `index.js` differs; CSS byte-identical. SSR build of `verify-parsers.ts`
   resolves; **V owed** (compile). **L**: 134 edges (`qul → translation`
   existed), no cycles; rules hold.
+
+- **Review of 3c: PASS WITH NOTES; "ready for 3d".** Compile's `try` body
+  read statement by statement: no `TranslationError` can reach its `catch`, so
+  the added pass-through cannot run. Note: the new module's header described
+  the provider using it a step early — true from 3d.
+
+**Step 3d, measured 2026-11-16**
+- `anthropicClient(apiKey)` added to `translation/anthropic.ts`, returning
+  `new Anthropic({ apiKey, dangerouslyAllowBrowser: true })`, with the
+  `dangerouslyAllowBrowser` paragraph moved verbatim from
+  `AnthropicProvider.ts`'s header over it (the provider's header keeps its
+  first line, now pointing here, and its output-shape paragraph). Four sites
+  call it: the provider's private `client()` (`return anthropicClient(key);`,
+  so `validateKey` still builds inside its `try`), `explain.ts`, `gloss.ts`,
+  `qul/compile.ts` — each at the same place as before.
+- Explain, gloss and compile now use `Anthropic` only in type positions, so
+  their import is `import type` (the plan's "after these steps" condition,
+  met now): value imports of the SDK are only `translation/anthropic.ts` and
+  the provider, which Q's allowlist reports.
+- **T** exit 0. **Q** PASS, identical — every Anthropic scenario, headers
+  included (`anthropic-dangerous-direct-browser-access`). **B** exit 0; main
+  chunk 788,800 → 788,708 B (−92); only `index.js`; CSS byte-identical. SSR
+  build resolves; **V owed**. **L**: no new edge; rules hold.
 
 ## Open
 

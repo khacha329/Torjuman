@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { LocalSourceRef, TranslationUsage, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
@@ -6,7 +6,7 @@ import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError } from './anthropic';
+import { anthropicCallError, anthropicClient } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -166,10 +166,7 @@ export async function explainPhrase(options: {
   localSources: LocalSourceRef[];
   onProgress?: (partial: string) => void;
 }): Promise<ExplainResult> {
-  const client = new Anthropic({
-    apiKey: options.apiKey,
-    dangerouslyAllowBrowser: true,
-  });
+  const client = anthropicClient(options.apiKey);
 
   const usage: TranslationUsage = {
     inputTokens: 0,
