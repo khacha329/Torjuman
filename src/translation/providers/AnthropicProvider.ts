@@ -19,7 +19,7 @@ import {
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { anthropicClient, textOf, toTranslationError } from '../anthropic';
+import { addUsage, anthropicClient, textOf, toTranslationError } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -283,13 +283,6 @@ function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | 
 
 function emptyUsage(): TranslationUsage {
   return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-}
-
-function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void {
-  total.inputTokens += usage.input_tokens ?? 0;
-  total.outputTokens += usage.output_tokens ?? 0;
-  total.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-  total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
 }
 
 /**

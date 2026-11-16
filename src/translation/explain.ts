@@ -6,7 +6,7 @@ import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError, anthropicClient, textOf } from './anthropic';
+import { addUsage, anthropicCallError, anthropicClient, textOf } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -213,7 +213,7 @@ export async function explainPhrase(options: {
       });
 
       const message = await stream.finalMessage();
-      accumulate(usage, message.usage);
+      addUsage(usage, message.usage);
       notes += textOf(message);
 
       if (message.stop_reason === 'pause_turn') {
@@ -241,7 +241,7 @@ export async function explainPhrase(options: {
     });
 
     const final = await structured.finalMessage();
-    accumulate(usage, final.usage);
+    addUsage(usage, final.usage);
 
     const call = final.content.find(
       (block): block is Anthropic.ToolUseBlock =>
@@ -291,11 +291,4 @@ export async function explainPhrase(options: {
   } catch (error) {
     throw anthropicCallError(error);
   }
-}
-
-function accumulate(total: TranslationUsage, usage: Anthropic.Usage): void {
-  total.inputTokens += usage.input_tokens ?? 0;
-  total.outputTokens += usage.output_tokens ?? 0;
-  total.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-  total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
 }

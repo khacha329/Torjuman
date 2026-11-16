@@ -861,7 +861,8 @@ four call sites build a client per call — the basis of check Q.
 | 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `dc90a29` |
 | 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review PASS WITH NOTES | `5f87f7d` |
 | 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `bb1d962` |
-| 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review pending | this commit |
+| 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review PASS WITH NOTES | `6de2d88` |
+| 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1089,6 +1090,23 @@ FOUND_ISSUES 11.
   scenarios added for this step. **B** exit 0; main chunk 788,708 → 788,484 B
   (−224); only `index.js`; CSS byte-identical. SSR build resolves; **V owed**.
   **L**: no new edge; rules hold.
+
+- **Review of 3f: PASS WITH NOTES; "ready for 3g".** `finalMessage()`'s
+  `ParsedMessage` is an `Anthropic.Message`; every site was the same
+  expression on the same type. Note applied in 3g: the header re-wrapped.
+
+**Step 3g, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `addUsage` moved verbatim from `providers/AnthropicProvider.ts` to
+  `translation/anthropic.ts`, exported, with a doc comment (new text);
+  `anthropic.ts` gains a `type` import of `TranslationUsage`. The provider's
+  two calls are unchanged. Explain's `accumulate`, character-identical apart
+  from its name, is deleted, and its two calls now say `addUsage`. The module
+  header names the running token total and is re-wrapped (3f review).
+- **T** exit 0. **Q** PASS, identical — including per-turn cache-read and
+  cache-write counts and the null and absent counts added for this step. **B**
+  exit 0; main chunk 788,484 → 788,298 B (−186); only `index.js`; CSS
+  byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
+  hold.
 
 ## Open
 

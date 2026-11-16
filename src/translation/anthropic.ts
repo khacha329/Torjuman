@@ -1,13 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { TranslationUsage } from '../types';
 import { TranslationError } from './TranslationProvider';
 
 // What every Claude call in the app shares, so the SDK is used the same way
-// everywhere: the client, the text of a reply, and the two error mappings — the short one for
-// Explain, gloss and compile, the fuller one for translation and the key
-// check. It sits in the translation core rather than under providers/
-// because Explain and gloss (here in translation/) and QUL compile use it as
-// well as the provider, and the translation core may not import its providers
-// (docs/refactor/layers.json). Restructure Phase 3 gave it one home; check Q
+// everywhere: the client, the text of a reply, the running token total, and
+// the two error mappings — the short one for Explain, gloss and compile, the
+// fuller one for translation and the key check. It sits in the translation
+// core rather than under providers/ because Explain and gloss (here in
+// translation/) and QUL compile use it as well as the provider, and the
+// translation core may not import its providers (docs/refactor/layers.json). Restructure Phase 3 gave it one home; check Q
 // (scripts/verify-requests.ts) shows every call sends what it sent before.
 
 // `dangerouslyAllowBrowser` is what makes the SDK send
@@ -35,6 +36,19 @@ export function textOf(message: Anthropic.Message): string {
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
     .join('\n');
+}
+
+/**
+ * Add one reply's token counts to a running total. A count the API leaves out
+ * or sends as null adds nothing. Moved verbatim from providers/
+ * AnthropicProvider.ts in restructure Phase 3 step 3g; Explain had the same
+ * function as `accumulate`.
+ */
+export function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void {
+  total.inputTokens += usage.input_tokens ?? 0;
+  total.outputTokens += usage.output_tokens ?? 0;
+  total.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+  total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
 }
 
 /**
