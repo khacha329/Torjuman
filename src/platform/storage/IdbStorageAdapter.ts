@@ -35,6 +35,13 @@ import type {
 } from './StorageAdapter';
 import { BOOK_STORES, DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from './idbSchema';
 import { purgeIndex } from './idbPurge';
+import {
+  clearAllStores,
+  countStoreRows,
+  listStoreNames,
+  putStoreRows,
+  readStoreRows,
+} from './idbTransfer';
 
 // This file and the idb*.ts files beside it are the ONLY code that talks to
 // IndexedDB (restructure Phase 4 is moving this class's code into them, store
@@ -84,6 +91,13 @@ export class IdbStorageAdapter implements StorageAdapter {
     if (!this.db) throw new Error('StorageAdapter.init() has not been awaited');
     return this.db;
   }
+
+  /**
+   * The handle, fetched when a moved group function first needs it rather than
+   * when the class calls it: a method that returns early without touching the
+   * database (an empty write) still resolves before `init`, as it always has.
+   */
+  private readonly lazyHandle = (): IDBPDatabase<Schema> => this.handle;
 
   // ---------------------------------------------------------------- books
 
@@ -621,29 +635,17 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   // ------------------------------------------------------ device transfer
-  //
-  // Untyped on purpose: these move rows between this database and a file
-  // without interpreting them, so the per-store generics would add casts and
-  // no safety. The store name is checked against the live database instead.
 
   get schemaVersion(): number {
     return DB_VERSION;
   }
 
   listStoreNames(): string[] {
-    return Array.from(this.handle.objectStoreNames);
-  }
-
-  private untyped(store: string): IDBPDatabase {
-    const db = this.handle as unknown as IDBPDatabase;
-    if (!db.objectStoreNames.contains(store)) {
-      throw new Error(`This database has no "${store}" store.`);
-    }
-    return db;
+    return listStoreNames(this.lazyHandle);
   }
 
   async countStoreRows(store: string): Promise<number> {
-    return this.untyped(store).count(store);
+    return countStoreRows(this.lazyHandle, store);
   }
 
   async readStoreRows(
@@ -651,36 +653,15 @@ export class IdbStorageAdapter implements StorageAdapter {
     after: unknown,
     limit: number,
   ): Promise<{ rows: unknown[]; lastKey: unknown }> {
-    const db = this.untyped(store);
-    const range =
-      after === undefined ? undefined : IDBKeyRange.lowerBound(after as IDBValidKey, true);
-    // One transaction for both reads, so the keys and the rows describe the
-    // same snapshot and line up index for index.
-    const tx = db.transaction(store, 'readonly');
-    const [keys, rows] = await Promise.all([
-      tx.store.getAllKeys(range, limit),
-      tx.store.getAll(range, limit),
-    ]);
-    await tx.done;
-    return { rows, lastKey: keys.length > 0 ? keys[keys.length - 1] : undefined };
+    return readStoreRows(this.lazyHandle, store, after, limit);
   }
 
   async putStoreRows(store: string, rows: unknown[]): Promise<void> {
-    if (rows.length === 0) return;
-    const db = this.untyped(store);
-    const tx = db.transaction(store, 'readwrite');
-    await Promise.all(rows.map((row) => tx.store.put(row)));
-    await tx.done;
-    this.searchIndex.clear();
+    return putStoreRows(this.lazyHandle, this.searchIndex, store, rows);
   }
 
   async clearAllStores(): Promise<void> {
-    const db = this.handle as unknown as IDBPDatabase;
-    const names = Array.from(db.objectStoreNames);
-    const tx = db.transaction(names, 'readwrite');
-    await Promise.all(names.map((name) => tx.objectStore(name).clear()));
-    await tx.done;
-    this.searchIndex.clear();
+    return clearAllStores(this.lazyHandle, this.searchIndex);
   }
 
   // ---------------------------------------------------------- work backup

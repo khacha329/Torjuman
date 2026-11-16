@@ -1470,7 +1470,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `056290a` |
 | 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review PASS WITH NOTES | `a4ba6af` |
 | 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
-| 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review pending | this commit |
+| 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
+| 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1693,6 +1694,40 @@ holds)
   `purgeIndex`'s "every call below passes a valid pair" (its callers are in
   the adapter, and later the group files); and the harness's `PRIVATE` set
   still names `purgeIndex`, now inert.
+- **Review of `db6b10e`: PASS; "ready for 4e".**
+
+**Step 4e, measured 2026-11-16**
+- **A departure from Design §3, found here, applied from 4e on.** The plan
+  has each moved method take the handle (`this.handle` → `handle`) and its
+  class delegate pass `this.handle`. But some methods return before they
+  touch the database: `putStoreRows` with no rows (and, in later groups,
+  the empty `putMarks`, `putBlocks`, `deleteMarks`, the empty searches …)
+  resolve even before `init`, and check D's `before-init` records exactly
+  that. A delegate that reads `this.handle` to pass it would make them
+  reject. So each moved function takes `handle: () => IDBPDatabase<Schema>`
+  and calls it where the body read `this.handle` — still one token per
+  site, `this.handle` → `handle()` — and the class passes one fetcher, a
+  `private readonly lazyHandle = () => this.handle` field (an instance
+  field, not on the prototype, so the harness's method list is unaffected).
+  `purgeIndex` (4d) keeps its handle parameter: its callers have already
+  read the handle. **Proven:** a delegate made eager (`const db =
+  this.handle; return putStoreRows(() => db, …)`) → D FAIL, 1 of 40
+  (`family/before-init`); restored from a copy, PASS.
+- The device-transfer section's comment and its five members (`listStoreNames`,
+  the private `untyped`, `countStoreRows`, `readStoreRows`, `putStoreRows`,
+  `clearAllStores`) moved verbatim into the new
+  `platform/storage/idbTransfer.ts`, de-indented, each a function whose first
+  parameter is the fetcher; `this.handle` → `handle()`, `this.untyped(` →
+  `untyped(handle, `, `this.searchIndex` → a `searchIndex` parameter typed
+  `Map<string, unknown>` (these only clear it; `SearchEntry` moves with its
+  group in 4h). `untyped` is not exported (only this file uses it). The
+  `schemaVersion` getter and the section divider stay in the class; the class
+  gains five one-line delegates, `listStoreNames` still synchronous (so it
+  still throws, not rejects, before `init`).
+- **T** exit 0. **B** exit 0; main chunk 788,277 → 788,528 B (+251: five
+  delegates, the field); only `index.js`; CSS byte-identical. **L**: rules
+  hold. **D** PASS, identical — every whole-tablet scenario and
+  `family/raw-store-io`, `family/before-init`. **Q** PASS. **V owed**.
 
 ## Open
 
