@@ -1476,7 +1476,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review PASS | `ab1c19b` |
 | 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review PASS | `b04c7f8` |
 | 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `1b5089a` |
-| 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review pending | this commit |
+| 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
+| 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1917,12 +1918,13 @@ holds)
   today's exactly). Each entry: `keyPath`, `indexes` (name, keyPath,
   `multiEntry: true` only on `narratorProfiles.byNaming`), and Design
   §2.2's `onUpgrade` (`recreate` for `entities`; `if-missing` for the nine
-  guarded stores and the QUL trio, `createdWith: 'qulResources'` on
-  `qulEntries` and `qulCompilations`; `assumed` for the other twelve) — read
-  off the existing branch, not yet read by any code (4k). `perBook` is not
-  added (4l). No store uses `autoIncrement` or `unique`, and the shape has
-  neither. `createStore` passes an options object only where `multiEntry`
-  is set, so every `createIndex` call has the same arguments as before.
+  guarded stores plus `qulEntries` and `qulCompilations` (11), with
+  `createdWith: 'qulResources'` on those two; `assumed` for the other
+  twelve) — read off the existing branch, not yet read by any code (4k).
+  `perBook` is not added (4l). No store uses `autoIncrement` or `unique`,
+  and the shape has neither. `createStore` passes an options object only
+  where `multiEntry` is set, so every `createIndex` call has the same
+  arguments as before.
 - Six comments moved verbatim from the fresh branch onto their entries:
   `marks`, `sharhCards`, `narratorProfiles`, `shareRecords`, `qulResources`
   (the trio's comment) and `biographyEntries`.
@@ -1946,6 +1948,45 @@ holds)
   `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
   identical (40 scenarios). **Q** PASS. **U** PASS, 180/180 (a fresh
   install through the bundle). **V owed**.
+- **Review of `11ee82e`: PASS WITH NOTES.** Two `onUpgrade` values D cannot
+  see if 4k trusts them wrongly: (i) an `assumed` store marked `if-missing`
+  (every fixture has all twelve, so it is harmless on any reachable
+  database; a reading check), and (ii) `createdWith: 'qulResources'` dropped
+  from `qulCompilations` alone (no fixture lacked only `qulCompilations`;
+  closed by the follow-up below). **The 4k reviewer must read both values off
+  the table against today's branch, and check that the `objectStoreNames`
+  snapshot is taken once, before any creation.** Comment notes applied in
+  the follow-up: `idbSchema.ts`'s header and `upgradeDatabase`'s JSDoc gain
+  that since 4j the fresh branch is a loop over `STORES`; `createdWith`'s
+  JSDoc reworded; "the nine guarded stores and the QUL trio" above made
+  "the nine guarded stores plus `qulEntries` and `qulCompilations` (11)".
+
+**4j follow-up, measured 2026-11-16** (check D; `src/` comments only)
+- `scripts/verify-storage.mjs` gains a third odd database,
+  `v10-without-qulCompilations` (v10 minus `qulCompilations`, built like the
+  other two from `TODAY`), and the scenario
+  `harness/odd-v10-without-qulCompilations`; its header now names three odd
+  databases and why the third exists, and `--write`'s usage line says "step
+  4a and its reviewed follow-ups". Recorded on the current code, whose
+  existing-DB branch is still the hand-written one: the 53 lines from `if
+  (oldVersion >= 1)` to its `return;` are byte-identical at `1b5089a` and
+  `11ee82e`. Today's behaviour, now pinned: the database opens at 11 with 23
+  stores, `shareRecords` created, `qulCompilations` never (the trio's guard
+  sees `qulResources`).
+- **Re-baselined:** run 1 (no write) FAIL, 1 of 41 differ — only the new
+  scenario, absent from the record; run 2 `--write`; run1 == run2 (`cmp`);
+  the record's only change is the added scenario (no other scenario or
+  top-level field changed). 41 scenarios, 51 phases, 374,093 B.
+- **Proven:** a temporary guard in the existing branch that creates
+  `qulCompilations` when it is missing (what a table entry without
+  `createdWith` would do at 4k) → D FAIL, 1 of 41, exactly
+  `harness/odd-v10-without-qulCompilations` (its schema becomes today's 24
+  stores); restored from a `cp` copy, `cmp` checked. FOUND_ISSUES 21 now
+  names the third scenario.
+- **T** exit 0. **D** PASS, identical (41 scenarios). **Q** PASS. **B**: every
+  chunk identical to 4j's after masking (`compare-bundles`); the raw bytes
+  differ only in the build timestamp and the `node.browser` chunk-hash
+  reference. CSS unchanged.
 
 ## Open
 

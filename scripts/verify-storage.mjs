@@ -2,7 +2,8 @@
 //
 //   npm run verify:storage                   (vite build, then this: compare to the record)
 //   node scripts/verify-storage.mjs          (this alone, on the dist/ already built)
-//   node scripts/verify-storage.mjs --write  (rewrite the record; Phase 4 step 4a only)
+//   node scripts/verify-storage.mjs --write  (rewrite the record; Phase 4 step 4a and its
+//                                             reviewed follow-ups only)
 //
 // Why it exists. Phase 4 of the restructure (docs/refactor/plans/
 // phase4-storage.md, Design §1) splits platform/storage/IdbStorageAdapter.ts
@@ -85,10 +86,14 @@
 //   - v1base is not a historical schema: the twelve stores the existing-DB
 //     branch never creates, with today's indexes, at version 1 — the one
 //     database that exercises every guard;
-//   - two databases the app cannot produce (FOUND_ISSUES 21): v10 without
+//   - three databases the app cannot produce (FOUND_ISSUES 21): v10 without
 //     qulResources (today `init` rejects and the database stays at 10 with
-//     every row) and v10 without qulEntries (today it opens, and never gets
-//     qulEntries). The first rejects `init` with Chromium's AbortError
+//     every row), v10 without qulEntries and v10 without qulCompilations
+//     (today each opens, and never gets the missing store: the trio's one
+//     guard tests qulResources only). The third was added after step 4j's
+//     review: it is the only database on which a table entry for
+//     qulCompilations that lost `createdWith` would behave differently. The
+//     first rejects `init` with Chromium's AbortError
 //     ("Version change transaction was aborted in upgradeneeded event
 //     handler"); the ConstraintError itself ("An object store with the
 //     specified name already exists") reaches the page as an uncaught
@@ -182,6 +187,7 @@ const OLD_DATABASES = {
   v11: { version: 11, stores: TODAY },
   'v10-without-qulResources': { version: 10, stores: without('shareRecords', 'qulResources') },
   'v10-without-qulEntries': { version: 10, stores: without('shareRecords', 'qulEntries') },
+  'v10-without-qulCompilations': { version: 10, stores: without('shareRecords', 'qulCompilations') },
 };
 
 // ------------------------------------------------------------------ in-page helpers
@@ -327,7 +333,7 @@ const HARNESS_SCENARIOS = [
     phases: [{ run: 'seed-then-open', old, input: { stores: storesOf(old) } }],
   })),
   { id: 'harness/reopen-v11', phases: [{ run: 'seed-then-open', old: 'v11', input: { stores: storesOf('v11') } }] },
-  ...['v10-without-qulResources', 'v10-without-qulEntries'].map((old) => ({
+  ...['v10-without-qulResources', 'v10-without-qulEntries', 'v10-without-qulCompilations'].map((old) => ({
     id: `harness/odd-${old}`,
     phases: [{ run: 'seed-then-open', old, input: { stores: storesOf(old) } }],
   })),

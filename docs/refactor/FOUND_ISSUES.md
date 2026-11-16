@@ -324,7 +324,9 @@ throws a ConstraintError ("An object store with the specified name already
 exists"), Chromium aborts the version change, `init` rejects with an
 AbortError and the database stays at its old version, every row kept. Neither
 database can arise from the app's own code. Check D pins both:
-`harness/odd-v10-without-qulEntries`, `harness/odd-v10-without-qulResources`.
+`harness/odd-v10-without-qulEntries`, `harness/odd-v10-without-qulResources`;
+and, since the 4j follow-up, a third, `harness/odd-v10-without-qulCompilations`
+(opens, never gets `qulCompilations`).
 Design §6 F.
 
 ## 22. A work backup is not a snapshot (2026-11-16, by reading)

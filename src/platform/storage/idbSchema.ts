@@ -32,7 +32,8 @@ import type {
 // IdbStorageAdapter.init hands to openDB; every typed transaction in the
 // adapter checks against `Schema`. Moved verbatim from IdbStorageAdapter.ts in
 // restructure Phase 4 steps 4b and 4c (docs/refactor/plans/phase4-storage.md);
-// the schema history stays with the version it explains.
+// the schema history stays with the version it explains. Since step 4j the
+// fresh-install branch creates every store from the `STORES` table below.
 
 export const DB_NAME = 'shamela-reader';
 // Schema history: v2 added entities, v3 reshaped them to a multi-block anchor,
@@ -165,7 +166,7 @@ interface StoreSpec<S extends StoreNames<Schema>> {
   indexes?: readonly IndexSpec<S>[];
   /** How a database opened at oldVersion >= 1 gets this store. */
   onUpgrade: 'assumed' | 'if-missing' | 'recreate';
-  /** Created when THIS store is missing, not itself (the QUL trio). */
+  /** Created when the named store is missing, not when this one is (the QUL trio). */
   createdWith?: StoreNames<Schema>;
 }
 
@@ -314,7 +315,8 @@ function createStore<S extends StoreNames<Schema>>(db: IDBPDatabase<Schema>, nam
 /**
  * The `upgrade` callback `IdbStorageAdapter.init` passes to `openDB`: the
  * existing-database branch, then the fresh-install branch. Moved verbatim from
- * the callback's body in restructure Phase 4 step 4c.
+ * the callback's body in restructure Phase 4 step 4c; since step 4j the
+ * fresh-install branch is a loop over `STORES`.
  */
 export function upgradeDatabase(db: IDBPDatabase<Schema>, oldVersion: number): void {
   if (oldVersion >= 1) {
