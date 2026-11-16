@@ -76,9 +76,9 @@ And concretely:
   …>` missing a key (`PROVIDER_KEYS` in `services/secrets.ts`, compile's
   `COMPILERS`), and the reader's `Record<ProviderId, number>` request counts
   in `useTranslator.ts`. Onboarding's copy and toggle, and the reader's
-  per-provider session totals and banner, are copy written per provider. (Reworded at the
-  end of Phase 3, the owner's Q16: `ProviderId` is a type, so "one file plus
-  one entry" cannot hold literally.)
+  per-provider session totals and banner, are copy written per provider.
+  (Reworded at the end of Phase 3, the owner's Q16: `ProviderId` is a type,
+  so "one file plus one entry" cannot hold literally.)
 - **Adding a store** is one entry in one schema table that both upgrade paths
   read.
 - **Adding a settings section** is one component using the shared shell, plus

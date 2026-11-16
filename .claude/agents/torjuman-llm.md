@@ -59,7 +59,8 @@ entry in `PROVIDERS` and `PROVIDER_ORDER`, its id in `ProviderId`, and what
 and the reader's `requestsByProvider: Record<ProviderId, number>` in
 `ui/reader/useTranslator.ts`. What still names a
 provider on purpose — the seeded profile, Onboarding's copy and toggle, the
-session totals and banner, Explain and gloss — is listed with the reason in
+session totals and banner, compile's table, Explain and gloss, Offline's
+"back to Gemini" — is listed with the reason in
 `docs/refactor/plans/phase3-provider-seams.md` Design §5. Check Q
 (`npm run verify:requests`) records every request each call site sends; a
 change that should not alter one must leave it identical.

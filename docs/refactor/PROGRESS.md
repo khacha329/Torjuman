@@ -1428,6 +1428,12 @@ FOUND_ISSUES 11.
   `Record<ProviderId, number>`, not a `Record<CloudProviderId, …>`: the
   registry comment, RESTRUCTURE §2 and the agent now say so. Three lines left
   unwrapped (RESTRUCTURE §2, `registry.ts`, README) are re-wrapped.
+- **Review of `6fa343b`: PASS WITH NOTES; "ready for the Phase 3 PR".** Both
+  wordings true against the code. Applied in the next commit: one line the
+  re-wrap left at 88 characters (RESTRUCTURE §2), and the agent's list of
+  what still names a provider gains compile's table and Offline's "back to
+  Gemini". Noted: the entry for `0648b5a` above says the `Record<ProviderId,
+  number>` wording was added there; it arrived in `6fa343b`.
 
 ## Phase 3 result
 
