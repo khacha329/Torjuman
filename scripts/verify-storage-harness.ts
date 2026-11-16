@@ -519,10 +519,12 @@ const phases: Record<string, Phase> = {
       ['clearAllStores', 'clearAllStores', () => s.clearAllStores()],
     ];
 
-    // The class's own members, less `init` and the private helpers. A helper
-    // that later moves out of the class simply stops being listed here; one
-    // that is added makes this fail until it is named.
-    const PRIVATE = new Set(['constructor', 'init', 'handle', 'purgeIndex', 'loadSearchIndex', 'untyped']);
+    // The class's own members, less `init` and the private `handle` getter.
+    // Phase 4 moved the other private helpers (`purgeIndex`, `loadSearchIndex`,
+    // `untyped`) out of the class, so they are no longer listed; one that is
+    // added back makes this fail until it is named. (`lazyHandle` is an
+    // instance field, not on the prototype.)
+    const PRIVATE = new Set(['constructor', 'init', 'handle']);
     const members = Object.getOwnPropertyNames(IdbStorageAdapter.prototype).filter((name) => !PRIVATE.has(name));
     const called = new Set(calls.map(([, method]) => method));
     const missing = members.filter((name) => !called.has(name));

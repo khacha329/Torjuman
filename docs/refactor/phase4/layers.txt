@@ -1,0 +1,45 @@
+files: 169
+directory edges: 134
+directories in a cycle: 0 (in 0 components)
+directory pairs importing each other: 0
+file-level cycles: 0
+
+== imports, by directory (value + type-only import statements) ==
+(root): app 3, services 1, ui 6, ui/reader 1, ui/settings 1, ui/share 1
+app: catalog 1, ingest 1, platform/http 1+1t, platform/storage 1+1t, qul 1, retrieval 1, services 1, translation 2, translation/providers 1, types 0+1t
+biography: platform/storage 0+2t, retrieval 6, services 2, types 0+8t
+catalog: ingest 1+1t, platform/http 0+1t, platform/storage 0+1t, services 1, types 0+2t
+components: (nothing)
+dictionary: lib 3, platform/storage 0+1t, types 0+1t
+ingest: dictionary 2, lib 4, platform/http 0+2t, platform/storage 0+2t, quran 2, shamela 6, types 0+1t
+lib: types 0+1t
+library: dictionary 1, lib 4, platform/http 1, platform/storage 0+2t, quran 1, services 1, share 1, types 0+1t
+platform/http: (nothing)
+platform/storage: lib 1, types 0+6t
+qul: lib 2, platform/storage 0+3t, quran 0+1t, services 1, shamela 1, translation 3, types 0+5t
+quran: biography 3, lib 3, platform/storage 0+1t, retrieval 1, services 1, shamela 1, types 0+2t
+retrieval: lib 4, platform/http 0+5t, platform/storage 0+5t, services 3, types 0+6t
+services: lib 1, types 0+1t
+shamela: lib 3, types 0+3t
+share: lib 2, platform/storage 0+3t, types 0+3t
+translation: lib 4, platform/storage 0+2t, types 0+10t
+translation/offline: lib 1, quran 0+1t, translation 1+1t, types 0+1t
+translation/providers: lib 2, translation 14, types 0+3t
+types: (nothing)
+ui: app 12, catalog 1+2t, ingest 1+1t, lib 3, library 3, platform/http 2, services 1, shamela 1, translation/providers 1, types 0+4t, ui/kit 6
+ui/kit: app 1
+ui/reader: app 25, biography 5+2t, components 6, dictionary 2+1t, lib 13, platform/storage 0+4t, qul 3, quran 4+1t, retrieval 5+1t, services 6, shamela 1, share 4, translation 11+1t, translation/offline 3, translation/providers 2, types 0+26t, ui 3, ui/kit 9
+ui/settings: app 17, biography 2, components 1, dictionary 1, lib 10, library 3, platform/storage 0+1t, qul 4, quran 2, retrieval 3, services 4, share 1, translation 3, translation/offline 2, translation/providers 2, types 0+8t, ui 2, ui/kit 15
+ui/share: app 2, share 3+1t, ui/kit 1, ui/reader 1
+
+== directory cycles (strongly connected components) ==
+none
+
+== directory pairs importing each other ==
+none
+
+== file-level cycles ==
+none
+
+== rules (11 in docs/refactor/layers.json) ==
+all hold

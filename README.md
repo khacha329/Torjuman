@@ -41,7 +41,10 @@ src/
   platform/          the two swap points for Capacitor
     http/            HttpClient interface + WebHttpClient (uses the proxy),
                      and proxyUrl, the Worker's address
-    storage/         StorageAdapter interface + IdbStorageAdapter
+    storage/         StorageAdapter interface + IdbStorageAdapter, which hands
+                     each method to an idb*.ts file: idbSchema (the STORES
+                     table and the upgrade), idbWork, idbReference,
+                     idbLibrary, idbBackup, idbTransfer, idbPurge
   lib/               pure helpers: arabic, hash, id, saveFile, takhrij,
                      providers, delay, format, gzip
   components/        BidiText
@@ -66,8 +69,9 @@ scripts/             verify-*, check-layers, build tools
 fixtures/            unmodified HTML fetched from shamela.ws (not committed)
 ```
 
-`IdbStorageAdapter.ts` is the only file that uses the IndexedDB API, and
-`platform/http/` is the only place that calls `fetch` through the proxy.
+`IdbStorageAdapter.ts` and the `idb*.ts` files beside it are the only code
+that uses the IndexedDB API, and `platform/http/` is the only place that
+calls `fetch` through the proxy.
 A few modules fetch directly, on purpose, because they need what
 `HttpClient` — text `GET`s only — does not do or because their host allows
 browser requests: the Gemini API (`GeminiProvider.ts`, `qul/compile.ts`;

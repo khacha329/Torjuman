@@ -1,5 +1,6 @@
 import type { IDBPDatabase } from 'idb';
 import type { Schema } from './idbSchema';
+import type { SearchEntry } from './idbLibrary';
 
 // Raw store I/O for the whole-tablet transfer (library/deviceTransfer.ts,
 // through the StorageAdapter interface): list the stores, count, read in key
@@ -12,8 +13,8 @@ import type { Schema } from './idbSchema';
 // rows resolves even before `init` — and reading `this.handle` in the class to
 // pass it would make them reject instead (check D's before-init scenario).
 //
-// The search index is passed as `Map<string, unknown>`: these functions only
-// clear it, and its entry type moves with the book-content group (step 4h).
+// The search index is passed in so that a write can clear it: rows written or
+// cleared here may be any book's blocks.
 //
 // Untyped on purpose: these move rows between this database and a file
 // without interpreting them, so the per-store generics would add casts and
@@ -60,7 +61,7 @@ export async function readStoreRows(
 
 export async function putStoreRows(
   handle: () => IDBPDatabase<Schema>,
-  searchIndex: Map<string, unknown>,
+  searchIndex: Map<string, SearchEntry[]>,
   store: string,
   rows: unknown[],
 ): Promise<void> {
@@ -74,7 +75,7 @@ export async function putStoreRows(
 
 export async function clearAllStores(
   handle: () => IDBPDatabase<Schema>,
-  searchIndex: Map<string, unknown>,
+  searchIndex: Map<string, SearchEntry[]>,
 ): Promise<void> {
   const db = handle() as unknown as IDBPDatabase;
   const names = Array.from(db.objectStoreNames);

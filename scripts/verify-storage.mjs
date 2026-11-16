@@ -70,7 +70,9 @@
 //   - every refused whole-tablet file left rows and localStorage untouched;
 //   - the share adapter's ignored writes left the visitor's database untouched;
 //   - the code's BOOK_STORES is EXPECTED_BOOK_STORES below, name for name and
-//     in order.
+//     in order;
+//   - every scenario named in KEYED_ASSERTIONS ran, so a renamed scenario
+//     cannot drop the assertions read from its outputs.
 //
 // Masked: nothing. Date.now and Math.random are pinned in the page, so the
 // ids `newId` makes on arrival (entities, the dictionary root index) are the
@@ -555,6 +557,10 @@ const EXPECTED_BOOK_STORES = [
   'marks', 'cards', 'explanationCards', 'sharhCards', 'biographyEntries',
 ];
 let bookStoresChecked = false;
+
+/** The scenarios whose outputs the per-run assertions below read by id. */
+const KEYED_ASSERTIONS = ['work-backup', 'book-transfer', 'device-transfer', 'share-adapter'];
+const keyedRan = new Set();
 function assert(label, ok) {
   if (!ok) failures.push(label);
 }
@@ -647,8 +653,12 @@ try {
     }
     scenarios[scenario.id] = scenario.phases.length === 1 ? recorded[Object.keys(recorded)[0]] : recorded;
 
-    // The assertions that hold whatever the record says.
+    // The assertions that hold whatever the record says. Those that read one
+    // scenario's outputs are keyed on its id; the ids are listed in
+    // KEYED_ASSERTIONS and checked after the loop, so renaming a scenario
+    // fails D instead of silently dropping its assertions.
     const keys = Object.values(outputs)[0].fakeKeys;
+    if (KEYED_ASSERTIONS.includes(scenario.id)) keyedRan.add(scenario.id);
     if (scenario.id === 'work-backup') {
       checkKeys('work backup', outputs.export.result.file, keys, false);
     }
@@ -680,6 +690,7 @@ try {
     }
   }
   assert('BOOK_STORES was checked (no harness scenario ran)', bookStoresChecked);
+  for (const id of KEYED_ASSERTIONS) assert(`the assertions keyed on ${id} ran (no such scenario)`, keyedRan.has(id));
   console.log(`  harness: ${HARNESS_SCENARIOS.length} scenarios`);
 } catch (error) {
   console.error(`\nFAIL — a scenario could not run: ${error.message}`);

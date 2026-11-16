@@ -27,10 +27,12 @@ import type {
 
 // The only interface the app knows about for persistence.
 //
-// The IndexedDB implementation lives in IdbStorageAdapter.ts and is the single
-// file in the codebase that mentions IndexedDB. Swapping in native SQLite under
-// Capacitor means writing one more implementation of this interface; no caller
-// changes.
+// The IndexedDB implementation is IdbStorageAdapter.ts and the idb*.ts files
+// beside it: idbSchema.ts holds the schema, its one STORES table and the
+// upgrade that reads it, and one file per store group holds that group's
+// methods. They are the only app code that uses IndexedDB. Swapping in native
+// SQLite under Capacitor means writing one more implementation of this
+// interface; no caller changes.
 
 /**
  * The user's own work: small, precious, irreplaceable.
@@ -229,6 +231,7 @@ export interface StorageAdapter {
   // decryption key, which exists nowhere else — see ShareRecord.
   putShareRecord(record: ShareRecord): Promise<void>;
   listShareRecords(): Promise<ShareRecord[]>;
+  /** Forgets the local record; it cannot unpublish anything (see idbWork.ts). */
   deleteShareRecord(id: string): Promise<void>;
 
   // Word gloss cache

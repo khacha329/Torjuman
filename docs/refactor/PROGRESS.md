@@ -1457,7 +1457,7 @@ provider; Dig deeper once; Explain once; a word's Meaning (gloss); Compile one
 āyah on each provider; switch a profile between providers and see the model
 list and default follow.
 
-## Phase 4: storage (in progress, branch `claude/restructure-phase-4`)
+## Phase 4: storage (complete, branch `claude/restructure-phase-4`)
 
 Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 2026-11-16, all thirteen answers as recommended** (`109d400`).
@@ -1481,7 +1481,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review PASS WITH NOTES | `87b3b26` |
 | 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review PASS WITH NOTES | `b60633e` |
 | 4l follow-up — D asserts `BOOK_STORES`' order against its own hand list (negative test 3 now caught) | T D pass; the record unchanged; review PASS WITH NOTES | `7bffce0` |
-| 4m. `WORK_STORES` drives `exportWork`/`importWork` (Q7); the 4l review's must-fix; D's order check no longer keyed on a scenario name | T B L D Q pass, the SSR build, and five negative tests; V owed; review pending | this commit |
+| 4m. `WORK_STORES` drives `exportWork`/`importWork` (Q7); the 4l review's must-fix; D's order check no longer keyed on a scenario name | T B L D Q pass, the SSR build, and five negative tests; V owed; review PASS | `b69abd4` |
+| 4n. docs and comments made true; D's keyed assertions guarded; the plan's corrections; end of phase | T B L D Q U S R pass, the SSR build; V and M owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2196,6 +2197,92 @@ holds)
   `index.js` differs; CSS byte-identical. **L**: rules hold. **Q** PASS. The
   **SSR build** of `verify-parsers.ts` (`npx vite build --ssr … --outDir
   .verify/ssr`) exit 0; its output was deleted after. **V owed**.
+- **Review of `b69abd4`: PASS; "ready for 4n".** Nothing to fix.
+
+**Step 4n, measured 2026-11-16**
+- **Code comments made true** (no behaviour change; the bundle is identical
+  to 4m's after masking):
+  - `StorageAdapter.ts`'s header now says the IndexedDB implementation is
+    `IdbStorageAdapter.ts` and the `idb*.ts` files beside it, with
+    `idbSchema.ts` holding the schema, the one `STORES` table and the upgrade
+    that reads it. `deleteShareRecord` gains a one-line pointer ("it cannot
+    unpublish anything (see idbWork.ts)"). `listFetchedPageIndices`,
+    `listPageMeta` and `searchBlocksLoose` already had their own interface
+    doc comments, so they needed no pointer.
+  - `idbPurge.ts`: "every call below passes a valid pair" now says "every
+    caller (idbLibrary.ts, idbReference.ts)".
+  - `idbTransfer.ts`: the search index is typed `Map<string, SearchEntry[]>`
+    (a type-only import from `idbLibrary.ts`), and the header's sentence
+    about 4h is replaced by why the map is passed in.
+  - `IdbStorageAdapter.ts`'s header gains the reason RESTRUCTURE §2 asks of
+    a file over ~500 lines: it imports each group's functions and lists every
+    method as a delegate, with no logic left to split.
+- **Check D's scripts** (record unchanged):
+  - The harness's `PRIVATE` set no longer names the helpers that left the
+    class (`purgeIndex`, `loadSearchIndex`, `untyped`). It still fails both
+    ways: a `private untyped()` added back to the class → "missing untyped";
+    a call to `loadSearchIndex` → "not in the class loadSearchIndex" (each
+    exit 2, restored from a copy).
+  - The assertions keyed on scenario ids (work backup, per-book transfer,
+    whole-tablet transfer, share adapter) now record that they ran, and
+    `KEYED_ASSERTIONS` fails D after the loop if one did not. Renaming
+    `share-adapter` → "FAIL — 1 assertion(s): the assertions keyed on
+    share-adapter ran (no such scenario)"; restored. Fixed rather than
+    written up, so no FOUND_ISSUES entry.
+- **Docs:** README's storage map line and "the only file that uses the
+  IndexedDB API" (now the adapter and the `idb*.ts` files). RESTRUCTURE:
+  status (Phase 4 complete), §2 "Adding a store" (everything a store now
+  takes, named), §4 T-f (both branches read one table; what can still go
+  wrong), §5's D row (three odd databases, the two order and keyed
+  assertions), §6's Phase 4 row (complete). The plan gains "Corrections
+  found in review" (eight items).
+- **Not edited: CLAUDE.md and `.claude/agents/torjuman-storage.md`.** The
+  plan lists both for 4n (the map, the Never line, trap 6, the agent's map
+  and rules), but this session's rules let no agent message authorize a
+  change to CLAUDE.md or the agent configuration. The exact replacement
+  text is `docs/refactor/phase4/claude-config-4n.patch`, for the owner to
+  apply with `git apply` (checked clean) or decline, and then delete; the
+  Commands row for D is already right. Until it is applied, CLAUDE.md's
+  Never line and trap 6 still name "both upgrade branches in
+  `IdbStorageAdapter.init`".
+- **L** saved as `docs/refactor/phase4/layers.txt`. Against
+  `phase3/layers.txt`, the only differences are 162 → 169 files (the seven
+  `idb*.ts` files) and `platform/storage`'s type-only imports of `types`,
+  0+2t → 0+6t. Still 134 directory edges, no cycle, all eleven rules hold.
+- **T** exit 0. **B** exit 0; main chunk 790,214 B, identical to 4m after
+  masking (every chunk); CSS byte-identical. **D** PASS, identical (41
+  scenarios, 51 phases, 374,093 B). **Q** PASS. **U** 180/180. **S** 30/30.
+  **R** 28/28; R_PERF. **SSR build** of `verify-parsers.ts` exit 0, its
+  output deleted. **V owed**.
+
+## Phase 4 result
+
+| | Phase 3 end | Phase 4 end |
+| --- | --- | --- |
+| `IdbStorageAdapter.ts` | 1,059 lines: schema, both upgrade branches, every method body, backup | 562 lines: `init`, the `handle` getter and fetcher, `schemaVersion`, 83 one-line delegates |
+| new files in `platform/storage/` | — | `idbSchema.ts` 392, `idbLibrary.ts` 360, `idbWork.ts` 232, `idbReference.ts` 185, `idbBackup.ts` 112, `idbTransfer.ts` 86, `idbPurge.ts` 59 lines |
+| hand-written store lists | six: the fresh branch (24 stores), the existing branch's guards (10 guards, 12 stores), `BOOK_STORES` (10), `exportWork`'s fields and `importWork`'s calls and its type (11 each) | two lists the code runs on: `STORES` (24, both branches; `BOOK_STORES` derived) and the ordered `WORK_STORES` (11, typed against `WorkBundle`); plus two that check them: the `SameUnion` assertion and D's `EXPECTED_BOOK_STORES` |
+| `DB_VERSION` | 11 | 11 (no schema change; D's schema dumps identical at every step) |
+| check D | — | 41 scenarios, 51 phases (40 at 4a; the v10 without `qulCompilations` added after 4j), identical at every step from 4b |
+| main JS chunk | 788,264 B | 790,214 B (+1,950: the delegates and the table walks) |
+| check Q | identical | identical at every step |
+| screens (check U) | 180 files | 180 files, identical at 4c, 4j, 4k, 4n |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began. **Owed before merge:**
+- **V**, `npm run verify` on the owner's PC.
+- **M** on the staged build (`npm run stage`) on the tablet in Chrome,
+  exactly as the plan's "Only the owner can run" lists it: deployed app →
+  staged build only, never restoring into the deployed app, steps 1–8; the
+  optional step 9 is left out, since the owner named no second profile or
+  tablet (Q11).
+- The CLAUDE.md and agent patch above, for the owner to apply or decline.
+
+**Open, and not this phase's to fix:** FOUND_ISSUES 24. Replacing a book from
+a Library transfer file deletes its cards, marks, explanations, sharḥ cards
+and position, though the dialog says they are kept; and a replacement that
+fails part way leaves no copy of the book. Check D's `book-transfer` pins
+today's behaviour. It needs its own change, if the owner wants one.
 
 ## Open
 

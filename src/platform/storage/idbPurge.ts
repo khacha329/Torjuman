@@ -41,8 +41,9 @@ export async function purgeIndex(
   key: string,
 ): Promise<number> {
   // idb's generics cannot express "this index belongs to this store" across a
-  // union of store names, and every call below passes a valid pair. The
-  // untyped handle is the library's own escape hatch for exactly this.
+  // union of store names, and every caller (idbLibrary.ts, idbReference.ts)
+  // passes a valid pair. The untyped handle is the library's own escape hatch
+  // for exactly this.
   const db = handle as unknown as IDBPDatabase;
   let removed = 0;
   for (;;) {

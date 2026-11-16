@@ -825,3 +825,54 @@ optional step 9 is left out unless the owner offers one (Q11); the reviewer
 after every commit and `torjuman-storage` reading this plan and D's harness
 before 4a's baseline is committed (Q12); D's whole normalized record
 committed as `docs/refactor/phase4/storage.json` (Q13).
+
+## Corrections found in review
+
+Where the plan above turned out wrong or short, as the step reviews found it.
+The text above is left as approved; each step's PROGRESS entry has the detail.
+
+1. **The handle fetcher (4e).** Design §3 has each moved function take the
+   handle. Ten methods return before touching the database, so they resolve
+   before `init`, and a delegate that read `this.handle` to pass it would make
+   them reject. From 4e each function takes a fetcher, `() => IDBPDatabase`.
+   Recorded in the amendment under Design §3.
+2. **When the comments became untrue (4c, not 4d).** Design §5 and Q8 date
+   the adapter's "ONLY file that talks to IndexedDB" to 4d. It was untrue from
+   4c, when `upgradeDatabase` (which creates and deletes stores) moved to
+   `idbSchema.ts`; so were the D harness's header and CLAUDE.md's Never line
+   and trap 6. Nothing was misled meanwhile, since `init` names
+   `upgradeDatabase`.
+3. **The class's size after 4i.** Design §3 estimated ~330 lines. It was 557
+   at 4i (562 at the end of the phase, after 4n added the reason below): 83
+   one-line delegates of about four lines each (signature, `return`,
+   brace, blank) and about 125 lines of imports naming every type and
+   function. RESTRUCTURE §2 asks for a reason at the top of a file over ~500
+   lines; the adapter's header gives it (4n).
+4. **The table's shape (4j, 4l).** Three departures from Design §2.2's
+   sketch. `IndexSpec.keyPath` is `string | string[]`, not `readonly`, since
+   `idb`'s `createIndex` takes a mutable array. Stores are created by a
+   generic `createStore(db, name)` that reads `STORES[name]` itself, because
+   passing `STORES[name]` for a union of names does not type-check. And the
+   literal is `TABLE … satisfies …`, exported as `STORES` with the mapped
+   type: `BookStore` needs the literal `perBook: true` entries, the walks need
+   each entry as its own store's spec. `perBook` is typed so that it is an
+   error on a store without a `byBook` index, a tightening of the sketch.
+5. **`onUpgrade` and `createdWith` were born at 4j**, a step before 4k read
+   them, so 4j's D could not check them. The 4j review named the two values D
+   still cannot see (an `assumed` store marked `if-missing`; `createdWith`
+   dropped from `qulCompilations` alone). The second was closed by a third odd
+   database, v10 without `qulCompilations`; the first is harmless on every
+   reachable database and stays a reading check. A review expected v1base to
+   expose the second as well; with the snapshot it does not.
+6. **Adding a per-book store is three edits**, not one: the `perBook` flag,
+   the `SameUnion` assertion under `BOOK_STORES`, and D's
+   `EXPECTED_BOOK_STORES` (4l). The assertion keeps `BookStore` the ten
+   literal names; D's list catches a reordered table, which neither `tsc`
+   nor the record sees (R6). RESTRUCTURE §2 now names all three.
+7. **Check L's wording.** "The new files import only `idb`, `lib` and
+   `types`": they also import each other inside `platform/storage`
+   (`idbLibrary` → `idbReference`, `idbBackup` → `idbWork` and others), which
+   adds no directory edge. The directory graph kept its 134 edges.
+8. **D's assertions keyed on scenario ids.** A renamed scenario would have
+   dropped the assertions read from its outputs without failing. Fixed in 4m
+   for `BOOK_STORES` and in 4n for the rest (`KEYED_ASSERTIONS`).

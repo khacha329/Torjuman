@@ -1,8 +1,9 @@
 # Restructuring Ḥāshiya
 
 Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9, Phase 2 in PR
-#10 and Phase 3 on `claude/restructure-phase-3`, all complete and awaiting the
-owner's `npm run verify`, the tablet checks after Phases 2 and 3, and merge. Base commit
+#10, Phase 3 on `claude/restructure-phase-3` and Phase 4 on
+`claude/restructure-phase-4`, all complete and awaiting the owner's `npm run
+verify`, the tablet checks after Phases 2, 3 and 4, and merge. Base commit
 `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
@@ -80,7 +81,23 @@ And concretely:
   (Reworded at the end of Phase 3, the owner's Q16: `ProviderId` is a type,
   so "one file plus one entry" cannot hold literally.)
 - **Adding a store** is one entry in one schema table that both upgrade paths
-  read.
+  read: `STORES` in `platform/storage/idbSchema.ts`, giving the store's key
+  path, its indexes, how an existing database gets it (`onUpgrade`, and
+  `createdWith` for a store created together with another) and `perBook`
+  when its rows belong to a book. The entry is not the whole change, because
+  a store has methods and the database has a version. A new store also
+  needs its `Schema` type; its `StorageAdapter` methods, written as functions
+  in its group's `idb*.ts` file with a one-line delegate in
+  `IdbStorageAdapter`, and in `ShareStorageAdapter`, which implements the
+  whole interface; if it is per book, the `SameUnion` assertion under
+  `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if it is backed up, its
+  `WorkBundle` field and a `WORK_STORES` entry in `idbBackup.ts` (`tsc` fails
+  until the two agree); a `DB_VERSION` bump with a line in the schema
+  history (CLAUDE.md's Never and trap 6); and check D's own schema list
+  (`TODAY` in `scripts/verify-storage.mjs`) with a re-baseline, after
+  checking that the diff is the new store and nothing else. (Spelled out at
+  the end of Phase 4: "one entry" holds for the schema, not for the methods
+  or the version.)
 - **Adding a settings section** is one component using the shared shell, plus
   one line in the list.
 - No source file over ~500 lines without a reason written at its top.
@@ -154,6 +171,10 @@ walks into:
 - **T-f. The IndexedDB upgrade path runs once per tablet.** A storage step
   that gets it wrong is not caught until the owner opens the app, and then
   it is their data. Check D (§5) exists for this and is built before Phase 4.
+  Since Phase 4 both branches of `upgradeDatabase` (`idbSchema.ts`) read the
+  one `STORES` table, so they cannot disagree about a store's shape; what
+  they can still get wrong is a store's `onUpgrade` or `createdWith`, which
+  D's upgrade and odd-database scenarios show.
 - **T-g. Reader estimates are tuned to CSS.** Moving reader styles or
   components can change margins; `TYPE_CHROME` must follow. Checks S and R.
 - **T-h. Bundle chunking.** transformers.js and sql.js are dynamic imports and
@@ -170,7 +191,7 @@ walks into:
 | **S** | `npm run verify:selection` | 30/30 | here |
 | **R** | `npm run verify:reader` | 28/28; performance report within noise of the baseline | here |
 | **V** | `npm run verify` | all pass (owner reports the count) | **owner's PC** |
-| **D** | `npm run verify:storage` (`scripts/verify-storage.mjs` and `verify-storage-harness.ts`, from Phase 4 step 4a): in Chromium, the IndexedDB schema after a fresh install and after upgrading each older database it builds (v1 base, v7–v10; v11 reopened; two impossible ones), through the shipped bundle and through a harness of the real storage modules; and, through the harness, every store's rows and every result after each `StorageAdapter` method family, a per-book delete, the work backup, the per-book transfer, the whole-tablet transfer and its refusals, and the share adapter | identical to `docs/refactor/phase4/storage.json`; fake keys only in the whole-tablet file written with them; a restore equals its source; refusals and ignored writes leave the database untouched | here |
+| **D** | `npm run verify:storage` (`scripts/verify-storage.mjs` and `verify-storage-harness.ts`, from Phase 4 step 4a): in Chromium, the IndexedDB schema after a fresh install and after upgrading each older database it builds (v1 base, v7–v10; v11 reopened; three impossible ones), through the shipped bundle and through a harness of the real storage modules; and, through the harness, every store's rows and every result after each `StorageAdapter` method family, a per-book delete, the work backup, the per-book transfer, the whole-tablet transfer and its refusals, and the share adapter | identical to `docs/refactor/phase4/storage.json`; fake keys only in the whole-tablet file written with them; a restore equals its source; refusals and ignored writes leave the database untouched; `BOOK_STORES` is D's own list, in order; every scenario an assertion reads by id ran | here |
 | **U** | `npm run verify:markup` (`scripts/verify-markup.mjs`, from Phase 2): normalized DOM and screenshots of every screen and state that shows a shared UI piece, at 960×600 and 600×960 touch, in a build without and a build with a proxy | every file matches `docs/refactor/phase2/markup.sha256` | here |
 | **Q** | `npm run verify:requests` (`scripts/verify-requests.ts`, from Phase 3): every request each provider call site hands to `fetch` (method, URL, headers, body), retries, waits and mapped errors, for fixed inputs and canned responses, plus cache keys and model values | identical to `docs/refactor/phase3/requests.json`; fake keys only in their own header; no `Authorization` | here |
 | **M** | the staged build on the tablet: open a book, select across screens, translate, open a verse sheet, Settings, a transfer | the owner says it works | **tablet** |
@@ -191,7 +212,7 @@ mechanical, high-payoff work first; the owner's data last but one.
 | **1** | **Complete.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
 | **2** | **Complete.** **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the settings sections on the shared shell (21 sections, 15 shells) | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Complete.** **Provider seams**: one Anthropic client used by all four call sites, with two error mappings (short and full, not merged: Q4); one Gemini model POST; provider descriptors in the registry (placeholder, models offered and known, default) that Settings' key and model fields, Onboarding's key field and the card's model label now read; compile picks a compiler from a `Record<CloudProviderId, …>` table (Q5); Explain and gloss export the provider they run on, so the reader does not name it (Q10). What still names a provider on purpose — compile's table, Explain and gloss (Claude-only), Onboarding's copy and toggle, the session totals, the seeded profile, Offline's "back to Gemini" (Q6), `secrets` (Q8) — is §2 above, the plan's Design §5 and FOUND_ISSUES 4 | medium: cache keys and requests must be byte-identical | T B L Q U S R X; V (cache keys, `maxTokensFor`, prices); M with real keys |
-| **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
+| **4** | **Complete.** **Storage**: check D first (4a); `IdbStorageAdapter`'s code moved into `idb*.ts` files by store group, the class keeping one-line delegates (4b–4i); one `STORES` table that both upgrade branches read (4j, 4k); `BOOK_STORES` from its `perBook` flag (4l); the work backup on one ordered `WORK_STORES` list (4m). Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md) | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
 | **5** | **Big UI files**: `ReaderScreen` into hooks (position, navigation, panel divider, gloss) and parts (header, sheets host); `EntitySheet` into `QuranSheet`, `CompileTab`, `HadithSheet`; `SettingsScreen` inline sections into files; `BlockList` estimates and `settleOn` into a module; `useTranslator` steps into named functions | medium: the reader is the app | S R on every step; T B L X; screenshots; M |
 | **6** | **Docs**: `docs/EXTENDING.md` (how to add a provider, a source, a store, a route, a setting, a sheet tab), README map and links, CLAUDE.md map updated | none | X |
 

@@ -131,6 +131,10 @@ import { exportWork, importWork } from './idbBackup';
 // method to its group). Everything else goes through the StorageAdapter
 // interface, so replacing this with native SQLite under Capacitor touches
 // nothing else.
+//
+// Over 500 lines only because it imports each group's functions by name and
+// lists every StorageAdapter method as a one-line delegate: no logic is left
+// here to split. The schema and its upgrade are in idbSchema.ts.
 
 export class IdbStorageAdapter implements StorageAdapter {
   private db: IDBPDatabase<Schema> | null = null;
