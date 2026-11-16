@@ -83,6 +83,57 @@
 //     on-device ones.
 // None writes an API key: none of these states needs one.
 //
+// Added in Phase 5 step 5a (docs/refactor/plans/phase5-big-ui-files.md, Design
+// §1.1), on the old code, as manifest lines added beside the earlier ones, all
+// in the plain build, each in a fresh context seeded by seedReader (a verse, a
+// numbered matn with two sharḥ blocks, a narrator, three read marks, a cached
+// gloss) or by seedCards — so no earlier capture's database changes. Before
+// 5a U showed the reader's header and card panel only; these are every state
+// a Phase 5 part renders. reader-page is the whole body; each other one is
+// the element its state adds, so a change to one part names its own captures:
+//   - reader-page: the book opened, no key — NoKeyBanner, the header with
+//     ReadMarkNav, the rail spacer, the blocks with their entities, and the
+//     aside and divider (960) or the sheet bar (600);
+//   - reader-collapsed (960): Hide cards tapped, with seedCards' five cards —
+//     the edge tab and its count;
+//   - reader-sheet-open (600): the sheet handle tapped, with the five cards —
+//     the sticky sheet, handle and panel together;
+//   - reader-quran: the verse tapped — QuranSheet's Translation tab (the
+//     bundled English; quran.com is aborted), a popover at 960;
+//   - reader-quran-similar: then its Similar tab — the panel promoted to a
+//     sheet (preferSheet);
+//   - reader-quran-compiled: compileEnabled seeded, the verse, Compiled —
+//     CompileTab blocked on the missing Gemini key;
+//   - reader-hadith: the ḥadīth tapped, after dorar is aborted and sunnah.com
+//     skipped (no key) — "No grading found", the honest-English note, the
+//     footer; reader-hadith-diagnostics: then Show dorar diagnostics, the
+//     diagnostics block alone;
+//   - reader-biography: the narrator tapped — BiographySheet with no
+//     biographical work imported;
+//   - reader-rail: one word selected — SelectionRail (no dictionary, so its
+//     action is disabled); reader-meaning: then Meaning with no key — the gloss
+//     error in DictionarySheet; reader-meaning-cached: the seeded word
+//     selected, Meaning — the gloss ready state;
+//   - reader-margin-menu: a 600 ms press on the matn's margin — MarginMenu
+//     with Translate all…; reader-batch-proposal: then Translate all… — the
+//     proposal bar (three blocks, cost unknown for the default Gemini model);
+//   - reader-notice: a phrase selected, Translate with no key — the
+//     translator's notice;
+//   - reader-popover (600): with seedCards, a margin marker tapped —
+//     CardPopover (at 960 a marker answers in the panel, which reader-cards
+//     shows);
+//   - reader-toc, reader-search (a word with two hits), reader-share: Contents,
+//     Search, Share tapped — TocDrawer, the search column, ShareChapter's
+//     dialog (no chapter on screen: the seeded blocks have no toc node).
+// Text below the fold is scrolled to the middle of the screen before it is
+// tapped (`centre`), because Playwright's own scroll-into-view landed the page
+// at different places on different runs and a popover clamped to the top had
+// the same DOM but different pixels; and each sheet or popover is captured
+// after a resize event (`captureDialog`), because a popover whose content
+// arrives after it is first placed keeps its first place until the reader
+// renders again, which is a race (FOUND_ISSUES 34; the ḥadīth popover came
+// out at top 12 px or 275.8 px).
+//
 // A failing run lists each differing file; with a .verify/markup/base/ dump
 // present (VERIFY_OUT=.verify/markup/base on the 2a commit, `git worktree add`
 // with node_modules linked if .verify/ was cleared) it also prints the first
@@ -117,7 +168,21 @@
 //     is taller than the landscape viewport and the element screenshot comes
 //     out with the sticky top bar over its top and its last lines cut off, as
 //     the 2a capture settings--translation-profiles.png does; the .html, and
-//     the 600x960 screenshot, have the line.
+//     the 600x960 screenshot, have the line;
+//   - (5a) the rail's Dictionary action enabled, and the dictionary sheet with
+//     an entry: no dictionary book is seeded — the double-tap path belongs to
+//     check R (plan Design §1.2), and reader-rail shows the action disabled;
+//   - (5a) the sharḥ notice and the "Searching the commentary…" bar: both need
+//     an imported commentary (a «شروح الحديث» book) to search, and the ḥadīth
+//     sheet offers no commentary button without one;
+//   - (5a) a running batch (BatchRunning): it needs answered translations;
+//     check P covers it;
+//   - (5a) reader-quran-compiled with a key, and a compiled paragraph: it needs
+//     an answer from the model host;
+//   - (5a) the read-only (shared) view: it needs a real encrypted share bundle;
+//   - (5a) the Tafsīr, Topics and Surah tabs: no such QUL resource is
+//     committed (public/qul/ holds matching-ayah only), so the Similar tab is
+//     the one QUL tab here.
 //
 // Like verify-reader-scroll.mjs it needs Chromium through Playwright and is
 // kept out of `npm run verify`.
@@ -299,9 +364,90 @@ function seedCards() {
   ];
 }
 
+/**
+ * The reader's own furniture (Phase 5 step 5a): a verse, a ḥadīth with its
+ * commentary, a narrator, read marks and a cached gloss, written only into the
+ * contexts that take them, like seedCards, so no earlier capture's database
+ * changes. Synthetic but for the verse, Ibrāhīm 2, read from the bundled
+ * muṣḥaf (public/quran/uthmani.json); the rest says it is a test text. Not
+ * 14:7, verify-reader-scroll.mjs's verse, which the plan named: the bundled
+ * matching-ayah resource has no entry for 14:7, so its sheet has no Similar
+ * tab, and 14:2 has two matches (42:53, 34:1).
+ *
+ * Blocks 1–5 of the seeded book are rewritten in place (same ids, same
+ * order), so the book is still 40 blocks on 10 pages: 1 the verse, 2 a
+ * numbered matn, 3–4 its sharḥ, 5 the next numbered matn — which ends the
+ * commentary range (translation/hadithRange.ts commentaryRange), so "Translate
+ * all…" proposes three blocks rather than the rest of the book. The entities
+ * are written rather than detected: the book row's nameIndexSize 0 equals the
+ * (empty) biography index, so ensureEntities (quran/entityService.ts) keeps
+ * what is stored instead of re-detecting — detection cannot find a ḥadīth in a
+ * book with no hadithCollection. Three `read` marks put ReadMarkNav in the
+ * header. One gloss row (keyed by its normalized word, which needs no
+ * folding) is the cached Meaning. `compile` also turns on compileEnabled,
+ * merged into the settings row the first boot wrote, for the Compiled tab.
+ */
+const READER_VERSE = (() => {
+  const { counts, ayat } = JSON.parse(readFileSync(join(ROOT, 'public/quran/uthmani.json'), 'utf8'));
+  // Flat index of 14:2: the ayāt of sūras 1–13, then the second.
+  return ayat[counts.slice(0, 13).reduce((sum, count) => sum + count, 0) + 1];
+})();
+const READER_NARRATOR = 'أبي هريرة';
+const READER_HADITH = '«هذا متن حديث تجريبي للتحقق من العرض، وليس من كتاب حقيقي»';
+const READER_MATN = `عن ${READER_NARRATOR} رضي الله عنه قال: ${READER_HADITH}.`;
+/** The word whose gloss is seeded (reader-meaning-cached), in block 0. */
+const CACHED_WORD = 'تجريبي';
+/** The word whose gloss is not (reader-rail, reader-meaning), in block 0. */
+const UNCACHED_WORD = 'الفقرة';
+const SEARCH_WORD = 'متن';
+
+function seedReader({ compile = false } = {}) {
+  const at = FIXED_NOW - 7_200_000;
+  const rows = seedRows();
+  const blocks = rows.blocks.map((block) => ({ ...block }));
+  const rewrite = (index, type, text, hadithNumber = null) =>
+    Object.assign(blocks[index], { type, text, normalized: text, hadithNumber });
+  rewrite(1, 'body', READER_VERSE);
+  rewrite(2, 'hadith_matn', READER_MATN, '1');
+  rewrite(3, 'sharh', 'شرح تجريبي أول: هذا شرح للتحقق من العرض، وليس من كتاب حقيقي.');
+  rewrite(4, 'sharh', 'شرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.');
+  rewrite(5, 'hadith_matn', 'هذا متن ثان تجريبي، وليس من كتاب حقيقي.', '2');
+  const entity = (key, type, index, start, end, extra) => ({
+    id: `entity-${key}`, bookId: BOOK, startBlockId: blocks[index].id, startOffset: start,
+    endBlockId: blocks[index].id, endOffset: end, type, matchQuality: 'exact', detectedAt: at, ...extra,
+  });
+  const narratorAt = READER_MATN.indexOf(READER_NARRATOR);
+  const hadithAt = READER_MATN.indexOf(READER_HADITH);
+  const read = (index) => ({
+    id: `mark-read-${index}`, bookId: BOOK, startBlockId: blocks[index].id, startOffset: 0,
+    endBlockId: blocks[index].id, endOffset: blocks[index].text.length, kind: 'read', scope: 'block',
+    note: null, createdAt: at + index, collapsed: false,
+  });
+  return {
+    rows: {
+      ...rows,
+      books: rows.books.map((book) => (book.id === BOOK ? { ...book, nameIndexSize: 0 } : book)),
+      blocks,
+      entities: [
+        entity('quran', 'quran', 1, 0, READER_VERSE.length, { reference: '14:2', label: 'إبراهيم 2', textUthmani: READER_VERSE }),
+        entity('hadith', 'hadith', 2, hadithAt, hadithAt + READER_HADITH.length, { reference: 'riyadussalihin:1' }),
+        entity('narrator', 'narrator', 2, narratorAt, narratorAt + READER_NARRATOR.length, { reference: 'ابي هريره', label: READER_NARRATOR }),
+      ],
+      marks: [read(10), read(20), read(30)],
+      // The id is copied from src/translation/models.ts (ANTHROPIC_GLOSS_MODEL).
+      wordGlosses: [{
+        word: CACHED_WORD, display: CACHED_WORD, root: 'ج ر ب',
+        meaning: 'experimental — a placeholder gloss for the check, not from a model', note: null,
+        isTechnicalTerm: false, model: 'claude-haiku-5-5', createdAt: at,
+      }],
+    },
+    settings: compile ? { compileEnabled: true } : null,
+  };
+}
+
 // ------------------------------------------------------------------ browser
 
-async function newPage(browser, base, profile, { onboarded = true, seed = true, cards = false, network = {} } = {}) {
+async function newPage(browser, base, profile, { onboarded = true, seed = true, cards = false, reader = null, network = {} } = {}) {
   const context = await browser.newContext({
     viewport: profile.viewport,
     hasTouch: true,
@@ -364,6 +510,8 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
       localStorage.setItem('shamela-reader.catalogOffered', '1');
     });
   }
+  if (cards && reader) throw new Error('newPage: cards and reader are separate seeds');
+  const readerSeed = seed && reader ? seedReader(reader === true ? {} : reader) : null;
   if (seed) {
     // The app creates its database on boot (DB_VERSION 11) and then seeds the
     // bundled QUL resource, whose resource row is written last. Both are waited
@@ -413,7 +561,27 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
         });
       }
       db.close();
-    }, cards ? { ...seedRows(), cards: seedCards() } : seedRows());
+    }, readerSeed ? readerSeed.rows : cards ? { ...seedRows(), cards: seedCards() } : seedRows());
+    if (readerSeed?.settings) {
+      // Merged into the row the first boot wrote (idbWork.ts: one row, key
+      // 'app'), so every other setting is what it would have been.
+      await page.evaluate(async (patch) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('shamela-reader');
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction('settings', 'readwrite');
+          const store = tx.objectStore('settings');
+          const request = store.get('app');
+          request.onsuccess = () => store.put({ ...(request.result ?? {}), ...patch, key: 'app' });
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      }, readerSeed.settings);
+    }
   }
   await page.reload();
   await page.waitForFunction(() => document.body.innerText.length > 0);
@@ -497,7 +665,7 @@ async function serialize(page, element) {
  * One capture: wait for stability, write <name>.html and <name>.png.
  * `element` null means the whole body (HTML) and the viewport (PNG).
  */
-async function capture(page, dir, name, element = null, shot = element) {
+async function capture(page, dir, name, element = null, shot = element, style = undefined) {
   const target = element ?? page.locator('body');
   await target.waitFor({ state: 'attached', timeout: STABLE_LIMIT_MS });
   await untilStable(name, () => target.evaluate((node) => (node === document.body ? node.innerHTML : node.outerHTML)));
@@ -505,6 +673,7 @@ async function capture(page, dir, name, element = null, shot = element) {
   const html = await serialize(page, element);
   writeFileSync(join(dir, `${name}.html`), html);
   const options = { path: join(dir, `${name}.png`), animations: 'disabled', mask: maskLocators(page), caret: 'hide' };
+  if (style) options.style = style;
   if (shot) await shot.screenshot(options);
   else await page.screenshot(options);
   captured++;
@@ -662,6 +831,242 @@ async function plainCaptures(browser, base, profile, dir) {
   await page.locator('[data-card-id="card-2"]').getByRole('button', { name: 'Retranslate ▾' }).click();
   await page.getByRole('button', { name: 'Same provider and model' }).waitFor();
   await capture(page, dir, 'reader-retranslate', cardPanel(page));
+  await page.context().close();
+
+  await readerCaptures(fresh, profile, dir);
+}
+
+// ------------------------------------------------------------------ the reader (5a)
+
+/**
+ * Every reader state a Phase 5 part renders (docs/refactor/plans/
+ * phase5-big-ui-files.md, Design §1.1), each from a fresh context seeded with
+ * seedReader (or seedCards for the popover). Only reader-page is the whole
+ * body; every other capture is the element that state adds, so that a change
+ * to one part names that part's captures and no others.
+ */
+async function readerCaptures(fresh, profile, dir) {
+  const beside = profile.name === '960x600';
+  const hash = `#/read/${encodeURIComponent(BOOK)}`;
+  const open = async (options = { reader: true }) => {
+    const page = await fresh(options);
+    await go(page, hash);
+    await page.locator('[data-block-id]').first().waitFor();
+    if (options.reader) await page.locator('[data-entity-id="entity-hadith"]').waitFor();
+    return page;
+  };
+  const dialog = (page) => page.locator('[role="dialog"]').last();
+  /**
+   * Scroll `target` to the middle of the screen and wait for the page to stop.
+   * Found while taking the baseline: a bare click scrolls the target in by
+   * Playwright's own means, which landed the page at different places on
+   * different runs (scrollY 386 or 163 before the same tap). A popover
+   * clamped to the top of the screen then has the same DOM but not the same
+   * pixels. Taps on text below the fold go through here.
+   */
+  const centre = async (page, target) => {
+    await target.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+    await untilStable('the page scroll', () => page.evaluate(() => String(window.scrollY)));
+  };
+  /**
+   * Capture the open sheet or popover once it has placed itself from its
+   * final height. AnchoredPanel places a popover when it mounts, from its
+   * height then, and again only on a scroll, a resize or a new `onClose` —
+   * which the reader passes inline, so on its next render (FOUND_ISSUES 34).
+   * A sheet whose lookups finish after the first placement keeps that place
+   * unless the reader happens to render again: found while proving 5a, the
+   * ḥadīth popover came out at top 12 px on most runs and at 275.8 px on one,
+   * running off the bottom of the screen with its diagnostics button out of
+   * reach. A resize event (the size unchanged) makes it place itself from its
+   * final height on every run. It changes no state of the page.
+   *
+   * In the screenshot only, the sticky header's backdrop blur is switched
+   * off: a popover clamped to the top of the screen lies over the header, its
+   * rounded corners show the header through, and the blur of the text
+   * scrolled under the header differed by a few levels between two runs
+   * (pixels at most 7/255 apart, in the corner alone). The DOM is untouched.
+   */
+  const captureDialog = async (page, name) => {
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    await capture(page, dir, name, dialog(page), dialog(page), 'header { backdrop-filter: none !important; }');
+  };
+  const tap = async (page, target) => {
+    await centre(page, target);
+    await target.click();
+  };
+  /** Select [start, end) of a block's text, as the handles would. */
+  const select = (page, index, start, end) =>
+    page.evaluate(
+      ({ id, start, end }) => {
+        const element = document.querySelector(`[data-block-id="${id}"]`);
+        const position = (offset) => {
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          let seen = 0;
+          while (walker.nextNode()) {
+            const length = walker.currentNode.textContent.length;
+            if (seen + length >= offset) return [walker.currentNode, offset - seen];
+            seen += length;
+          }
+          throw new Error(`offset ${offset} is past the end of ${id}`);
+        };
+        const [startNode, startOffset] = position(start);
+        const [endNode, endOffset] = position(end);
+        window.getSelection().setBaseAndExtent(startNode, startOffset, endNode, endOffset);
+      },
+      { id: `${BOOK}:p${Math.floor(index / 4) + 1}:${index}`, start, end },
+    );
+  const block0 = `الفقرة 1: هذا نص تجريبي للتحقق من العرض، وليس من كتاب حقيقي.`;
+  const word = (text) => [block0.indexOf(text), block0.indexOf(text) + text.length];
+  const rail = (page) => page.getByRole('toolbar', { name: 'Actions for the selected text' });
+  const untilRail = (page) =>
+    page.waitForFunction(() => document.querySelector('[role="toolbar"]')?.style.visibility === 'visible');
+  let page;
+
+  // The whole page: NoKeyBanner, the header (with ReadMarkNav: three read
+  // marks), the rail spacer, the blocks (verse, matn, sharḥ, narrator), and the
+  // aside with its divider and the empty panel (960) or the sheet bar (600).
+  page = await open();
+  await page.getByTitle('Passages marked to read').waitFor();
+  await capture(page, dir, 'reader-page');
+  await page.context().close();
+
+  // The panel collapsed to its edge tab (960), or the bottom sheet opened by
+  // its handle (600): with seedCards' five cards, so the tab has a count and
+  // the sheet has cards in it.
+  page = await open({ cards: true });
+  if (beside) {
+    await page.locator('[data-card-id="card-3"]').waitFor();
+    await page.getByRole('button', { name: 'Hide cards', exact: true }).click();
+    const edge = page.locator('button[aria-label="Show cards"]');
+    await edge.getByText('Cards (5)').waitFor();
+    await capture(page, dir, 'reader-collapsed', edge);
+  } else {
+    await page.getByRole('button', { name: /^▲ Cards/ }).click();
+    await page.getByRole('button', { name: '▼ Hide cards' }).waitFor();
+    await page.locator('[data-card-id="card-3"]').waitFor();
+    await capture(page, dir, 'reader-sheet-open', page.locator('div.sticky.bottom-0'));
+  }
+  await page.context().close();
+
+  // QuranSheet: Translation (bundled English — quran.com is aborted), then the
+  // first QUL tab the bundled matching-ayah resource gives (Similar).
+  page = await open();
+  await tap(page, page.locator('[data-entity-id="entity-quran"]'));
+  await dialog(page).getByText('(bundled)').waitFor();
+  await captureDialog(page, 'reader-quran');
+  const similar = dialog(page).getByRole('button', { name: 'Similar', exact: true });
+  await similar.click({ timeout: STABLE_LIMIT_MS });
+  await dialog(page).getByText('% coverage').first().waitFor();
+  await captureDialog(page, 'reader-quran-similar');
+  await page.context().close();
+
+  // CompileTab, blocked: compileEnabled seeded, no key.
+  page = await open({ reader: { compile: true } });
+  await tap(page, page.locator('[data-entity-id="entity-quran"]'));
+  await dialog(page).getByRole('button', { name: 'Compiled', exact: true }).click({ timeout: STABLE_LIMIT_MS });
+  await dialog(page).getByText('API key is set. Add one in Settings.').waitFor();
+  await captureDialog(page, 'reader-quran-compiled');
+  await page.context().close();
+
+  // HadithSheet after dorar and sunnah.com fail (aborted; no sunnah key), then
+  // its diagnostics — only the diagnostics block, so a footer change is
+  // reader-hadith's alone.
+  page = await open();
+  await tap(page, page.locator('[data-entity-id="entity-hadith"]'));
+  await dialog(page).getByText('No verified English translation').waitFor();
+  await captureDialog(page, 'reader-hadith');
+  await dialog(page).getByRole('button', { name: 'Show dorar diagnostics' }).click();
+  const diagnostics = dialog(page).locator('div.border-t.pt-2', { has: page.locator('dl') });
+  await diagnostics.waitFor();
+  await capture(page, dir, 'reader-hadith-diagnostics', diagnostics);
+  await page.context().close();
+
+  // BiographySheet for the narrator (no biographical work imported).
+  page = await open();
+  await tap(page, page.locator('[data-entity-id="entity-narrator"]'));
+  await dialog(page).waitFor();
+  await captureDialog(page, 'reader-biography');
+  await page.context().close();
+
+  // SelectionRail for one word (no dictionary: its action is disabled), then
+  // Meaning with no key: the gloss error in DictionarySheet.
+  page = await open();
+  await select(page, 0, ...word(UNCACHED_WORD));
+  await untilRail(page);
+  await capture(page, dir, 'reader-rail', rail(page));
+  await rail(page).getByRole('button', { name: /^Meaning/ }).click();
+  await dialog(page).getByText('No API key is set. Add one in Settings.').waitFor();
+  await captureDialog(page, 'reader-meaning');
+  await page.context().close();
+
+  // The gloss ready state, from the seeded wordGlosses row.
+  page = await open();
+  await select(page, 0, ...word(CACHED_WORD));
+  await untilRail(page);
+  await rail(page).getByRole('button', { name: /^Meaning/ }).click();
+  await dialog(page).getByText('a placeholder gloss for the check').waitFor();
+  await captureDialog(page, 'reader-meaning-cached');
+  await page.context().close();
+
+  // MarginMenu: a long press (600 ms, over MarginTarget's 480) on the matn's
+  // margin, then its Translate all…: the batch proposal bar.
+  page = await open();
+  const margin = page.locator('[data-index="2"] [role="button"]').first();
+  // Below the fold at 960×600: scrolled to first, the same way every run.
+  await centre(page, margin);
+  const box = await margin.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(600);
+  await page.mouse.up();
+  const menu = page.getByRole('menu');
+  await menu.waitFor();
+  await capture(page, dir, 'reader-margin-menu', menu);
+  await menu.getByRole('button', { name: 'Translate all…' }).click();
+  const proposal = page.locator('div.border-amber-200', { hasText: "Translate this ḥadīth's commentary?" });
+  await proposal.waitFor();
+  await capture(page, dir, 'reader-batch-proposal', proposal);
+  await page.context().close();
+
+  // The translator's notice: a phrase selected, Translate with no key.
+  page = await open();
+  await select(page, 0, 0, block0.indexOf('،'));
+  await untilRail(page);
+  await rail(page).getByRole('button', { name: 'Translate', exact: true }).click();
+  const notice = page.locator('p', { hasText: 'API key is set. Add one in Settings before translating.' });
+  await notice.waitFor();
+  await capture(page, dir, 'reader-notice', notice);
+  await page.context().close();
+
+  // CardPopover: with the panel a sheet, a marker tap opens a popover.
+  if (!beside) {
+    page = await open({ cards: true });
+    await tap(page, page.getByRole('button', { name: 'Open translation' }).first());
+    await dialog(page).getByText('Paragraph 1: a placeholder translation').waitFor();
+    await captureDialog(page, 'reader-popover');
+    await page.context().close();
+  }
+
+  page = await open();
+  await page.getByRole('button', { name: 'Contents', exact: true }).click();
+  const toc = page.getByRole('dialog', { name: 'Table of contents' });
+  await toc.waitFor();
+  await capture(page, dir, 'reader-toc', toc);
+  await page.context().close();
+
+  page = await open();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  const input = page.getByPlaceholder('بحث في هذا الكتاب…');
+  await input.fill(SEARCH_WORD);
+  const searchColumn = page.locator('div.sticky.self-start', { has: input });
+  await searchColumn.getByText(/^\d+ results?$/).waitFor();
+  await capture(page, dir, 'reader-search', searchColumn);
+  await page.context().close();
+
+  page = await open();
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await dialog(page).waitFor();
+  await captureDialog(page, 'reader-share');
   await page.context().close();
 }
 

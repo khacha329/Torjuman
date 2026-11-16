@@ -2308,6 +2308,94 @@ and position, though the dialog says they are kept; and a replacement that
 fails part way leaves no copy of the book. Check D's `book-transfer` pins
 today's behaviour. It needs its own change, if the owner wants one.
 
+## Phase 5: big UI files (in progress, branch `claude/restructure-phase-5`)
+
+Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
+**approved 2026-11-16, all seventeen answers as recommended** (`79171e4`).
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 5a. U's reader captures, baselined on the old code; FOUND_ISSUES 26–36 (the plan's A–K) | U proven (two runs, five breakages); T B L R S pass; review pending | this commit |
+
+**Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **35 captures** (17 at 960×600, 18 at 600×960), plain build, each an
+  `.html` and a `.png`: **70 manifest lines added, none removed or changed**
+  (`git diff --numstat`: `70 0`); the manifest is 250 files. Each in a fresh
+  context from a new seed option, `seedReader` (blocks 1–5 of the seeded book
+  rewritten in place as a verse, a numbered matn, two sharḥ blocks and the
+  next numbered matn; a Qurʾān, a ḥadīth and a narrator entity; three `read`
+  marks; one cached gloss; `compileEnabled` for the compile capture only), or
+  from 3b's `seedCards`; no earlier context's data changed. Synthetic only;
+  the verse is read from the committed muṣḥaf. Names: `reader-page`,
+  `reader-collapsed` (960), `reader-sheet-open` (600), `reader-quran`,
+  `reader-quran-similar`, `reader-quran-compiled`, `reader-hadith`,
+  `reader-hadith-diagnostics`, `reader-biography`, `reader-rail`,
+  `reader-meaning`, `reader-meaning-cached`, `reader-margin-menu`,
+  `reader-batch-proposal`, `reader-notice`, `reader-popover` (600),
+  `reader-toc`, `reader-search`, `reader-share`. Only `reader-page` is the
+  whole body; every other capture is the element its state adds.
+- **Run time** 223 s and 226 s for the whole of U (was ≈150 s at 3b); builds
+  ≈6 s each.
+- **Masked in the DOM: nothing.** Three causes of flakes were found and
+  handled in how the states are reached, each in the script:
+  (1) a bare `click` on text below the fold let Playwright scroll it in, and
+  the page landed at scrollY 386 or 163 on different runs, so the ḥadīth
+  popover had the same DOM and different pixels — taps now scroll the target
+  to the middle and wait for the scroll to stop (`centre`); (2) the ḥadīth
+  popover was placed at top 12 px on most runs and **275.8 px on one**, running
+  off the bottom of the screen with "Show dorar diagnostics" out of reach:
+  AnchoredPanel places a popover from its height at mount and again only on a
+  scroll, a resize or a new `onClose` (a reader render, FOUND_ISSUES 34), so
+  content that arrives later keeps the first place unless the reader happens
+  to render — every sheet and popover is now captured after a `resize` event
+  (`captureDialog`); (3) in **screenshots only**, the sticky header's backdrop
+  blur is switched off for those captures (Playwright's `style` option): a
+  popover over the header showed it through its corner, a few levels (≤ 7/255)
+  apart between runs. **Residual:** after (3), one of seven full runs differed
+  in `960x600/reader-quran.png` alone (DOM identical; the dump was overwritten
+  before it could be inspected); four reader-only reruns in separate processes
+  and the five breakage runs were identical everywhere else. If it recurs, the
+  fallback is 2a's: compare that one PNG by `--compare` or `--html-only`.
+  Item (2) is a behaviour worth the owner's eye — on the tablet a ḥadīth
+  sheet in landscape can open partly off screen — and is not in A–K; it is
+  noted here for the 5a review to decide whether it gets a FOUND_ISSUES entry.
+- **Departures from the plan, each in the script's header:** the verse is
+  Ibrāhīm **2**, not 14:7 — the bundled matching-ayah resource has no entry
+  for 14:7, so its sheet would have had no Similar tab; 14:2 has two matches.
+  `reader-collapsed` and `reader-sheet-open` use `seedCards` so the edge tab
+  has a count ("Cards (5)") and the sheet has cards. The Tafsīr, Topics and
+  Surah tabs are not reachable (no such QUL file is committed); the rest of
+  the plan's "not captured" list is in the script's.
+- **Proof.** Run 1 `--write-manifest` (`git diff --numstat`: 70 added, 0
+  removed); then `npm run verify:markup` three times: FAIL 249/250 (the
+  residual PNG above), PASS 250/250, and, as the last gate after R and S,
+  PASS 250/250. Breakages, each a temporary edit restored from a `cp`
+  backup, `git diff --quiet -- src` after each, every run exit 1:
+  1. `backdrop-blur` removed from the header (`ReaderScreen.tsx:766`): DOM of
+     `reader-page` and `reader-header` at both sizes, as planned; and the
+     **PNGs** of `reader-rail`, `reader-toc` (both sizes) and
+     `reader-batch-proposal` (600) — their element boxes overlap the sticky
+     header, which shows through the rail's and the drawer's translucency
+     (237/250).
+  2. "Translate all…" removed from the ḥadīth footer: `reader-hadith` at both
+     sizes only (246/250).
+  3. The compile blocked message changed: `reader-quran-compiled` at both
+     sizes only (246/250).
+  4. `preferSheet` dropped from QuranSheet: `reader-quran-similar` **and
+     `reader-quran-compiled`** at 960 (at 600 every panel is a sheet anyway);
+     the plan named only the first, but the prop governs every
+     non-Translation tab, Compiled included (246/250).
+  5. The batch bar's text changed ("cost nothing" → "cost nothing at all"):
+     `reader-batch-proposal` at both sizes only (246/250). Its heading was not
+     the edit, because the capture finds the bar by it.
+- **R** first and alone (`timeout 1200 npm run verify:reader`, 1 min 30 s):
+  PASS 28/28; landscape 240,000 px in 33.4 s, 1,905 nodes, **1 long task
+  (55 ms, 5 ms blocking)**; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long
+  tasks. With no `src/` change the one long task is noise against 4n's 0.
+  **S** PASS 30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged).
+  **L** `--check`: no file-level cycle, 11 rules hold.
+
 ## Open
 
 - V baseline count from the owner's PC.

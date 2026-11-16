@@ -380,3 +380,119 @@ cards (`IdbStorageAdapter.ts:1054`); sharḥ cards are restored but not counted.
 Check D's `work-backup` → `import-fresh`: `restoredCards` 3 for two translation
 cards and one explanation, with the one sharḥ card restored beside them.
 Cosmetic.
+
+## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
+
+Found by the Phase 5 survey. The dictionary sheet's "Translate this entry"
+(`ui/reader/DictionarySheet.tsx:79`) hands the entry's text (`:42`) to
+`onTranslateEntry` (`ui/reader/ReaderScreen.tsx:1102-1115`), which anchors it
+on the whole visible block: `startBlockId`/`endBlockId` the visible block,
+offsets `0` and `block.text.length`, `sourceText` the entry. The cache key is
+built from the anchor's ids and offsets, not its text
+(`ui/reader/useTranslator.ts:195-205`), and is looked up before anything else
+(`:207-213`). So translating that whole block later returns the dictionary
+entry's card, and if the block was translated whole before, "Translate this
+entry" returns the block's card instead of the entry's English. Either card
+also sits on the visible block in the panel and the margin. **Could put a wrong
+translation in front of a lesson; left unfixed (structure-only phase).** Not
+pinned by any check, so a fix needs no re-baseline. Phase 5 plan, Design §9 A.
+
+## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:649-666`: the divider sets `dragging` on
+`pointerdown` (`:972-975`) and the window listens for `pointermove` and
+`pointerup` only. A finger drag that the browser takes over for panning ends
+in `pointercancel` instead, which leaves `dragging` true and `body`
+`user-select: none` until some later `pointerup` — after which the next
+unrelated finger movement resizes the panel. The divider (`:971-980`) has no
+`touch-action`, so on a touch screen the browser is free to take the drag. And
+every `pointermove` while dragging writes the whole settings row
+(`updateSettings`, `app/AppContext.tsx:221-227`). Whether a finger drag resizes
+the panel on the tablet at all is not known: check R's touch report (Phase 5
+step 5b) shows what Chromium's emulation does, and the tablet run (M) is the
+answer. **May make a feature unusable on the tablet.** Phase 5 plan, Design §9 B.
+
+## 28. The sheet handle counts translations only (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:1025`: the portrait sheet's handle says
+`▲ Cards (${translator.cards.length})`, while the collapsed edge tab in
+landscape counts every card kind (`allCards.length`, `:1009`), and the sheet,
+once open, lists notes, explanations and sharḥ cards too. A reader with only
+notes sees "Cards (0)" over a sheet that is not empty. Cosmetic. Phase 5 plan,
+Design §9 C.
+
+## 29. `busy` is one flag for every translation (2026-11-16, by reading)
+
+`ui/reader/useTranslator.ts:62` holds one `busy`; each translation sets it
+(`:252`) and clears it in its `finally` (`:355`). When two run at once — a
+manual Translate during a batch, or a retranslate during either — the first to
+finish clears it, and the rail's Translate and Explain
+(`ui/reader/SelectionRail.tsx:128-139`, `disabled={busy}`) come back while the
+other is still running. Minor. Phase 5 plan, Design §9 D.
+
+## 30. A detached doc comment in the reader (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:389-400` ("Track whether a selection exists…
+`selectionchange` on `document`, not `pointerup`…") describes the
+`selectionchange` effect at `:421-434`, but sits above the
+biography-availability effect (`:404-419`), whose own comment follows it
+(`:401-403`). Docs only. Phase 5 plan, Design §9 E.
+
+## 31. The reader is not keyed by book (2026-11-16, by reading)
+
+`App.tsx:94` renders `<ReaderScreen bookId={route.bookId} />` and
+`ui/share/ShareScreen.tsx:146` `<ReaderScreen bookId={…} />`, neither with a
+`key`. A hash change straight from one book to another reuses the mounted
+screen: `restoredRef` (`ui/reader/ReaderScreen.tsx:124`) is still true, so the
+restore effect returns early (`:365`) and the second book opens at the top, not
+at its saved position; and `useTranslator`'s `listCards` effect
+(`ui/reader/useTranslator.ts:66-68`) has no cancellation, so a slow first list
+can land after the second. Only reachable by editing the URL (the Library is
+always between two books). Phase 5 plan, Design §9 F.
+
+## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
+
+`ui/settings/SettingsScreen.tsx:533-546`: `exportWork` sets "Preparing…" and
+then awaits `storage.exportWork()` and `saveFile` with no `try`, so a failure
+(a quota error, a refused download) leaves the message in place with nothing
+said. Its success message counts translation cards, explanations, marks and
+glossary entries, but not sharḥ cards or word glosses, which the backup does
+carry (`WorkBundle`, `platform/storage/StorageAdapter.ts:48-60`) — like the
+restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
+
+## 33. When Meaning is offered (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:1043`: the rail gets `meaningAvailable={navigator.onLine ||
+secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}`. Offline with a key, Meaning
+is offered and fails unless the word is cached; offline without a key it is
+disabled, though a cached gloss would work with neither
+(`translation/gloss.ts:97-100` returns the cache before checking the network,
+`:102-106`, or the key). May be intended; unstated. Phase 5 plan, Design §9 H.
+
+## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading)
+
+The reader passes inline `onClose` arrows to its sheets
+(`ui/reader/ReaderScreen.tsx:1089`, `:1098`, `:1168`, `:1199`), new on every
+render. `AnchoredPanel`'s effect depends on `onClose`
+(`ui/reader/AnchoredPanel.tsx:131`), so each render removes its document
+`pointerdown` listener and adds it back a tick later (`setTimeout(…, 0)`,
+`:122`). The screen renders on each change of the top block while scrolling, so
+with a sheet open a tap landing in that tick is not seen as an outside tap.
+Minor. Phase 5 keeps it exactly (its plan, Design §6.4). Phase 5 plan, Design
+§9 I.
+
+## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
+
+`ui/reader/useTranslator.ts:88-94`: before each on-device translation, the
+loop awaits `storage.getHadith` for every ḥadīth entity in the book, one read
+after another, whatever the selection covers. On a large collection that is
+thousands of sequential reads per translation. Performance. Phase 5 plan,
+Design §9 J.
+
+## 36. `digDeeper` is unreachable (2026-11-16, by reading)
+
+`TranslateRequest.digDeeper` (`ui/reader/useTranslator.ts:32`), its default
+(`:173`), its two uses (`:246`, `:289`) and `retranslate`'s option
+(`:381-387`) have no caller left in `src/`: the card's "Dig deeper" button was
+replaced by Explain (`ui/reader/TranslationCardView.tsx:229-232`). A dead
+option, kept by Phase 5. Phase 5 plan, Design §9 K.
