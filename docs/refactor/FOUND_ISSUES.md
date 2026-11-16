@@ -217,7 +217,8 @@ scenario in `docs/refactor/phase3/requests.json`. Left as is:
    `compile.gemini.body-drop`).
 2. At every Anthropic site the same drop maps to kind `api` with the message
    "network error", not kind `network` (`anthropic.translate.body-drop`,
-   `explain.body-drop`, `gloss.body-drop`, `compile.anthropic.body-drop`).
+   `anthropic.validateKey.body-drop`, `explain.body-drop`, `gloss.body-drop`,
+   `compile.anthropic.body-drop`).
 3. An error event inside the Anthropic stream reads "Anthropic API error
    undefined: {…json…}" (`anthropic.translate.stream-error-event`).
 4. Gemini's `promptFeedback.blockReason` is ignored, so a blocked prompt is

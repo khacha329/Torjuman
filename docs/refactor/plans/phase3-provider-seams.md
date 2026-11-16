@@ -568,6 +568,11 @@ a fresh context, so they cannot affect the others.
 
 ### 8. Q's record across the phase
 
+**Harness commits before 3b (added during 3a's reviews).** Two harness
+commits on the old code extend Q with scenarios the 3a reviews found missing;
+each adds entries only, every earlier entry byte-identical, and each is
+reviewed like a step (PROGRESS). After them, the rule below applies.
+
 The record must not change at any step, with two exceptions that **add** a
 section and change nothing already in it: 3m (`providerIdForModel`, new) and
 3q if done (`explainModelFor`, new). There, the new section's values are

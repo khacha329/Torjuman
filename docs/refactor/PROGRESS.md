@@ -853,7 +853,8 @@ four call sites build a client per call — the basis of check Q.
 | --- | --- | --- |
 | 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review PASS WITH NOTES | `707095f` |
 | review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | `aacf81b` |
-| harness: check Q's coverage gaps closed, on the old code | Q proven; review pending | this commit |
+| harness: check Q's coverage gaps closed, on the old code | Q proven; review PASS WITH NOTES | `9306ea6` |
+| harness: check Q's second-round gaps | in progress | — |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -926,6 +927,15 @@ FOUND_ISSUES 11.
   byte for byte. The one edit inside `node_modules/@anthropic-ai/sdk/client.mjs`
   was checked here against the published 0.120.0 tarball: identical.
 - Behaviours the new scenarios expose: FOUND_ISSUES 14.
+
+- **Reviews of aacf81b (PASS) and 9306ea6 (PASS WITH NOTES).** The 81 earlier
+  entries re-verified identical; every new scenario realistic; security
+  assertions hold. Applied: the plan's §8 names these harness commits;
+  FOUND_ISSUES 14.2 adds `anthropic.validateKey.body-drop`. **Second-round
+  gaps**, being closed in a second harness commit: a 429 with no `retry-after`
+  header (3e), multi-text-block replies at every joining site (3f), absent
+  cache-token counts (3g), an in-stream error after partial text (3e),
+  compile's Gemini 200 with an empty or non-JSON body (3i).
 
 ## Open
 
