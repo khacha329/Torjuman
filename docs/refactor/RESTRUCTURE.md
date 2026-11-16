@@ -93,11 +93,21 @@ And concretely:
   `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if it is backed up, its
   `WorkBundle` field and a `WORK_STORES` entry in `idbBackup.ts` (`tsc` fails
   until the two agree); a `DB_VERSION` bump with a line in the schema
-  history (CLAUDE.md's Never and trap 6); and check D's own schema list
-  (`TODAY` in `scripts/verify-storage.mjs`) with a re-baseline, after
-  checking that the diff is the new store and nothing else. (Spelled out at
-  the end of Phase 4: "one entry" holds for the schema, not for the methods
-  or the version.)
+  history (CLAUDE.md's Never and trap 6); and in check D
+  (`scripts/verify-storage.mjs`), the new store in `TODAY`, an
+  `OLD_DATABASES` entry for the previous version *without* it, and the
+  version D expects moved to the new one, then a re-baseline after checking
+  that the diff is the new store and nothing else. The entry must be
+  `onUpgrade: 'if-missing'`: an existing tablet gets the store only that
+  way, and without the old-version database D cannot see a store wrongly
+  marked `'assumed'` — every database it builds would already contain it.
+  **Changing an existing store** (a new index, a different key path) is not
+  a table edit at all: `upgradeDatabase` never alters a store that exists,
+  except `'recreate'`, which empties it. A table edit alone gives fresh
+  installs the change and every existing tablet nothing; it needs its own
+  migration code in the upgrade branch (FOUND_ISSUES 20). (Spelled out at
+  the end of Phase 4: "one entry" holds for a new store's schema, not for
+  its methods, its version, or a change to a store that already exists.)
 - **Adding a settings section** is one component using the shared shell, plus
   one line in the list.
 - No source file over ~500 lines without a reason written at its top.
@@ -172,9 +182,12 @@ walks into:
   that gets it wrong is not caught until the owner opens the app, and then
   it is their data. Check D (§5) exists for this and is built before Phase 4.
   Since Phase 4 both branches of `upgradeDatabase` (`idbSchema.ts`) read the
-  one `STORES` table, so they cannot disagree about a store's shape; what
-  they can still get wrong is a store's `onUpgrade` or `createdWith`, which
-  D's upgrade and odd-database scenarios show.
+  one `STORES` table, so they cannot disagree about which stores exist or
+  how a *new* store is built. They can still differ in two ways: a store's
+  `onUpgrade` or `createdWith` can be wrong (D's upgrade and odd-database
+  scenarios show it, given an old-version database without the store), and
+  a change to an existing store's indexes or key path reaches fresh installs
+  only, since the upgrade branch never alters a store that exists (§2).
 - **T-g. Reader estimates are tuned to CSS.** Moving reader styles or
   components can change margins; `TYPE_CHROME` must follow. Checks S and R.
 - **T-h. Bundle chunking.** transformers.js and sql.js are dynamic imports and

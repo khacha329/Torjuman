@@ -42,11 +42,16 @@ are kept out of backups".
 
 ## Rules
 
-- A schema change bumps `DB_VERSION`, extends the history comment, changes
-  the `STORES` entry (both upgrade branches read it), and updates
-  `StorageAdapter`, `ShareStorageAdapter`, `perBook` with the `SameUnion`
-  assertion and D's `EXPECTED_BOOK_STORES`, and `WorkBundle` with
-  `WORK_STORES`, as they apply; then re-baseline check D. Say in the PR what
+- A schema change follows CLAUDE.md trap 6 and RESTRUCTURE §2 "Adding a
+  store", which list every place a new store touches — the `Schema` type, its
+  `STORES` entry (`onUpgrade: 'if-missing'`), its group-file functions and
+  class delegate, `ShareStorageAdapter`, `perBook` with the `SameUnion`
+  assertion and D's `EXPECTED_BOOK_STORES`, `WorkBundle` with `WORK_STORES`,
+  the `DB_VERSION` bump and history line, and in check D `TODAY`, an
+  `OLD_DATABASES` entry for the previous version without the store, the
+  expected version, and a re-baseline. A new index or key path on an
+  existing store needs migration code in the upgrade branch: no `onUpgrade`
+  value alters a store that exists. Say in the PR what
   an old tablet does on first open, and what the tablet transfer does between
   two versions (it refuses a schema mismatch).
 - Before restructuring storage code, take a schema baseline on the old code:

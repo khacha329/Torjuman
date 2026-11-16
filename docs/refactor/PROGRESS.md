@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phases 0–3 complete (PRs khacha329/Torjuman#8, #9, #10, and Phase 3's on `claude/restructure-phase-3`), awaiting the owner's `npm run verify`, the tablet checks and merge
+## Current state: Phases 0–4 complete (PRs khacha329/Torjuman#8, #9, #10, #11, and Phase 4's on `claude/restructure-phase-4`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -2260,6 +2260,26 @@ holds)
   taken as a flake of the run, not of the change. **SSR build** of
   `verify-parsers.ts` exit 0, its output deleted. **V owed**.
 
+- **Review of 4n and of Phase 4: FAIL on two doc claims, fixed in the next
+  commit; the code passed.** Over the phase: `DB_VERSION` 11 at every
+  commit; the existing-database branch at `afffa50` the same text as Phase
+  3's; `storage.json` changed only in 4a (before 4b) and additively at
+  `afffa50`; `layers.json`, `package-lock.json`, `translation/` untouched;
+  the JS identical from 4m to 4n; the R hang judged a flake. Fixed:
+  RESTRUCTURE §4 T-f said both branches "cannot disagree about a store's
+  shape" — untrue for an existing store, since the upgrade branch never
+  alters one (FOUND_ISSUES 20): a new index on `cards` reaches fresh
+  installs only. Trap 6, the Never line, §2 and the storage agent now say a
+  change to an existing store needs its own migration code. And the
+  new-store lists left out what lets D see the upgrade path — the entry
+  must be `'if-missing'`, and D needs an `OLD_DATABASES` entry for the
+  previous version without the store and its expected version moved —
+  without which a new store wrongly marked `'assumed'` passes D and every
+  real tablet lacks it; all three lists now say so, and the agent's rule
+  points at trap 6 and §2 rather than keeping a thinner copy. Also this
+  file's "Current state" heading, and the "Later" items that Phases 3 and 4
+  did.
+
 ## Phase 4 result
 
 | | Phase 3 end | Phase 4 end |
@@ -2295,6 +2315,3 @@ today's behaviour. It needs its own change, if the owner wants one.
 
 ## Later
 
-- Check D (IndexedDB schema dump) is built in Phase 4 step 0, on the old code.
-- A recorded-request check for Phase 3 (the exact request bodies each
-  provider sends for a fixed selection), built on the old code first.

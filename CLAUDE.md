@@ -59,7 +59,8 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
 - **Delete** a file, store, setting or saved data path without the owner's OK.
 - **Change the IndexedDB schema** without bumping `DB_VERSION` and changing
   the `STORES` table that both upgrade branches of `upgradeDatabase`
-  (`platform/storage/idbSchema.ts`) read — see trap 6.
+  (`platform/storage/idbSchema.ts`) read — and, for a change to a store that
+  already exists, writing its migration in the upgrade branch. See trap 6.
 - **Force a tool call** (`tool_choice: tool` or `any`) on current Claude
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
@@ -197,7 +198,13 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    the whole interface); if per book, `perBook: true`, the `SameUnion`
    assertion under `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if
    backed up, its `WorkBundle` field and a `WORK_STORES` entry; the
-   `DB_VERSION` bump; and a check D re-baseline (RESTRUCTURE §2). The
+   `DB_VERSION` bump; and in check D the store in `TODAY`, an
+   `OLD_DATABASES` entry for the previous version without it, the expected
+   version moved, then a re-baseline (RESTRUCTURE §2). Its entry must be
+   `onUpgrade: 'if-missing'`. A new index or key path on an existing store
+   is **not** a table edit: the upgrade branch never alters a store that
+   exists (`'recreate'` empties it), so it needs its own migration code, or
+   fresh installs get it and every existing tablet does not. The
    whole-tablet transfer copies every store raw and refuses a different
    schema version, so both tablets must run the same app version.
 7. **The reader scrolls the page, not a box.** `useWindowVirtualizer` with
