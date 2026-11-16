@@ -1466,7 +1466,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | --- | --- | --- |
 | 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review PASS WITH NOTES | `8579140` |
 | review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review FAIL (a lost cache-key hit) | `8a9cb4b` |
-| 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review owed | this commit |
+| 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review PASS, "ready for 4b" | `c1d2cfb` |
+| 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1613,6 +1614,22 @@ holds)
   scenarios differ (`family/cards`, and `family/before-init`, where the
   rejection becomes a resolve); restored from a copy (`cmp` equal, `git diff
   --quiet -- src`), then PASS.
+- **Review of `c1d2cfb`: PASS; "ready for 4b".** The record's diff is the two
+  `family/cards` hunks only; the new hit returns the replaced row's values.
+
+**Step 4b, measured 2026-11-16**
+- `IdbStorageAdapter.ts:41-59` (`DB_NAME`, the schema history, `DB_VERSION =
+  11`) and `:71-169` (`BOOK_STORES` with both comments, `BookStore`, `Schema`)
+  moved verbatim into the new `platform/storage/idbSchema.ts`, `export` added
+  to the five names; it imports `idb`'s `DBSchema` and the 24 types (the
+  adapter's type import copied). A four-line header says what the file is.
+  The adapter imports the five names and drops `DBSchema` from its `idb`
+  import; `SETTINGS_KEY`, `PURGE_BATCH` and `SearchEntry` stay until their
+  groups move. `DB_VERSION = 11` moved as is.
+- **T** exit 0. **B** exit 0; main chunk 788,264 → 788,264 B (0; the
+  declarations' order in the bundle changes only); only `index.js` differs;
+  CSS byte-identical. **L**: 163 files, 134 edges, rules hold. **D** PASS,
+  identical. **Q** PASS. **V owed** (nothing it builds changed).
 
 ## Open
 
