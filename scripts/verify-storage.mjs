@@ -91,9 +91,8 @@
 //     every row), v10 without qulEntries and v10 without qulCompilations
 //     (today each opens, and never gets the missing store: the trio's one
 //     guard tests qulResources only). The third was added after step 4j's
-//     review: it is the only database on which a table entry for
-//     qulCompilations that lost `createdWith` would behave differently. The
-//     first rejects `init` with Chromium's AbortError
+//     review: it is the only database that lacks qulCompilations but has
+//     qulResources. The first rejects `init` with Chromium's AbortError
 //     ("Version change transaction was aborted in upgradeneeded event
 //     handler"); the ConstraintError itself ("An object store with the
 //     specified name already exists") reaches the page as an uncaught
@@ -140,7 +139,9 @@ const FULL_LIMIT = 50;
 // ------------------------------------------------------------------ schemas
 
 /**
- * Today's stores, in the fresh branch's order (IdbStorageAdapter.ts:259-334):
+ * Today's stores, in the fresh branch's order (written from IdbStorageAdapter.ts
+ * :259-334 at step 4a; since 4j the `STORES` table in
+ * src/platform/storage/idbSchema.ts, in the same order):
  * [name, keyPath, [[index, keyPath, options?], …]].
  */
 const TODAY = [

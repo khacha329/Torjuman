@@ -324,52 +324,23 @@ export function upgradeDatabase(db: IDBPDatabase<Schema>, oldVersion: number): v
     // cards, marks and the glossary are left exactly as they are.
     // Entities are derived, so that store is dropped and rebuilt by
     // detection rather than migrated.
-    if (db.objectStoreNames.contains('entities')) {
-      db.deleteObjectStore('entities');
-    }
-    const entities = db.createObjectStore('entities', { keyPath: 'id' });
-    entities.createIndex('byBook', 'bookId');
-    entities.createIndex('byStartBlock', 'startBlockId');
-
-    if (!db.objectStoreNames.contains('marks')) {
-      const marks = db.createObjectStore('marks', { keyPath: 'id' });
-      marks.createIndex('byBook', 'bookId');
-      marks.createIndex('byStartBlock', 'startBlockId');
-    }
-    if (!db.objectStoreNames.contains('dictionaryEntries')) {
-      const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-      dictionary.createIndex('byBook', 'bookId');
-      dictionary.createIndex('byRoot', 'root');
-    }
-    if (!db.objectStoreNames.contains('explanationCards')) {
-      const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-      explanations.createIndex('byBook', 'bookId');
-    }
-    if (!db.objectStoreNames.contains('wordGlosses')) {
-      db.createObjectStore('wordGlosses', { keyPath: 'word' });
-    }
-    if (!db.objectStoreNames.contains('qulResources')) {
-      db.createObjectStore('qulResources', { keyPath: 'id' });
-      const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-      qulEntries.createIndex('byResource', 'resourceId');
-      qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-      db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-    }
-    if (!db.objectStoreNames.contains('biographyEntries')) {
-      const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-      biography.createIndex('byBook', 'bookId');
-    }
-    if (!db.objectStoreNames.contains('sharhCards')) {
-      const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-      sharh.createIndex('byBook', 'bookId');
-    }
-    if (!db.objectStoreNames.contains('narratorProfiles')) {
-      const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-      narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-      narrators.createIndex('byShard', 'shard');
-    }
-    if (!db.objectStoreNames.contains('shareRecords')) {
-      db.createObjectStore('shareRecords', { keyPath: 'id' });
+    //
+    // The names are read once, before anything is created, and every guard
+    // asks that snapshot. Asking the live list would find `qulResources` just
+    // created and skip `qulEntries` and `qulCompilations`, which are created
+    // with it (their `createdWith`), exactly as the one hand-written guard over
+    // all three did. Creation follows the table's order; it cannot be
+    // observed, since store and index names are listed sorted and a failed
+    // creation aborts the whole upgrade.
+    const existing = new Set(db.objectStoreNames);
+    for (const name of Object.keys(STORES) as StoreNames<Schema>[]) {
+      const spec = STORES[name];
+      if (spec.onUpgrade === 'recreate') {
+        if (existing.has(name)) db.deleteObjectStore(name);
+        createStore(db, name);
+      } else if (spec.onUpgrade === 'if-missing' && !existing.has(spec.createdWith ?? name)) {
+        createStore(db, name);
+      }
     }
     return;
   }

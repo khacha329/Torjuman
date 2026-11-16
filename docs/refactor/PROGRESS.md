@@ -1477,7 +1477,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review PASS | `b04c7f8` |
 | 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `1b5089a` |
 | 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
-| 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review pending | this commit |
+| 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review PASS WITH NOTES | `afffa50` |
+| 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1987,6 +1988,69 @@ holds)
   chunk identical to 4j's after masking (`compare-bundles`); the raw bytes
   differ only in the build timestamp and the `node.browser` chunk-hash
   reference. CSS unchanged.
+- **Review of `afffa50`: PASS WITH NOTES; "ready for 4k".** Applied with
+  4k (script comments only, D identical without a re-baseline): the header's
+  reason for the third odd database now reads "the only database that lacks
+  qulCompilations but has qulResources"; `TODAY`'s JSDoc no longer cites
+  `IdbStorageAdapter.ts:259-334` as live (written from it at 4a; since 4j
+  the `STORES` table, same order). The review expected v1base to expose a
+  `qulCompilations` without `createdWith` too; with the snapshot it does not
+  (negative test 3 below), so the header does not say so.
+
+**Step 4k, measured 2026-11-16**
+- The existing-DB branch of `upgradeDatabase` is now: the branch's opening
+  comment kept verbatim at its top ("Upgrading an existing database: only
+  touch what changed …"; the branch's only comment — the per-version reasons
+  live in the history comment above `DB_VERSION`, untouched); a new comment
+  on the snapshot and the creation order; `const existing = new
+  Set(db.objectStoreNames)`, taken once before any deletion or creation;
+  then for each `STORES` entry in table order: `recreate` → delete if in the
+  snapshot, then `createStore`; `if-missing` → `createStore` if the snapshot
+  lacks `createdWith ?? name`; `assumed` → nothing. `return;` kept. The ten
+  hand-written guards and creations (53 lines) are gone; the fresh branch is
+  unchanged. **`DB_VERSION` stays 11** (trap 6: no store, index or key path
+  changes, so no bump; D records version 11 everywhere).
+- **Creation order** inside the upgrade becomes the table's (today entities,
+  marks, dictionaryEntries, explanationCards, wordGlosses, the trio,
+  biographyEntries, sharhCards, narratorProfiles, shareRecords; now
+  entities, dictionaryEntries, marks, explanationCards, sharhCards,
+  narratorProfiles, shareRecords, wordGlosses, the trio, biographyEntries),
+  accepted by Q5. Where it could show: on the v10 database without
+  `qulResources`, `shareRecords` is now created before the trio's
+  ConstraintError rather than never reached; the abort rolls it back, and D
+  records the same version 10, 22 stores, AbortError and `uncaughtInPage`.
+  No entry reads another store but through `createdWith`, which asks the
+  snapshot; each index is created on its own store inside `createStore`.
+- **D PASS, identical** (41 scenarios): `upgrade-v1base`, `-v7`, `-v8`,
+  `-v9`, `-v10`, `reopen-v11` in both halves, and the three odd databases
+  (without `qulResources`: version 10, 22 stores, AbortError,
+  `uncaughtInPage` ConstraintError; without `qulEntries` and without
+  `qulCompilations`: version 11, 23 stores, the missing one never created).
+- **Negative tests** (each in place, restored from a `cp` copy, `cmp`
+  checked):
+  1. `entities` `recreate` → `if-missing`: D FAIL, 6 of 41 —
+     `harness/upgrade-v7`, `-v8`, `-v9`, `-v10`, `odd-…-qulEntries`,
+     `odd-…-qulCompilations` (their seeded entity rows survive; today the
+     store is dropped and recreated empty). Not v1base (no `entities` to keep) nor the bundle half (it
+     records schemas, which are the same).
+  2. `qulEntries` without `createdWith`: D FAIL, 1 of 41 —
+     `harness/odd-v10-without-qulEntries` (it now gets `qulEntries`).
+  3. `qulCompilations` without `createdWith`: D FAIL, 1 of 41 —
+     `harness/odd-v10-without-qulCompilations` only. v1base lacks all three,
+     so both forms create it there; only the 4j follow-up's scenario sees
+     this.
+  4. The names read live per entry (`{ has: (store) =>
+     db.objectStoreNames.contains(store) }`, type-clean): D cannot run —
+     "bundle/upgrade-v1base: the app did not open version 11 and seed within
+     30 s" (exit 2): with `qulResources` just created, `qulEntries` and
+     `qulCompilations` are skipped and the app's QUL seed fails. Caught.
+  5. `books` `assumed` → `if-missing`: D PASS, identical — not caught, as
+     expected: every fixture has all twelve assumed stores, so the guard
+     never fires. Harmless on every reachable database; the reviewer reads
+     the twelve `assumed` values against the old branch.
+- **T** exit 0. **B** exit 0; main chunk 792,189 → 790,745 B (−1,444: the
+  hand-written creations gone); only `index.js` differs; CSS byte-identical.
+  **L**: rules hold. **Q** PASS. **U** PASS, 180/180. **V owed**.
 
 ## Open
 
