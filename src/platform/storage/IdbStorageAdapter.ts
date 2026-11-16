@@ -43,6 +43,27 @@ import {
   readStoreRows,
 } from './idbTransfer';
 import {
+  clearBiographyEntries,
+  deleteNarratorShard,
+  deleteQulResource,
+  findNarratorProfiles,
+  getHadith,
+  getQulCompilation,
+  getQulEntries,
+  getQulEntry,
+  getQuranVerse,
+  listBiographyEntries,
+  listNarratorShards,
+  listQulResources,
+  putBiographyEntries,
+  putHadith,
+  putNarratorProfiles,
+  putQulCompilation,
+  putQulEntries,
+  putQulResource,
+  putQuranVerse,
+} from './idbReference';
+import {
   deleteCard,
   deleteExplanationCard,
   deleteGlossaryEntry,
@@ -448,85 +469,67 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ------------------------------------------------------ retrieval cache
 
   async putQuranVerse(verse: QuranVerse): Promise<void> {
-    await this.handle.put('quranVerses', verse);
+    return putQuranVerse(this.lazyHandle, verse);
   }
 
   async getQuranVerse(reference: string): Promise<QuranVerse | undefined> {
-    return this.handle.get('quranVerses', reference);
+    return getQuranVerse(this.lazyHandle, reference);
   }
 
   async putHadith(record: HadithRecord): Promise<void> {
-    await this.handle.put('hadiths', record);
+    return putHadith(this.lazyHandle, record);
   }
 
   async getHadith(reference: string): Promise<HadithRecord | undefined> {
-    return this.handle.get('hadiths', reference);
+    return getHadith(this.lazyHandle, reference);
   }
 
   // ------------------------------------------------------------------ QUL
 
   async putQulResource(resource: QulResource): Promise<void> {
-    await this.handle.put('qulResources', resource);
+    return putQulResource(this.lazyHandle, resource);
   }
 
   // ---------------------------------------------------------------- biography
 
   async putBiographyEntries(entries: BiographyEntry[]): Promise<void> {
-    const transaction = this.handle.transaction('biographyEntries', 'readwrite');
-    await Promise.all(entries.map((entry) => transaction.store.put(entry)));
-    await transaction.done;
+    return putBiographyEntries(this.lazyHandle, entries);
   }
 
   async listBiographyEntries(bookId?: string): Promise<BiographyEntry[]> {
-    if (bookId === undefined) return this.handle.getAll('biographyEntries');
-    return this.handle.getAllFromIndex('biographyEntries', 'byBook', bookId);
+    return listBiographyEntries(this.lazyHandle, bookId);
   }
 
   async clearBiographyEntries(bookId: string): Promise<void> {
-    await purgeIndex(this.handle, 'biographyEntries', 'byBook', bookId);
+    return clearBiographyEntries(this.lazyHandle, bookId);
   }
 
   async listQulResources(): Promise<QulResource[]> {
-    const all = await this.handle.getAll('qulResources');
-    return all.sort((a, b) => a.name.localeCompare(b.name));
+    return listQulResources(this.lazyHandle);
   }
 
   async deleteQulResource(id: string): Promise<void> {
-    // Entries first, resource row last. A word-by-word resource is ~77,000
-    // entries, too many to clear in a single transaction without the same
-    // per-row stall `purgeIndex` exists to avoid — so the removal is no longer
-    // atomic, and the ordering is what makes that safe: an interrupted purge
-    // still lists the resource, and pressing Remove again finishes it. The
-    // reverse order would leave entries no longer reachable from anywhere.
-    await purgeIndex(this.handle, 'qulEntries', 'byResource', id);
-    await this.handle.delete('qulResources', id);
+    return deleteQulResource(this.lazyHandle, id);
   }
 
   async putQulEntries(entries: QulEntry[]): Promise<void> {
-    const transaction = this.handle.transaction('qulEntries', 'readwrite');
-    await Promise.all(entries.map((entry) => transaction.store.put(entry)));
-    await transaction.done;
+    return putQulEntries(this.lazyHandle, entries);
   }
 
   async getQulEntry(resourceId: string, key: string): Promise<QulEntry | undefined> {
-    return this.handle.get('qulEntries', `${resourceId}|${key}`);
+    return getQulEntry(this.lazyHandle, resourceId, key);
   }
 
   async getQulEntries(resourceId: string, keys: string[]): Promise<QulEntry[]> {
-    const transaction = this.handle.transaction('qulEntries', 'readonly');
-    const found = await Promise.all(
-      keys.map((key) => transaction.store.get(`${resourceId}|${key}`)),
-    );
-    await transaction.done;
-    return found.filter((entry): entry is QulEntry => entry !== undefined);
+    return getQulEntries(this.lazyHandle, resourceId, keys);
   }
 
   async putQulCompilation(record: QulCompilation): Promise<void> {
-    await this.handle.put('qulCompilations', record);
+    return putQulCompilation(this.lazyHandle, record);
   }
 
   async getQulCompilation(cacheKey: string): Promise<QulCompilation | undefined> {
-    return this.handle.get('qulCompilations', cacheKey);
+    return getQulCompilation(this.lazyHandle, cacheKey);
   }
 
   // ---------------------------------------------------------------- crawl
@@ -590,34 +593,19 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ---------------------------------------------------- narrator profiles
 
   async putNarratorProfiles(profiles: StoredNarratorProfile[]): Promise<void> {
-    for (let i = 0; i < profiles.length; i += 500) {
-      const tx = this.handle.transaction('narratorProfiles', 'readwrite');
-      await Promise.all(profiles.slice(i, i + 500).map((row) => tx.store.put(row)));
-      await tx.done;
-    }
+    return putNarratorProfiles(this.lazyHandle, profiles);
   }
 
   async findNarratorProfiles(naming: string): Promise<StoredNarratorProfile[]> {
-    if (naming.length < 3) return [];
-    return this.handle.getAllFromIndex('narratorProfiles', 'byNaming', naming);
+    return findNarratorProfiles(this.lazyHandle, naming);
   }
 
   async listNarratorShards(): Promise<{ shard: string; count: number }[]> {
-    const counts = new Map<string, number>();
-    const tx = this.handle.transaction('narratorProfiles', 'readonly');
-    // Key cursor only: counting shards must not read tens of thousands of
-    // full profiles into memory just to render a settings row.
-    let cursor = await tx.store.index('byShard').openKeyCursor();
-    while (cursor) {
-      counts.set(cursor.key as string, (counts.get(cursor.key as string) ?? 0) + 1);
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return [...counts].map(([shard, count]) => ({ shard, count }));
+    return listNarratorShards(this.lazyHandle);
   }
 
   async deleteNarratorShard(shard: string): Promise<void> {
-    await purgeIndex(this.handle, 'narratorProfiles', 'byShard', shard);
+    return deleteNarratorShard(this.lazyHandle, shard);
   }
 
   // -------------------------------------------------------- shared chapters

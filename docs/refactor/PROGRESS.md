@@ -1472,7 +1472,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
 | 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
 | 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
-| 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review pending | this commit |
+| 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review PASS WITH NOTES | `284b7ef` |
+| 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1768,6 +1769,40 @@ holds)
   **D** PASS, identical (40 scenarios). **Q** PASS. **S** 30/30. **R** 28/28;
   landscape 240,000 px 33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px
   24.6 s 1,904 nodes 0 long tasks. **V owed**.
+- **Review of `284b7ef`: PASS WITH NOTES; "ready for 4g".** Nothing to fix.
+  For 4n: with `deleteShareRecord`'s doc comment moved to `idbWork.ts`, the
+  interface (`StorageAdapter.ts:232`) no longer shows that it "does not, and
+  cannot, unpublish anything"; consider a one-line pointer there.
+
+**Step 4g, measured 2026-11-16**
+- Nineteen methods moved verbatim into the new
+  `platform/storage/idbReference.ts`, in the class's order (so the biography
+  methods stay between `putQulResource` and `listQulResources`, where they
+  were), de-indented, in the 4e fetcher form: retrieval cache
+  (`putQuranVerse`, `getQuranVerse`, `putHadith`, `getHadith`), QUL
+  (`putQulResource`, `listQulResources`, `deleteQulResource` with its
+  comment, `putQulEntries`, `getQulEntry`, `getQulEntries`,
+  `putQulCompilation`, `getQulCompilation`), biography
+  (`putBiographyEntries`, `listBiographyEntries`, `clearBiographyEntries`)
+  and narrator profiles (`putNarratorProfiles`, `findNarratorProfiles`,
+  `listNarratorShards` with its comment, `deleteNarratorShard`).
+- 21 substitution sites, all `this.handle` → `handle()`: one per method,
+  two in `listBiographyEntries` and two in `deleteQulResource`. Three of them
+  are the `purgeIndex(this.handle, ` calls of 4d (`clearBiographyEntries`,
+  `deleteQulResource`, `deleteNarratorShard`), now `purgeIndex(handle(), `;
+  `idbReference.ts` imports `purgeIndex` from `./idbPurge`. No method calls
+  another or reads `this.searchIndex`. A token diff of each function against
+  `284b7ef` shows only `export function`, the fetcher parameter (and the
+  trailing comma of a wrapped signature) and those sites.
+- `deleteBook` (book content, 4h) still calls `this.deleteNarratorShard(`,
+  now a delegate. The adapter keeps its `purgeIndex` import (`deleteBook`,
+  `clearEntities`, `clearDictionaryEntries`); no adapter import became
+  unused. The class gains nineteen one-line delegates; dividers stay.
+- **T** exit 0. **B** exit 0; main chunk 789,828 → 790,648 B (+820: nineteen
+  delegates); only `index.js` differs; CSS byte-identical. **L**: rules hold.
+  **D** PASS, identical (40 scenarios; `family/before-init` still records
+  `putNarratorProfiles([])` and `findNarratorProfiles (two letters)`
+  resolving). **Q** PASS. S and R not run (not required for 4g). **V owed**.
 
 ## Open
 
