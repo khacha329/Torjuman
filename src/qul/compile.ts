@@ -130,6 +130,18 @@ export function renderCompilePrompt(source: CompileSource): string {
   return parts.join('\n');
 }
 
+// One compiler per cloud provider. A table rather than a ternary, so a new
+// cloud provider is a type error here instead of a silent fall into the Gemini
+// branch (restructure Phase 3 step 3l, the owner's Q5). The functions are
+// declarations below, hoisted, so the table can name them before they appear.
+const COMPILERS: Record<
+  CloudProviderId,
+  (model: string, apiKey: string, prompt: string) => Promise<CompileResult>
+> = {
+  anthropic: compileWithAnthropic,
+  gemini: compileWithGemini,
+};
+
 export async function compileAyah(options: {
   providerId: CloudProviderId;
   model: string;
@@ -137,9 +149,7 @@ export async function compileAyah(options: {
   source: CompileSource;
 }): Promise<CompileResult> {
   const prompt = renderCompilePrompt(options.source);
-  return options.providerId === 'anthropic'
-    ? compileWithAnthropic(options.model, options.apiKey, prompt)
-    : compileWithGemini(options.model, options.apiKey, prompt);
+  return COMPILERS[options.providerId](options.model, options.apiKey, prompt);
 }
 
 async function compileWithAnthropic(

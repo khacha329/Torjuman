@@ -865,8 +865,9 @@ four call sites build a client per call — the basis of check Q.
 | 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
 | 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `1e019c2` |
 | 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `034d11f` |
-| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | d0ff6e1 |
-| 3k. `costOf` → `models.ts` | T B L Q pass; S R U running; V owed; review pending | this commit |
+| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `d0ff6e1` |
+| 3k. `costOf` → `models.ts` | T B L Q S R U pass; V owed; review PASS WITH NOTES | `fff14db` |
+| 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1194,7 +1195,31 @@ FOUND_ISSUES 11.
   main chunk 788,200 → 788,200 B (0); only `index.js` differs (the function's
   position); CSS byte-identical. SSR build resolves; **V owed** (`models.ts`,
   the cost checks at `verify-parsers.ts:4224-4243`). **L**: 134 edges, no new
-  one; rules hold. **S R U** were running at commit; their results are recorded with the review.
+  one; rules hold. **S R U** were still running when 3k was committed (the
+  commit added only this text to the tree they ran on): **S** 30/30; **R**
+  28/28, perf identical to the baseline (240,000 px in 33.3 s, 1,905 DOM
+  nodes, 0 long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes); **U**
+  180/180.
+
+- **Review of 3k: PASS WITH NOTES; "ready for 3l".** The moved block diffs
+  identical; no importer of `costOf` from the provider path is left anywhere;
+  every import left in the provider is used; no new edge. Notes applied here:
+  the 3j row's hash in backticks, the over-long line above re-wrapped. Noted,
+  not changed: the plan's 3k paragraph cites the old line numbers (316-341,
+  now 282-307) and leaves `verify-requests.ts` out of its sentence (the Steps
+  row names it).
+
+**Step 3l, measured 2026-11-16** (owner's Q5)
+- `compile.ts`'s `compileAyah` dispatches through
+  `const COMPILERS: Record<CloudProviderId, (model, apiKey, prompt) =>
+  Promise<CompileResult>>` instead of the `=== 'anthropic' ? … : …` ternary,
+  so a new cloud provider is a `tsc` error there rather than a fall into
+  Gemini. Same function for both ids. A value outside `CloudProviderId`
+  (which the type forbids and `EntitySheet.tsx` guards) would now reject with
+  a `TypeError` instead of going to Gemini — unreachable.
+- **T** exit 0. **Q** PASS, identical — every compile scenario. **B** exit 0;
+  main chunk 788,200 → 788,198 B (−2); only `index.js` differs; CSS
+  byte-identical. SSR build resolves; **V owed**. **L**: rules hold.
 
 ## Open
 
