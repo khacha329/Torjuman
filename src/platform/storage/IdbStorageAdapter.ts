@@ -33,7 +33,7 @@ import type {
   WorkBundle,
   WorkRestoreReport,
 } from './StorageAdapter';
-import { BOOK_STORES, DB_NAME, DB_VERSION, type BookStore, type Schema } from './idbSchema';
+import { BOOK_STORES, DB_NAME, DB_VERSION, type BookStore, type Schema, upgradeDatabase } from './idbSchema';
 
 // This is the ONLY file that talks to IndexedDB. Everything else goes through
 // the StorageAdapter interface, so replacing this with native SQLite under
@@ -82,139 +82,7 @@ export class IdbStorageAdapter implements StorageAdapter {
 
   async init(): Promise<void> {
     this.db = await openDB<Schema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        if (oldVersion >= 1) {
-          // Upgrading an existing database: only touch what changed. Blocks,
-          // cards, marks and the glossary are left exactly as they are.
-          // Entities are derived, so that store is dropped and rebuilt by
-          // detection rather than migrated.
-          if (db.objectStoreNames.contains('entities')) {
-            db.deleteObjectStore('entities');
-          }
-          const entities = db.createObjectStore('entities', { keyPath: 'id' });
-          entities.createIndex('byBook', 'bookId');
-          entities.createIndex('byStartBlock', 'startBlockId');
-
-          if (!db.objectStoreNames.contains('marks')) {
-            const marks = db.createObjectStore('marks', { keyPath: 'id' });
-            marks.createIndex('byBook', 'bookId');
-            marks.createIndex('byStartBlock', 'startBlockId');
-          }
-          if (!db.objectStoreNames.contains('dictionaryEntries')) {
-            const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-            dictionary.createIndex('byBook', 'bookId');
-            dictionary.createIndex('byRoot', 'root');
-          }
-          if (!db.objectStoreNames.contains('explanationCards')) {
-            const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-            explanations.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('wordGlosses')) {
-            db.createObjectStore('wordGlosses', { keyPath: 'word' });
-          }
-          if (!db.objectStoreNames.contains('qulResources')) {
-            db.createObjectStore('qulResources', { keyPath: 'id' });
-            const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-            qulEntries.createIndex('byResource', 'resourceId');
-            qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-            db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-          }
-          if (!db.objectStoreNames.contains('biographyEntries')) {
-            const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-            biography.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('sharhCards')) {
-            const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-            sharh.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('narratorProfiles')) {
-            const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-            narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-            narrators.createIndex('byShard', 'shard');
-          }
-          if (!db.objectStoreNames.contains('shareRecords')) {
-            db.createObjectStore('shareRecords', { keyPath: 'id' });
-          }
-          return;
-        }
-
-        db.createObjectStore('books', { keyPath: 'id' });
-
-        const toc = db.createObjectStore('tocNodes', { keyPath: 'id' });
-        toc.createIndex('byBook', 'bookId');
-
-        const pages = db.createObjectStore('pages', { keyPath: 'id' });
-        pages.createIndex('byBook', 'bookId');
-        pages.createIndex('byBookPage', ['bookId', 'pageIndex']);
-
-        const blocks = db.createObjectStore('blocks', { keyPath: 'id' });
-        blocks.createIndex('byBook', 'bookId');
-        blocks.createIndex('byPage', 'pageId');
-        blocks.createIndex('byBookOrder', ['bookId', 'order']);
-
-        const entities = db.createObjectStore('entities', { keyPath: 'id' });
-        entities.createIndex('byBook', 'bookId');
-        entities.createIndex('byStartBlock', 'startBlockId');
-
-        const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-        dictionary.createIndex('byBook', 'bookId');
-        dictionary.createIndex('byRoot', 'root');
-
-        // Indexed by startBlockId so the virtualized reader can look up the
-        // marks for the blocks on screen without scanning thousands.
-        const marks = db.createObjectStore('marks', { keyPath: 'id' });
-        marks.createIndex('byBook', 'bookId');
-        marks.createIndex('byStartBlock', 'startBlockId');
-
-        const cards = db.createObjectStore('cards', { keyPath: 'id' });
-        cards.createIndex('byBook', 'bookId');
-        cards.createIndex('byCacheKey', 'cacheKey');
-
-        const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-        explanations.createIndex('byBook', 'bookId');
-
-        // Retrieved commentary. Its own store rather than a kind inside
-        // `cards`, because that store is keyed for the translation cache —
-        // byCacheKey — and a card that was never generated has no cache key.
-        const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-        sharh.createIndex('byBook', 'bookId');
-
-        // Imported narrator profiles. `byNaming` is multiEntry over every form a
-        // man is cited under, so a short mention in a commentary reaches a
-        // profile filed under a twelve-word nasab in one indexed read.
-        const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-        narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-        narrators.createIndex('byShard', 'shard');
-
-        // Shared chapters this device published. No index: there are a few
-        // dozen at most and Settings reads all of them at once.
-        db.createObjectStore('shareRecords', { keyPath: 'id' });
-
-        db.createObjectStore('wordGlosses', { keyPath: 'word' });
-
-        // One store for all four QUL resource kinds. They share a shape — key
-        // in, record out — so a single compound index serves every lookup and
-        // deleting a resource is one range delete rather than four.
-        db.createObjectStore('qulResources', { keyPath: 'id' });
-        const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-        qulEntries.createIndex('byResource', 'resourceId');
-        qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-        db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-
-        // Derived from each book's contents, so indexed only by book: a lookup
-        // reads every imported biographical work anyway, and there are three of
-        // them at most.
-        const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-        biography.createIndex('byBook', 'bookId');
-
-        db.createObjectStore('profiles', { keyPath: 'id' });
-        db.createObjectStore('glossary', { keyPath: 'id' });
-        db.createObjectStore('quranVerses', { keyPath: 'reference' });
-        db.createObjectStore('hadiths', { keyPath: 'reference' });
-        db.createObjectStore('crawlStates', { keyPath: 'bookId' });
-        db.createObjectStore('positions', { keyPath: 'bookId' });
-        db.createObjectStore('settings', { keyPath: 'key' });
-      },
+      upgrade: upgradeDatabase,
     });
   }
 

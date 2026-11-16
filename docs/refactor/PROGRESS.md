@@ -1467,7 +1467,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review PASS WITH NOTES | `8579140` |
 | review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review FAIL (a lost cache-key hit) | `8a9cb4b` |
 | 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review PASS, "ready for 4b" | `c1d2cfb` |
-| 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review pending | this commit |
+| 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `056290a` |
+| 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1622,7 +1623,7 @@ holds)
   11`) and `:71-169` (`BOOK_STORES` with both comments, `BookStore`, `Schema`)
   moved verbatim into the new `platform/storage/idbSchema.ts`, `export` added
   to the five names; it imports `idb`'s `DBSchema` and the 24 types (the
-  adapter's type import copied). A four-line header says what the file is.
+  adapter's type import copied). A five-line header says what the file is.
   The adapter imports the five names and drops `DBSchema` from its `idb`
   import; `SETTINGS_KEY`, `PURGE_BATCH` and `SearchEntry` stay until their
   groups move. `DB_VERSION = 11` moved as is.
@@ -1630,6 +1631,27 @@ holds)
   declarations' order in the bundle changes only); only `index.js` differs;
   CSS byte-identical. **L**: 163 files, 134 edges, rules hold. **D** PASS,
   identical. **Q** PASS. **V owed** (nothing it builds changed).
+
+- **Review of 4b: PASS WITH NOTES; "ready for 4c".** Verbatim apart from the
+  five `export`s, the imports and the header; the bundle differs only in
+  the order of pure constant initialisers. Applied: the header was five
+  lines, not four (above); `idbSchema.ts`'s header said the upgrade branches
+  were in `IdbStorageAdapter.init`, which 4c makes untrue — reworded there.
+
+**Step 4c, measured 2026-11-16**
+- The `upgrade(db, oldVersion) { … }` body (`IdbStorageAdapter.ts:86-216`
+  at `056290a`) moved into `export function upgradeDatabase(db:
+  IDBPDatabase<Schema>, oldVersion: number): void` at the end of
+  `idbSchema.ts`, re-indented from eight spaces to two and otherwise
+  verbatim (a whitespace-stripped diff is empty), `return;` included. `init`
+  passes `{ upgrade: upgradeDatabase }`. The body used nothing from the
+  adapter's scope (no `this`, no adapter constant). `idbSchema.ts` imports
+  `IDBPDatabase` beside `DBSchema`; its header now says the upgrade callback
+  is there, and the function has a three-line doc comment.
+- **T** exit 0. **B** exit 0; main chunk 788,264 → 788,284 B (+20, a named
+  function); only `index.js`; CSS byte-identical. **L**: rules hold. **D**
+  PASS, identical — every schema scenario, fresh and upgraded. **U** 180/180
+  (a fresh install through the bundle). **Q** PASS. **V owed**.
 
 ## Open
 
