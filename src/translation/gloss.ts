@@ -5,6 +5,7 @@ import { normalize } from '../lib/arabic';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
+import { anthropicCallError } from './anthropic';
 
 // "What does this word mean here, in English?"
 //
@@ -163,16 +164,6 @@ export async function glossWord(
     await storage.putWordGloss(gloss);
     return gloss;
   } catch (error) {
-    if (error instanceof TranslationError) throw error;
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError('api', error instanceof Error ? error.message : String(error));
+    throw anthropicCallError(error);
   }
 }

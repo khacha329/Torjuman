@@ -6,6 +6,7 @@ import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
+import { anthropicCallError } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -297,20 +298,7 @@ export async function explainPhrase(options: {
       costUsd: null,
     };
   } catch (error) {
-    if (error instanceof TranslationError) throw error;
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError(
-      'api',
-      error instanceof Error ? error.message : String(error),
-    );
+    throw anthropicCallError(error);
   }
 }
 

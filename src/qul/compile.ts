@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { sha256 } from '../lib/hash';
 import { GEMINI_BASE } from '../translation/models';
 import { TranslationError } from '../translation/TranslationProvider';
+import { anthropicCallError } from '../translation/anthropic';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -174,16 +175,7 @@ async function compileWithAnthropic(
       costUsd: null,
     };
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError('api', error instanceof Error ? error.message : String(error));
+    throw anthropicCallError(error);
   }
 }
 

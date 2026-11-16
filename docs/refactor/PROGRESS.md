@@ -857,7 +857,8 @@ four call sites build a client per call — the basis of check Q.
 | harness: check Q's second-round gaps | Q proven; review PASS WITH NOTES | `33078d4` |
 | harness: SyntaxError messages masked in Q | review PASS WITH NOTES | `f444b44` |
 | review notes: f444b44 — comment, plan text | applied | `2012536` |
-| 3b. U captures for the Claude side and the reader's cards | U proven; review pending | this commit |
+| 3b. U captures for the Claude side and the reader's cards | U proven; review PASS WITH NOTES | `da5d0f0` |
+| 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1001,6 +1002,30 @@ FOUND_ISSUES 11.
   `models.ts` → `settings--translation--claude`, `…-profiles--claude`,
   `reader-retranslate`; the card badge separator → `reader-cards`,
   `reader-retranslate`. Re-run here: PASS 180/180.
+
+- **Review of 3b: PASS WITH NOTES; "ready for 3c".** No key in any dump;
+  seeded model ids match `models.ts`; earlier captures unaffected. Noted, not
+  changed: the `<select>`'s chosen option is a DOM property, so only the PNG
+  shows it; what 3m–3q change that no capture shows — a legacy profile without
+  `providerId` (3m, Q and reading), a card on an unknown model or a Gemini
+  non-default model, the switch back from Claude to Gemini (3n), Explain's
+  "needs an Anthropic key" notice and explanation cards (3q, S R Q). The
+  manifest's line 2 ("Written once, in 2a") is left for 3r, so this step's
+  diff stays additions only.
+
+**Step 3c, measured 2026-11-16**
+- New `translation/anthropic.ts` with `anthropicCallError`, the short mapping
+  moved from `explain.ts` (its multi-line `'api'` throw kept), returning instead
+  of throwing (the plan names this), with a header. `explain.ts`, `gloss.ts`
+  and `qul/compile.ts`: each `catch` body became `throw
+  anthropicCallError(error);`. Gloss's copy was the same lines; compile's
+  lacked the pass-through line, which its `try` cannot need (plan §1). Each
+  file imports the function; their SDK imports stay until 3d.
+- **T** exit 0. **Q** PASS, identical (every Explain, gloss and compile error
+  scenario). **B** exit 0; main chunk 789,438 → 788,800 B (−638); only
+  `index.js` differs; CSS byte-identical. SSR build of `verify-parsers.ts`
+  resolves; **V owed** (compile). **L**: 134 edges (`qul → translation`
+  existed), no cycles; rules hold.
 
 ## Open
 
