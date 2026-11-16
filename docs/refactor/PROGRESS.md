@@ -856,7 +856,8 @@ four call sites build a client per call — the basis of check Q.
 | harness: check Q's coverage gaps closed, on the old code | Q proven; review PASS WITH NOTES | `9306ea6` |
 | harness: check Q's second-round gaps | Q proven; review PASS WITH NOTES | `33078d4` |
 | harness: SyntaxError messages masked in Q | review PASS WITH NOTES | `f444b44` |
-| review notes: f444b44 — comment, plan text | applied | this commit |
+| review notes: f444b44 — comment, plan text | applied | `2012536` |
+| 3b. U captures for the Claude side and the reader's cards | U proven; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -974,6 +975,32 @@ FOUND_ISSUES 11.
   intended entries hold a `SyntaxError`; neither has `raw`. Applied: the
   comment's Node-version example corrected; the plan's "Nothing else is
   masked" and §8's harness paragraph now name this one exception (owner told).
+
+**Step 3b, measured 2026-11-16** (no `src/` change)
+- Built by a delegated agent from plan §6, checked here. **Ten captures**
+  (five names × both sizes, `.html` + `.png`: 20 manifest lines), plain build,
+  each in a fresh context: `onboarding--claude` (the Claude panel and its
+  `sk-ant-…` placeholder), `settings--translation--claude` (Claude's four
+  models, Sonnet 5.5 selected), `settings--translation-profiles--claude`
+  ("This profile runs on Claude — …"), **`reader-cards`** (five seeded cards:
+  Gemini, Claude Sonnet 5.5 with cost and cache, a superseded Claude model,
+  on-device, a collapsed Claude card) and **`reader-retranslate`** (the
+  provider groups and models in registry order). Both reader captures made it
+  (owner's Q13). Cards are seeded only for these two (`seedCards()` behind an
+  option), so no earlier capture's data changed. No key is stored anywhere;
+  no mask added.
+- Manifest: rewritten sorted by `--write-manifest`; `git diff` is 20 added
+  lines and no removed line; every earlier line present.
+- Known limit, recorded in the script's header: at 960×600 the two
+  "translation-profiles" screenshots (the Phase 2 one too) are cut by the
+  viewport and the sticky bar, so for that line the `.html` and the 600×960
+  `.png` are the proof.
+- **Proof**: three runs PASS 180/180 (≈150 s each); deliberate edits, each
+  restored — Onboarding's Claude placeholder → exit 1, both
+  `onboarding--claude` files at both sizes; a Claude model label in
+  `models.ts` → `settings--translation--claude`, `…-profiles--claude`,
+  `reader-retranslate`; the card badge separator → `reader-cards`,
+  `reader-retranslate`. Re-run here: PASS 180/180.
 
 ## Open
 
