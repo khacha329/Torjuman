@@ -859,7 +859,8 @@ four call sites build a client per call — the basis of check Q.
 | review notes: f444b44 — comment, plan text | applied | `2012536` |
 | 3b. U captures for the Claude side and the reader's cards | U proven; review PASS WITH NOTES | `da5d0f0` |
 | 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `dc90a29` |
-| 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review pending | this commit |
+| 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review PASS WITH NOTES | `5f87f7d` |
+| 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1050,6 +1051,25 @@ FOUND_ISSUES 11.
   included (`anthropic-dangerous-direct-browser-access`). **B** exit 0; main
   chunk 788,800 → 788,708 B (−92); only `index.js`; CSS byte-identical. SSR
   build resolves; **V owed**. **L**: no new edge; rules hold.
+
+- **Review of 3d: PASS WITH NOTES; "ready for 3e".** The `import type`
+  change belongs to row 3d itself ("imports become `import type` where only
+  types remain"). Note applied in 3e: `anthropic.ts`'s header line re-wrapped.
+
+**Step 3e, measured 2026-11-16**
+- `toTranslationError` moved verbatim from the end of
+  `providers/AnthropicProvider.ts` to `translation/anthropic.ts`, exported,
+  with a short doc comment (new text); the provider imports it beside
+  `anthropicClient`. Its three call sites (translate's two passes,
+  `validateKey`'s last line) are unchanged, and `validateKey`'s boolean
+  `instanceof` checks stay in the provider. The module header now names both
+  mappings and is re-wrapped (3d review).
+- **T** exit 0. **Q** PASS, identical — every provider error scenario
+  (401, 403, 429 with and without a readable retry-after, 400, 500, connection
+  failure, body drop, stream errors). **B** exit 0; main chunk 788,708 B
+  (unchanged size, the mapping emitted beside the short one); only `index.js`;
+  CSS byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
+  hold.
 
 ## Open
 

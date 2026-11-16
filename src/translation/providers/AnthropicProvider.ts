@@ -19,7 +19,7 @@ import {
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { anthropicClient } from '../anthropic';
+import { anthropicClient, toTranslationError } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -333,45 +333,4 @@ export function costOf(model: string, usage: TranslationUsage): number | null {
   const output = usage.outputTokens * rates.outputPerMTok;
 
   return (input + cacheRead + cacheWrite + output) / 1_000_000;
-}
-
-function toTranslationError(error: unknown): TranslationError {
-  if (error instanceof TranslationError) return error;
-
-  if (error instanceof Anthropic.AuthenticationError) {
-    return new TranslationError(
-      'auth',
-      'Your Anthropic API key was rejected. Check it in Settings — this is a key problem, not a usage limit.',
-    );
-  }
-  if (error instanceof Anthropic.PermissionDeniedError) {
-    return new TranslationError(
-      'auth',
-      'That Anthropic key is valid but not permitted to use this model. Check the key’s workspace and model access.',
-    );
-  }
-  if (error instanceof Anthropic.RateLimitError) {
-    const header = error.headers?.get?.('retry-after');
-    return new TranslationError(
-      'rate-limit',
-      'Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.',
-      { retryAfterSeconds: header ? Number(header) : null },
-    );
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return new TranslationError(
-      'network',
-      'Could not reach api.anthropic.com. Check the network connection.',
-    );
-  }
-  if (error instanceof Anthropic.BadRequestError) {
-    return new TranslationError('api', `Anthropic rejected the request: ${error.message}`);
-  }
-  if (error instanceof Anthropic.APIError) {
-    return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
-  }
-  return new TranslationError(
-    'api',
-    error instanceof Error ? error.message : String(error),
-  );
 }
