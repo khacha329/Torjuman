@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { TranslationError } from './TranslationProvider';
 
 // What every Claude call in the app shares, so the SDK is used the same way
-// everywhere: the client, and the two error mappings — the short one for
+// everywhere: the client, the text of a reply, and the two error mappings — the short one for
 // Explain, gloss and compile, the fuller one for translation and the key
 // check. It sits in the translation core rather than under providers/
 // because Explain and gloss (here in translation/) and QUL compile use it as
@@ -19,6 +19,22 @@ import { TranslationError } from './TranslationProvider';
 /** The SDK client every Anthropic call uses; one per call, as before. */
 export function anthropicClient(apiKey: string): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+}
+
+/**
+ * Text from EVERY text block, not the first.
+ *
+ * `content` is an array, and with the search tool enabled it holds
+ * `server_tool_use` and `web_search_tool_result` blocks interleaved with
+ * several text blocks. Reading `content[0].text` finds a non-text block and
+ * concludes there is no answer — the single most likely cause of dig-deeper
+ * failing far more often than plain translation.
+ */
+export function textOf(message: Anthropic.Message): string {
+  return message.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n');
 }
 
 /**

@@ -5,7 +5,7 @@ import { normalize } from '../lib/arabic';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError, anthropicClient } from './anthropic';
+import { anthropicCallError, anthropicClient, textOf } from './anthropic';
 
 // "What does this word mean here, in English?"
 //
@@ -134,10 +134,7 @@ export async function glossWord(
 
     // Without a forced call the model can answer in text instead, usually with
     // the same JSON written out. Recover it before giving up on a paid reply.
-    const text = message.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    const text = textOf(message);
     const fields = (call?.input ?? parseJsonObject(text)) as Record<string, unknown> | null;
     if (!fields || typeof fields.meaning !== 'string' || !fields.meaning.trim()) {
       throw new TranslationError('parse', 'No gloss was returned.', { raw: text });

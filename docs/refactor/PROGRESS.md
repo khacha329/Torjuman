@@ -860,7 +860,8 @@ four call sites build a client per call — the basis of check Q.
 | 3b. U captures for the Claude side and the reader's cards | U proven; review PASS WITH NOTES | `da5d0f0` |
 | 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `dc90a29` |
 | 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review PASS WITH NOTES | `5f87f7d` |
-| 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
+| 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `bb1d962` |
+| 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1070,6 +1071,24 @@ FOUND_ISSUES 11.
   (unchanged size, the mapping emitted beside the short one); only `index.js`;
   CSS byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
   hold.
+
+- **Review of 3e: PASS WITH NOTES; "ready for 3f".** The moved body is
+  byte-identical (`cmp`). Note for 3r: FOUND_ISSUES 11 still places the
+  `retry-after` read in `AnthropicProvider.ts`; it is now in `anthropic.ts`.
+
+**Step 3f, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `textOf` moved verbatim, with its doc comment ("Text from EVERY text
+  block…"), from `providers/AnthropicProvider.ts` to `translation/anthropic.ts`;
+  the provider imports it (its two calls unchanged). The four inline copies —
+  Explain's research notes and structuring text, gloss's text, compile's text
+  (which keeps its `.trim()`) — became `textOf(…)`. Each copy was the same
+  filter–map–join. Nothing outside the provider imported its `textOf`.
+- `qul/compile.ts` no longer uses the SDK at all, not even its types, so its
+  `import type Anthropic` line went; the SDK census now lists four files.
+- **T** exit 0. **Q** PASS, identical — including the multi-text-block
+  scenarios added for this step. **B** exit 0; main chunk 788,708 → 788,484 B
+  (−224); only `index.js`; CSS byte-identical. SSR build resolves; **V owed**.
+  **L**: no new edge; rules hold.
 
 ## Open
 

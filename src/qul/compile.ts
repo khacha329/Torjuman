@@ -1,8 +1,7 @@
-import type Anthropic from '@anthropic-ai/sdk';
 import { sha256 } from '../lib/hash';
 import { GEMINI_BASE } from '../translation/models';
 import { TranslationError } from '../translation/TranslationProvider';
-import { anthropicCallError, anthropicClient } from '../translation/anthropic';
+import { anthropicCallError, anthropicClient, textOf } from '../translation/anthropic';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -161,11 +160,7 @@ async function compileWithAnthropic(
     });
 
     return {
-      text: message.content
-        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('\n')
-        .trim(),
+      text: textOf(message).trim(),
       usage: {
         inputTokens: message.usage.input_tokens ?? 0,
         outputTokens: message.usage.output_tokens ?? 0,

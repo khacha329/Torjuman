@@ -6,7 +6,7 @@ import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError, anthropicClient } from './anthropic';
+import { anthropicCallError, anthropicClient, textOf } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -214,10 +214,7 @@ export async function explainPhrase(options: {
 
       const message = await stream.finalMessage();
       accumulate(usage, message.usage);
-      notes += message.content
-        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('\n');
+      notes += textOf(message);
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -254,10 +251,7 @@ export async function explainPhrase(options: {
     // tool_choice auto cannot make the model call the tool. When it answers in
     // text instead, it has usually written the same JSON there, and a reply
     // that has been paid for is recovered rather than thrown away.
-    const text = final.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    const text = textOf(final);
     const recovered = call ? null : parseJsonObject(text);
     const fields = (call?.input ?? recovered) as Record<string, unknown> | null;
 
