@@ -393,7 +393,12 @@ built from the anchor's ids and offsets, not its text
 (`:207-213`). So translating that whole block later returns the dictionary
 entry's card, and if the block was translated whole before, "Translate this
 entry" returns the block's card instead of the entry's English. Either card
-also sits on the visible block in the panel and the margin. **Could put a wrong
+also sits on the visible block in the panel and the margin. And the request
+itself is built from the anchor, not the text: with the entry's text as
+`targetText` it sends the visible block's surrounding context, its
+`blockTypes`, its `hadithNumbers` and the verses known in it
+(`knownQuranRefs`) (`ui/reader/useTranslator.ts:215-223`, `:277-288`), so the
+model is told the entry is that block. **Could put a wrong
 translation in front of a lesson; left unfixed (structure-only phase).** Not
 pinned by any check, so a fix needs no re-baseline. Phase 5 plan, Design §9 A.
 
@@ -465,9 +470,9 @@ restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
 `ui/reader/ReaderScreen.tsx:1043`: the rail gets `meaningAvailable={navigator.onLine ||
 secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}`. Offline with a key, Meaning
 is offered and fails unless the word is cached; offline without a key it is
-disabled, though a cached gloss would work with neither
-(`translation/gloss.ts:97-100` returns the cache before checking the network,
-`:102-106`, or the key). May be intended; unstated. Phase 5 plan, Design §9 H.
+disabled, though a cached gloss would work with neither:
+`translation/gloss.ts:97-100` returns the cache before checking the network
+(`:102-106`) or the key (`:108-110`). May be intended; unstated. Phase 5 plan, Design §9 H.
 
 ## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading)
 
@@ -496,3 +501,26 @@ Design §9 J.
 (`:381-387`) have no caller left in `src/`: the card's "Dig deeper" button was
 replaced by Explain (`ui/reader/TranslationCardView.tsx:229-232`). A dead
 option, kept by Phase 5. Phase 5 plan, Design §9 K.
+
+## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured)
+
+Found while baselining Phase 5 step 5a's U captures. `AnchoredPanel`
+(`ui/reader/AnchoredPanel.tsx:59-95`) places a popover in `reposition`, a
+`useCallback` on `[anchor, asSheet, onClose]` run by a layout effect, and
+again on a window scroll or resize — never when its own content changes. It
+measures the panel's height at that moment (`panelRef.current?.offsetHeight`,
+280 if not yet laid out) to choose above or below the anchor. A sheet whose
+lookups fill in after it mounts (the ḥadīth sheet: dorar, sunnah.com, the
+commentaries) keeps the place chosen for its short loading state. In check U's
+landscape `reader-hadith` the popover came out at `top: 12px` on most runs and
+at `top: 275.844px` on one: about 486 px tall, it ran off the bottom of the
+600 px screen, with "Show dorar diagnostics" out of reach until the reader
+scrolled. Whether it is re-placed after its content arrives depends on the
+reader rendering again: every sheet's `onClose` is an inline arrow
+(`ui/reader/ReaderScreen.tsx:1089`, `:1098`, `:1168`, `:1199`), so a reader
+render makes a new `reposition` and re-runs the layout effect (the mechanism of
+FOUND_ISSUES 34). It is right today only by that accident; a Phase 5 part that
+rendered less often than the screen would change when — or whether — the
+popover is re-placed. Check U now captures every sheet after a resize event so
+its pixels do not depend on the race. On the tablet in landscape a ḥadīth sheet
+can open partly off screen. Left unfixed (structure-only phase).

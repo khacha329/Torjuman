@@ -2315,7 +2315,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 
 | Step | State | Commit |
 | --- | --- | --- |
-| 5a. U's reader captures, baselined on the old code; FOUND_ISSUES 26–36 (the plan's A–K) | U proven (two runs, five breakages); T B L R S pass; review pending | this commit |
+| 5a. U's reader captures, baselined on the old code; FOUND_ISSUES 26–36 (the plan's A–K) | U: three runs (one FAIL on a PNG), five breakages; T B L R S pass; review FAIL (U as baselined cannot gate the moves) | `23bc734` |
+| 5a fix — the margin's place and the proposal bar made deterministic, dialogs screenshotted alone, `reader-page-cards` added; FOUND_ISSUES 37, 26 and 33 corrected | U five runs PASS in a row, two breakages; T B L R S pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2346,20 +2347,20 @@ holds)
   popover was placed at top 12 px on most runs and **275.8 px on one**, running
   off the bottom of the screen with "Show dorar diagnostics" out of reach:
   AnchoredPanel places a popover from its height at mount and again only on a
-  scroll, a resize or a new `onClose` (a reader render, FOUND_ISSUES 34), so
+  scroll, a resize or a new `onClose` (a reader render; FOUND_ISSUES 37), so
   content that arrives later keeps the first place unless the reader happens
   to render — every sheet and popover is now captured after a `resize` event
   (`captureDialog`); (3) in **screenshots only**, the sticky header's backdrop
   blur is switched off for those captures (Playwright's `style` option): a
   popover over the header showed it through its corner, a few levels (≤ 7/255)
-  apart between runs. **Residual:** after (3), one of seven full runs differed
-  in `960x600/reader-quran.png` alone (DOM identical; the dump was overwritten
-  before it could be inspected); four reader-only reruns in separate processes
-  and the five breakage runs were identical everywhere else. If it recurs, the
-  fallback is 2a's: compare that one PNG by `--compare` or `--html-only`.
-  Item (2) is a behaviour worth the owner's eye — on the tablet a ḥadīth
-  sheet in landscape can open partly off screen — and is not in A–K; it is
-  noted here for the 5a review to decide whether it gets a FOUND_ISSUES entry.
+  apart between runs. **Residual:** after (3), of the three full runs compared
+  with the final manifest outside a breakage, one differed in
+  `960x600/reader-quran.png` alone (DOM identical; the dump was overwritten
+  before it could be inspected); four reader-only reruns in separate processes,
+  and the captures outside each edit in the five breakage runs, were
+  identical. (Corrected after the review, which found the first wording's
+  "one of seven" counted breakage runs as clean runs.) Item (2) is now
+  FOUND_ISSUES 37.
 - **Departures from the plan, each in the script's header:** the verse is
   Ibrāhīm **2**, not 14:7 — the bundled matching-ayah resource has no entry
   for 14:7, so its sheet would have had no Similar tab; 14:2 has two matches.
@@ -2395,6 +2396,74 @@ holds)
   tasks. With no `src/` change the one long task is noise against 4n's 0.
   **S** PASS 30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged).
   **L** `--check`: no file-level cycle, 11 rules hold.
+
+- **Review of 5a: FAIL** — the commit was clean, but U as baselined could not
+  gate the moves. In the reviewer's first of two runs U failed 248/250:
+  `600x960/reader-margin-menu.html` (MarginMenu at top 331.375 px against the
+  baseline's 386.375 px — it places itself at the margin target's top, and
+  after `centre` the target's place varied by 55 px with scrollY settled,
+  which was all `centre` waited on) and `600x960/reader-batch-proposal.png`.
+  The baselined `600x960/reader-batch-proposal.png` showed the reader's header,
+  not the bar, which sat under the sticky header. `960x600/reader-quran.png`'s
+  flake was left unexplained. No capture held a CardMarkerDot, which 5f3 moves.
+  The placement race belonged in FOUND_ISSUES; 33 cited the wrong lines for
+  the key check; 26 left out what the request sends. PROGRESS's run counts
+  ("two runs", "one of seven") did not match the log.
+
+**5a fix, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- `centre` waits on the target's rectangle and scrollY together, before and
+  after scrolling, and repeats the scroll until the target's middle is within
+  1 px of the screen's (or the page is at the top, for a target that cannot be
+  centred), failing after four tries.
+- The proposal is captured after scrolling back to the top and waiting for the
+  bar's place to be still; the 600×960 PNG now shows the bar (looked at).
+- `captureDialog`'s screenshot `style` makes everything but the dialog
+  invisible (`body *` outside the dialog `visibility: hidden`, the dialog
+  `visible`), in place of only turning off the header's blur; the DOM is
+  untouched, and `reader-page`/`reader-header` capture what is hidden. It
+  applies to every sheet and popover capture, `reader-popover` included.
+- New `reader-page-cards`, both sizes: the body with `seedCards`' five cards
+  — the five margin markers (CardMarkerDot), the translated-range strips and,
+  at 960, the panel with the cards.
+- FOUND_ISSUES 37 filed (the AnchoredPanel placement race); 26 gains what the
+  request sends; 33 cites `gloss.ts:108-110` for the key check. The script's
+  header points at 37.
+- **Manifest:** against `79171e4` (before 5a) `git diff --numstat` is `74 0`,
+  so the 180 earlier lines are byte-identical; against `23bc734` it is `22
+  18`: the four `reader-page-cards` lines added and 18 lines changed, all
+  PNGs — the 17 sheet and popover screenshots (their corners) and
+  `600x960/reader-batch-proposal.png`. No `.html` changed. 254 files, 37
+  captures (18 at 960, 19 at 600).
+- **U five runs in a row, full, against the rewritten manifest:** after `--write-manifest`
+  (242 s), `npm run verify:markup` five times, each `PASS — 254/254 files
+  match docs/refactor/phase2/markup.sha256` (248 s, 243 s, 246 s, 242 s,
+  239 s for the captures; about 4 min each with the builds). Before that, two
+  reader-only runs of the new harness in separate processes were identical
+  (74/74).
+- **Breakages** (temporary edits restored from a `cp` backup, `src/` clean
+  after each): (1) the batch bar's text ("cost
+  nothing" → "cost nothing at all") → exit 1, 250/254: `reader-batch-proposal`
+  `.html` and `.png` at both sizes, the 600×960 PNG among them; (2)
+  CardMarkerDot's title ("Open this translation" → "Open this one
+  translation", `BlockList.tsx`) → exit 1, 252/254: `reader-page-cards.html`
+  at both sizes (a title does not paint, so the PNGs match).
+- **Not a check's fault, seen while looking:** in every QuranSheet capture
+  the verse's Uthmani marks (ٱ, the small high signs) draw as "NO GLYPH" boxes.
+  `ArabicVerse` sets no font, so the sheet's Arabic falls back from
+  `system-ui` to this container's fonts, which lack them; the blocks set the
+  reader's font inline and render the same verse whole. On the tablet the
+  system Arabic font decides; only the tablet can show it.
+- **R** first and alone: the first run **hung** after the landscape report
+  (landscape 240,000 px, 33.3 s, 1,905 nodes, 0 long tasks), the CPU idle, and
+  was killed at 10 min; re-run once alone, as the plan's Design §1.5 says:
+  PASS 28/28 in 1 min 35 s, landscape 240,000 px in 33.3 s, 1,905 nodes, 0
+  long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks — as
+  4n. This is the second R hang on an unchanged bundle (4n's was the first);
+  the plan says a second hang in a row stops the step, and these were not in a
+  row (5a's R ran clean), but it is recorded for the reviewer. **S** PASS
+  30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged). **L**
+  `--check`: no file-level cycle, 11 rules hold.
 
 ## Open
 

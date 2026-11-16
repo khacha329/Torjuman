@@ -94,6 +94,9 @@
 //   - reader-page: the book opened, no key — NoKeyBanner, the header with
 //     ReadMarkNav, the rail spacer, the blocks with their entities, and the
 //     aside and divider (960) or the sheet bar (600);
+//   - reader-page-cards: the same body with seedCards' five cards instead —
+//     the margin markers (CardMarkerDot) and translated-range strips, and at
+//     960 the panel holding the cards;
 //   - reader-collapsed (960): Hide cards tapped, with seedCards' five cards —
 //     the edge tab and its count;
 //   - reader-sheet-open (600): the sheet handle tapped, with the five cards —
@@ -116,7 +119,9 @@
 //     selected, Meaning — the gloss ready state;
 //   - reader-margin-menu: a 600 ms press on the matn's margin — MarginMenu
 //     with Translate all…; reader-batch-proposal: then Translate all… — the
-//     proposal bar (three blocks, cost unknown for the default Gemini model);
+//     proposal bar (three blocks, cost unknown for the default Gemini model),
+//     captured with the page back at the top so the bar is not behind the
+//     sticky header;
 //   - reader-notice: a phrase selected, Translate with no key — the
 //     translator's notice;
 //   - reader-popover (600): with seedCards, a margin marker tapped —
@@ -126,13 +131,18 @@
 //     Search, Share tapped — TocDrawer, the search column, ShareChapter's
 //     dialog (no chapter on screen: the seeded blocks have no toc node).
 // Text below the fold is scrolled to the middle of the screen before it is
-// tapped (`centre`), because Playwright's own scroll-into-view landed the page
-// at different places on different runs and a popover clamped to the top had
-// the same DOM but different pixels; and each sheet or popover is captured
-// after a resize event (`captureDialog`), because a popover whose content
-// arrives after it is first placed keeps its first place until the reader
-// renders again, which is a race (FOUND_ISSUES 34; the ḥadīth popover came
-// out at top 12 px or 275.8 px).
+// tapped or pressed (`centre`), and the page is waited on until the target's
+// own rectangle is still, not only scrollY: Playwright's own scroll-into-view
+// landed the page at different places on different runs, and with scrollY
+// settled the virtualizer still moved the matn's margin by 55 px between two
+// runs (the 5a review), which MarginMenu's place follows. Each sheet or
+// popover is captured after a resize event (`captureDialog`), because a
+// popover whose content arrives after it is first placed keeps its first place
+// until the reader renders again — a race (FOUND_ISSUES 37; the ḥadīth popover
+// came out at top 12 px or 275.8 px). And its screenshot is taken with
+// everything but the dialog made invisible (Playwright's `style` option; the
+// DOM is untouched), because its rounded corners showed the header and text
+// under it, a few levels apart between runs.
 //
 // A failing run lists each differing file; with a .verify/markup/base/ dump
 // present (VERIFY_OUT=.verify/markup/base on the 2a commit, `git worktree add`
@@ -845,6 +855,11 @@ async function plainCaptures(browser, base, profile, dir) {
  * body; every other capture is the element that state adds, so that a change
  * to one part names that part's captures and no others.
  */
+/** Screenshot style: hide everything but the open dialog (captureDialog). */
+const ONLY_THE_DIALOG =
+  'body *:not([role="dialog"]):not([role="dialog"] *) { visibility: hidden !important; } ' +
+  '[role="dialog"] { visibility: visible !important; }';
+
 async function readerCaptures(fresh, profile, dir) {
   const beside = profile.name === '960x600';
   const hash = `#/read/${encodeURIComponent(BOOK)}`;
@@ -857,16 +872,40 @@ async function readerCaptures(fresh, profile, dir) {
   };
   const dialog = (page) => page.locator('[role="dialog"]').last();
   /**
-   * Scroll `target` to the middle of the screen and wait for the page to stop.
+   * Scroll `target` to the middle of the screen and wait until it is still.
    * Found while taking the baseline: a bare click scrolls the target in by
    * Playwright's own means, which landed the page at different places on
    * different runs (scrollY 386 or 163 before the same tap). A popover
    * clamped to the top of the screen then has the same DOM but not the same
    * pixels. Taps on text below the fold go through here.
+   *
+   * Still means the target's own place, not only scrollY: the 5a review saw
+   * the matn's margin 55 px apart between two runs with scrollY settled (the
+   * virtualizer measures rows after the scroll and moves them), and MarginMenu
+   * places itself at the target's top. So the target's rectangle and scrollY
+   * are waited on together, and the scroll is repeated until the target's
+   * middle is within 1 px of the screen's (four tries; then it fails).
    */
   const centre = async (page, target) => {
-    await target.evaluate((node) => node.scrollIntoView({ block: 'center' }));
-    await untilStable('the page scroll', () => page.evaluate(() => String(window.scrollY)));
+    const where = () =>
+      target.evaluate((node) => {
+        const rect = node.getBoundingClientRect();
+        return JSON.stringify([window.scrollY, rect.top, rect.height]);
+      });
+    await untilStable('the target before scrolling', where);
+    for (let attempt = 0; ; attempt++) {
+      await target.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+      await untilStable('the target after scrolling', where);
+      const off = await target.evaluate((node) => {
+        const rect = node.getBoundingClientRect();
+        return Math.abs(rect.top + rect.height / 2 - window.innerHeight / 2);
+      });
+      // A target near the top of the page cannot be centred; then the page is
+      // at the top and the place is still the same every run.
+      const atTop = await page.evaluate(() => window.scrollY === 0);
+      if (off <= 1 || atTop) return;
+      if (attempt === 3) throw new Error(`could not centre the target (${off} px off)`);
+    }
   };
   /**
    * Capture the open sheet or popover once it has placed itself from its
@@ -877,18 +916,20 @@ async function readerCaptures(fresh, profile, dir) {
    * unless the reader happens to render again: found while proving 5a, the
    * ḥadīth popover came out at top 12 px on most runs and at 275.8 px on one,
    * running off the bottom of the screen with its diagnostics button out of
-   * reach. A resize event (the size unchanged) makes it place itself from its
-   * final height on every run. It changes no state of the page.
+   * reach (FOUND_ISSUES 37). A resize event, the window's size unchanged,
+   * makes it place itself from its final height on every run; the app's other
+   * resize listeners (the layout mode, the rail) read the same size and so
+   * change nothing.
    *
-   * In the screenshot only, the sticky header's backdrop blur is switched
-   * off: a popover clamped to the top of the screen lies over the header, its
-   * rounded corners show the header through, and the blur of the text
-   * scrolled under the header differed by a few levels between two runs
-   * (pixels at most 7/255 apart, in the corner alone). The DOM is untouched.
+   * In the screenshot only, everything but the dialog is made invisible: a
+   * popover lies over the header and the text, its rounded corners show them
+   * through, and those pixels differed by a few levels between runs (the
+   * header's blur of whatever was scrolled under it). The DOM is untouched,
+   * and reader-page and reader-header capture what is hidden here.
    */
   const captureDialog = async (page, name) => {
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
-    await capture(page, dir, name, dialog(page), dialog(page), 'header { backdrop-filter: none !important; }');
+    await capture(page, dir, name, dialog(page), dialog(page), ONLY_THE_DIALOG);
   };
   const tap = async (page, target) => {
     await centre(page, target);
@@ -928,6 +969,15 @@ async function readerCaptures(fresh, profile, dir) {
   page = await open();
   await page.getByTitle('Passages marked to read').waitFor();
   await capture(page, dir, 'reader-page');
+  await page.context().close();
+
+  // The same, with seedCards' five cards: the margin markers (CardMarkerDot)
+  // and the translated-range strips beside blocks 0–4, and at 960 the panel
+  // with them. No other capture has a marker on the page.
+  page = await open({ cards: true });
+  await page.getByRole('button', { name: 'Open translation' }).nth(4).waitFor();
+  if (beside) await page.locator('[data-card-id="card-3"]').waitFor();
+  await capture(page, dir, 'reader-page-cards');
   await page.context().close();
 
   // The panel collapsed to its edge tab (960), or the bottom sheet opened by
@@ -1025,6 +1075,14 @@ async function readerCaptures(fresh, profile, dir) {
   await menu.getByRole('button', { name: 'Translate all…' }).click();
   const proposal = page.locator('div.border-amber-200', { hasText: "Translate this ḥadīth's commentary?" });
   await proposal.waitFor();
+  // The bar is in the page's flow under the sticky header, so with the page
+  // scrolled to the matn it sits behind the header (the 5a review found the
+  // first baseline's 600×960 PNG showed the header). Back at the top, the bar
+  // is on screen below the header.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await untilStable('the proposal on screen', () =>
+    proposal.evaluate((node) => JSON.stringify([window.scrollY, node.getBoundingClientRect().top])),
+  );
   await capture(page, dir, 'reader-batch-proposal', proposal);
   await page.context().close();
 
