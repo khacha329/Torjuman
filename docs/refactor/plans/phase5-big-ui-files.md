@@ -1051,3 +1051,20 @@ proof), then X on the whole phase.
 
 ## Owner's answers
 
+
+**All seventeen as recommended** ("all as recommended, go ahead",
+2026-11-16): U, R and P built and recorded on the old code before any move
+(Q1); R first, alone, under a timeout, re-run once on a hang (Q2);
+adaptations (f)–(l) (Q3); flat files (Q4); `Section` to
+`ui/settings/Section.tsx` (Q5); one Settings section per commit (Q6); the
+EntitySheet order with `quranSheetData.ts` (Q7); `blockLayout.ts` and
+`BlockRow.tsx` (Q8); the five hooks (Q9); parts with same-name props, no
+context (Q10); the screen at about 800 lines with a reason at its top
+(Q11); the `useTranslator` steps (Q12); untrue comments in 5j, moved files'
+headers in their step (Q13); FOUND_ISSUES A–K filed in 5a and left (Q14);
+M as written (Q15) — the owner did not say whether the panel is resized by
+finger or whether a published chapter link exists, so M's divider-by-finger
+item stays (it is how B is judged) and step 12 is done only if the owner
+has a link; the reviewer after every commit, `torjuman-reader` reading the
+plan and 5a's and 5b's additions before their baselines, `torjuman-llm`
+reading P before 5c's (Q16); the book-kinds seam as in Design §8 (Q17).
