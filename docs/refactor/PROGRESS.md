@@ -1465,7 +1465,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | Step | State | Commit |
 | --- | --- | --- |
 | 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review PASS WITH NOTES | `8579140` |
-| review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review owed | this commit |
+| review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review FAIL (a lost cache-key hit) | `8a9cb4b` |
+| 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review owed | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1485,7 +1486,7 @@ holds)
   book), work backup (4 phases), per-book transfer (4), whole-tablet transfer
   (4: export with and without keys, two restores, six refusals), share
   adapter. Record `docs/refactor/phase4/storage.json`, **340,129 B** (360,229 B
-  after the review notes).
+  after the review notes, 361,971 B after the cache-key fix).
   **Run time**: about 11 s for the check, 17.6 s for `npm run
   verify:storage` with its build.
 - **Masked: nothing.** Pinned: `Date.now` (page.clock), `Math.random`, locale,
@@ -1544,7 +1545,8 @@ holds)
   before any move, and readability notes. Closed here, still with no `src/`
   change (`git diff --quiet -- src`):
   - **`before-init` calls every one of the 84 interface methods** (95 calls:
-    the 11 with an early return are called empty and non-empty), in the
+    11 methods are called twice — 10 with an early return, empty and
+    non-empty, and `listBiographyEntries` with and without a filter), in the
     interface's order, and fails the harness if the list and the class's
     own prototype disagree (less `init` and the private helpers `handle`,
     `purgeIndex`, `loadSearchIndex`, `untyped`). Today 83 reject, 1 throws
@@ -1593,6 +1595,24 @@ holds)
      `ConstraintError: Key already exists in the object store.`).
   Final run PASS. T exit 0; B 788,264 B; L 162 files, 134 edges, rules hold;
   Q PASS.
+
+- **Review of `8a9cb4b`: FAIL, one coverage regression, fixed here.** The new
+  overwrite step in `family/cards` ran before the only `getCardByCacheKey`
+  that hit, so both lookups of `cache-a2` missed and no hit through the
+  `byCacheKey` index was left anywhere in the record: a moved lookup that
+  always returned `undefined` would have passed. Now a hit on `cache-a2`
+  before the overwrite, then a miss on it and a hit on `cache-a2-new` after.
+  Also the "95 calls" wording above corrected (10 early returns and
+  `listBiographyEntries` are the 11 called twice). Everything else in the
+  review checked out: the prototype assertion bites both ways; the step-list
+  fix hid nothing (all 37 old `before-init` outcomes identical); the
+  overwrites really overwrite.
+- **Re-measured**: record **361,971 B**; only `family/cards` differed before
+  the rewrite; run 1, then run 2 with `--write`: byte-identical (`cmp`).
+  Breakage 9, `getCardByCacheKey` returning `undefined` → FAIL, 2 of 40
+  scenarios differ (`family/cards`, and `family/before-init`, where the
+  rejection becomes a resolve); restored from a copy (`cmp` equal, `git diff
+  --quiet -- src`), then PASS.
 
 ## Open
 

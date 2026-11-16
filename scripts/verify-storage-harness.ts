@@ -651,11 +651,16 @@ const phases: Record<string, Phase> = {
     await record.step('putCard a1', () => s.putCard(card('card-a1', A, 'cache-a1') as never));
     await record.step('putCard a2', () => s.putCard(card('card-a2', A, 'cache-a2') as never));
     await record.step('putCard b1', () => s.putCard(card('card-b1', B, 'cache-b1') as never));
+    // A hit through the byCacheKey index, before the row is replaced.
+    await record.step('getCardByCacheKey cache-a2', () => s.getCardByCacheKey('cache-a2'));
     // Over an existing key: a put replaces the row (an add would reject).
     await record.step('putCard a2 again (same key, new cache key)', () => s.putCard(card('card-a2', A, 'cache-a2-new', T0 + 5) as never));
     await record.step('listCards A', () => s.listCards(A));
+    // The replaced row is found under its new cache key and no longer under
+    // the old one, so a lookup that always missed or read the wrong index
+    // would show.
     await record.step('getCardByCacheKey cache-a2 (the replaced key)', () => s.getCardByCacheKey('cache-a2'));
-    await record.step('getCardByCacheKey cache-a2', () => s.getCardByCacheKey('cache-a2'));
+    await record.step('getCardByCacheKey cache-a2-new (the new key)', () => s.getCardByCacheKey('cache-a2-new'));
     await record.step('getCardByCacheKey missing', () => s.getCardByCacheKey('nope'));
     await record.step('deleteCard a1', () => s.deleteCard('card-a1'));
     await record.step('deleteCard missing', () => s.deleteCard('nope'));
