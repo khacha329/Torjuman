@@ -864,7 +864,8 @@ four call sites build a client per call — the basis of check Q.
 | 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review PASS WITH NOTES | `6de2d88` |
 | 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
 | 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `1e019c2` |
-| 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review pending | this commit |
+| 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `034d11f` |
+| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1154,6 +1155,24 @@ FOUND_ISSUES 11.
   and bodies. **B** exit 0; main chunk 788,249 → 788,188 B (−61); only
   `index.js`; CSS byte-identical. SSR build resolves; **V owed** (compile).
   **L**: 134 edges (`qul → translation` existed); rules hold.
+
+- **Review of 3i: PASS WITH NOTES; "ready for 3j".** URLs, header order and
+  bodies identical in both bundles; `JSON.stringify` still runs inside each
+  caller's `try` (`postGemini` is not async). Applied in 3j: `gemini.ts`'s
+  header says "both Gemini model calls" (the key check is a GET of its own) and
+  points at compile's Gemini branch in FOUND_ISSUES 11.
+
+**Step 3j, measured 2026-11-16** (owner's Q6 (a))
+- `GLOSS_MAX_TOKENS = 2000` and `GLOSS_OUTPUT_CONFIG: { effort: Effort } = {
+  effort: 'low' }` in `models.ts`, right after `ANTHROPIC_GLOSS_MODEL`, each
+  under its comment moved verbatim from `gloss.ts`. `gloss.ts`'s request reads
+  `max_tokens: GLOSS_MAX_TOKENS, output_config: GLOSS_OUTPUT_CONFIG,` in the
+  same place, so the body's key order is unchanged. FOUND_ISSUES 4 notes the
+  move. No model fact changed: the values are the ones gloss sent.
+- **T** exit 0. **Q** PASS, identical — every gloss request body. **B** exit 0;
+  main chunk 788,188 → 788,200 B (+12, two named constants); only `index.js`;
+  CSS byte-identical. SSR build resolves; **V owed** (`models.ts`). **L**: no
+  new edge; rules hold.
 
 ## Open
 

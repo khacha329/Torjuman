@@ -49,9 +49,11 @@ Found by the Phase 0 review.
   `ui/settings/OfflineTranslation.tsx` all do.
 - A model ID outside `models.ts`: `ui/settings/OfflineTranslation.tsx:210`
   saves `model: 'gemini-3.7-flash'` inline.
-- Call parameters outside `models.ts`: `translation/gloss.ts:111,114` sets
+- Call parameters outside `models.ts`: `translation/gloss.ts:111,114` set
   `max_tokens: 2000` and `output_config: { effort: 'low' }` inline (with
-  comments saying why).
+  comments saying why). **Moved in Phase 3 step 3j** (owner's Q6) to
+  `models.ts` as `GLOSS_MAX_TOKENS` and `GLOSS_OUTPUT_CONFIG`, comments
+  verbatim.
 
 Left as is: Phase 3 (provider seams) is where these move, as structure. The
 comment in `registry.ts` is corrected when the registry moves in Phase 1 step

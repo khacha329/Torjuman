@@ -1,9 +1,11 @@
 import { GEMINI_BASE } from './models';
 
-// The one request shape every Gemini call shares: a model method's URL, and a
-// JSON POST with the key in its header. Translation (providers/GeminiProvider.ts)
-// and QUL compile (qul/compile.ts) each keep their own error handling, status
-// checks and parsing, which differ (FOUND_ISSUES 11); only this is the same.
+// The request shape both Gemini model calls share: a model method's URL, and
+// a JSON POST with the key in its header. Translation
+// (providers/GeminiProvider.ts) and QUL compile (qul/compile.ts) each keep
+// their own error handling, status checks and parsing, which differ
+// (FOUND_ISSUES 11, compile's Gemini branch); only this is the same. The
+// provider's key check is a GET and stays its own.
 // Restructure Phase 3 step 3i gave it one home; check Q
 // (scripts/verify-requests.ts) shows both send what they sent before.
 

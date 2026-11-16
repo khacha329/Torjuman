@@ -6,6 +6,7 @@ import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
 import { anthropicCallError, anthropicClient, textOf } from './anthropic';
+import { GLOSS_MAX_TOKENS, GLOSS_OUTPUT_CONFIG } from './models';
 
 // "What does this word mean here, in English?"
 //
@@ -106,13 +107,8 @@ export async function glossWord(
   try {
     const message = await client.messages.create({
       model: request.model,
-      // Small in, small out. The answer itself is a few hundred tokens, but
-      // Haiku 5.5 thinks by default and thinking counts against this limit,
-      // so it leaves room for some. Billing is on what is actually generated.
-      max_tokens: 2000,
-      // A glance, not an article: the least thinking that does the job. Haiku
-      // 5.5's own default is `medium`.
-      output_config: { effort: 'low' },
+      max_tokens: GLOSS_MAX_TOKENS,
+      output_config: GLOSS_OUTPUT_CONFIG,
       system: answerWithTool(SYSTEM, GLOSS_TOOL_NAME),
       messages: [
         {

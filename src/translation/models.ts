@@ -55,6 +55,15 @@ export const ANTHROPIC_KEY_CHECK_MODEL = CLAUDE_HAIKU_5_5;
 /** The reader's "Meaning" lookup: a tiny request, so the cheapest model. */
 export const ANTHROPIC_GLOSS_MODEL = CLAUDE_HAIKU_5_5;
 
+// Small in, small out. The answer itself is a few hundred tokens, but
+// Haiku 5.5 thinks by default and thinking counts against this limit,
+// so it leaves room for some. Billing is on what is actually generated.
+export const GLOSS_MAX_TOKENS = 2000;
+
+// A glance, not an article: the least thinking that does the job. Haiku
+// 5.5's own default is `medium`.
+export const GLOSS_OUTPUT_CONFIG: { effort: Effort } = { effort: 'low' };
+
 /**
  * Explain runs on Claude even when the active profile is on Gemini, since it
  * relies on Anthropic's web-search tool. This is the model it uses then.
