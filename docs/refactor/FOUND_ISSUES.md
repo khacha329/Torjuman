@@ -509,7 +509,7 @@ Found while baselining Phase 5 step 5a's U captures. `AnchoredPanel`
 `useCallback` on `[anchor, asSheet, onClose]` run by a layout effect, and
 again on a window scroll or resize — never when its own content changes. It
 measures the panel's height at that moment (`panelRef.current?.offsetHeight`,
-280 if not yet laid out) to choose above or below the anchor. A sheet whose
+280 only if the panel is not mounted — in the layout effect it is, so the height used is that of its short loading state) to choose above or below the anchor. A sheet whose
 lookups fill in after it mounts (the ḥadīth sheet: dorar, sunnah.com, the
 commentaries) keeps the place chosen for its short loading state. In check U's
 landscape `reader-hadith` the popover came out at `top: 12px` on most runs and
@@ -524,3 +524,18 @@ rendered less often than the screen would change when — or whether — the
 popover is re-placed. Check U now captures every sheet after a resize event so
 its pixels do not depend on the race. On the tablet in landscape a ḥadīth sheet
 can open partly off screen. Left unfixed (structure-only phase).
+
+## 38. The Qurʾān sheet's verse uses the device's font, not the bundled one (2026-11-16, measured in the container)
+
+`ArabicVerse` (`ui/reader/QuranTabs.tsx:23-34`) sets the class `arabic`,
+which gives leading and font features but no font family
+(`src/index.css:106-112`), so the verse inherits the body's
+`ui-sans-serif, system-ui, …` stack. The reader's blocks
+(`BlockList.tsx:559`) and the dictionary sheet (`DictionarySheet.tsx:181`)
+set the bundled reader font inline, and `index.css:3-5` says the fonts are
+bundled so the app does not depend on the device. In this container the
+verse's Uthmani marks (ٱ and the small high signs) draw as empty boxes in
+check U's Qurʾān sheet captures; whether the tablet's system Arabic font
+covers them is unconfirmed. Found by Phase 5 step 5a's captures; left
+unfixed (structure-only phase). Check U's Qurʾān PNGs depend on the
+container's fonts, which is stable here.
