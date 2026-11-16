@@ -1478,7 +1478,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `1b5089a` |
 | 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
 | 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review PASS WITH NOTES | `afffa50` |
-| 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review pending | this commit |
+| 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review PASS WITH NOTES | `87b3b26` |
+| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2051,6 +2052,69 @@ holds)
 - **T** exit 0. **B** exit 0; main chunk 792,189 → 790,745 B (−1,444: the
   hand-written creations gone); only `index.js` differs; CSS byte-identical.
   **L**: rules hold. **Q** PASS. **U** PASS, 180/180. **V owed**.
+- **Review of `87b3b26`: PASS WITH NOTES; "ready for 4l".** The reviewer
+  compared the old branch and the new one store by store, for every
+  combination of present and absent stores, and found no database,
+  reachable or not, whose stored result differs. D has no v2–v6 fixtures
+  (FOUND_ISSUES 20); those versions were checked by reading only. Must-fix,
+  applied with 4l (comments only): `idbSchema.ts`'s header and
+  `upgradeDatabase`'s JSDoc now say that since 4k the existing-database
+  branch reads `STORES` too, and `STORES`' JSDoc gives the order as "the
+  order a fresh install creates them and an upgrade walks them".
+
+**Step 4l, measured 2026-11-16**
+- `StoreSpec` gains `perBook?: 'byBook' extends IndexNames<Schema, S> ? true
+  : never`, with a doc comment. That is Design §2.2's `perBook?: true`, made
+  a type error on a store without a `byBook` index (the index is what
+  `deleteBook` walks). The flag is still explicit, as Design §4 asks, not
+  inferred from the index. Ten entries carry `perBook: true`.
+- **Two names for one table.** The literal is now `const TABLE = { … }
+  satisfies { readonly [S in StoreNames<Schema>]: StoreSpec<S> }`, which
+  keeps the literal `perBook: true` types `BookStore` is computed from. It
+  is exported as `STORES: { readonly [S …]: StoreSpec<S> } = TABLE`, the 4j
+  type, which the two walks need to see each entry as its own store's spec.
+  A single `satisfies` declaration did not type-check: `createStore` and the
+  upgrade loop no longer saw a `StoreSpec<S>` (TS2322, TS2339). The same
+  object, no casts; the excess-property and index-name checks are kept.
+- `BookStore` is the mapped type of the `TABLE` entries whose `perBook` is
+  `true`. `BOOK_STORES: readonly BookStore[]` is `Object.keys(STORES)`
+  filtered on `STORES[name].perBook === true`, in table order, with a type
+  predicate. A type assertion in the file (`true satisfies SameUnion<BookStore,
+  'tocNodes' | … | 'biographyEntries'>`) proves `BookStore` is still the ten
+  literal names (the plan's "a type assertion in the file"). It is a second
+  place to edit when a per-book store is added; 4n can drop it if the owner
+  prefers.
+- **Same names, same order, proven:** `idbSchema.ts` bundled with esbuild
+  and imported in Node gives `BOOK_STORES` = `tocNodes, pages, blocks,
+  entities, dictionaryEntries, marks, cards, explanationCards, sharhCards,
+  biographyEntries`. That equals the hand list at `87b3b26`, read from
+  `git show`. Table order puts the fourteen other stores between them, so
+  filtering keeps the order.
+- **Comments moved verbatim:** the hand list's doc ("Every store that files
+  its rows under a book … buried in the body of `deleteBook`") now sits
+  above the derived `BOOK_STORES`, as Design §4 says. The `biographyEntries`
+  story ("Its absence here was not harmless …") sits on that entry, above
+  its `perBook: true`. Both were found line for line by script.
+- **Readers:** `idbLibrary.ts` (`deleteBook`'s loop) and `idbPurge.ts`
+  (`purgeIndex`'s `store: BookStore | …`), both unchanged. D's harness has
+  its own rows and imports no `BOOK_STORES`.
+- **Negative tests** (in place, restored from a `cp` copy):
+  1. `perBook` dropped from `marks`: `tsc` fails at the assertion (TS1360),
+     and D on the unchecked bundle FAILs 2 of 41, `delete-book` and
+     `book-transfer` (as 4a's breakage 3).
+  2. `perBook: true` on `glossary`, which has no `byBook` index: `tsc` fails
+     at the entry (TS2322). D on the bundle FAILs 2 of 41, `delete-book` and
+     `book-transfer`.
+  3. `cards` moved above `marks` in the table: `tsc` passes and D PASSes,
+     identical. Neither sees the order of `BOOK_STORES`, which is
+     `deleteBook`'s purge order and so decides what an interrupted removal
+     leaves (R6). The reviewer compares the order. A D harness assertion
+     against its own hand list would catch it; not added here.
+- **T** exit 0. **B** exit 0; main chunk 790,745 → 790,779 B (+34); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
+  identical (41 scenarios, `delete-book` over 4,097 blocks and
+  `book-transfer` among them). **Q** PASS. S, R and U not run (not required
+  for 4l). **V owed**.
 
 ## Open
 
