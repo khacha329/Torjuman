@@ -5,10 +5,15 @@ import { AnthropicProvider } from './AnthropicProvider';
 import { GeminiProvider } from './GeminiProvider';
 import { isClaudeModel } from '../models';
 
-// The only place outside the settings screen that names a provider.
+// Where the providers are listed, and the lookups on them.
 //
 // Everything else asks for the provider a profile pins and talks to the
-// interface, so adding a third provider means adding a file and one line here.
+// interface. Adding a third provider means its file, one entry in PROVIDERS
+// and PROVIDER_ORDER, its id in ProviderId, and each Record<CloudProviderId, …>
+// tsc then reports (PROVIDER_KEYS in services/secrets.ts, COMPILERS in
+// qul/compile.ts). Corrected in restructure Phase 3: this comment used to say
+// it was the only place outside the settings screen that named a provider,
+// which was never true (FOUND_ISSUES 4).
 
 const PROVIDERS: Record<CloudProviderId, TranslationProvider> = {
   gemini: new GeminiProvider(),

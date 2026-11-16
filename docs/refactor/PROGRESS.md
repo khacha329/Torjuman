@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 done on `claude/restructure-phase-1`, awaiting the owner's `npm run verify` and merge
+## Current state: Phases 0–3 complete (PRs khacha329/Torjuman#8, #9, #10, and Phase 3's on `claude/restructure-phase-3`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -841,7 +841,7 @@ owner's PC (steps 2b, 2d, 2e, 2f touch modules it builds), and **M** on the
 tablet with `npm run stage` — including one book exported and imported back,
 which no automated check covers.
 
-## Phase 3: provider seams (planning, branch `claude/restructure-phase-3`)
+## Phase 3: provider seams (complete, branch `claude/restructure-phase-3`)
 
 Plan: [`plans/phase3-provider-seams.md`](plans/phase3-provider-seams.md),
 written by the `torjuman-planner` agent on `ef2c626`; **approved 2026-11-16,
@@ -872,7 +872,8 @@ four call sites build a client per call — the basis of check Q.
 | 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q U S R pass; V owed; review PASS WITH NOTES | `309b5e2` |
 | 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
 | 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review PASS WITH NOTES | `469aa90` |
-| 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) pass; U S R running; V owed; review pending | this commit |
+| 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) U S R pass; V owed; review PASS WITH NOTES | `4027b03` |
+| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 T B L Q U S R pass; review of the phase pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1350,7 +1351,71 @@ FOUND_ISSUES 11.
   CLAUDE_SONNET_5_5`). Then PASS, identical. **T** exit 0. **B** exit 0; main
   chunk 788,242 → 788,264 B (+22); only `index.js`; CSS byte-identical. SSR
   build resolves; **V owed**. **L**: 134 edges, rules hold. **U S R** were
-  running when this was committed; results with the review.
+  running when 3q was committed, on the same content: **U** 180/180; **S**
+  30/30; **R** 28/28 — 240,000 px in 33.6 s landscape (33.3 s baseline; the
+  same distance, nodes and blocks, 0 long tasks: timing noise), 175,800 px in
+  24.4 s portrait, 1,905 / 1,904 DOM nodes.
+
+- **Review of 3q: PASS WITH NOTES; "ready for 3r"** (conditional on U S R,
+  which then passed). Behaviour value-identical; the moved ternary token for
+  token; the record's diff strictly additive; the only `'anthropic'` left in
+  `src/ui` is Onboarding's Q9 toggle. Applied in 3r: `explainModelFor`'s
+  comment said "verbatim", but the parameter was renamed.
+
+**Step 3r, measured 2026-11-16**
+- Part 1 (`7743f69`, docs only): RESTRUCTURE status, Phase 3 marked complete,
+  §2's provider sentence reworded (Q16, from Design §5); the CLAUDE.md map
+  names `anthropic` and `gemini`, and its model-facts pointers (Never, trap 4)
+  say no model id is inline any more and where the remaining call parameters
+  are listed; `torjuman-llm.md`'s map and its "still hard-coded" paragraph;
+  README's list of direct callers names the two shared modules; FOUND_ISSUES
+  4 (Phase 3 status, `:206`), 11 (the retry-after read is now
+  `toTranslationError` in `anthropic.ts`) and 12 (`validateKey`'s lines); the
+  plan gains "Corrections found in review", its approved text left as is.
+- Part 2: the comments that became true — `TranslationProvider.ts`'s header
+  (screens ask the registry; what still names a provider is Design §5) and
+  `registry.ts`'s (what adding a provider takes; the old "only place" claim
+  named as corrected, FOUND_ISSUES 4); `explainModelFor`'s "verbatim but for
+  the parameter's name"; `verify-requests.ts`'s note on `OFFLINE_MODELS`
+  (3n review). Check Q's allowlist narrowed to the end state (Design §10):
+  the SDK as a value only in `anthropic.ts` and `AnthropicProvider.ts`,
+  `GEMINI_BASE` only in `models.ts`, `gemini.ts` and `GeminiProvider.ts`.
+  Negative test: `gloss.ts`'s SDK import made a value import → Q FAIL
+  "allowlist: src/translation/gloss.ts imports @anthropic-ai/sdk as a value";
+  restored from a copy → PASS. The markup manifest's line 2 (and the line in
+  `verify-markup.mjs` that writes it) now says captures were added in 3b; `#`
+  lines are not compared.
+- **End of phase:** **T** exit 0. **B** exit 0, main chunk 788,264 B, every
+  chunk identical to 3q's (comments only); CSS byte-identical. SSR build of
+  `verify-parsers.ts` resolves. **L** `--check`: 162 files (`anthropic.ts`,
+  `gemini.ts`), 134 edges, no cycles, 11 rules hold; report saved as
+  [`phase3/layers.txt`](phase3/layers.txt) — against Phase 2's, the same
+  edges, `ui/reader → translation/providers` 3 → 2 (useExplanations no longer
+  reaches a provider file). **Q** PASS identical: 111 scenarios, 179
+  requests, 10 value sections. **U S R** were running when part 2 was
+  committed; results with the phase review.
+
+## Phase 3 result
+
+| | Phase 2 end | Phase 3 end |
+| --- | --- | --- |
+| Anthropic SDK clients | built in 4 files | `anthropicClient` in `translation/anthropic.ts`; the SDK a value import in 2 files (Q enforces) |
+| error mappings | 4 copies (2 kinds) | `anthropicCallError` and `toTranslationError`, one each (FOUND_ISSUES 11: not merged) |
+| Gemini model POSTs | 2 hand-built | `geminiModelUrl` + `postGemini` in `translation/gemini.ts` |
+| provider named by | models' three functions, Settings, Onboarding, AppContext, compile, the reader, Offline | the provider objects (`knownModels`, `keyPlaceholder`), the registry's lookups, `COMPILERS`, `EXPLAIN_`/`GLOSS_PROVIDER_ID`; what stays is plan Design §5 |
+| model ids outside `models.ts` | 1 (`OfflineTranslation`) | 0 |
+| main JS chunk | 789,438 B | 788,264 B (−1,174) |
+| check Q (recorded requests) | — | 111 scenarios, 179 requests, 10 value sections; identical at every step but the two additive sections (3m, 3q) |
+| screens (check U) | 160 files | 180 files (3b's captures), identical at every step |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began. **Owed before merge:** `npm
+run verify` on the owner's PC (3c–3l and 3n touch modules it builds, and its
+own imports at `verify-parsers.ts:4159` and `:4196`), and **M** on the
+staged build with real keys: test both keys; translate one passage on each
+provider; Dig deeper once; Explain once; a word's Meaning (gloss); Compile one
+āyah on each provider; switch a profile between providers and see the model
+list and default follow.
 
 ## Open
 

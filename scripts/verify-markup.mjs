@@ -855,7 +855,7 @@ function writeManifest() {
   writeFileSync(
     MANIFEST,
     `# Check U (scripts/verify-markup.mjs): SHA-256 of each normalized capture, per profile.\n` +
-      `# Written once, in Phase 2 step 2a, on the old code; every later step must match it.\n` +
+      `# Written on the old code (Phase 2 step 2a; captures added in Phase 3 step 3b); every later step must match it.\n` +
       lines.join('\n') +
       '\n',
   );

@@ -28,8 +28,9 @@ export const EXPLAIN_PROVIDER_ID = 'anthropic' as const;
 
 /**
  * The model an Explain card runs on: the profile's own when it is a Claude
- * model, otherwise ANTHROPIC_EXPLAIN_FALLBACK_MODEL. Moved verbatim from
- * ui/reader/useExplanations.ts in step 3q.
+ * model, otherwise ANTHROPIC_EXPLAIN_FALLBACK_MODEL. Moved from
+ * ui/reader/useExplanations.ts in step 3q, verbatim but for the parameter's
+ * name.
  */
 export function explainModelFor(profileModel: string): string {
   return isClaudeModel(profileModel)

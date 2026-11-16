@@ -9,9 +9,12 @@ import type {
 
 // The seam between the app and whichever service actually does the translating.
 //
-// Nothing outside src/translation/ may reference a provider by name, except the
-// registry and the settings screen. Everything else asks the registry for the
-// provider a profile pins and calls this interface.
+// Code outside src/translation/ asks the registry for the provider a profile
+// pins and calls this interface; a provider describes itself through the
+// fields below (models, default, key link and placeholder), so screens need
+// not name one. What still names a provider on purpose — the seeded profile,
+// Onboarding's copy, the session totals, Explain and gloss — is listed with
+// the reason in docs/refactor/plans/phase3-provider-seams.md (Design §5).
 //
 // Both providers are bring-your-own-key. No key is embedded in the app: a key
 // shipped inside a distributed client is trivially extractable and the bill

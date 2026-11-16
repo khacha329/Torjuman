@@ -330,7 +330,8 @@ const { createDefaultProfile, STUDY_CIRCLE_PROMPT } = await import('../src/trans
 const { costOf } = await import('../src/translation/models');
 const { secrets, API_KEY_STORAGE_KEYS } = await import('../src/services/secrets');
 // Static imports only (the transformers.js import inside it is dynamic and
-// never runs here): its model list is a value 3n's knownModels may read.
+// never runs here): its model list supplies the offline ids the
+// offlineModels, providerIdForModel and explainModelFor sections pass in.
 const { OFFLINE_MODELS, offlineModelById } = await import('../src/translation/offline/OfflineProvider');
 
 type TranslationRequest = import('../src/translation/TranslationProvider').TranslationRequest;
@@ -1654,24 +1655,21 @@ values('values.explainModelFor', () => {
 // ------------------------------------------- the SDK-import allowlist (Q12)
 
 // Which files may import `@anthropic-ai/sdk` as a value (a type-only import is
-// allowed anywhere), and which may name GEMINI_BASE. The lists are a superset
-// through Phase 3: they already name the two shared modules steps 3c-3i
-// create, and still name the four call sites that build their own client or
-// URL at 3a. Step 3r narrows each to its end state (plan Design §10): the SDK
-// as a value only in translation/anthropic.ts and AnthropicProvider.ts,
-// GEMINI_BASE only in translation/gemini.ts and GeminiProvider.ts.
+// allowed anywhere), and which may name GEMINI_BASE. Through Phase 3 the
+// lists were a superset that still named the call sites building their own
+// client or URL; step 3r narrowed them to the end state (plan Design §10):
+// the SDK as a value only in translation/anthropic.ts and AnthropicProvider.ts
+// (which needs the SDK's error classes in validateKey), GEMINI_BASE only where
+// it is defined and in translation/gemini.ts and GeminiProvider.ts (its key
+// check's GET). A new file on either list is a decision, made in review.
 const SDK_VALUE_IMPORTERS_ALLOWED = [
   'src/translation/anthropic.ts',
   'src/translation/providers/AnthropicProvider.ts',
-  'src/translation/explain.ts', // 3d makes it type-only; 3r removes the line
-  'src/translation/gloss.ts', // 3d makes it type-only; 3r removes the line
-  'src/qul/compile.ts', // 3d makes it type-only; 3r removes the line
 ];
 const GEMINI_BASE_USERS_ALLOWED = [
   'src/translation/models.ts', // where it is defined
   'src/translation/gemini.ts',
   'src/translation/providers/GeminiProvider.ts',
-  'src/qul/compile.ts', // 3i moves its URL to gemini.ts; 3r removes the line
 ];
 
 function sourceFiles(dir: string): string[] {

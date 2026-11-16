@@ -1,5 +1,5 @@
 # Check U (scripts/verify-markup.mjs): SHA-256 of each normalized capture, per profile.
-# Written once, in Phase 2 step 2a, on the old code; every later step must match it.
+# Written on the old code (Phase 2 step 2a; captures added in Phase 3 step 3b); every later step must match it.
 1b423cc3b5e979c1999514f58cbf70598fcacaadc4f71730abbc6222e2231ce9  600x960/catalog-importing.html
 18231ee78663bd825f8abcbfc182db94bc0b83995dbc2b4a433690254fd8c0fd  600x960/catalog-importing.png
 e09f761867606f4794680723ed0eeb2122441c070d8586f3e227007778959630  600x960/catalog-proxy.html
