@@ -172,7 +172,7 @@ unifying them is a behaviour change for its own PR):
 
 - `translation/providers/AnthropicProvider.ts` (~359–363) reads `retry-after`
   with `Number()`, so a date-form value gives `NaN` seconds (check Q records
-  it: `anthropic.translate.429-retry-after-date`).
+  it: `anthropic.translate.429-retry-after-http-date`).
 - Explain, gloss and compile map Anthropic errors more coarsely than
   translation: a 403 comes out as `api`, and a 429 carries no retry-after.
 - Compile's Gemini branch does not retry a 429 or read the error body, so a

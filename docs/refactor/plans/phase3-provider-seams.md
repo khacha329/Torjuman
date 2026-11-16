@@ -598,8 +598,9 @@ adds one has gone wrong.
 
 What the rules cannot see: which files import `@anthropic-ai/sdk` or call the
 Gemini host. Q12 offers a small allowlist assertion inside
-`verify-requests.ts`, added in 3r (after the moves, so the allowlist is the
-end state): value imports of `@anthropic-ai/sdk` only in
+`verify-requests.ts`. **Built in 3a** as a superset of today's importers, plus
+a check that only `translation/models.ts` names the Gemini host; **3r narrows
+it to the end state** (changed during 3a, recorded in PROGRESS): value imports of `@anthropic-ai/sdk` only in
 `translation/anthropic.ts` and `translation/providers/AnthropicProvider.ts`,
 type-only elsewhere; `GEMINI_BASE` imported only by `translation/gemini.ts`
 and `GeminiProvider.ts`. Alternative: teach `check-layers.mjs` package rules,
@@ -631,7 +632,7 @@ summary, a `Checks:` paragraph.
 | 3o | `keyPlaceholder` on the contract; Settings and Onboarding read it | `TranslationProvider.ts`, both providers, `SettingsScreen.tsx`, `OnboardingScreen.tsx` | T B L Q U (`settings--api-keys`, `onboarding`, `onboarding--claude`) | low–medium (markup) |
 | 3p | *(Q6)* `OfflineTranslation.tsx:205`'s inline provider and model | `OfflineTranslation.tsx` | T B L Q U (read: the handler is not captured) | low |
 | 3q | *(Q10)* `EXPLAIN_PROVIDER_ID`, `explainModelFor` in `explain.ts`; `GLOSS_PROVIDER_ID` in `gloss.ts`; the reader uses them | `explain.ts`, `gloss.ts`, `useExplanations.ts`, `ReaderScreen.tsx`, `verify-requests.ts` (section added) | T B L Q (additions only) U **S R** | low |
-| 3r | docs; comments that became true; the SDK allowlist (Q12); end-of-phase checks | `registry.ts:7-10` and `TranslationProvider.ts:12-14` comments, `.claude/agents/torjuman-llm.md` ("Where things are", the "still hard-coded" paragraph), CLAUDE.md map and Never/trap 4 pointers, README "How it fits together" (`:73-75`, the call-site list), RESTRUCTURE status, §2 wording (§5 above), §6 row, FOUND_ISSUES 4, PROGRESS result | T B L Q U S R X | none |
+| 3r | docs; comments that became true; the SDK allowlist (Q12) narrowed to the end state (it exists since 3a); end-of-phase checks | `registry.ts:7-10` and `TranslationProvider.ts:12-14` comments, `.claude/agents/torjuman-llm.md` ("Where things are", the "still hard-coded" paragraph), CLAUDE.md map and Never/trap 4 pointers, README "How it fits together" (`:73-75`, the call-site list), RESTRUCTURE status, §2 wording (§5 above), §6 row, FOUND_ISSUES 4, PROGRESS result | T B L Q U S R X | none |
 
 ## Per step
 

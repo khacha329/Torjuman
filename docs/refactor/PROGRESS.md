@@ -851,7 +851,8 @@ four call sites build a client per call — the basis of check Q.
 
 | Step | State | Commit |
 | --- | --- | --- |
-| 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review pending | this commit |
+| 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review PASS WITH NOTES | `707095f` |
+| review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -889,6 +890,16 @@ FOUND_ISSUES 11.
   the record holds only `sk-ant-q-check-not-a-real-key` and
   `AIza-q-check-not-a-real-key`.
 - T exit 0; build unchanged (789,438 B); layers 11 rules hold.
+
+- **Review of 3a: PASS WITH NOTES.** Confirmed: only the two fake keys in
+  the record (one per request), no network, `ANTHROPIC_*` deleted before any
+  client is built, the assertions run before `--write`. Fixed: FOUND_ISSUES 11
+  cited a wrong scenario id; the plan now says the allowlist exists since 3a
+  and 3r narrows it. **Coverage gaps found** that later steps would move
+  unseen: cache-read usage per turn (3g), the provider mapping's non-SDK branch
+  (3e), running out of research turns (3h), Gemini's later backoff waits, 403
+  and `PROHIBITED_CONTENT` (3i), offline model ids (3n), compile's Gemini 400.
+  These are added to Q on the old code in a harness commit before 3b.
 
 ## Open
 
