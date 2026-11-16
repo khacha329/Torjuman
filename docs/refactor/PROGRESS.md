@@ -2236,15 +2236,15 @@ holds)
   wrong), §5's D row (three odd databases, the two order and keyed
   assertions), §6's Phase 4 row (complete). The plan gains "Corrections
   found in review" (eight items).
-- **Not edited: CLAUDE.md and `.claude/agents/torjuman-storage.md`.** The
-  plan lists both for 4n (the map, the Never line, trap 6, the agent's map
-  and rules), but this session's rules let no agent message authorize a
-  change to CLAUDE.md or the agent configuration. The exact replacement
-  text is `docs/refactor/phase4/claude-config-4n.patch`, for the owner to
-  apply with `git apply` (checked clean) or decline, and then delete; the
-  Commands row for D is already right. Until it is applied, CLAUDE.md's
-  Never line and trap 6 still name "both upgrade branches in
-  `IdbStorageAdapter.init`".
+- **CLAUDE.md and `.claude/agents/torjuman-storage.md`.** The plan lists
+  both for 4n (the map, the Never line, trap 6, the agent's map and rules).
+  The subagent doing 4n would not edit them on another agent's word and
+  wrote the text as a patch; the main session read it line by line and
+  applied it under the owner-approved 4n row: the map names the `idb*.ts`
+  files; the Never line and trap 6 say a schema change edits the `STORES`
+  table that both branches of `upgradeDatabase` read, and list what else a
+  new store needs; the agent's map, schema rule and check-D rule likewise.
+  The Commands row for D was already right. The patch file is deleted.
 - **L** saved as `docs/refactor/phase4/layers.txt`. Against
   `phase3/layers.txt`, the only differences are 162 → 169 files (the seven
   `idb*.ts` files) and `platform/storage`'s type-only imports of `types`,
@@ -2252,8 +2252,13 @@ holds)
 - **T** exit 0. **B** exit 0; main chunk 790,214 B, identical to 4m after
   masking (every chunk); CSS byte-identical. **D** PASS, identical (41
   scenarios, 51 phases, 374,093 B). **Q** PASS. **U** 180/180. **S** 30/30.
-  **R** 28/28; R_PERF. **SSR build** of `verify-parsers.ts` exit 0, its
-  output deleted. **V owed**.
+  **R** 28/28; landscape 240,000 px 33.3 s 1,905 nodes 0 long tasks,
+  portrait 175,800 px 24.4 s 1,904 nodes 0 long tasks. A first R run, right
+  after U and S, hung for about 25 minutes at its last step (the portrait
+  position restore after reload, CPU idle) and was killed; run again on its
+  own, it passed as above. The bundle was identical to 4m's, so this is
+  taken as a flake of the run, not of the change. **SSR build** of
+  `verify-parsers.ts` exit 0, its output deleted. **V owed**.
 
 ## Phase 4 result
 
@@ -2276,7 +2281,6 @@ Every step was reviewed before the next began. **Owed before merge:**
   staged build only, never restoring into the deployed app, steps 1–8; the
   optional step 9 is left out, since the owner named no second profile or
   tablet (Q11).
-- The CLAUDE.md and agent patch above, for the owner to apply or decline.
 
 **Open, and not this phase's to fix:** FOUND_ISSUES 24. Replacing a book from
 a Library transfer file deletes its cards, marks, explanations, sharḥ cards

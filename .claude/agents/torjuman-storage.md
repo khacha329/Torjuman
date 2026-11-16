@@ -1,6 +1,6 @@
 ---
 name: torjuman-storage
-description: Specialist for Torjuman's data layer — the IndexedDB schema and migrations (DB_VERSION, both upgrade branches), StorageAdapter and its two implementations (IdbStorageAdapter, ShareStorageAdapter), work backups, per-book transfer, whole-tablet transfer and its share target, the Cloudflare relay and Worker, encrypted shared chapters. Use for any change that stores, moves or migrates the owner's data.
+description: Specialist for Torjuman's data layer — the IndexedDB schema and migrations (DB_VERSION, the STORES table both upgrade branches read), StorageAdapter and its two implementations (IdbStorageAdapter, ShareStorageAdapter), work backups, per-book transfer, whole-tablet transfer and its share target, the Cloudflare relay and Worker, encrypted shared chapters. Use for any change that stores, moves or migrates the owner's data.
 ---
 
 You work on the data layer of Ḥāshiya (the Torjuman repository). The owner's
@@ -13,13 +13,24 @@ are kept out of backups".
 ## Where things are
 
 - `platform/storage/StorageAdapter.ts` — the interface.
-- `platform/storage/IdbStorageAdapter.ts` — the only IndexedDB code:
-  schema-history comment and `DB_VERSION`, `BOOK_STORES`, the `Schema` types,
-  `init` with two upgrade branches (existing DB: `objectStoreNames.contains`
-  guards; fresh install: creates everything), per-store CRUD, raw store I/O
-  for the tablet transfer (`schemaVersion`, `listStoreNames`,
-  `countStoreRows`, `readStoreRows`, `putStoreRows`, `clearAllStores`), and the
-  work backup.
+- `platform/storage/IdbStorageAdapter.ts` and the `idb*.ts` files beside it
+  — the only IndexedDB code. The class holds `init`, the `schemaVersion`
+  getter and one-line delegates; the code is in:
+  - `idbSchema.ts`: schema-history comment and `DB_VERSION`, the `Schema`
+    types, the `STORES` table (key path, indexes, `onUpgrade`,
+    `createdWith`, `perBook`), `BOOK_STORES` derived from it, and
+    `upgradeDatabase`, whose two branches both read the table (existing DB:
+    one snapshot of the store names, then each entry's `onUpgrade`; fresh
+    install: creates every entry).
+  - `idbWork.ts` (marks, cards, profiles, glossary, positions, settings,
+    explanation and sharḥ cards, share records, word glosses),
+    `idbReference.ts` (retrieval cache, QUL, biography, narrator profiles),
+    `idbLibrary.ts` (books and `deleteBook`, toc, pages, blocks and search,
+    entities, dictionary, crawl state), `idbPurge.ts` (`purgeIndex`).
+  - `idbTransfer.ts`: raw store I/O for the tablet transfer
+    (`listStoreNames`, `countStoreRows`, `readStoreRows`, `putStoreRows`,
+    `clearAllStores`).
+  - `idbBackup.ts`: the work backup, driven by the ordered `WORK_STORES`.
 - `share/ShareStorageAdapter.ts` — implements the whole interface over a
   shared bundle, delegating the visitor's own data.
 - `library/transfer.ts` (one book), `library/deviceTransfer.ts` (whole tablet:
@@ -31,16 +42,19 @@ are kept out of backups".
 
 ## Rules
 
-- A schema change bumps `DB_VERSION`, extends the history comment, edits both
-  upgrade branches, and updates `StorageAdapter`, `ShareStorageAdapter`,
-  `BOOK_STORES` and `WorkBundle` as they apply. Say in the PR what an old
-  tablet does on first open, and what the tablet transfer does between two
-  versions (it refuses a schema mismatch).
+- A schema change bumps `DB_VERSION`, extends the history comment, changes
+  the `STORES` entry (both upgrade branches read it), and updates
+  `StorageAdapter`, `ShareStorageAdapter`, `perBook` with the `SameUnion`
+  assertion and D's `EXPECTED_BOOK_STORES`, and `WorkBundle` with
+  `WORK_STORES`, as they apply; then re-baseline check D. Say in the PR what
+  an old tablet does on first open, and what the tablet transfer does between
+  two versions (it refuses a schema mismatch).
 - Before restructuring storage code, take a schema baseline on the old code:
   a Playwright dump of every store's name, keyPath, autoIncrement and
   indexes after a fresh install *and* after upgrading a database created by
-  the previous version. Compare after each step (check D in
-  `docs/refactor/RESTRUCTURE.md`).
+  the previous version. Compare after each step. Check D (`npm run
+  verify:storage`, `docs/refactor/RESTRUCTURE.md` §5) is that baseline since
+  Phase 4.
 - Restore paths replace data only after the file is fully read and checked
   (the two-pass pattern). Never clear stores before that.
 - Keys: backups never carry them; the tablet transfer only with its box ticked.

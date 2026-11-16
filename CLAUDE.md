@@ -57,8 +57,9 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   hash to tag.
 - **Merge a PR** without the owner's word in this conversation.
 - **Delete** a file, store, setting or saved data path without the owner's OK.
-- **Change the IndexedDB schema** without bumping `DB_VERSION` and editing
-  *both* upgrade branches in `IdbStorageAdapter.init` — see trap 6.
+- **Change the IndexedDB schema** without bumping `DB_VERSION` and changing
+  the `STORES` table that both upgrade branches of `upgradeDatabase`
+  (`platform/storage/idbSchema.ts`) read — see trap 6.
 - **Force a tool call** (`tool_choice: tool` or `any`) on current Claude
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
@@ -112,7 +113,11 @@ src/
                        (secrets), retrieval log, activity
   platform/http/       HttpClient + WebHttpClient (proxy routing), proxyUrl (the
                        Worker's URL, shared with the relay)
-  platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
+  platform/storage/    StorageAdapter + IdbStorageAdapter, which delegates each
+                       method to an idb*.ts file (the only IndexedDB code):
+                       idbSchema (Schema, the STORES table, upgradeDatabase,
+                       BOOK_STORES), idbWork, idbReference, idbLibrary,
+                       idbBackup (WORK_STORES), idbTransfer, idbPurge
   lib/                 pure helpers: arabic, hash, id, saveFile, takhrij,
                        providers (isCloudProvider), delay, format
                        (formatBytes, percentOf), gzip
@@ -181,11 +186,18 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    a hash of selection, profile id and version, glossary hash, provider and
    model. Changing any input, or the join, silently invalidates every cached
    card. `npm run verify` pins this.
-6. **IndexedDB.** `DB_VERSION` in `IdbStorageAdapter.ts`; the existing-DB
-   branch uses `objectStoreNames.contains` guards, the fresh-install branch
-   creates everything — both must agree. A new store also needs:
-   `StorageAdapter` methods, `ShareStorageAdapter` (it implements the whole
-   interface), `BOOK_STORES` if per book, `WorkBundle` if backed up. The
+6. **IndexedDB.** `DB_VERSION` and its history in `idbSchema.ts`. Both
+   branches of `upgradeDatabase` read the one `STORES` table there: a fresh
+   install creates every entry; an existing database takes one snapshot of
+   its store names first, then acts on each entry's `onUpgrade` (`recreate`,
+   `if-missing`, `assumed`; `createdWith` for the QUL trio's shared guard).
+   A new store needs: its `Schema` type and `STORES` entry; its
+   `StorageAdapter` methods (functions in its group's `idb*.ts` file, a
+   delegate in `IdbStorageAdapter`) and `ShareStorageAdapter` (it implements
+   the whole interface); if per book, `perBook: true`, the `SameUnion`
+   assertion under `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if
+   backed up, its `WorkBundle` field and a `WORK_STORES` entry; the
+   `DB_VERSION` bump; and a check D re-baseline (RESTRUCTURE §2). The
    whole-tablet transfer copies every store raw and refuses a different
    schema version, so both tablets must run the same app version.
 7. **The reader scrolls the page, not a box.** `useWindowVirtualizer` with
