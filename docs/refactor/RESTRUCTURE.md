@@ -164,6 +164,7 @@ walks into:
 | **V** | `npm run verify` | all pass (owner reports the count) | **owner's PC** |
 | **D** | IndexedDB schema dump, fresh install and upgrade from the previous version (built in Phase 4 step 0) | identical to baseline | here |
 | **U** | `npm run verify:markup` (`scripts/verify-markup.mjs`, from Phase 2): normalized DOM and screenshots of every screen and state that shows a shared UI piece, at 960×600 and 600×960 touch, in a build without and a build with a proxy | every file matches `docs/refactor/phase2/markup.sha256` | here |
+| **Q** | `npm run verify:requests` (`scripts/verify-requests.ts`, from Phase 3): every request each provider call site hands to `fetch` (method, URL, headers, body), retries, waits and mapped errors, for fixed inputs and canned responses, plus cache keys and model values | identical to `docs/refactor/phase3/requests.json`; fake keys only in their own header; no `Authorization` | here |
 | **M** | the staged build on the tablet: open a book, select across screens, translate, open a verse sheet, Settings, a transfer | the owner says it works | **tablet** |
 | **X** | `torjuman-reviewer` on the commit | PASS or PASS WITH NOTES | here |
 

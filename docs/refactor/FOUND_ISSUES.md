@@ -164,3 +164,44 @@ Found while planning Phase 2, real duplicates but deferred:
   Q3: not now).
 
 Not duplicates: the nine red error boxes, which all differ.
+
+## 11. Error handling differs between the Claude call sites (2026-11-16, measured)
+
+Found by the Phase 3 plan survey. Left as is (owner's answer to Phase 3 Q4:
+unifying them is a behaviour change for its own PR):
+
+- `translation/providers/AnthropicProvider.ts` (~359–363) reads `retry-after`
+  with `Number()`, so a date-form value gives `NaN` seconds (check Q records
+  it: `anthropic.translate.429-retry-after-date`).
+- Explain, gloss and compile map Anthropic errors more coarsely than
+  translation: a 403 comes out as `api`, and a 429 carries no retry-after.
+- Compile's Gemini branch does not retry a 429 or read the error body, so a
+  bad key reported as a 400 comes out as `api`, not `auth`.
+- The SDK retries twice by itself, so a rate-limited Claude call is three
+  requests (check Q shows them).
+- `ANTHROPIC_VERSION` (`translation/models.ts` ~117) is exported and unused.
+
+More inline call parameters for FOUND_ISSUES 4's list, left where they are:
+compile's `max_tokens` 4000 (both branches), research 8000 (both sites), the
+research turn limit, the web-search `max_uses`, Gemini's `MAX_RETRIES`.
+
+## 12. A network failure passes the Claude key check (2026-11-16, measured)
+
+`AnthropicProvider.validateKey` (~62–80) returns `true` for every `APIError`
+that is not a 401 or 403, on the reasoning that a rate limit or a 400 still
+proves the key authenticated. But the SDK's `APIConnectionError` is an
+`APIError` with no status (`node_modules/@anthropic-ai/sdk/core/error.mjs`
+~71), so with no network the key test reports the key as good — after three
+attempts. Check Q records it (`anthropic.validateKey.connection-failure` →
+`true`). Left as is; a fix would treat a status-less error as "could not
+check". Found by the `torjuman-llm` plan read before Phase 3 step 3a.
+
+## 13. The translation cache key depends on the device's locale (2026-11-16, measured)
+
+`glossaryHashOf` (`translation/prompt.ts` ~20) sorts glossary entries with
+`localeCompare`, whose order depends on the browser's locale. Two devices with
+different locales could compute different glossary hashes, and so different
+cache keys (trap 5), for the same glossary — a cached card made on one would
+not be found on the other after a tablet transfer. Not known to have happened;
+the owner's tablets share a locale. Check Q pins `en-US`. Left as is. Found by
+the `torjuman-llm` plan read before Phase 3 step 3a.

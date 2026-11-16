@@ -84,7 +84,10 @@ construction**, `client.mjs:101,110,111`).
 | `translation/gloss.ts:103` | `new Anthropic({ apiKey: request.apiKey, dangerouslyAllowBrowser: true })` | per uncached, online, keyed `glossWord`, after the cache, `navigator.onLine` and empty-key checks (`:90-101`) |
 | `qul/compile.ts:150` | `new Anthropic({ apiKey, dangerouslyAllowBrowser: true })` | per `compileWithAnthropic` |
 
-Each construction is outside its `try`. Identical; can be merged.
+Identical; can be merged. Three constructions are outside their `try`;
+`validateKey`'s is inside it (`AnthropicProvider.ts:64-65`), and step 3d keeps
+it there — Q cannot see this, since construction never throws in Node
+(corrected by the `torjuman-llm` plan read before 3a).
 
 **Error mapping.** Two different mappings, one of them written three times.
 
@@ -104,7 +107,9 @@ Each construction is outside its `try`. Identical; can be merged.
 
 `validateKey` (`:62-80`) has a third, boolean mapping before it: 401 and 403 →
 `false`; any other `APIError` → `true` ("a rate limit or a 400 still proves
-the key authenticated"); the rest → `toTranslationError`.
+the key authenticated"); the rest → `toTranslationError`. Note: the SDK's
+`APIConnectionError` is an `APIError` with no status, so a network failure
+also returns `true` — FOUND_ISSUES 12 (found by the plan read before 3a).
 
 *The short one*, in `explain.ts:299-314`, `gloss.ts:165-177` and
 `qul/compile.ts:176-187`:
@@ -332,9 +337,20 @@ pretty-printed JSON in scenario order, with request bodies as strings, so a
 difference is reported by line and a body difference shows as one changed
 string.
 
+**The environment (added by the plan read before 3a).** The Anthropic SDK
+reads `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_LOG` and
+`ANTHROPIC_CUSTOM_HEADERS` from `process.env` when a client is built
+(`client.mjs:68, :78, :107, :114`). The cloud container sets the first, which
+would make every recorded URL machine-dependent; and a set
+`ANTHROPIC_AUTH_TOKEN` would put a real credential into an `Authorization`
+header of a committed file. The browser has no `process.env`, so the check
+deletes every `ANTHROPIC_*` variable before it runs, and fails if any request
+carries `Authorization`.
+
 **What is committed.** The record itself,
 `docs/refactor/phase3/requests.json` (synthetic inputs and prompt text that is
-already in `src/`; expected well under 200 KB — measured and reported in 3a)
+already in `src/`; measured in 3a at 349 KB, every retry kept as its own
+request)
 (Q11). Modes: `npm run verify:requests` compares and exits 1 listing each
 differing scenario with its first differing lines; `--write` (3a only, and in
 the two steps that add a section, Design §8); `--out <file>` to dump
@@ -343,8 +359,9 @@ elsewhere.
 **Proof of the check, in 3a**, each edit undone and `git diff` empty after:
 
 1. two runs: identical (determinism; also with `TZ` and locale changed, since
-   `toLocaleString` is in the truncation messages — the check pins
-   `en-US`-style output by running under `LANG=C.UTF-8`, and says so);
+   `toLocaleString` is in the truncation messages and `localeCompare` in the
+   glossary hash — the check pins `en-US` inside the script, since `LANG`
+   does not reach Node's default locale everywhere);
 2. one character changed in gloss's "Rate limited." → exit 1, naming the
    gloss 429 scenario;
 3. `responseMimeType` and `responseSchema` swapped in `GeminiProvider.ts`'s

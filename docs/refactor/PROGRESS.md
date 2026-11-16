@@ -849,6 +849,47 @@ all sixteen answers as recommended**. Checked here: the SDK takes `fetch` when a
 built (`client.mjs`: `options.fetch ?? Shims.getDefaultFetch()`), and all
 four call sites build a client per call — the basis of check Q.
 
+| Step | State | Commit |
+| --- | --- | --- |
+| 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review pending | this commit |
+
+**Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
+applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
+client construction (the cloud container sets `ANTHROPIC_BASE_URL`; a set
+`ANTHROPIC_AUTH_TOKEN` would have put a credential in the committed record) —
+the check deletes them and fails on any `Authorization` header; the key
+check's network failure returns `true` (FOUND_ISSUES 12); `validateKey`
+builds its client inside its `try` (3d keeps it there); the glossary hash
+sorts with `localeCompare` (FOUND_ISSUES 13). The survey's quirks are
+FOUND_ISSUES 11.
+
+**Step 3a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`)
+- Built by the `torjuman-llm` agent from plan §1, checked here.
+  `scripts/verify-requests.ts` runs through `vite build --ssr` in Node, with a
+  stubbed `globalThis.fetch` and canned responses: **74 call-site scenarios,
+  111 requests, 7 value sections** (glossary hash, `cacheKeyFor`,
+  `compileCacheKey`, token budgets, `costOf`, registry and models, secrets).
+  Record: `docs/refactor/phase3/requests.json`, 349,096 B.
+- Masked: `x-stainless-os`, `-arch`, `-runtime`, `-runtime-version` (they
+  describe the machine). Pinned: sleeps under 60 s recorded and run at once,
+  `Math.random`, `Date.now`, the `en-US` locale, `navigator.onLine`,
+  `localStorage`; `ANTHROPIC_*` deleted.
+- Assertions that fail even with `--write`: each fake key only in its own
+  header (`x-api-key` / `x-goog-api-key`); no `Authorization`; only the two
+  model hosts; no unanswered or unused response; 20 s per scenario. The
+  SDK-import allowlist (Q12) is in place as a superset that step 3r narrows.
+- **Proof.** Two runs identical; a run under `TZ=Pacific/Kiritimati` and a
+  German locale identical; dummy `ANTHROPIC_*` variables set → still PASS.
+  Deliberate edits, each restored with `cmp`: gloss "Rate limited." → "!" →
+  exit 1, `gloss.429`; Gemini's `responseMimeType`/`responseSchema` swapped →
+  exactly the 13 `gemini.translate.*`; `dangerouslyAllowBrowser` dropped in
+  compile → the 5 `compile.anthropic.*`; `cacheKeyFor`'s join changed →
+  `values.cacheKeyFor`; the key put in a Gemini URL → 6 assertion failures;
+  an SDK import added to `coverage.ts` → the allowlist. Re-run here: PASS;
+  the record holds only `sk-ant-q-check-not-a-real-key` and
+  `AIza-q-check-not-a-real-key`.
+- T exit 0; build unchanged (789,438 B); layers 11 rules hold.
+
 ## Open
 
 - V baseline count from the owner's PC.
