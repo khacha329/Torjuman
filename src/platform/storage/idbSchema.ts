@@ -1,4 +1,4 @@
-import type { DBSchema, IDBPDatabase } from 'idb';
+import type { DBSchema, IDBPDatabase, IndexNames, StoreNames } from 'idb';
 import type {
   AppSettings,
   BiographyEntry,
@@ -154,6 +154,163 @@ export interface Schema extends DBSchema {
   settings: { key: string; value: AppSettings & { key: string } };
 }
 
+interface IndexSpec<S extends StoreNames<Schema>> {
+  name: IndexNames<Schema, S>;
+  keyPath: string | string[];
+  multiEntry?: true;
+}
+
+interface StoreSpec<S extends StoreNames<Schema>> {
+  keyPath: string;
+  indexes?: readonly IndexSpec<S>[];
+  /** How a database opened at oldVersion >= 1 gets this store. */
+  onUpgrade: 'assumed' | 'if-missing' | 'recreate';
+  /** Created when THIS store is missing, not itself (the QUL trio). */
+  createdWith?: StoreNames<Schema>;
+}
+
+/**
+ * Every store, its key path and its indexes, in the order a fresh install
+ * creates them. Typed against `Schema`, so a store the table misses, a store
+ * `Schema` does not know, or an index name `Schema` does not list fails `tsc`.
+ * Added in restructure Phase 4 step 4j (docs/refactor/plans/phase4-storage.md,
+ * Design §2); the comments are the fresh-install branch's, moved verbatim.
+ */
+export const STORES: { readonly [S in StoreNames<Schema>]: StoreSpec<S> } = {
+  books: { keyPath: 'id', onUpgrade: 'assumed' },
+  tocNodes: {
+    keyPath: 'id',
+    indexes: [{ name: 'byBook', keyPath: 'bookId' }],
+    onUpgrade: 'assumed',
+  },
+  pages: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byBookPage', keyPath: ['bookId', 'pageIndex'] },
+    ],
+    onUpgrade: 'assumed',
+  },
+  blocks: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byPage', keyPath: 'pageId' },
+      { name: 'byBookOrder', keyPath: ['bookId', 'order'] },
+    ],
+    onUpgrade: 'assumed',
+  },
+  entities: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byStartBlock', keyPath: 'startBlockId' },
+    ],
+    onUpgrade: 'recreate',
+  },
+  dictionaryEntries: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byRoot', keyPath: 'root' },
+    ],
+    onUpgrade: 'if-missing',
+  },
+  // Indexed by startBlockId so the virtualized reader can look up the
+  // marks for the blocks on screen without scanning thousands.
+  marks: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byStartBlock', keyPath: 'startBlockId' },
+    ],
+    onUpgrade: 'if-missing',
+  },
+  cards: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byBook', keyPath: 'bookId' },
+      { name: 'byCacheKey', keyPath: 'cacheKey' },
+    ],
+    onUpgrade: 'assumed',
+  },
+  explanationCards: {
+    keyPath: 'id',
+    indexes: [{ name: 'byBook', keyPath: 'bookId' }],
+    onUpgrade: 'if-missing',
+  },
+  // Retrieved commentary. Its own store rather than a kind inside
+  // `cards`, because that store is keyed for the translation cache —
+  // byCacheKey — and a card that was never generated has no cache key.
+  sharhCards: {
+    keyPath: 'id',
+    indexes: [{ name: 'byBook', keyPath: 'bookId' }],
+    onUpgrade: 'if-missing',
+  },
+  // Imported narrator profiles. `byNaming` is multiEntry over every form a
+  // man is cited under, so a short mention in a commentary reaches a
+  // profile filed under a twelve-word nasab in one indexed read.
+  narratorProfiles: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byNaming', keyPath: 'namings', multiEntry: true },
+      { name: 'byShard', keyPath: 'shard' },
+    ],
+    onUpgrade: 'if-missing',
+  },
+  // Shared chapters this device published. No index: there are a few
+  // dozen at most and Settings reads all of them at once.
+  shareRecords: { keyPath: 'id', onUpgrade: 'if-missing' },
+  wordGlosses: { keyPath: 'word', onUpgrade: 'if-missing' },
+  // One store for all four QUL resource kinds. They share a shape — key
+  // in, record out — so a single compound index serves every lookup and
+  // deleting a resource is one range delete rather than four.
+  qulResources: { keyPath: 'id', onUpgrade: 'if-missing' },
+  qulEntries: {
+    keyPath: 'id',
+    indexes: [
+      { name: 'byResource', keyPath: 'resourceId' },
+      { name: 'byResourceKey', keyPath: ['resourceId', 'key'] },
+    ],
+    onUpgrade: 'if-missing',
+    createdWith: 'qulResources',
+  },
+  qulCompilations: { keyPath: 'cacheKey', onUpgrade: 'if-missing', createdWith: 'qulResources' },
+  // Derived from each book's contents, so indexed only by book: a lookup
+  // reads every imported biographical work anyway, and there are three of
+  // them at most.
+  biographyEntries: {
+    keyPath: 'id',
+    indexes: [{ name: 'byBook', keyPath: 'bookId' }],
+    onUpgrade: 'if-missing',
+  },
+  profiles: { keyPath: 'id', onUpgrade: 'assumed' },
+  glossary: { keyPath: 'id', onUpgrade: 'assumed' },
+  quranVerses: { keyPath: 'reference', onUpgrade: 'assumed' },
+  hadiths: { keyPath: 'reference', onUpgrade: 'assumed' },
+  crawlStates: { keyPath: 'bookId', onUpgrade: 'assumed' },
+  positions: { keyPath: 'bookId', onUpgrade: 'assumed' },
+  settings: { keyPath: 'key', onUpgrade: 'assumed' },
+};
+
+/**
+ * Creates one store from its table entry: the key path, then each index in
+ * listed order, with an options object only where `multiEntry` is set — the
+ * same calls the hand-written fresh branch made. Generic over the store, and
+ * reading the entry itself, so `tsc` ties each index name to that store.
+ */
+function createStore<S extends StoreNames<Schema>>(db: IDBPDatabase<Schema>, name: S): void {
+  const spec: StoreSpec<S> = STORES[name];
+  const store = db.createObjectStore(name, { keyPath: spec.keyPath });
+  for (const index of spec.indexes ?? []) {
+    if (index.multiEntry) {
+      store.createIndex(index.name, index.keyPath, { multiEntry: true });
+    } else {
+      store.createIndex(index.name, index.keyPath);
+    }
+  }
+}
+
 /**
  * The `upgrade` callback `IdbStorageAdapter.init` passes to `openDB`: the
  * existing-database branch, then the fresh-install branch. Moved verbatim from
@@ -215,80 +372,7 @@ export function upgradeDatabase(db: IDBPDatabase<Schema>, oldVersion: number): v
     return;
   }
 
-  db.createObjectStore('books', { keyPath: 'id' });
-
-  const toc = db.createObjectStore('tocNodes', { keyPath: 'id' });
-  toc.createIndex('byBook', 'bookId');
-
-  const pages = db.createObjectStore('pages', { keyPath: 'id' });
-  pages.createIndex('byBook', 'bookId');
-  pages.createIndex('byBookPage', ['bookId', 'pageIndex']);
-
-  const blocks = db.createObjectStore('blocks', { keyPath: 'id' });
-  blocks.createIndex('byBook', 'bookId');
-  blocks.createIndex('byPage', 'pageId');
-  blocks.createIndex('byBookOrder', ['bookId', 'order']);
-
-  const entities = db.createObjectStore('entities', { keyPath: 'id' });
-  entities.createIndex('byBook', 'bookId');
-  entities.createIndex('byStartBlock', 'startBlockId');
-
-  const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-  dictionary.createIndex('byBook', 'bookId');
-  dictionary.createIndex('byRoot', 'root');
-
-  // Indexed by startBlockId so the virtualized reader can look up the
-  // marks for the blocks on screen without scanning thousands.
-  const marks = db.createObjectStore('marks', { keyPath: 'id' });
-  marks.createIndex('byBook', 'bookId');
-  marks.createIndex('byStartBlock', 'startBlockId');
-
-  const cards = db.createObjectStore('cards', { keyPath: 'id' });
-  cards.createIndex('byBook', 'bookId');
-  cards.createIndex('byCacheKey', 'cacheKey');
-
-  const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-  explanations.createIndex('byBook', 'bookId');
-
-  // Retrieved commentary. Its own store rather than a kind inside
-  // `cards`, because that store is keyed for the translation cache —
-  // byCacheKey — and a card that was never generated has no cache key.
-  const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-  sharh.createIndex('byBook', 'bookId');
-
-  // Imported narrator profiles. `byNaming` is multiEntry over every form a
-  // man is cited under, so a short mention in a commentary reaches a
-  // profile filed under a twelve-word nasab in one indexed read.
-  const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-  narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-  narrators.createIndex('byShard', 'shard');
-
-  // Shared chapters this device published. No index: there are a few
-  // dozen at most and Settings reads all of them at once.
-  db.createObjectStore('shareRecords', { keyPath: 'id' });
-
-  db.createObjectStore('wordGlosses', { keyPath: 'word' });
-
-  // One store for all four QUL resource kinds. They share a shape — key
-  // in, record out — so a single compound index serves every lookup and
-  // deleting a resource is one range delete rather than four.
-  db.createObjectStore('qulResources', { keyPath: 'id' });
-  const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-  qulEntries.createIndex('byResource', 'resourceId');
-  qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-  db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-
-  // Derived from each book's contents, so indexed only by book: a lookup
-  // reads every imported biographical work anyway, and there are three of
-  // them at most.
-  const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-  biography.createIndex('byBook', 'bookId');
-
-  db.createObjectStore('profiles', { keyPath: 'id' });
-  db.createObjectStore('glossary', { keyPath: 'id' });
-  db.createObjectStore('quranVerses', { keyPath: 'reference' });
-  db.createObjectStore('hadiths', { keyPath: 'reference' });
-  db.createObjectStore('crawlStates', { keyPath: 'bookId' });
-  db.createObjectStore('positions', { keyPath: 'bookId' });
-  db.createObjectStore('settings', { keyPath: 'key' });
+  for (const name of Object.keys(STORES) as StoreNames<Schema>[]) {
+    createStore(db, name);
+  }
 }

@@ -1475,7 +1475,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review PASS WITH NOTES | `284b7ef` |
 | 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review PASS | `ab1c19b` |
 | 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review PASS | `b04c7f8` |
-| 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review pending | this commit |
+| 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `1b5089a` |
+| 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1883,7 +1884,12 @@ holds)
   exportWork, importWork } from './idbBackup'` after the `./idbWork` block
   and drops no import. The class now holds `db`, `searchIndex`, `init`, the
   `handle` getter, `lazyHandle`, the `schemaVersion` getter and 83 one-line
-  delegates: 557 lines, the class at `:134-557`.
+  delegates: 557 lines, the class at `:134-557`. The plan's "~330 lines
+  after 4i" (Design §3, "What stays in the class") did not count the
+  delegates' form or the imports: 83 delegates of about four lines each
+  (signature, `return`, brace, blank) and about 125 lines of import blocks
+  naming every type and function. 4n adds this to a "Corrections found in
+  review" list in the plan.
 - **T** exit 0. **B** exit 0; main chunk 791,806 → 791,869 B (+63); only
   `index.js` differs; CSS byte-identical. **L**: rules hold, no cycle. **D**
   PASS, identical (40 scenarios, `work-backup/export`, `import-fresh`,
@@ -1892,7 +1898,54 @@ holds)
   required for 4i). **V owed**.
 - The adapter's header, which said Phase 4 "is moving" the class's code
   into the `idb*.ts` files, now says it moved it and that the class hands
-  each method to its group — true from 4i, when the last body left (Q8).
+  each data method to its group — true from 4i, when the last body left
+  (Q8). (`init` and the `schemaVersion` getter stay in the class by design;
+  "data method" was the 4i review's wording.)
+- **Review of `1b5089a`: PASS WITH NOTES; "ready for 4j".** Applied with
+  4j: the header's "hands each to its group" → "hands each data method to
+  its group"; the sentence above on the plan's line estimate.
+
+**Step 4j, measured 2026-11-16**
+- New code, not a move. `idbSchema.ts` gains `IndexSpec`, `StoreSpec`, an
+  exported `STORES` table typed `{ readonly [S in StoreNames<Schema>]:
+  StoreSpec<S> }` (`idb`'s own `StoreNames`/`IndexNames`), and a private
+  generic `createStore(db, name)`. The fresh-install branch of
+  `upgradeDatabase` is now `for (const name of Object.keys(STORES)) …
+  createStore(db, name)`; the existing-DB branch is untouched (4k).
+- The table has 24 entries, in the fresh branch's order (books … settings;
+  `Object.keys` keeps string-key insertion order, so the creation order is
+  today's exactly). Each entry: `keyPath`, `indexes` (name, keyPath,
+  `multiEntry: true` only on `narratorProfiles.byNaming`), and Design
+  §2.2's `onUpgrade` (`recreate` for `entities`; `if-missing` for the nine
+  guarded stores and the QUL trio, `createdWith: 'qulResources'` on
+  `qulEntries` and `qulCompilations`; `assumed` for the other twelve) — read
+  off the existing branch, not yet read by any code (4k). `perBook` is not
+  added (4l). No store uses `autoIncrement` or `unique`, and the shape has
+  neither. `createStore` passes an options object only where `multiEntry`
+  is set, so every `createIndex` call has the same arguments as before.
+- Six comments moved verbatim from the fresh branch onto their entries:
+  `marks`, `sharhCards`, `narratorProfiles`, `shareRecords`, `qulResources`
+  (the trio's comment) and `biographyEntries`.
+- Two departures from Design §2.2's sketch: `IndexSpec.keyPath` is `string |
+  string[]`, not `string | readonly string[]`, because `idb`'s `createIndex`
+  takes `string | string[]` and a readonly array would need a cast; and
+  creation goes through a generic helper that reads `STORES[name]` itself,
+  because passing `STORES[name]` for a union `name` does not type-check
+  (the correlated-union limit).
+- **Typing proven:** removing `settings` from the table, adding an `extra`
+  store, misspelling `byRoot`, and giving `dictionaryEntries` the `cards`
+  index `byCacheKey` each fail `tsc` (TS2741, TS2353, TS2820, TS2322);
+  restored from a copy. A *missing* index is not a type error; D catches it.
+- **Negative tests** (in place, restored from a `cp` copy, `cmp` checked):
+  dropping `narratorProfiles.byShard` → D FAIL, 25 of 40; flipping
+  `byNaming`'s `multiEntry` off → D FAIL, 25 of 40. The 25 are both `fresh`
+  scenarios (the store's index list differs) and every scenario that starts
+  from a fresh install; no upgrade scenario fails, as it should not while
+  the existing branch is hand-written.
+- **T** exit 0. **B** exit 0; main chunk 791,869 → 792,189 B (+320); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
+  identical (40 scenarios). **Q** PASS. **U** PASS, 180/180 (a fresh
+  install through the bundle). **V owed**.
 
 ## Open
 

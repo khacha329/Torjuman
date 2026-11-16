@@ -127,9 +127,10 @@ import { exportWork, importWork } from './idbBackup';
 
 // This file and the idb*.ts files beside it are the ONLY code that talks to
 // IndexedDB (restructure Phase 4 moved this class's code into them by store
-// group; the class keeps the StorageAdapter methods and hands each to its
-// group). Everything else goes through the StorageAdapter interface, so
-// replacing this with native SQLite under Capacitor touches nothing else.
+// group; the class keeps the StorageAdapter methods and hands each data
+// method to its group). Everything else goes through the StorageAdapter
+// interface, so replacing this with native SQLite under Capacitor touches
+// nothing else.
 
 export class IdbStorageAdapter implements StorageAdapter {
   private db: IDBPDatabase<Schema> | null = null;
