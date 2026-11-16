@@ -3,12 +3,13 @@ import type { TranslationUsage } from '../types';
 import { TranslationError } from './TranslationProvider';
 
 // What every Claude call in the app shares, so the SDK is used the same way
-// everywhere: the client, the text of a reply, the running token total, and
-// the two error mappings — the short one for Explain, gloss and compile, the
-// fuller one for translation and the key check. It sits in the translation
-// core rather than under providers/ because Explain and gloss (here in
-// translation/) and QUL compile use it as well as the provider, and the
-// translation core may not import its providers (docs/refactor/layers.json). Restructure Phase 3 gave it one home; check Q
+// everywhere: the client, the web-search tool, the text of a reply, the
+// running token total, and the two error mappings — the short one for Explain,
+// gloss and compile, the fuller one for translation and the key check. It sits
+// in the translation core rather than under providers/ because Explain and
+// gloss (here in translation/) and QUL compile use it as well as the provider,
+// and the translation core may not import its providers
+// (docs/refactor/layers.json). Restructure Phase 3 gave it one home; check Q
 // (scripts/verify-requests.ts) shows every call sends what it sent before.
 
 // `dangerouslyAllowBrowser` is what makes the SDK send
@@ -21,6 +22,18 @@ import { TranslationError } from './TranslationProvider';
 export function anthropicClient(apiKey: string): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 }
+
+/**
+ * The web-search tool translation's dig-deeper pass and Explain's research
+ * pass offer Claude: at most five searches per request. Moved from
+ * providers/AnthropicProvider.ts in restructure Phase 3 step 3h; Explain wrote
+ * the same object inline.
+ */
+export const WEB_SEARCH_TOOL = {
+  type: 'web_search_20260209' as const,
+  name: 'web_search' as const,
+  max_uses: 5,
+};
 
 /**
  * Text from EVERY text block, not the first.

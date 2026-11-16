@@ -862,7 +862,8 @@ four call sites build a client per call — the basis of check Q.
 | 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review PASS WITH NOTES | `5f87f7d` |
 | 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `bb1d962` |
 | 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review PASS WITH NOTES | `6de2d88` |
-| 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review pending | this commit |
+| 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
+| 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1101,12 +1102,30 @@ FOUND_ISSUES 11.
   `anthropic.ts` gains a `type` import of `TranslationUsage`. The provider's
   two calls are unchanged. Explain's `accumulate`, character-identical apart
   from its name, is deleted, and its two calls now say `addUsage`. The module
-  header names the running token total and is re-wrapped (3f review).
+  header names the running token total; its re-wrap was only partial (the 3g
+  review found one 123-character line left), finished in 3h.
 - **T** exit 0. **Q** PASS, identical — including per-turn cache-read and
   cache-write counts and the null and absent counts added for this step. **B**
   exit 0; main chunk 788,484 → 788,298 B (−186); only `index.js`; CSS
   byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
   hold.
+
+- **Review of 3g: PASS WITH NOTES; "ready for 3h".** Bodies identical, calls
+  unchanged. The header re-wrap claimed in 3g was partial; corrected above and
+  finished in 3h.
+
+**Step 3h, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `WEB_SEARCH_TOOL` moved verbatim from `providers/AnthropicProvider.ts` to
+  `translation/anthropic.ts`, exported, with a doc comment (new text); the
+  provider imports it. Explain's inline `{ type: 'web_search_20260209', name:
+  'web_search', max_uses: 5 }` — the same keys in the same order — became
+  `WEB_SEARCH_TOOL`, so the request body serialises the same. The module
+  header names the tool and is now re-wrapped as a whole paragraph (closing
+  the 3f and 3g notes); its other long lines are code and message strings.
+- **T** exit 0. **Q** PASS, identical — the dig-deeper and Explain research
+  request bodies included. **B** exit 0; main chunk 788,298 → 788,249 B (−49);
+  only `index.js`; CSS byte-identical. SSR build resolves; **V owed**. **L**:
+  no new edge; rules hold.
 
 ## Open
 

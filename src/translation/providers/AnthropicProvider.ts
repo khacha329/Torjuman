@@ -19,7 +19,7 @@ import {
   PRICES,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { addUsage, anthropicClient, textOf, toTranslationError } from '../anthropic';
+import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -32,12 +32,6 @@ import {
 //
 // Output shape is enforced by a strict tool rather than requested in prose —
 // see schema.ts for why, and for why the tool is not forced.
-
-const WEB_SEARCH_TOOL = {
-  type: 'web_search_20260209' as const,
-  name: 'web_search' as const,
-  max_uses: 5,
-};
 
 const MAX_RESEARCH_TURNS = 4;
 

@@ -6,7 +6,7 @@ import { explainStructureMaxTokens, outputConfigFor } from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { addUsage, anthropicCallError, anthropicClient, textOf } from './anthropic';
+import { addUsage, anthropicCallError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -202,7 +202,7 @@ export async function explainPhrase(options: {
         max_tokens: 8000,
         system: SYSTEM,
         messages,
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
+        tools: [WEB_SEARCH_TOOL],
         output_config: outputConfigFor(options.model),
       });
 
