@@ -855,7 +855,8 @@ four call sites build a client per call — the basis of check Q.
 | review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | `aacf81b` |
 | harness: check Q's coverage gaps closed, on the old code | Q proven; review PASS WITH NOTES | `9306ea6` |
 | harness: check Q's second-round gaps | Q proven; review PASS WITH NOTES | `33078d4` |
-| harness: SyntaxError messages masked in Q | applied | this commit |
+| harness: SyntaxError messages masked in Q | review PASS WITH NOTES | `f444b44` |
+| review notes: f444b44 — comment, plan text | applied | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -968,6 +969,11 @@ FOUND_ISSUES 11.
   record changes: the two `compile.gemini.200-*` messages and one `masked`
   header line — the one deliberate exception to "earlier entries
   byte-identical", made before 3b, after which §8 forbids any. Two runs PASS.
+
+- **Review of f444b44: PASS WITH NOTES; "ready for 3b".** Only the two
+  intended entries hold a `SyntaxError`; neither has `raw`. Applied: the
+  comment's Node-version example corrected; the plan's "Nothing else is
+  masked" and §8's harness paragraph now name this one exception (owner told).
 
 ## Open
 

@@ -287,7 +287,8 @@ harness also installs, per scenario and restored after:
 **Masked headers, and why.** `x-stainless-os`, `x-stainless-arch`,
 `x-stainless-runtime`, `x-stainless-runtime-version`: they describe the machine
 running the check (Node on Linux here; Chrome on Android on the tablet), not
-the code. Nothing else is masked. `user-agent` and
+the code. Nothing else is masked, except a `SyntaxError`'s message (the
+engine's wording; harness commit before 3b, §8). `user-agent` and
 `x-stainless-package-version` carry the SDK version, which the lockfile pins
 and this phase does not change, so they stay in the record; an SDK upgrade
 would show up there, which is right. The keys are fake (`sk-ant-q-check-…`,
@@ -571,7 +572,10 @@ a fresh context, so they cannot affect the others.
 **Harness commits before 3b (added during 3a's reviews).** Two harness
 commits on the old code extend Q with scenarios the 3a reviews found missing;
 each adds entries only, every earlier entry byte-identical, and each is
-reviewed like a step (PROGRESS). After them, the rule below applies.
+reviewed like a step (PROGRESS). A third masks a `SyntaxError`'s message — the
+JavaScript engine's wording, which differs between Node versions — changing
+exactly two existing entries' messages and one header line; it is the one
+exception, made before 3b and reviewed. After them, the rule below applies.
 
 The record must not change at any step, with two exceptions that **add** a
 section and change nothing already in it: 3m (`providerIdForModel`, new) and

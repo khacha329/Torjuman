@@ -371,8 +371,9 @@ function describeError(error: unknown): Record<string, unknown> {
     if (field in error) record[field] = plain((error as unknown as Record<string, unknown>)[field]);
   }
   // A SyntaxError's message is the JavaScript engine's wording, not the app's,
-  // and it differs between Node versions ("Unexpected end of JSON input" in
-  // Node 22, "Unexpected token < in JSON at position 0" in Node 18). No step
+  // and it differs between Node versions: for the HTML body, `Unexpected token
+  // '<', … is not valid JSON` in Node 20+, `Unexpected token < in JSON at
+  // position 0` in Node 18. No step
   // can change it while the class stays SyntaxError, and a change in how the
   // app handles the error still shows in the class, name and kind. Masked so
   // Q gives the same answer on the owner's PC, whatever its Node.
