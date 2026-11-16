@@ -1,7 +1,7 @@
 import { sha256 } from '../lib/hash';
-import { GEMINI_BASE } from '../translation/models';
 import { TranslationError } from '../translation/TranslationProvider';
 import { anthropicCallError, anthropicClient, textOf } from '../translation/anthropic';
+import { geminiModelUrl, postGemini } from '../translation/gemini';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -181,20 +181,13 @@ async function compileWithGemini(
 ): Promise<CompileResult> {
   let response: Response;
   try {
-    response = await fetch(
-      `${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        // The key travels in the header, never in the query string — see the
-        // note in GeminiProvider.
-        headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 4000 },
-        }),
-      },
-    );
+    // The key travels in the header, never in the query string — see the
+    // note on postGemini in translation/gemini.ts.
+    response = await postGemini(geminiModelUrl(model, 'generateContent'), apiKey, {
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4000 },
+    });
   } catch {
     throw new TranslationError('network', 'Could not reach the Gemini API.');
   }

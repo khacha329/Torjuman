@@ -863,7 +863,8 @@ four call sites build a client per call — the basis of check Q.
 | 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `bb1d962` |
 | 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review PASS WITH NOTES | `6de2d88` |
 | 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
-| 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review pending | this commit |
+| 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `1e019c2` |
+| 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1126,6 +1127,33 @@ FOUND_ISSUES 11.
   request bodies included. **B** exit 0; main chunk 788,298 → 788,249 B (−49);
   only `index.js`; CSS byte-identical. SSR build resolves; **V owed**. **L**:
   no new edge; rules hold.
+
+- **Review of 3h: PASS WITH NOTES; "ready for 3i".** The shared object is never
+  mutated (the SDK spreads params); Q's Explain and dig-deeper bodies carry the
+  same tool JSON. Note: one header line is 81 characters (cosmetic).
+
+**Step 3i, measured 2026-11-16**
+- New `translation/gemini.ts` (plan §3): `geminiModelUrl(model, method)` —
+  the URL both sites built — and `postGemini(url, apiKey, body)` — the `POST`
+  with the `x-goog-api-key` and `content-type` headers, in the same order, and
+  `JSON.stringify(body)` — with a header (new text). The provider's note 1 on
+  why the key goes in a header moved over `postGemini`; the provider's
+  numbered list keeps the note's first sentence with a pointer, so its "two
+  deliberate differences" still reads as two.
+- `GeminiProvider.translate`: the URL is still built once before the loop
+  (`geminiModelUrl(request.model, 'streamGenerateContent?alt=sse')`); the
+  fetch inside its `try` is `postGemini(url, key, body)`. `qul/compile.ts`:
+  `postGemini(geminiModelUrl(model, 'generateContent'), apiKey, { … })`, the
+  body object unchanged, inside its `try`; its pointer comment now names
+  `postGemini`. Evaluation order — URL, body object, `JSON.stringify`,
+  `fetch` — unchanged at both. Error handling, status checks and parsing stay
+  at each site (owner's Q4). `validateKey`'s `GET` untouched.
+- Compile no longer imports `GEMINI_BASE`; Q's census lists `gemini.ts`,
+  `models.ts` and the provider (`validateKey`).
+- **T** exit 0. **Q** PASS, identical — every Gemini scenario, URLs, headers
+  and bodies. **B** exit 0; main chunk 788,249 → 788,188 B (−61); only
+  `index.js`; CSS byte-identical. SSR build resolves; **V owed** (compile).
+  **L**: 134 edges (`qul → translation` existed); rules hold.
 
 ## Open
 

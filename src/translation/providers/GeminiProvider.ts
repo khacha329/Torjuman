@@ -17,14 +17,14 @@ import { renderSystem, renderUser } from '../prompt';
 import { parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
 import { delay } from '../../lib/delay';
+import { geminiModelUrl, postGemini } from '../gemini';
 
 // Google Generative Language API.
 //
 // Two deliberate differences from the Anthropic path, rather than a port of it:
 //
 //  1. The key travels in the `x-goog-api-key` header, never as a URL query
-//     parameter. Query strings end up in browser history, proxy logs and
-//     referrer headers; an API key does not belong in any of them.
+//     parameter — see postGemini in ../gemini.ts for why.
 //
 //  2. The segment shape is declared as a `responseSchema`, so valid JSON is
 //     enforced by the API rather than requested in the prompt. This is the
@@ -85,8 +85,7 @@ export class GeminiProvider implements TranslationProvider {
     key: string,
     onChunk?: (partial: string) => void,
   ): Promise<TranslationResult> {
-    const url =
-      `${GEMINI_BASE}/models/${encodeURIComponent(request.model)}:streamGenerateContent?alt=sse`;
+    const url = geminiModelUrl(request.model, 'streamGenerateContent?alt=sse');
 
     let text = '';
     let finishReason: string | undefined;
@@ -117,14 +116,7 @@ export class GeminiProvider implements TranslationProvider {
 
       let response: Response;
       try {
-        response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'x-goog-api-key': key,
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
+        response = await postGemini(url, key, body);
       } catch {
         throw new TranslationError(
           'network',
