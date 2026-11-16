@@ -13,7 +13,7 @@ import { DictionarySheet, type GlossState } from './DictionarySheet';
 import { BiographySheet } from './BiographySheet';
 import { ensureBiographyIndexes } from '../../biography/service';
 import { ensureNarratorSources } from '../../biography/narratorService';
-import { glossWord } from '../../translation/gloss';
+import { glossWord, GLOSS_PROVIDER_ID } from '../../translation/gloss';
 import { ANTHROPIC_GLOSS_MODEL } from '../../translation/models';
 import {
   loadDictionary,
@@ -218,7 +218,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       setGloss({ status: 'loading' });
       try {
         const found = await glossWord(storage, {
-          apiKey: secrets.getProviderKey('anthropic'),
+          apiKey: secrets.getProviderKey(GLOSS_PROVIDER_ID),
           model: ANTHROPIC_GLOSS_MODEL,
           word,
           sentence,
@@ -1040,7 +1040,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           busy={translator.busy}
           dictionaryAvailable={dictionary !== null}
           biographyAvailable={biographyAvailable}
-          meaningAvailable={navigator.onLine || secrets.getProviderKey('anthropic') !== ''}
+          meaningAvailable={navigator.onLine || secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}
           onBiography={() =>
             withSelection((anchor) => {
               const element = blockElementFor(anchor.startBlockId);

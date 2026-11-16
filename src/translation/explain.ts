@@ -2,7 +2,12 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { LocalSourceRef, TranslationUsage, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
-import { explainStructureMaxTokens, outputConfigFor } from './models';
+import {
+  explainStructureMaxTokens,
+  outputConfigFor,
+  ANTHROPIC_EXPLAIN_FALLBACK_MODEL,
+  isClaudeModel,
+} from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
@@ -13,6 +18,24 @@ import { addUsage, anthropicCallError, anthropicClient, textOf, WEB_SEARCH_TOOL 
 // The user understands the words; what is unclear is the concept. So this
 // searches his own library first, then the web, and returns an explanation with
 // citations. It never touches the translation card it hangs from.
+
+/**
+ * Explain runs on Claude whatever the active profile's provider: its research
+ * pass is Anthropic's server-side web search. Exported so the reader names no
+ * provider (restructure Phase 3 step 3q, the owner's Q10).
+ */
+export const EXPLAIN_PROVIDER_ID = 'anthropic' as const;
+
+/**
+ * The model an Explain card runs on: the profile's own when it is a Claude
+ * model, otherwise ANTHROPIC_EXPLAIN_FALLBACK_MODEL. Moved verbatim from
+ * ui/reader/useExplanations.ts in step 3q.
+ */
+export function explainModelFor(profileModel: string): string {
+  return isClaudeModel(profileModel)
+    ? profileModel
+    : ANTHROPIC_EXPLAIN_FALLBACK_MODEL;
+}
 
 export interface ExplainResult {
   explanation: string;

@@ -19,6 +19,13 @@ import { GLOSS_MAX_TOKENS, GLOSS_OUTPUT_CONFIG } from './models';
 // afterwards. It never writes to the glossary — these are transient lookups,
 // not terminology decisions.
 
+/**
+ * The gloss runs on Claude whatever the active profile's provider: it is a
+ * strict-tool call on a small Claude model. Exported so the reader names no
+ * provider (restructure Phase 3 step 3q, the owner's Q10).
+ */
+export const GLOSS_PROVIDER_ID = 'anthropic' as const;
+
 const GLOSS_TOOL_NAME = 'emit_gloss';
 
 // Strict, so a call's input always matches this schema.

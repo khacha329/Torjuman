@@ -7411,6 +7411,27 @@
         "some-model": "gemini",
         "": "gemini"
       }
+    },
+    {
+      "id": "values.explainModelFor",
+      "values": {
+        "claude-fable-5-1": "claude-fable-5-1",
+        "claude-haiku-4-5": "claude-haiku-4-5",
+        "claude-haiku-5-5": "claude-haiku-5-5",
+        "claude-opus-5": "claude-opus-5",
+        "claude-opus-5-5": "claude-opus-5-5",
+        "claude-sonnet-5": "claude-sonnet-5",
+        "claude-sonnet-5-5": "claude-sonnet-5-5",
+        "gemini-3.7-flash": "claude-sonnet-5-5",
+        "gemini-3.5-flash-lite": "claude-sonnet-5-5",
+        "gemini-2.5-flash": "claude-sonnet-5-5",
+        "gemini-2.5-pro": "claude-sonnet-5-5",
+        "some-unknown-model": "claude-sonnet-5-5",
+        "opus-mt-ar-en": "claude-sonnet-5-5",
+        "nllb-200-distilled-600M": "claude-sonnet-5-5",
+        "some-model": "claude-sonnet-5-5",
+        "": "claude-sonnet-5-5"
+      }
     }
   ]
 }

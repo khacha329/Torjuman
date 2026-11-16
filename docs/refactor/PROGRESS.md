@@ -871,7 +871,8 @@ four call sites build a client per call — the basis of check Q.
 | 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review PASS | `b114143` |
 | 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q U S R pass; V owed; review PASS WITH NOTES | `309b5e2` |
 | 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
-| 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review pending | this commit |
+| 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review PASS WITH NOTES | `469aa90` |
+| 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) pass; U S R running; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1322,6 +1323,34 @@ FOUND_ISSUES 11.
   `providerId:"gemini",model:bp`); only `index.js`; CSS byte-identical.
   **L**: rules hold. **U** 180/180 (the section is unchanged; the handler
   itself is read, not run: it needs an installed on-device model).
+
+- **Review of 3p: PASS WITH NOTES; "ready for 3q".** Value byte-identical;
+  no model id left in `src` outside `models.ts` (the one `gemini-` hit is the
+  localStorage key name in `services/secrets.ts`); the handler is exercised
+  by no check (the select renders only with an installed on-device model) —
+  verified by reading. Note, for 3r: FOUND_ISSUES 4 still cites
+  `OfflineTranslation.tsx:210` (the Phase 0 line); it is `:206`.
+
+**Step 3q, measured 2026-11-16** (owner's Q10)
+- `explain.ts` exports `EXPLAIN_PROVIDER_ID = 'anthropic' as const` and
+  `explainModelFor(profileModel)`, the expression moved from
+  `useExplanations.ts:95-97` (`isClaudeModel(…) ? … :
+  ANTHROPIC_EXPLAIN_FALLBACK_MODEL`, the parameter renamed); `explain.ts`'s
+  `models` import gains the two names. `gloss.ts` exports
+  `GLOSS_PROVIDER_ID = 'anthropic' as const`. Each has a short comment saying
+  why the feature is Claude-only. `useExplanations.ts` uses them at the key
+  read and the card (its `models` import of the two names goes);
+  `ReaderScreen.tsx` uses `GLOSS_PROVIDER_ID` at the gloss's key read and the
+  `meaningAvailable` test. The notice "needs an Anthropic key" is copy and
+  stays. Two imports that grew past the line were wrapped.
+- **Q**: section `values.explainModelFor` added (the ids of
+  `values.providerIdForModel`); the record's diff is 21 lines added, none
+  removed. Checked by reading: the seven Claude ids map to themselves,
+  everything else to `claude-sonnet-5-5` (`ANTHROPIC_EXPLAIN_FALLBACK_MODEL =
+  CLAUDE_SONNET_5_5`). Then PASS, identical. **T** exit 0. **B** exit 0; main
+  chunk 788,242 → 788,264 B (+22); only `index.js`; CSS byte-identical. SSR
+  build resolves; **V owed**. **L**: 134 edges, rules hold. **U S R** were
+  running when this was committed; results with the review.
 
 ## Open
 

@@ -321,7 +321,7 @@ console.error = (...parts: unknown[]) => {
 // ------------------------------------------------------------ the modules
 
 const registry = await import('../src/translation/providers/registry');
-const { explainPhrase } = await import('../src/translation/explain');
+const { explainPhrase, explainModelFor } = await import('../src/translation/explain');
 const { glossWord } = await import('../src/translation/gloss');
 const { compileAyah, compileCacheKey } = await import('../src/qul/compile');
 const { cacheKeyFor, glossaryHashOf } = await import('../src/translation/prompt');
@@ -1640,6 +1640,15 @@ values('values.offlineModels', () => {
 values('values.providerIdForModel', () => {
   const ids = [...MODEL_IDS, ...OFFLINE_MODELS.map((model) => model.id), 'some-model', ''];
   return Object.fromEntries(ids.map((model) => [model, registry.providerIdForModel(model)]));
+});
+
+// Added in 3q (plan Design §8): the Explain card's model, which
+// useExplanations computed inline as `isClaudeModel(activeProfile.model) ?
+// activeProfile.model : ANTHROPIC_EXPLAIN_FALLBACK_MODEL`, now explain.ts's
+// explainModelFor. The same ids as the section above.
+values('values.explainModelFor', () => {
+  const ids = [...MODEL_IDS, ...OFFLINE_MODELS.map((model) => model.id), 'some-model', ''];
+  return Object.fromEntries(ids.map((model) => [model, explainModelFor(model)]));
 });
 
 // ------------------------------------------- the SDK-import allowlist (Q12)
