@@ -42,14 +42,44 @@ import {
   putStoreRows,
   readStoreRows,
 } from './idbTransfer';
+import {
+  deleteCard,
+  deleteExplanationCard,
+  deleteGlossaryEntry,
+  deleteMarks,
+  deleteProfile,
+  deleteShareRecord,
+  deleteSharhCard,
+  getCardByCacheKey,
+  getProfile,
+  getReadingPosition,
+  getSettings,
+  getWordGloss,
+  listCards,
+  listExplanationCards,
+  listGlossary,
+  listMarks,
+  listProfiles,
+  listShareRecords,
+  listSharhCards,
+  listWordGlosses,
+  putCard,
+  putExplanationCard,
+  putGlossaryEntry,
+  putMarks,
+  putProfile,
+  putReadingPosition,
+  putSettings,
+  putShareRecord,
+  putSharhCard,
+  putWordGloss,
+} from './idbWork';
 
 // This file and the idb*.ts files beside it are the ONLY code that talks to
 // IndexedDB (restructure Phase 4 is moving this class's code into them, store
 // group by store group). Everything else goes through the StorageAdapter
 // interface, so replacing this with native SQLite under Capacitor touches
 // nothing else.
-
-const SETTINGS_KEY = 'app';
 
 /** Minimal per-block record kept in memory for search. */
 interface SearchEntry {
@@ -354,72 +384,65 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ---------------------------------------------------------------- marks
 
   async putMarks(marks: Mark[]): Promise<void> {
-    if (marks.length === 0) return;
-    const tx = this.handle.transaction('marks', 'readwrite');
-    await Promise.all(marks.map((mark) => tx.store.put(mark)));
-    await tx.done;
+    return putMarks(this.lazyHandle, marks);
   }
 
   async listMarks(bookId: string): Promise<Mark[]> {
-    return this.handle.getAllFromIndex('marks', 'byBook', bookId);
+    return listMarks(this.lazyHandle, bookId);
   }
 
   async deleteMarks(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
-    const tx = this.handle.transaction('marks', 'readwrite');
-    await Promise.all(ids.map((id) => tx.store.delete(id)));
-    await tx.done;
+    return deleteMarks(this.lazyHandle, ids);
   }
 
   // ---------------------------------------------------------------- cards
 
   async putCard(card: TranslationCard): Promise<void> {
-    await this.handle.put('cards', card);
+    return putCard(this.lazyHandle, card);
   }
 
   async listCards(bookId: string): Promise<TranslationCard[]> {
-    return this.handle.getAllFromIndex('cards', 'byBook', bookId);
+    return listCards(this.lazyHandle, bookId);
   }
 
   async getCardByCacheKey(cacheKey: string): Promise<TranslationCard | undefined> {
-    return this.handle.getFromIndex('cards', 'byCacheKey', cacheKey);
+    return getCardByCacheKey(this.lazyHandle, cacheKey);
   }
 
   async deleteCard(id: string): Promise<void> {
-    await this.handle.delete('cards', id);
+    return deleteCard(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------------- profiles
 
   async putProfile(profile: TranslationProfile): Promise<void> {
-    await this.handle.put('profiles', profile);
+    return putProfile(this.lazyHandle, profile);
   }
 
   async listProfiles(): Promise<TranslationProfile[]> {
-    return this.handle.getAll('profiles');
+    return listProfiles(this.lazyHandle);
   }
 
   async getProfile(id: string): Promise<TranslationProfile | undefined> {
-    return this.handle.get('profiles', id);
+    return getProfile(this.lazyHandle, id);
   }
 
   async deleteProfile(id: string): Promise<void> {
-    await this.handle.delete('profiles', id);
+    return deleteProfile(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------------- glossary
 
   async putGlossaryEntry(entry: GlossaryEntry): Promise<void> {
-    await this.handle.put('glossary', entry);
+    return putGlossaryEntry(this.lazyHandle, entry);
   }
 
   async listGlossary(): Promise<GlossaryEntry[]> {
-    const entries = await this.handle.getAll('glossary');
-    return entries.sort((a, b) => a.addedAt - b.addedAt);
+    return listGlossary(this.lazyHandle);
   }
 
   async deleteGlossaryEntry(id: string): Promise<void> {
-    await this.handle.delete('glossary', id);
+    return deleteGlossaryEntry(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------ retrieval cache
@@ -519,52 +542,49 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ------------------------------------------------------------- position
 
   async putReadingPosition(position: ReadingPosition): Promise<void> {
-    await this.handle.put('positions', position);
+    return putReadingPosition(this.lazyHandle, position);
   }
 
   async getReadingPosition(bookId: string): Promise<ReadingPosition | undefined> {
-    return this.handle.get('positions', bookId);
+    return getReadingPosition(this.lazyHandle, bookId);
   }
 
   // ------------------------------------------------------------- settings
 
   async putSettings(settings: AppSettings): Promise<void> {
-    await this.handle.put('settings', { ...settings, key: SETTINGS_KEY });
+    return putSettings(this.lazyHandle, settings);
   }
 
   async getSettings(): Promise<AppSettings | undefined> {
-    const stored = await this.handle.get('settings', SETTINGS_KEY);
-    if (!stored) return undefined;
-    const { key: _key, ...settings } = stored;
-    return settings;
+    return getSettings(this.lazyHandle);
   }
 
   // --------------------------------------------- explanations and glosses
 
   async putExplanationCard(card: ExplanationCard): Promise<void> {
-    await this.handle.put('explanationCards', card);
+    return putExplanationCard(this.lazyHandle, card);
   }
 
   async listExplanationCards(bookId: string): Promise<ExplanationCard[]> {
-    return this.handle.getAllFromIndex('explanationCards', 'byBook', bookId);
+    return listExplanationCards(this.lazyHandle, bookId);
   }
 
   async deleteExplanationCard(id: string): Promise<void> {
-    await this.handle.delete('explanationCards', id);
+    return deleteExplanationCard(this.lazyHandle, id);
   }
 
   // -------------------------------------------------------------- sharḥ
 
   async putSharhCard(card: SharhCard): Promise<void> {
-    await this.handle.put('sharhCards', card);
+    return putSharhCard(this.lazyHandle, card);
   }
 
   async listSharhCards(bookId: string): Promise<SharhCard[]> {
-    return this.handle.getAllFromIndex('sharhCards', 'byBook', bookId);
+    return listSharhCards(this.lazyHandle, bookId);
   }
 
   async deleteSharhCard(id: string): Promise<void> {
-    await this.handle.delete('sharhCards', id);
+    return deleteSharhCard(this.lazyHandle, id);
   }
 
   // ---------------------------------------------------- narrator profiles
@@ -603,35 +623,27 @@ export class IdbStorageAdapter implements StorageAdapter {
   // -------------------------------------------------------- shared chapters
 
   async putShareRecord(record: ShareRecord): Promise<void> {
-    await this.handle.put('shareRecords', record);
+    return putShareRecord(this.lazyHandle, record);
   }
 
   async listShareRecords(): Promise<ShareRecord[]> {
-    const records = await this.handle.getAll('shareRecords');
-    return records.sort((a, b) => b.createdAt - a.createdAt);
+    return listShareRecords(this.lazyHandle);
   }
 
-  /**
-   * Forgets the local record. It does not, and cannot, unpublish anything.
-   *
-   * The file lives in a git repository that only the author can push to, so
-   * withdrawing a share is deleting that file and pushing. Settings says so
-   * rather than implying this button did it.
-   */
   async deleteShareRecord(id: string): Promise<void> {
-    await this.handle.delete('shareRecords', id);
+    return deleteShareRecord(this.lazyHandle, id);
   }
 
   async putWordGloss(gloss: WordGloss): Promise<void> {
-    await this.handle.put('wordGlosses', gloss);
+    return putWordGloss(this.lazyHandle, gloss);
   }
 
   async getWordGloss(word: string): Promise<WordGloss | undefined> {
-    return this.handle.get('wordGlosses', word);
+    return getWordGloss(this.lazyHandle, word);
   }
 
   async listWordGlosses(): Promise<WordGloss[]> {
-    return this.handle.getAll('wordGlosses');
+    return listWordGlosses(this.lazyHandle);
   }
 
   // ------------------------------------------------------ device transfer

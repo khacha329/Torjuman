@@ -1472,6 +1472,7 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
 | 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
 | 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
+| 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1738,6 +1739,35 @@ holds)
   six; `countStoreRows`'s signature in `idbTransfer.ts` wrapped like its
   neighbours. For 4n: the harness's `PRIVATE` set now also names the inert
   `untyped`.
+
+**Step 4f, measured 2026-11-16**
+- Thirty methods moved verbatim into the new `platform/storage/idbWork.ts`,
+  in the class's order, de-indented, each a function whose first parameter
+  is the fetcher (the 4e form): marks (`putMarks`, `listMarks`,
+  `deleteMarks`), cards (`putCard`, `listCards`, `getCardByCacheKey`,
+  `deleteCard`), profiles (`putProfile`, `listProfiles`, `getProfile`,
+  `deleteProfile`), glossary (`putGlossaryEntry`, `listGlossary`,
+  `deleteGlossaryEntry`), position (`putReadingPosition`,
+  `getReadingPosition`), settings (`putSettings`, `getSettings`), explanation
+  cards (`putExplanationCard`, `listExplanationCards`,
+  `deleteExplanationCard`), sharḥ cards (`putSharhCard`, `listSharhCards`,
+  `deleteSharhCard`), share records (`putShareRecord`, `listShareRecords`,
+  `deleteShareRecord`, with its doc comment) and word glosses
+  (`putWordGloss`, `getWordGloss`, `listWordGlosses`). `SETTINGS_KEY` moved
+  with settings, not exported. Every body has exactly one substitution site,
+  `this.handle` → `handle()` (30 sites); none reads `this.searchIndex`, calls
+  `purgeIndex` or another method. A whitespace-insensitive token diff of each
+  function against `c1efead` shows only `export function`, the fetcher
+  parameter (and the trailing comma of a wrapped signature) and that one
+  token. The section dividers stay in the class over the thirty one-line
+  delegates; no adapter import became unused (the delegates' signatures
+  still name every type). `exportWork`/`importWork` still call
+  `this.getSettings()`/`this.putSettings(`, now delegates.
+- **T** exit 0. **B** exit 0; main chunk 788,528 → 789,828 B (+1,300: thirty
+  delegates); only `index.js` differs; CSS byte-identical. **L**: rules hold.
+  **D** PASS, identical (40 scenarios). **Q** PASS. **S** 30/30. **R** 28/28;
+  landscape 240,000 px 33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px
+  24.6 s 1,904 nodes 0 long tasks. **V owed**.
 
 ## Open
 
