@@ -791,3 +791,20 @@ then X on the whole phase.
 
 ## Owner's answers
 
+
+**All thirteen as recommended** ("all as recommended, go ahead",
+2026-11-16): check D in Chromium with no new dependency (Q1); upgrades from
+v7, v8, v10 from git, v9 synthesized, a synthetic v1 base and a v11 reopen
+(Q2) — the owner named no device with a pre-v7 database, so none is assumed
+and FOUND_ISSUES E records the gap; one class with free functions per group
+and the fifth adaptation (Q3); flat `idb*.ts` files in `platform/storage/`
+(Q4); the upgrade branch from the table with a snapshot and the trio's
+shared guard kept (Q5); `BOOK_STORES` from a `perBook` flag (Q6); an ordered
+`WORK_STORES` list for the backup in 4m (Q7); the adapter's header in 4d,
+the other comments in 4n (Q8); D out of the deploy workflow (Q9);
+FOUND_ISSUES A–H written in 4a and left (Q10); M as written, deployed app →
+staged build only — the owner named no second profile or tablet, so M's
+optional step 9 is left out unless the owner offers one (Q11); the reviewer
+after every commit and `torjuman-storage` reading this plan and D's harness
+before 4a's baseline is committed (Q12); D's whole normalized record
+committed as `docs/refactor/phase4/storage.json` (Q13).
