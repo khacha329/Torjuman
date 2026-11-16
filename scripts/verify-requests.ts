@@ -327,7 +327,7 @@ const { compileAyah, compileCacheKey } = await import('../src/qul/compile');
 const { cacheKeyFor, glossaryHashOf } = await import('../src/translation/prompt');
 const models = await import('../src/translation/models');
 const { createDefaultProfile, STUDY_CIRCLE_PROMPT } = await import('../src/translation/profiles');
-const { costOf } = await import('../src/translation/providers/AnthropicProvider');
+const { costOf } = await import('../src/translation/models');
 const { secrets, API_KEY_STORAGE_KEYS } = await import('../src/services/secrets');
 // Static imports only (the transformers.js import inside it is dynamic and
 // never runs here): its model list is a value 3n's knownModels may read.

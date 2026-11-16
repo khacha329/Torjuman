@@ -4156,7 +4156,7 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
 
 {
   const models = await import('../src/translation/models');
-  const { costOf } = await import('../src/translation/providers/AnthropicProvider');
+  const { costOf } = await import('../src/translation/models');
   const { parseJsonObject } = await import('../src/translation/parseSegments');
   const { EMIT_TRANSLATION_TOOL, GEMINI_RESPONSE_SCHEMA, answerWithTool } = await import(
     '../src/translation/schema'

@@ -865,7 +865,8 @@ four call sites build a client per call — the basis of check Q.
 | 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
 | 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `1e019c2` |
 | 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `034d11f` |
-| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review pending | this commit |
+| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | d0ff6e1 |
+| 3k. `costOf` → `models.ts` | T B L Q pass; S R U running; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1173,6 +1174,27 @@ FOUND_ISSUES 11.
   main chunk 788,188 → 788,200 B (+12, two named constants); only `index.js`;
   CSS byte-identical. SSR build resolves; **V owed** (`models.ts`). **L**: no
   new edge; rules hold.
+
+- **Review of 3j: PASS WITH NOTES; "ready for 3k".** Gloss's `create()` keys,
+  order and values identical in both bundles; sharing one
+  `GLOSS_OUTPUT_CONFIG` object is safe (SDK 0.120.0 copies the params
+  shallowly and never writes `output_config`). Note: the constant is not
+  frozen; not a defect today. `Effort` is assignable to the SDK's
+  `OutputConfig.effort`.
+
+**Step 3k, measured 2026-11-16** (owner's Q7)
+- `costOf` and its doc comment moved verbatim from
+  `providers/AnthropicProvider.ts` to `models.ts`, right after
+  `CACHE_WRITE_MULTIPLIER`. `models.ts`'s `types` import gains
+  `TranslationUsage` (type-only, R11). The provider imports `costOf` from
+  `../models` and no longer imports `PRICES` or the two multipliers.
+  `ui/reader/useExplanations.ts`, `verify-parsers.ts:4159` and
+  `verify-requests.ts:330` import it from `translation/models`.
+- **T** exit 0. **Q** PASS, identical (`values.costOf` included). **B** exit 0;
+  main chunk 788,200 → 788,200 B (0); only `index.js` differs (the function's
+  position); CSS byte-identical. SSR build resolves; **V owed** (`models.ts`,
+  the cost checks at `verify-parsers.ts:4224-4243`). **L**: 134 edges, no new
+  one; rules hold. **S R U** were running at commit; their results are recorded with the review.
 
 ## Open
 

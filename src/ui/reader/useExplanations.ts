@@ -15,7 +15,7 @@ const NO_REFERENCE_WORKS =
   'Nothing in your library matches this phrase, and external sources are unavailable offline. ' +
   'Importing a commentary — Fatḥ al-Bārī, or an-Nawawī’s Sharḥ Ṣaḥīḥ Muslim — as a reference work ' +
   'would give this something to search. Settings → Reference works.';
-import { costOf } from '../../translation/providers/AnthropicProvider';
+import { costOf } from '../../translation/models';
 import type { SelectionAnchor } from './selection';
 
 // "Explain this phrase" — a research question, answered into its own card.

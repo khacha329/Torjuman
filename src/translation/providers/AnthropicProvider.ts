@@ -11,12 +11,10 @@ import {
   ANTHROPIC_DEFAULT_MODEL,
   ANTHROPIC_KEY_CHECK_MODEL,
   ANTHROPIC_MODELS,
-  CACHE_READ_MULTIPLIER,
-  CACHE_WRITE_MULTIPLIER,
   maxTokensFor,
   outputCeilingFor,
   outputConfigFor,
-  PRICES,
+  costOf,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
 import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
@@ -277,31 +275,4 @@ function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | 
 
 function emptyUsage(): TranslationUsage {
   return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-}
-
-/**
- * USD estimate from the token counts the API reported.
- *
- * `usage` can be the sum of several requests (dig deeper, Explain). A model
- * with long-context pricing is priced at the higher rate when the summed prompt
- * crosses its threshold, which is exact for one request and an upper bound for
- * several. Only Haiku 5.5 has such a tier, at 100,000 prompt tokens.
- */
-export function costOf(model: string, usage: TranslationUsage): number | null {
-  const price = PRICES[model];
-  if (!price) return null;
-
-  const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
-  const rates =
-    price.longContext && promptTokens > price.longContext.overPromptTokens
-      ? price.longContext
-      : price;
-  const cacheReadMultiplier = price.cacheReadMultiplier ?? CACHE_READ_MULTIPLIER;
-
-  const input = usage.inputTokens * rates.inputPerMTok;
-  const cacheRead = usage.cacheReadTokens * rates.inputPerMTok * cacheReadMultiplier;
-  const cacheWrite = usage.cacheWriteTokens * rates.inputPerMTok * CACHE_WRITE_MULTIPLIER;
-  const output = usage.outputTokens * rates.outputPerMTok;
-
-  return (input + cacheRead + cacheWrite + output) / 1_000_000;
 }
