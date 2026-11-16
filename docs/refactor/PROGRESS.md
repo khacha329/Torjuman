@@ -1457,6 +1457,83 @@ provider; Dig deeper once; Explain once; a word's Meaning (gloss); Compile one
 āyah on each provider; switch a profile between providers and see the model
 list and default follow.
 
+## Phase 4: storage (in progress, branch `claude/restructure-phase-4`)
+
+Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
+2026-11-16, all thirteen answers as recommended** (`109d400`).
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review owed | this commit |
+
+**Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- Built by the `torjuman-storage` agent from plan Design §1. Playwright in the
+  container's Chromium (153.0.8010.12, from `playwright` 1.63.0), no new
+  dependency (Q1). Two halves on one `vite preview` origin: the shipped
+  bundle for the schema, and a Vite library-mode build of the real
+  `IdbStorageAdapter`, `library/transfer`, `library/deviceTransfer` and
+  `share/ShareStorageAdapter` for everything else. Every phase in a fresh
+  context; en-US, UTC, service workers blocked, `page.clock` fixed,
+  `Math.random` seeded; requests off the origin aborted.
+- **40 scenarios, 49 phases**: bundle 7 (fresh, upgrade from v1base, v7, v8,
+  v9, v10, reopen v11); harness 33 — the same seven with a row in every store
+  the old version had (schema and rows in one scenario), the two impossible
+  QUL databases, `before-init`, 18 method families (the interface's sections
+  plus the six raw whole-tablet calls), per-book delete (4,097 blocks in one
+  book), work backup (4 phases), per-book transfer (4), whole-tablet transfer
+  (4: export with and without keys, two restores, six refusals), share
+  adapter. Record `docs/refactor/phase4/storage.json`, **340,129 B**.
+  **Run time**: about 11 s for the check, 17.6 s for `npm run
+  verify:storage` with its build.
+- **Masked: nothing.** Pinned: `Date.now` (page.clock), `Math.random`, locale,
+  time zone. Ids `newId` makes on arrival (entities, the dictionary root
+  index) come out the same every run.
+- Asserted on every run, `--write` included: the three fake keys
+  (`sk-ant-d-check-…`, `AIza-d-check-…`, `sunnah-d-check-…`) in no work backup,
+  no per-book file, no whole-tablet file without keys, and all three in the
+  one with them; both restores equal the source row for row; every refusal
+  and the share adapter's ignored writes left the database (and
+  localStorage) untouched.
+- **Proof.** Run 1, then run 2 with `--write`: byte-identical (`cmp`); runs
+  with `TZ=Pacific/Kiritimati` and a German locale, and with
+  `TZ=America/St_Johns`: PASS. The five breakages, each a temporary edit
+  restored from a backup copy (`cmp` equal, `git diff --quiet -- src` after
+  each), each exit 1:
+  1. `cards`' `byCacheKey` index dropped from the fresh branch → 25 of 40
+     differ: `bundle/fresh`, `harness/fresh` and every harness scenario that
+     installs fresh (18 families, `delete-book`, `work-backup`,
+     `book-transfer`, `device-transfer`, `share-adapter`); no upgrade
+     scenario;
+  2. the `sharhCards` guard removed → 6: `bundle/` and `harness/`
+     `upgrade-v1base`, `-v7`, `-v8` (v9 and v10 already have it);
+  3. `marks` removed from `BOOK_STORES` → 2: `delete-book`, `book-transfer`;
+  4. `hadiths` dropped from `exportWork` → 1: `work-backup`;
+  5. the `schemaVersion` comparison in `parseHeader` removed → the assertion
+     "rows and localStorage untouched after restoreDevice, schemaVersion 10"
+     and 1 scenario, `device-transfer`.
+  Final run after restoring: PASS.
+- **Where the plan's design was not followed as written**: the upgrade-rows
+  group is merged into the harness schema scenarios (one phase records both);
+  the impossible database without `qulResources` makes `init` reject with an
+  AbortError, the ConstraintError reaching the page as an uncaught exception
+  (recorded as `uncaughtInPage`); a schema other than a fresh install's is
+  written `"stores": "as today"` when it equals TODAY built with raw
+  IndexedDB (compared in full either way — the first version abbreviated
+  against `harness/fresh`, which made a fresh-branch breakage show in every
+  upgrade scenario); the work backup file is its length and SHA-256, its
+  content being the `exportWork` value beside it; a third fake key
+  (Sunnah's) is planted. Added beyond the plan: the raw-store-I/O family,
+  two refusals (a work backup given as a tablet file; `restoreDevice`'s own
+  header check), a failed replacement in the per-book conflict phase.
+- **Found**: FOUND_ISSUES 16–23 are the plan's A–H; **24 is new and is a data
+  loss**: replacing a book from a Library transfer file deletes its marks,
+  cards, explanations, sharḥ cards and position, though the confirm dialog
+  says they are kept; a failed replacement leaves no copy of the book. 25 is
+  new and cosmetic (a restore's card count omits sharḥ cards).
+- T exit 0; B main chunk 788,264 B (unchanged); L 162 files, 134 edges, 11
+  rules hold; Q PASS.
+
 ## Open
 
 - V baseline count from the owner's PC.

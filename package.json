@@ -15,6 +15,7 @@
     "verify:selection": "vite build --logLevel warn && node scripts/verify-selection.mjs",
     "verify:reader": "vite build --logLevel warn && node scripts/verify-reader-scroll.mjs",
     "verify:markup": "node scripts/verify-markup.mjs",
+    "verify:storage": "vite build --logLevel warn && node scripts/verify-storage.mjs",
     "verify:requests": "vite build --ssr scripts/verify-requests.ts --outDir .verify/requests --logLevel warn && node .verify/requests/verify-requests.js",
     "glossary": "vite build --ssr scripts/build-glossary.ts --outDir .verify --logLevel warn && node .verify/build-glossary.js",
     "catalog": "vite build --ssr scripts/build-catalog.ts --outDir .verify --logLevel warn && node .verify/build-catalog.js"
