@@ -445,6 +445,23 @@ objects that must share one `handle` and one `searchIndex`; mixins would make
 schema, transfer and backup, and leave the CRUD (~600 lines) in the class with
 a reason at its top — the least risk, and short of the phase row.
 
+**Amended at step 4e (recorded in PROGRESS; the owner's Q3 text, "a
+`handle`-first parameter or call", covers it).** The form above would change
+behaviour: ten methods return before touching the database (`putStoreRows`,
+`putBlocks`, `putEntities`, `putDictionaryEntries`, `putMarks`, `deleteMarks`,
+`putNarratorProfiles` with an empty list; `searchBlocks` and
+`searchBlocksLoose` with an empty query; `findNarratorProfiles` under three
+letters), so they resolve before `init`, and a delegate that read
+`this.handle` to pass it would make them reject. So from 4e each moved
+function's first parameter is a handle **fetcher**, `handle: () =>
+IDBPDatabase<Schema>`; in moved bodies `this.handle` → `handle()`, and the
+other substitutions are as above with `handle` meaning the fetcher —
+`this.getBlock(` → `getBlock(handle, `, and `this.purgeIndex(` →
+`purgeIndex(handle(), ` (4d's `purgeIndex` takes the handle itself). The
+class delegates pass one fetcher, `this.lazyHandle`. The sentence "An `async`
+delegate keeps today's behaviour before `init`: a rejected promise" holds for
+the other methods; for the ten it is the fetcher that keeps it.
+
 ### 4. `BOOK_STORES`, the work backup and the transfers on the table
 
 **`BOOK_STORES` (4l).** `perBook: true` on the ten entries; `BOOK_STORES` is

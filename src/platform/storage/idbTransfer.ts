@@ -31,7 +31,10 @@ function untyped(handle: () => IDBPDatabase<Schema>, store: string): IDBPDatabas
   return db;
 }
 
-export async function countStoreRows(handle: () => IDBPDatabase<Schema>, store: string): Promise<number> {
+export async function countStoreRows(
+  handle: () => IDBPDatabase<Schema>,
+  store: string,
+): Promise<number> {
   return untyped(handle, store).count(store);
 }
 

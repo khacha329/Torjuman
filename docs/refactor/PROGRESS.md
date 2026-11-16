@@ -1471,7 +1471,7 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review PASS WITH NOTES | `a4ba6af` |
 | 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
 | 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
-| 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review pending | this commit |
+| 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1713,7 +1713,7 @@ holds)
   read the handle. **Proven:** a delegate made eager (`const db =
   this.handle; return putStoreRows(() => db, …)`) → D FAIL, 1 of 40
   (`family/before-init`); restored from a copy, PASS.
-- The device-transfer section's comment and its five members (`listStoreNames`,
+- The device-transfer section's comment and its six members (`listStoreNames`,
   the private `untyped`, `countStoreRows`, `readStoreRows`, `putStoreRows`,
   `clearAllStores`) moved verbatim into the new
   `platform/storage/idbTransfer.ts`, de-indented, each a function whose first
@@ -1728,6 +1728,16 @@ holds)
   delegates, the field); only `index.js`; CSS byte-identical. **L**: rules
   hold. **D** PASS, identical — every whole-tablet scenario and
   `family/raw-store-io`, `family/before-init`. **Q** PASS. **V owed**.
+
+- **Review of 4e: PASS WITH NOTES; "ready for 4f".** The departure is
+  necessary (ten methods resolve before `init`, listed in D's record),
+  minimal (one form for every group; a context object would need `handle`
+  public), still one token per site, and within the owner's Q3 wording; to
+  be stated in the PR. Applied: the plan gains an amendment note under
+  Design §3 so later reviews check the true form; "five members" above was
+  six; `countStoreRows`'s signature in `idbTransfer.ts` wrapped like its
+  neighbours. For 4n: the harness's `PRIVATE` set now also names the inert
+  `untyped`.
 
 ## Open
 
