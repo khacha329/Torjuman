@@ -379,6 +379,10 @@ async function seedRaw(stores: string[]): Promise<void> {
 
 const ALL_STORES = Object.keys(syntheticRows());
 
+/** The stores a work backup carries (exportWork's fields, settings included). */
+const WORK_STORES = ['cards', 'explanationCards', 'sharhCards', 'marks', 'glossary', 'profiles', 'positions',
+  'wordGlosses', 'quranVerses', 'hadiths', 'shareRecords', 'settings'];
+
 const phases: Record<string, Phase> = {
   // -------------------------------------------------- schema and upgrades
 
@@ -398,47 +402,136 @@ const phases: Record<string, Phase> = {
 
   // -------------------------------------------------- method families
 
+  /**
+   * Every method of the interface on an adapter whose `init` was never
+   * awaited, in the interface's order. Each is recorded as `rejected` (an
+   * async method: the handle is read inside the promise), `threw` (read
+   * synchronously — today only `listStoreNames`) or a value (an early return
+   * before the handle is read, or the `schemaVersion` getter). Plan Design §3
+   * keeps each delegate's sync or async form, and R5 relies on this to catch
+   * a delegate that reads `this.handle` before it returns a promise.
+   *
+   * The calls are checked against the class's own prototype, so a method the
+   * list misses — or one it names that the class lacks — fails the harness
+   * rather than going unrecorded.
+   */
   async 'before-init'() {
     const record = new Recorder();
     const s = new IdbStorageAdapter();
     const rows = syntheticRows();
-    await record.step('schemaVersion', () => s.schemaVersion);
-    await record.step('putBook', () => s.putBook(rows.books[0] as never));
-    await record.step('putTocNodes', () => s.putTocNodes(rows.tocNodes as never));
-    await record.step('putPage', () => s.putPage(rows.pages[0] as never));
-    await record.step('putBlocks([])', () => s.putBlocks([]));
-    await record.step('putBlocks', () => s.putBlocks(rows.blocks as never));
-    await record.step('putEntities([])', () => s.putEntities([]));
-    await record.step('putEntities', () => s.putEntities(rows.entities as never));
-    await record.step('putDictionaryEntries([])', () => s.putDictionaryEntries([]));
-    await record.step('putDictionaryEntries', () => s.putDictionaryEntries(rows.dictionaryEntries as never));
-    await record.step('putMarks([])', () => s.putMarks([]));
-    await record.step('putMarks', () => s.putMarks(rows.marks as never));
-    await record.step('deleteMarks([])', () => s.deleteMarks([]));
-    await record.step('putCard', () => s.putCard(rows.cards[0] as never));
-    await record.step('putProfile', () => s.putProfile(rows.profiles[0] as never));
-    await record.step('putGlossaryEntry', () => s.putGlossaryEntry(rows.glossary[0] as never));
-    await record.step('putQuranVerse', () => s.putQuranVerse(rows.quranVerses[0] as never));
-    await record.step('putQulResource', () => s.putQulResource(rows.qulResources[0] as never));
-    await record.step('putBiographyEntries', () => s.putBiographyEntries(rows.biographyEntries as never));
-    await record.step('putQulCompilation', () => s.putQulCompilation(rows.qulCompilations[0] as never));
-    await record.step('putCrawlState', () => s.putCrawlState(rows.crawlStates[0] as never));
-    await record.step('putReadingPosition', () => s.putReadingPosition(rows.positions[0] as never));
-    await record.step('putSettings', () => s.putSettings(SETTINGS as never));
-    await record.step('putExplanationCard', () => s.putExplanationCard(rows.explanationCards[0] as never));
-    await record.step('putSharhCard', () => s.putSharhCard(rows.sharhCards[0] as never));
-    await record.step('putNarratorProfiles([])', () => s.putNarratorProfiles([]));
-    await record.step('putNarratorProfiles', () => s.putNarratorProfiles(rows.narratorProfiles as never));
-    await record.step('putShareRecord', () => s.putShareRecord(rows.shareRecords[0] as never));
-    await record.step('putWordGloss', () => s.putWordGloss(rows.wordGlosses[0] as never));
-    await record.step('exportWork', () => s.exportWork());
-    await record.step('importWork', () => s.importWork({ cards: [] } as never));
-    await record.step('listStoreNames', () => s.listStoreNames());
-    await record.step('countStoreRows', () => s.countStoreRows('books'));
-    await record.step('readStoreRows', () => s.readStoreRows('books', undefined, 10));
-    await record.step('putStoreRows([])', () => s.putStoreRows('books', []));
-    await record.step('putStoreRows', () => s.putStoreRows('books', rows.books));
-    await record.step('clearAllStores', () => s.clearAllStores());
+    const r = (name: string, i = 0) => rows[name][i] as never;
+    const calls: [string, string, () => unknown][] = [
+      ['putBook', 'putBook', () => s.putBook(r('books'))],
+      ['getBook', 'getBook', () => s.getBook(A)],
+      ['listBooks', 'listBooks', () => s.listBooks()],
+      ['deleteBook', 'deleteBook', () => s.deleteBook(A)],
+      ['putTocNodes', 'putTocNodes', () => s.putTocNodes(rows.tocNodes as never)],
+      ['listTocNodes', 'listTocNodes', () => s.listTocNodes(A)],
+      ['putPage', 'putPage', () => s.putPage(r('pages'))],
+      ['getPage', 'getPage', () => s.getPage(A, 1)],
+      ['listFetchedPageIndices', 'listFetchedPageIndices', () => s.listFetchedPageIndices(A)],
+      ['listPageMeta', 'listPageMeta', () => s.listPageMeta(A)],
+      ['countPages', 'countPages', () => s.countPages(A)],
+      ['putBlocks([])', 'putBlocks', () => s.putBlocks([])],
+      ['putBlocks', 'putBlocks', () => s.putBlocks(rows.blocks as never)],
+      ['deleteBlocksForPage', 'deleteBlocksForPage', () => s.deleteBlocksForPage(`${A}:p1`)],
+      ['listBlocksForPage', 'listBlocksForPage', () => s.listBlocksForPage(`${A}:p1`)],
+      ['listBlocks', 'listBlocks', () => s.listBlocks(A)],
+      ['getBlock', 'getBlock', () => s.getBlock(`${A}:p1:0`)],
+      ['countBlocks', 'countBlocks', () => s.countBlocks(A)],
+      ['searchBlocks ""', 'searchBlocks', () => s.searchBlocks(A, '', 10)],
+      ['searchBlocks', 'searchBlocks', () => s.searchBlocks(A, normalize('الطهارة'), 10)],
+      ['searchBlocksLoose ""', 'searchBlocksLoose', () => s.searchBlocksLoose(A, '', 10)],
+      ['searchBlocksLoose', 'searchBlocksLoose', () => s.searchBlocksLoose(A, letterFold(normalize('الطهارة')), 10)],
+      ['putEntities([])', 'putEntities', () => s.putEntities([])],
+      ['putEntities', 'putEntities', () => s.putEntities(rows.entities as never)],
+      ['listEntities', 'listEntities', () => s.listEntities(A)],
+      ['clearEntities', 'clearEntities', () => s.clearEntities(A)],
+      ['putDictionaryEntries([])', 'putDictionaryEntries', () => s.putDictionaryEntries([])],
+      ['putDictionaryEntries', 'putDictionaryEntries', () => s.putDictionaryEntries(rows.dictionaryEntries as never)],
+      ['listDictionaryEntries', 'listDictionaryEntries', () => s.listDictionaryEntries(B)],
+      ['clearDictionaryEntries', 'clearDictionaryEntries', () => s.clearDictionaryEntries(B)],
+      ['putMarks([])', 'putMarks', () => s.putMarks([])],
+      ['putMarks', 'putMarks', () => s.putMarks(rows.marks as never)],
+      ['listMarks', 'listMarks', () => s.listMarks(A)],
+      ['deleteMarks([])', 'deleteMarks', () => s.deleteMarks([])],
+      ['deleteMarks', 'deleteMarks', () => s.deleteMarks(['mark-a1'])],
+      ['putCard', 'putCard', () => s.putCard(r('cards'))],
+      ['listCards', 'listCards', () => s.listCards(A)],
+      ['getCardByCacheKey', 'getCardByCacheKey', () => s.getCardByCacheKey('cache-a1')],
+      ['deleteCard', 'deleteCard', () => s.deleteCard('card-a1')],
+      ['putProfile', 'putProfile', () => s.putProfile(r('profiles'))],
+      ['listProfiles', 'listProfiles', () => s.listProfiles()],
+      ['getProfile', 'getProfile', () => s.getProfile('profile-d')],
+      ['deleteProfile', 'deleteProfile', () => s.deleteProfile('profile-d')],
+      ['putGlossaryEntry', 'putGlossaryEntry', () => s.putGlossaryEntry(r('glossary'))],
+      ['listGlossary', 'listGlossary', () => s.listGlossary()],
+      ['deleteGlossaryEntry', 'deleteGlossaryEntry', () => s.deleteGlossaryEntry('gloss-1')],
+      ['putQuranVerse', 'putQuranVerse', () => s.putQuranVerse(r('quranVerses'))],
+      ['getQuranVerse', 'getQuranVerse', () => s.getQuranVerse('112:1')],
+      ['putHadith', 'putHadith', () => s.putHadith(r('hadiths'))],
+      ['getHadith', 'getHadith', () => s.getHadith('synthetic:1')],
+      ['putQulResource', 'putQulResource', () => s.putQulResource(r('qulResources'))],
+      ['listQulResources', 'listQulResources', () => s.listQulResources()],
+      ['deleteQulResource', 'deleteQulResource', () => s.deleteQulResource('qul-d1')],
+      ['putQulEntries', 'putQulEntries', () => s.putQulEntries(rows.qulEntries as never)],
+      ['getQulEntry', 'getQulEntry', () => s.getQulEntry('qul-d1', '112:1')],
+      ['getQulEntries', 'getQulEntries', () => s.getQulEntries('qul-d1', ['112:1'])],
+      ['putBiographyEntries', 'putBiographyEntries', () => s.putBiographyEntries(rows.biographyEntries as never)],
+      ['listBiographyEntries()', 'listBiographyEntries', () => s.listBiographyEntries()],
+      ['listBiographyEntries(B)', 'listBiographyEntries', () => s.listBiographyEntries(B)],
+      ['clearBiographyEntries', 'clearBiographyEntries', () => s.clearBiographyEntries(B)],
+      ['putQulCompilation', 'putQulCompilation', () => s.putQulCompilation(r('qulCompilations'))],
+      ['getQulCompilation', 'getQulCompilation', () => s.getQulCompilation('compile-d1')],
+      ['putCrawlState', 'putCrawlState', () => s.putCrawlState(r('crawlStates'))],
+      ['getCrawlState', 'getCrawlState', () => s.getCrawlState(A)],
+      ['putReadingPosition', 'putReadingPosition', () => s.putReadingPosition(r('positions'))],
+      ['getReadingPosition', 'getReadingPosition', () => s.getReadingPosition(A)],
+      ['putSettings', 'putSettings', () => s.putSettings(SETTINGS as never)],
+      ['getSettings', 'getSettings', () => s.getSettings()],
+      ['putExplanationCard', 'putExplanationCard', () => s.putExplanationCard(r('explanationCards'))],
+      ['listExplanationCards', 'listExplanationCards', () => s.listExplanationCards(A)],
+      ['deleteExplanationCard', 'deleteExplanationCard', () => s.deleteExplanationCard('explain-a1')],
+      ['putSharhCard', 'putSharhCard', () => s.putSharhCard(r('sharhCards'))],
+      ['listSharhCards', 'listSharhCards', () => s.listSharhCards(A)],
+      ['deleteSharhCard', 'deleteSharhCard', () => s.deleteSharhCard('sharh-a1')],
+      ['putNarratorProfiles([])', 'putNarratorProfiles', () => s.putNarratorProfiles([])],
+      ['putNarratorProfiles', 'putNarratorProfiles', () => s.putNarratorProfiles(rows.narratorProfiles as never)],
+      ['findNarratorProfiles (two letters)', 'findNarratorProfiles', () => s.findNarratorProfiles('أح')],
+      ['findNarratorProfiles', 'findNarratorProfiles', () => s.findNarratorProfiles('أحمد')],
+      ['listNarratorShards', 'listNarratorShards', () => s.listNarratorShards()],
+      ['deleteNarratorShard', 'deleteNarratorShard', () => s.deleteNarratorShard('itqan:shard-1')],
+      ['putShareRecord', 'putShareRecord', () => s.putShareRecord(r('shareRecords'))],
+      ['listShareRecords', 'listShareRecords', () => s.listShareRecords()],
+      ['deleteShareRecord', 'deleteShareRecord', () => s.deleteShareRecord('share-a1')],
+      ['putWordGloss', 'putWordGloss', () => s.putWordGloss(r('wordGlosses'))],
+      ['getWordGloss', 'getWordGloss', () => s.getWordGloss('الطهارة')],
+      ['listWordGlosses', 'listWordGlosses', () => s.listWordGlosses()],
+      ['exportWork', 'exportWork', () => s.exportWork()],
+      ['importWork', 'importWork', () => s.importWork({ cards: [] } as never)],
+      ['schemaVersion', 'schemaVersion', () => s.schemaVersion],
+      ['listStoreNames', 'listStoreNames', () => s.listStoreNames()],
+      ['countStoreRows', 'countStoreRows', () => s.countStoreRows('books')],
+      ['readStoreRows', 'readStoreRows', () => s.readStoreRows('books', undefined, 10)],
+      ['putStoreRows([])', 'putStoreRows', () => s.putStoreRows('books', [])],
+      ['putStoreRows', 'putStoreRows', () => s.putStoreRows('books', rows.books)],
+      ['clearAllStores', 'clearAllStores', () => s.clearAllStores()],
+    ];
+
+    // The class's own members, less `init` and the private helpers. A helper
+    // that later moves out of the class simply stops being listed here; one
+    // that is added makes this fail until it is named.
+    const PRIVATE = new Set(['constructor', 'init', 'handle', 'purgeIndex', 'loadSearchIndex', 'untyped']);
+    const members = Object.getOwnPropertyNames(IdbStorageAdapter.prototype).filter((name) => !PRIVATE.has(name));
+    const called = new Set(calls.map(([, method]) => method));
+    const missing = members.filter((name) => !called.has(name));
+    const unknown = [...called].filter((name) => !members.includes(name));
+    if (missing.length > 0 || unknown.length > 0) {
+      throw new Error(`before-init does not cover the class: missing ${missing.join(', ') || 'none'}; not in the class ${unknown.join(', ') || 'none'}`);
+    }
+    record.extra.methodsCovered = called.size;
+
+    for (const [label, , call] of calls) await record.step(label, call);
     return record.result();
   },
 
@@ -542,6 +635,10 @@ const phases: Record<string, Phase> = {
     await record.step('putMarks([])', () => s.putMarks([]));
     await record.step('putMarks', () => s.putMarks([mark('mark-2', A), mark('mark-1', A, `${A}:p1:1`), mark('mark-3', B)] as never));
     await record.step('listMarks A', () => s.listMarks(A));
+    await record.step('putMarks mark-2 again (same key, moved) and mark-4', () => s.putMarks([
+      mark('mark-2', A, `${A}:p2:2`), mark('mark-4', A),
+    ] as never));
+    await record.step('listMarks A', () => s.listMarks(A));
     await record.step('deleteMarks([])', () => s.deleteMarks([]));
     await record.step('deleteMarks mark-1, missing', () => s.deleteMarks(['mark-1', 'nope']));
     await record.step('listMarks A', () => s.listMarks(A));
@@ -554,7 +651,10 @@ const phases: Record<string, Phase> = {
     await record.step('putCard a1', () => s.putCard(card('card-a1', A, 'cache-a1') as never));
     await record.step('putCard a2', () => s.putCard(card('card-a2', A, 'cache-a2') as never));
     await record.step('putCard b1', () => s.putCard(card('card-b1', B, 'cache-b1') as never));
+    // Over an existing key: a put replaces the row (an add would reject).
+    await record.step('putCard a2 again (same key, new cache key)', () => s.putCard(card('card-a2', A, 'cache-a2-new', T0 + 5) as never));
     await record.step('listCards A', () => s.listCards(A));
+    await record.step('getCardByCacheKey cache-a2 (the replaced key)', () => s.getCardByCacheKey('cache-a2'));
     await record.step('getCardByCacheKey cache-a2', () => s.getCardByCacheKey('cache-a2'));
     await record.step('getCardByCacheKey missing', () => s.getCardByCacheKey('nope'));
     await record.step('deleteCard a1', () => s.deleteCard('card-a1'));
@@ -733,6 +833,13 @@ const phases: Record<string, Phase> = {
     await record.step('searchBlocks A', () => s.searchBlocks(A, normalize('الطهارة'), 10));
     await record.step('putStoreRows blocks', () => s.putStoreRows('blocks', [block(A, 2, 9, 'الطهارة مرة أخرى.')]));
     await record.step('searchBlocks A after putStoreRows', () => s.searchBlocks(A, normalize('الطهارة'), 10));
+    // Over existing rows, not only after a clear: a put replaces them.
+    await record.step('putStoreRows glossary over existing keys', () => s.putStoreRows('glossary', [
+      { id: 'gloss-1', arabic: 'الإخلاص', english: 'sincerity (replaced)', note: null, addedAt: T0 + 9 },
+      { id: 'gloss-3', arabic: 'الصدق', english: 'truthfulness', note: null, addedAt: T0 + 3 },
+    ]));
+    await record.step('countStoreRows glossary', () => s.countStoreRows('glossary'));
+    await record.step('listGlossary', () => s.listGlossary());
     await record.step('putStoreRows([])', () => s.putStoreRows('nope', []));
     await record.step('putStoreRows (no such store)', () => s.putStoreRows('nope', [{ id: 'x' }]));
     await record.snapshot('before clearAllStores');
@@ -793,6 +900,16 @@ const phases: Record<string, Phase> = {
     pageHelpers().setLocal(TARGET_LOCAL);
     const s = await opened(record);
     if (input.withBook) await pageHelpers().put({ books: [syntheticRows().books[1]] });
+    if (input.overwrite) {
+      // An older copy of every backed-up row under the same keys, marked so a
+      // row that was not replaced shows; plus a row only this tablet has,
+      // which a restore merges around rather than removing.
+      const all = syntheticRows();
+      const older: Rows = {};
+      for (const store of WORK_STORES) older[store] = all[store].map((row) => ({ ...row, olderCopy: true }));
+      older.cards.push({ ...card('card-target', A, 'cache-target'), olderCopy: false });
+      await pageHelpers().put(older);
+    }
     const bundle = JSON.parse(input.file as string) as Record<string, unknown>;
     if (input.dropShareRecords) delete bundle.shareRecords;
     if (input.extraReferencedBook) {
@@ -1015,6 +1132,36 @@ const phases: Record<string, Phase> = {
     await record.step('through: putSettings', () => s.putSettings({ ...SETTINGS, fontSize: 30 } as never));
     await record.step('through: putQuranVerse', () => s.putQuranVerse({ ...r('quranVerses') as object, reference: '112:2' } as never));
     await record.step('through: putQulCompilation', () => s.putQulCompilation({ ...r('qulCompilations') as object, cacheKey: 'compile-share' } as never));
+    // Reads that go through to the visitor's own database (the verse and the
+    // compilation just written through among them), and the bundle-served
+    // reads that must NOT reach it (a book, a card lookup, a position).
+    const reads: [string, () => unknown][] = [
+      ['own: getQuranVerse 112:2', () => s.getQuranVerse('112:2')],
+      ['own: getQuranVerse 112:1', () => s.getQuranVerse('112:1')],
+      ['own: listQulResources', () => s.listQulResources()],
+      ['own: getQulEntry', () => s.getQulEntry('qul-d1', '112:1')],
+      ['own: getQulEntries', () => s.getQulEntries('qul-d1', ['112:2', '9:9'])],
+      ['own: getQulCompilation', () => s.getQulCompilation('compile-share')],
+      ['own: getSettings', () => s.getSettings()],
+      ['own: listProfiles', () => s.listProfiles()],
+      ['own: getProfile', () => s.getProfile('profile-d')],
+      ['own: listGlossary', () => s.listGlossary()],
+      ['own: listShareRecords', () => s.listShareRecords()],
+      ['own: getWordGloss', () => s.getWordGloss('الطهارة')],
+      ['own: listWordGlosses', () => s.listWordGlosses()],
+      ['own: listDictionaryEntries B', () => s.listDictionaryEntries(B)],
+      ['own: listBiographyEntries', () => s.listBiographyEntries()],
+      ['own: listNarratorShards', () => s.listNarratorShards()],
+      ['bundle then own: findNarratorProfiles', () => s.findNarratorProfiles('أحمد')],
+      ['own (bundle has none): getHadith', () => s.getHadith('synthetic:1')],
+      ['bundle: listBooks', () => s.listBooks()],
+      ['bundle: getBook A (the visitor has it; the share does not)', () => s.getBook(A)],
+      ['bundle: listBlocks A', () => s.listBlocks(A)],
+      ['bundle: getCardByCacheKey (always a miss)', () => s.getCardByCacheKey('cache-a1')],
+      ['bundle: getReadingPosition A (never recorded)', () => s.getReadingPosition(A)],
+      ['bundle: getPage (no HTML travels)', () => s.getPage(A, 1)],
+    ];
+    for (const [label, call] of reads) await record.step(label, call);
     await record.step('schemaVersion (delegated)', () => s.schemaVersion);
     await record.step('exportWork', () => s.exportWork());
     await record.step('importWork', () => s.importWork());

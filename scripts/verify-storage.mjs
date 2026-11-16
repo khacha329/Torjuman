@@ -31,7 +31,8 @@
 //      (from Node) until the database reports version 11 and the first boot
 //      has seeded the bundled matching-ayah resource, then dumps the schema.
 //      Rows are not recorded here: the app seeds profiles, settings and QUL
-//      rows itself.
+//      rows itself. Its uncaught page errors and console errors are, sorted
+//      (two boot lookups race, so their order is not the app's to keep).
 //   2. The harness, scripts/verify-storage-harness.ts, built here with Vite's
 //      JS API in library mode (no app config, no PWA plugin) into
 //      .verify/storage/ and served from /__dcheck/ on the same origin, so the
@@ -87,11 +88,18 @@
 //   - two databases the app cannot produce (FOUND_ISSUES 21): v10 without
 //     qulResources (today `init` rejects and the database stays at 10 with
 //     every row) and v10 without qulEntries (today it opens, and never gets
-//     qulEntries). The first rejects `init` with Chromium's AbortError ("Version change transaction was aborted in
-//     upgradeneeded event handler"); the ConstraintError itself ("An object
-//     store with the specified name already exists") reaches the page as an
-//     uncaught exception in the upgrade handler, which the record keeps as
+//     qulEntries). The first rejects `init` with Chromium's AbortError
+//     ("Version change transaction was aborted in upgradeneeded event
+//     handler"); the ConstraintError itself ("An object store with the
+//     specified name already exists") reaches the page as an uncaught
+//     exception in the upgrade handler, which the record keeps as
 //     `uncaughtInPage`.
+//
+// What D sees only as an outcome, and leaves to the reviewer: the ORDER of
+// writes and where transactions begin and end. A moved body that split one
+// transaction in two, or swapped two awaited writes, leaves the same rows
+// when nothing fails in between — which nothing here makes happen. The
+// plan's word-diff of each moved body (Design §3) is the check for that.
 //
 // What D does not see: the relay and the Worker (library/relayTransfer.ts
 // moves the same file's bytes and is not storage); the share-target handoff
@@ -158,7 +166,10 @@ const TODAY = [
 ];
 
 /** The stores the existing-DB branch never creates (assumed since v1). */
-const BASE_TWELVE = ['books', 'tocNodes', 'pages', 'blocks', 'cards', 'profiles', 'glossary', 'quranVerses', 'hadiths', 'crawlStates', 'positions', 'settings'];
+const BASE_TWELVE = [
+  'books', 'tocNodes', 'pages', 'blocks', 'cards', 'profiles',
+  'glossary', 'quranVerses', 'hadiths', 'crawlStates', 'positions', 'settings',
+];
 
 const without = (...names) => TODAY.filter(([name]) => !names.includes(name));
 
@@ -335,6 +346,7 @@ const HARNESS_SCENARIOS = [
       { name: 'import-fresh', run: 'work-import', input: (out) => ({ file: out.export.result.file }) },
       { name: 'import-without-shareRecords', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropShareRecords: true }) },
       { name: 'import-missing-books', run: 'work-import', input: (out) => ({ file: out.export.result.file, withBook: true, extraReferencedBook: true }) },
+      { name: 'import-over-existing', run: 'work-import', input: (out) => ({ file: out.export.result.file, overwrite: true }) },
     ],
   },
   {
@@ -376,7 +388,10 @@ function shorten(value) {
   return value;
 }
 
-/** A store-by-store dump: the count always, then the rows (or their summary). */
+/**
+ * A store-by-store dump: every row, in key order, for a store of up to
+ * FULL_LIMIT rows; above that, the count, first and last row and SHA-256.
+ */
 function rowsRecord(rows) {
   return Object.fromEntries(Object.entries(rows).map(([store, list]) => [store, list.length <= FULL_LIMIT ? list : shorten(list)]));
 }
@@ -441,11 +456,15 @@ async function newPage(browser, origin) {
   });
   const page = await context.newPage();
   const errors = [];
+  const consoleErrors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
   await page.clock.setFixedTime(FIXED_NOW);
   await page.addInitScript(installPageHelpers, DB_NAME);
   await page.goto(`${origin}/__dcheck/`);
-  return { context, page, errors };
+  return { context, page, errors, consoleErrors };
 }
 
 async function buildOld(page, old) {
@@ -472,7 +491,7 @@ function abbreviated(id, schema, today) {
 }
 
 async function bundleScenario(browser, origin, base, name, old) {
-  const { context, page, errors } = await newPage(browser, origin);
+  const { context, page, errors, consoleErrors } = await newPage(browser, origin);
   try {
     await buildOld(page, old);
     await page.goto(base);
@@ -481,7 +500,8 @@ async function bundleScenario(browser, origin, base, name, old) {
       if (Date.now() > deadline) throw new Error(`bundle/${name}: the app did not open version 11 and seed within ${BOOT_LIMIT_MS / 1000} s (${errors.join('; ')})`);
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    return schemaRecord(await page.evaluate(() => window.__dcheckPage.schema()));
+    const schema = schemaRecord(await page.evaluate(() => window.__dcheckPage.schema()));
+    return { schema, pageErrors: [...errors].sort(), consoleErrors: [...consoleErrors].sort() };
   } finally {
     await context.close();
   }
@@ -565,7 +585,8 @@ try {
   const today = await todaySchema(browser, origin);
   for (const [name, old] of BUNDLE_SCENARIOS) {
     const id = `bundle/${name}`;
-    scenarios[id] = { schema: abbreviated(id, await bundleScenario(browser, origin, appUrl, name, old), today) };
+    const { schema, pageErrors, consoleErrors } = await bundleScenario(browser, origin, appUrl, name, old);
+    scenarios[id] = { schema: abbreviated(id, schema, today), pageErrors, consoleErrors };
     phaseCount++;
   }
   console.log(`  bundle: ${BUNDLE_SCENARIOS.length} scenarios`);
@@ -582,7 +603,8 @@ try {
 
       const entry = {
         schema: abbreviated(scenario.id, output.schema, today),
-        steps: shorten(output.result.steps),
+        // Every step listed; only a value inside one is shortened.
+        steps: output.result.steps.map(([label, outcome]) => [label, shorten(outcome)]),
       };
       if (Object.keys(output.result.snapshots).length > 0) {
         entry.snapshots = Object.fromEntries(Object.entries(output.result.snapshots).map(([label, rows]) => [label, rowsRecord(rows)]));

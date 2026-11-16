@@ -1464,7 +1464,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 
 | Step | State | Commit |
 | --- | --- | --- |
-| 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review owed | this commit |
+| 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review PASS WITH NOTES | `8579140` |
+| review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review owed | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1476,14 +1477,15 @@ holds)
   `share/ShareStorageAdapter` for everything else. Every phase in a fresh
   context; en-US, UTC, service workers blocked, `page.clock` fixed,
   `Math.random` seeded; requests off the origin aborted.
-- **40 scenarios, 49 phases**: bundle 7 (fresh, upgrade from v1base, v7, v8,
+- **40 scenarios, 49 phases** (50 after the review notes below): bundle 7 (fresh, upgrade from v1base, v7, v8,
   v9, v10, reopen v11); harness 33 — the same seven with a row in every store
   the old version had (schema and rows in one scenario), the two impossible
   QUL databases, `before-init`, 18 method families (the interface's sections
   plus the six raw whole-tablet calls), per-book delete (4,097 blocks in one
   book), work backup (4 phases), per-book transfer (4), whole-tablet transfer
   (4: export with and without keys, two restores, six refusals), share
-  adapter. Record `docs/refactor/phase4/storage.json`, **340,129 B**.
+  adapter. Record `docs/refactor/phase4/storage.json`, **340,129 B** (360,229 B
+  after the review notes).
   **Run time**: about 11 s for the check, 17.6 s for `npm run
   verify:storage` with its build.
 - **Masked: nothing.** Pinned: `Date.now` (page.clock), `Math.random`, locale,
@@ -1497,7 +1499,11 @@ holds)
   localStorage) untouched.
 - **Proof.** Run 1, then run 2 with `--write`: byte-identical (`cmp`); runs
   with `TZ=Pacific/Kiritimati` and a German locale, and with
-  `TZ=America/St_Johns`: PASS. The five breakages, each a temporary edit
+  `TZ=America/St_Johns`: PASS. Those runs change only the **Node** process
+  (the script's own formatting and hashing); every browser context pins
+  `timezoneId` UTC and locale en-US whatever the machine says, so they show
+  that the Node side is deterministic, not that the page code is independent
+  of time zone or locale — the page side is pinned, not varied. The five breakages, each a temporary edit
   restored from a backup copy (`cmp` equal, `git diff --quiet -- src` after
   each), each exit 1:
   1. `cards`' `byCacheKey` index dropped from the fresh branch → 25 of 40
@@ -1533,6 +1539,60 @@ holds)
   new and cosmetic (a restore's card count omits sharḥ cards).
 - T exit 0; B main chunk 788,264 B (unchanged); L 162 files, 134 edges, 11
   rules hold; Q PASS.
+
+- **Review of 4a: PASS WITH NOTES.** Coverage gaps to close on the old code
+  before any move, and readability notes. Closed here, still with no `src/`
+  change (`git diff --quiet -- src`):
+  - **`before-init` calls every one of the 84 interface methods** (95 calls:
+    the 11 with an early return are called empty and non-empty), in the
+    interface's order, and fails the harness if the list and the class's
+    own prototype disagree (less `init` and the private helpers `handle`,
+    `purgeIndex`, `loadSearchIndex`, `untyped`). Today 83 reject, 1 throws
+    synchronously (`listStoreNames`), and 11 resolve without reading the
+    handle (the empty-list early returns, the empty searches, a naming under
+    three letters, the `schemaVersion` getter). This is what R5 relies on to
+    catch a delegate that reads `this.handle` synchronously after the fifth
+    adaptation (4f–4h).
+  - **Puts over existing keys**, where a `put`→`add` change would show:
+    `putCard` and `putMarks` over existing ids (`family/cards`,
+    `family/marks`), `putStoreRows` over existing rows before any clear
+    (`family/raw-store-io`), and a new `work-backup` phase
+    `import-over-existing` — an older copy of every backed-up row under the
+    same keys, plus a row only the receiving tablet has, which survives.
+  - The bundle half records each scenario's uncaught page errors and console
+    errors, sorted (none today in any of the seven).
+  - The share scenario reads through `ShareStorageAdapter`: 18 reads that
+    reach the visitor's own database (the verse and compilation just written
+    through among them) and 6 the bundle answers (a book, blocks, the
+    always-missing card lookup, position, page).
+  - Gap (c), write order and transaction boundaries, stays a reviewer check
+    (the word diff of moved bodies); the script's header now says so.
+  - Readability: the header's paragraph on the two odd databases re-wrapped;
+    `rowsRecord`'s comment made true. A step list was also being shortened
+    like a row list once it passed 50 entries (`before-init` and
+    `share-adapter` would have been recorded as count and hash); steps are
+    now always listed in full and only values inside them are shortened.
+  - **A comment that becomes untrue at 4d**: the harness's header calls
+    `IdbStorageAdapter` "the only IndexedDB code". Left as is; it is
+    corrected with the adapter's own header in 4d (Q8).
+- **Re-measured**: 40 scenarios, **50 phases** (the new backup phase),
+  record **360,229 B**; about 12 s for the check. Run 1, then run 2 with
+  `--write`: byte-identical (`cmp`); `TZ=Pacific/Kiritimati` with a German
+  locale: PASS (Node side only, as above). Breakages re-proven, each restored
+  from a backup (`cmp` equal, `git diff --quiet -- src`), each exit 1:
+  1. `byCacheKey` dropped from the fresh branch → the same 25 scenarios;
+  3. `marks` out of `BOOK_STORES` → `delete-book`, `book-transfer`;
+  5. the `schemaVersion` check removed → the refusal assertion and
+     `device-transfer`;
+  and three that only the new coverage catches, each changing one scenario:
+  6. `getBook` no longer `async` (it then throws synchronously before
+     `init`) → `family/before-init`: `rejected` becomes `threw`;
+  7. `put` → `add` in `putStoreRows` → `family/raw-store-io` (the write over
+     existing keys rejects; a restore after a clear never showed it);
+  8. `put` → `add` in `importWork` → `work-backup` (`import-over-existing`:
+     `ConstraintError: Key already exists in the object store.`).
+  Final run PASS. T exit 0; B 788,264 B; L 162 files, 134 edges, rules hold;
+  Q PASS.
 
 ## Open
 
