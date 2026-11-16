@@ -457,12 +457,32 @@ interface AnthropicBlock {
   block?: Record<string, unknown>;
 }
 
+/**
+ * Token counts for a canned reply. A cache count may be null (the field sent
+ * as null) or undefined (the field left out of message_start altogether, which
+ * JSON.stringify does by itself): the API documents both counts as nullable,
+ * and the app reads each with `?? 0`.
+ */
+interface CannedUsage {
+  input: number;
+  output: number;
+  cacheRead: number | null | undefined;
+  cacheWrite: number | null | undefined;
+}
+
 interface AnthropicMessage {
   model: string;
   blocks: AnthropicBlock[];
   stop: string;
   stopDetails?: Record<string, unknown>;
-  usage?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  usage?: CannedUsage;
+  /**
+   * End the stream with an in-stream `event: error` after this many events
+   * (message_start counts as the first), instead of message_delta and
+   * message_stop: what the API sends when it is overloaded part-way through a
+   * reply that has already started.
+   */
+  errorAfterEvents?: number;
 }
 
 const DEFAULT_USAGE = { input: 120, output: 80, cacheRead: 0, cacheWrite: 400 };
@@ -532,6 +552,10 @@ function anthropicStream(message: AnthropicMessage): Canned {
     usage: { output_tokens: usage.output },
   });
   events.push({ type: 'message_stop' });
+  if (message.errorAfterEvents !== undefined) {
+    events.length = message.errorAfterEvents;
+    events.push({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });
+  }
   return {
     status: 200,
     headers: { 'content-type': 'text/event-stream', 'request-id': 'req_q_stream' },
@@ -545,7 +569,7 @@ function anthropicJson(message: {
   model: string;
   content: Record<string, unknown>[];
   stop: string;
-  usage?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  usage?: CannedUsage;
 }): Canned {
   const usage = message.usage ?? DEFAULT_USAGE;
   return {
@@ -1080,7 +1104,7 @@ const STRUCTURE_USAGE = { input: 907, output: 1201, cacheRead: 2003, cacheWrite:
 const RETRY_USAGE = { input: 911, output: 2399, cacheRead: 3203, cacheWrite: 17 };
 
 /** One research turn with a search call and its result, ending as `stop`. */
-function researchTurn(model: string, turn: number, stop: string, usage = TURN_USAGE[turn]): Canned {
+function researchTurn(model: string, turn: number, stop: string, usage: CannedUsage = TURN_USAGE[turn]): Canned {
   const toolId = `srvtoolu_q_turn${turn}`;
   return anthropicStream({
     model,
@@ -1103,7 +1127,7 @@ function researchTurn(model: string, turn: number, stop: string, usage = TURN_US
   });
 }
 
-function emitToolWithUsage(model: string, usage: typeof STRUCTURE_USAGE, stop = 'tool_use'): Canned {
+function emitToolWithUsage(model: string, usage: CannedUsage, stop = 'tool_use'): Canned {
   return anthropicStream({
     model,
     blocks: [{ type: 'tool_use', id: 'toolu_q_emit', name: 'emit_translation', deltas: pieces(SEGMENTS_JSON, 40) }],
@@ -1112,7 +1136,7 @@ function emitToolWithUsage(model: string, usage: typeof STRUCTURE_USAGE, stop = 
   });
 }
 
-function explainToolWithUsage(model: string, usage: typeof STRUCTURE_USAGE): Canned {
+function explainToolWithUsage(model: string, usage: CannedUsage): Canned {
   return anthropicStream({
     model,
     blocks: [{ type: 'tool_use', id: 'toolu_q_explain', name: 'emit_explanation', deltas: pieces(EXPLANATION_JSON, 50) }],
@@ -1241,6 +1265,185 @@ await scenario(
   'anthropic.translate.429-retry-after-http-date-only',
   times(3, () => anthropicError(429, { 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
   translateAnthropic(translationRequest()),
+);
+
+// ------------------------- added after the second review (gaps 3e-3i)
+//
+// Like the group above, these run after every earlier scenario, so nothing
+// those record (message ids included) moves.
+
+// (3e) A 429 whose retry-after the app cannot read: retry-after-ms alone (the
+// SDK waits its 250 ms; the app's `header ? Number(header) : null` takes the
+// null branch), and no retry header at all (the SDK's own jittered backoff,
+// Math.random pinned; the same null branch).
+await scenario(
+  'anthropic.translate.429-retry-after-ms-only',
+  times(3, () => anthropicError(429, RETRY_MS)),
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'anthropic.translate.429-no-retry-headers',
+  times(3, () => anthropicError(429)),
+  translateAnthropic(translationRequest()),
+);
+
+// (3e) An in-stream error after the reply has started: message_start, a block
+// and some deltas, then `event: error`. Once in the research pass, where the
+// text deltas reach the progress callback before the error, and once in the
+// structuring pass, part-way through the tool's arguments.
+await scenario(
+  'anthropic.translate.dig-deeper-stream-error-after-text',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [{ type: 'text', deltas: ['Looking up ', 'the example ', 'in the sources'] }],
+      stop: 'end_turn',
+      // message_start, content_block_start, three text deltas.
+      errorAfterEvents: 5,
+    }),
+  ],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+await scenario(
+  'anthropic.translate.stream-error-after-tool-deltas',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [{ type: 'tool_use', id: 'toolu_q_emit', name: 'emit_translation', deltas: pieces(SEGMENTS_JSON, 40) }],
+      stop: 'tool_use',
+      // message_start, content_block_start, three input_json deltas.
+      errorAfterEvents: 5,
+    }),
+  ],
+  translateAnthropic(translationRequest()),
+);
+
+// (3f) Several text blocks in one reply at every site that joins them. A reply
+// with web search on comes back as text, server_tool_use, web_search_tool_result
+// and then the answer in several text blocks; each site joins them with '\n'.
+// The join shows in the next request's research notes (translate, Explain), in
+// the result's raw (translate's text fallback) or in the parse error's raw
+// (Explain's structuring pass, gloss), whose successful paths parse the JSON
+// out and so would not show a changed separator.
+function searchedTurn(model: string, toolId: string, before: string[], after: string[], stop: string): Canned {
+  return anthropicStream({
+    model,
+    blocks: [
+      ...before.map((text): AnthropicBlock => ({ type: 'text', deltas: [text] })),
+      { type: 'server_tool_use', id: toolId, name: 'web_search', deltas: ['{"query":', '"example"}'] },
+      {
+        type: 'web_search_tool_result',
+        block: {
+          type: 'web_search_tool_result',
+          tool_use_id: toolId,
+          content: [
+            { type: 'web_search_result', url: 'https://example.org/q', title: 'Example', encrypted_content: 'eq', page_age: null },
+          ],
+        },
+      },
+      ...after.map((text): AnthropicBlock => ({ type: 'text', deltas: pieces(text, 9) })),
+    ],
+    stop,
+  });
+}
+await scenario(
+  'anthropic.translate.dig-deeper-multi-text-blocks',
+  [
+    searchedTurn(SONNET, 'srvtoolu_q_multi1', ['Searching for the term.'], ['The first result says ', 'the example is synthetic.'], 'pause_turn'),
+    anthropicStream({
+      model: SONNET,
+      blocks: [
+        { type: 'text', deltas: ['One more note: '] },
+        { type: 'text', deltas: ['nothing else ', 'to add.'] },
+      ],
+      stop: 'end_turn',
+    }),
+    emitTool(SONNET),
+  ],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+await scenario(
+  'anthropic.translate.text-fallback-multi-text-blocks',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [
+        { type: 'text', deltas: ['Here is the translation ', 'as JSON.'] },
+        { type: 'text', deltas: ['```json\n', SEGMENTS_ARRAY, '\n```'] },
+      ],
+      stop: 'end_turn',
+    }),
+  ],
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'explain.research-multi-text-blocks',
+  [searchedTurn(SONNET, 'srvtoolu_q_multi2', ['Looking in the library first.'], ['Passage L0 ', 'settles the meaning.'], 'end_turn'), explainTool()],
+  explain(),
+);
+await scenario(
+  'explain.structure-multi-text-blocks-neither',
+  [
+    explainResearch(),
+    anthropicStream({
+      model: SONNET,
+      blocks: [
+        { type: 'text', deltas: ['No structured answer.'] },
+        { type: 'text', deltas: ['Only prose ', 'here.'] },
+      ],
+      stop: 'end_turn',
+    }),
+  ],
+  explain(),
+);
+await glossScenario('gloss.multi-text-blocks-parse', [
+  anthropicJson({
+    model: models.ANTHROPIC_GLOSS_MODEL,
+    content: [
+      { type: 'text', text: 'The word means ', citations: null },
+      { type: 'text', text: 'an example, roughly.', citations: null },
+    ],
+    stop: 'end_turn',
+  }),
+]);
+
+// (3g) Cache counts null or left out, so each site's `?? 0` is reached. A null
+// adds as 0 in JavaScript (`0 + null`), so the null scenarios pin only what the
+// fallback value is; the absent ones are what make a dropped `?? 0` show (NaN).
+// Mixed with numeric turns, so the sum across turns still shows.
+const NULL_CACHE: CannedUsage = { input: 1213, output: 307, cacheRead: null, cacheWrite: null };
+const ABSENT_CACHE: CannedUsage = { input: 1229, output: 311, cacheRead: undefined, cacheWrite: undefined };
+await scenario('anthropic.translate.cache-usage-null', [emitToolWithUsage(SONNET, NULL_CACHE)], translateAnthropic(translationRequest()));
+await scenario('anthropic.translate.cache-usage-absent', [emitToolWithUsage(SONNET, ABSENT_CACHE)], translateAnthropic(translationRequest()));
+await scenario(
+  'anthropic.translate.dig-deeper-cache-usage-absent-then-numbers',
+  [researchTurn(SONNET, 0, 'end_turn', ABSENT_CACHE), emitToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+await scenario(
+  'explain.cache-usage-null-then-numbers',
+  [researchTurn(SONNET, 0, 'end_turn', NULL_CACHE), explainToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  explain(),
+);
+await scenario(
+  'explain.cache-usage-numbers-then-absent',
+  [researchTurn(SONNET, 0, 'end_turn', TURN_USAGE[1]), explainToolWithUsage(SONNET, ABSENT_CACHE)],
+  explain(),
+);
+
+// (3i) compile's Gemini call with a 200 whose body is not the JSON it expects:
+// empty, and an HTML page (a captive portal, say). response.json() rejects
+// with V8's SyntaxError, which compileWithGemini does not catch, so the
+// message recorded is V8's own (Node 22 here and in the deploy workflow).
+await scenario(
+  'compile.gemini.200-empty-body',
+  [{ status: 200, headers: { 'content-type': 'application/json' }, body: '' }],
+  compile('gemini', GEMINI_MODEL),
+);
+await scenario(
+  'compile.gemini.200-non-json',
+  [{ status: 200, headers: { 'content-type': 'text/html' }, body: '<html>Synthetic portal page</html>' }],
+  compile('gemini', GEMINI_MODEL),
 );
 
 // --------------------------------------------------------- pure values

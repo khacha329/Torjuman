@@ -228,3 +228,25 @@ scenario in `docs/refactor/phase3/requests.json`. Left as is:
    1: searching.Turn 2: …"), in translate and Explain
    (`anthropic.translate.research-out-of-turns`,
    `explain.research-out-of-turns`).
+
+## 15. Four more error paths (2026-11-16, measured)
+
+Exposed by check Q's second-round scenarios; each is recorded in
+`docs/refactor/phase3/requests.json`. Left as is:
+
+1. A 200 from Gemini that is not JSON — an empty body, or an HTML page such
+   as a captive portal — escapes compile as a raw `SyntaxError`, not a
+   `TranslationError` (`compile.gemini.200-empty-body`,
+   `compile.gemini.200-non-json`). Beside FOUND_ISSUES 14.1.
+2. An overload error that arrives after the Claude reply has started loses the
+   partial reply: `raw` is null in the research and the structuring pass, the
+   progress text already shown is dropped, and the tokens are paid for
+   (`anthropic.translate.dig-deeper-stream-error-after-text`,
+   `anthropic.translate.stream-error-after-tool-deltas`).
+3. Live progress runs a reply's text blocks together ("…first.Passage …"),
+   while the notes sent onward join the same blocks with a newline. Cosmetic,
+   in translate and Explain (`anthropic.translate.dig-deeper-multi-text-blocks`,
+   `explain.research-multi-text-blocks`).
+4. The app never reads `retry-after-ms`: with only that header, or none,
+   `retryAfterSeconds` is null though the SDK knew the wait
+   (`anthropic.translate.429-retry-after-ms-only`). Pinned; not clearly a bug.
