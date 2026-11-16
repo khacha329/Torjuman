@@ -29,7 +29,9 @@ and the code disagree, say so — do not silently pick one.
   (`anthropicClient`), `WEB_SEARCH_TOOL`, `textOf`, `addUsage`, and the two
   error mappings (`anthropicCallError` for Explain, gloss and compile;
   `toTranslationError` for translation and the key check; FOUND_ISSUES 11).
-  No other file imports the SDK as a value — check Q fails if one does.
+  Only it and `providers/AnthropicProvider.ts` (whose key check tests the
+  SDK's error classes) import the SDK as a value — check Q fails if any
+  other file does.
 - `translation/gemini.ts` — `geminiModelUrl` and `postGemini`, the one
   Gemini model POST (key in the header, never the URL).
 - `translation/models.ts` — the only place model IDs, prices
@@ -53,7 +55,8 @@ and the code disagree, say so — do not silently pick one.
 Since Phase 3, adding a provider is its file in `translation/providers/`, its
 entry in `PROVIDERS` and `PROVIDER_ORDER`, its id in `ProviderId`, and every
 `Record<CloudProviderId, …>` that `tsc` then reports (`PROVIDER_KEYS` in
-`services/secrets.ts`, `COMPILERS` in `qul/compile.ts`). What still names a
+`services/secrets.ts`, `COMPILERS` in `qul/compile.ts`, the reader's
+`requestsByProvider` in `ui/reader/useTranslator.ts`). What still names a
 provider on purpose — the seeded profile, Onboarding's copy and toggle, the
 session totals and banner, Explain and gloss — is listed with the reason in
 `docs/refactor/plans/phase3-provider-seams.md` Design §5. Check Q

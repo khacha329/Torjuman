@@ -873,7 +873,7 @@ four call sites build a client per call — the basis of check Q.
 | 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
 | 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review PASS WITH NOTES | `469aa90` |
 | 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) U S R pass; V owed; review PASS WITH NOTES | `4027b03` |
-| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 T B L Q U S R pass; review of the phase pending | this commit |
+| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 `afd3605` T B L Q U S R pass; review of 3r and the phase PASS WITH NOTES, fixes in the next commit | — |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1393,7 +1393,31 @@ FOUND_ISSUES 11.
   edges, `ui/reader → translation/providers` 3 → 2 (useExplanations no longer
   reaches a provider file). **Q** PASS identical: 111 scenarios, 179
   requests, 10 value sections. **U S R** were running when part 2 was
-  committed; results with the phase review.
+  committed, on the same content: **U** 180/180 (the manifest's sha256
+  `83434fbe…` unchanged by the run); **S** 30/30; **R** 28/28, perf
+  identical to the baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s;
+  1,905 / 1,904 DOM nodes; 404 / 406 blocks; 0 long tasks).
+
+- **Review of 3r and of Phase 3 as a whole: PASS WITH NOTES; "ready for the
+  PR stacked on #10", merged only after V and M (Q15).** Over the range:
+  `prompt.ts`, `profiles.ts`, `services/`, `platform/`, `package-lock.json`,
+  `layers.json`, `.gitignore`, `.github/` unchanged (no cache-key input, no
+  IndexedDB change, no dependency; `package.json` gains only the
+  `verify:requests` script); `requests.json` changed after the harness
+  commits only by the two added sections; every chunk of 3r identical to
+  3q's; the layer report at HEAD byte-identical to `phase3/layers.txt`; no
+  refactor commit fixed a bug. Fixed here (four required, docs and one
+  comment): the agent's and CLAUDE.md's "no other file imports the SDK as a
+  value" now name `AnthropicProvider.ts` too (its key check tests the SDK's
+  error classes); RESTRUCTURE §6's Phase 3 row matched to §2 and Design §5
+  (two mappings, by Q4; what still names a provider); `anthropicCallError`'s
+  comment, stale since 3e, points at `toTranslationError` in the same file;
+  CLAUDE.md says no *cloud* model id is inline (the on-device ids live in
+  `OfflineProvider.ts`) and is re-wrapped. Notes applied: README says the
+  Gemini key check's `GET` does not go through `gemini.ts`; the registry,
+  RESTRUCTURE §2 and the agent add `useTranslator.ts`'s
+  `Record<ProviderId, number>` to what `tsc` reports; `TranslationProvider.ts`
+  names compile's table.
 
 ## Phase 3 result
 

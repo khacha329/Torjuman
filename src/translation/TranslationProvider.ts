@@ -13,8 +13,9 @@ import type {
 // pins and calls this interface; a provider describes itself through the
 // fields below (models, default, key link and placeholder), so screens need
 // not name one. What still names a provider on purpose — the seeded profile,
-// Onboarding's copy, the session totals, Explain and gloss — is listed with
-// the reason in docs/refactor/plans/phase3-provider-seams.md (Design §5).
+// Onboarding's copy, the session totals, compile's table, Explain and gloss —
+// is listed with the reason in docs/refactor/plans/phase3-provider-seams.md
+// (Design §5).
 //
 // Both providers are bring-your-own-key. No key is embedded in the app: a key
 // shipped inside a distributed client is trivially extractable and the bill

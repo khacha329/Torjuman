@@ -11,7 +11,8 @@ import { isClaudeModel } from '../models';
 // interface. Adding a third provider means its file, one entry in PROVIDERS
 // and PROVIDER_ORDER, its id in ProviderId, and each Record<CloudProviderId, …>
 // tsc then reports (PROVIDER_KEYS in services/secrets.ts, COMPILERS in
-// qul/compile.ts). Corrected in restructure Phase 3: this comment used to say
+// qul/compile.ts, the reader's per-provider request counts in
+// ui/reader/useTranslator.ts). Corrected in restructure Phase 3: this comment used to say
 // it was the only place outside the settings screen that named a provider,
 // which was never true (FOUND_ISSUES 4).
 

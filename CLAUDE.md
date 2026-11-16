@@ -62,8 +62,10 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
   come from the `claude-api` skill (or the provider's docs), never memory, and
-  belong in `src/translation/models.ts` (no model ID is inline elsewhere since Phase 3; the call parameters still
-  inline are listed in FOUND_ISSUES 4 and 11).
+  belong in `src/translation/models.ts` (since Phase 3 no cloud model ID is
+  inline elsewhere; the on-device models are listed in
+  `translation/offline/OfflineProvider.ts`; the call parameters still inline
+  are in FOUND_ISSUES 4 and 11).
 - **Skip, weaken or delete a check** to get green.
 
 ## Working pattern
@@ -171,7 +173,8 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    the call parameters still inline elsewhere are listed in FOUND_ISSUES 4
    and 11. Every Claude call builds its client with `anthropicClient` in
    `translation/anthropic.ts`; check Q (`npm run verify:requests`) fails if
-   another file imports the SDK as a value.
+   any file but that one and `AnthropicProvider.ts` (whose key check tests the
+   SDK's error classes) imports the SDK as a value.
    Saved profiles are migrated when a model is retired (`successorModel`).
 5. **Translation cache keys** (`cacheKeyFor` in `translation/prompt.ts`) are
    a hash of selection, profile id and version, glossary hash, provider and

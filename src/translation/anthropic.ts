@@ -71,8 +71,9 @@ export function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void 
  * `throw anthropicCallError(error)`. Moved verbatim from explain.ts in step 3c;
  * gloss.ts had the same lines, and compile.ts the same without the first one,
  * which its `try` could never need. Translation and the key check use the
- * fuller mapping in providers/AnthropicProvider.ts, whose messages and
- * retry-after differ (FOUND_ISSUES 11).
+ * fuller mapping below (`toTranslationError`, moved here from
+ * providers/AnthropicProvider.ts in step 3e), whose messages and retry-after
+ * differ (FOUND_ISSUES 11).
  */
 export function anthropicCallError(error: unknown): TranslationError {
   if (error instanceof TranslationError) return error;
