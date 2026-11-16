@@ -1469,7 +1469,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review PASS, "ready for 4b" | `c1d2cfb` |
 | 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `056290a` |
 | 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review PASS WITH NOTES | `a4ba6af` |
-| 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review pending | this commit |
+| 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
+| 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1669,7 +1670,7 @@ holds)
   verbatim into the new `platform/storage/idbPurge.ts`: the method became
   `export async function purgeIndex(handle: IDBPDatabase<Schema>, store,
   index, key)`, de-indented one level, and its one `this.handle` became
-  `handle` (the fifth adaptation, Q3); `PURGE_BATCH` gained `export`. The six
+  `handle` (the fifth adaptation, Q3). The six
   calls in the class became `purgeIndex(this.handle, …)`. Its comment
   "every call below" is kept verbatim though the calls are now in the
   adapter. The adapter drops its now-unused `BookStore` import. The
@@ -1679,6 +1680,19 @@ holds)
   `index.js`; CSS byte-identical. **L**: rules hold. **D** PASS, identical —
   the per-book delete over 4,097 rows, `deleteQulResource`,
   `deleteNarratorShard` and the clears among it. **Q** PASS. **V owed**.
+
+- **Review of 4d: FAIL, two comment-level points, fixed in the next commit.**
+  The code is clean: all six callers are `async`, so reading `this.handle`
+  at the call site still turns a throw before `init` into a rejection (one
+  microtask sooner), and D's `before-init` shows the same `rejected` for
+  every purge caller. But the adapter's new header said the class "hands
+  each [method] to its group", which only 4i makes true — now "is moving
+  this class's code into them, store group by store group". And
+  `PURGE_BATCH` had gained an `export` no file uses — outside rule 4 (b);
+  removed (the line above says so). For 4n's list of comments to make true:
+  `purgeIndex`'s "every call below passes a valid pair" (its callers are in
+  the adapter, and later the group files); and the harness's `PRIVATE` set
+  still names `purgeIndex`, now inert.
 
 ## Open
 

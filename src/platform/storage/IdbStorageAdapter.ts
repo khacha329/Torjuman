@@ -37,10 +37,10 @@ import { BOOK_STORES, DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from '
 import { purgeIndex } from './idbPurge';
 
 // This file and the idb*.ts files beside it are the ONLY code that talks to
-// IndexedDB (restructure Phase 4 split it by store group; this class keeps the
-// StorageAdapter methods and hands each to its group). Everything else goes
-// through the StorageAdapter interface, so replacing this with native SQLite
-// under Capacitor touches nothing else.
+// IndexedDB (restructure Phase 4 is moving this class's code into them, store
+// group by store group). Everything else goes through the StorageAdapter
+// interface, so replacing this with native SQLite under Capacitor touches
+// nothing else.
 
 const SETTINGS_KEY = 'app';
 
