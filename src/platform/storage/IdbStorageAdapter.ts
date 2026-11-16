@@ -25,7 +25,6 @@ import type {
   WordGloss,
   StoredNarratorProfile,
 } from '../../types';
-import { letterFold } from '../../lib/arabic';
 import type {
   PageMeta,
   SearchHit,
@@ -33,8 +32,7 @@ import type {
   WorkBundle,
   WorkRestoreReport,
 } from './StorageAdapter';
-import { BOOK_STORES, DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from './idbSchema';
-import { purgeIndex } from './idbPurge';
+import { DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from './idbSchema';
 import {
   clearAllStores,
   countStoreRows,
@@ -42,6 +40,36 @@ import {
   putStoreRows,
   readStoreRows,
 } from './idbTransfer';
+import {
+  clearDictionaryEntries,
+  clearEntities,
+  countBlocks,
+  countPages,
+  deleteBlocksForPage,
+  deleteBook,
+  getBlock,
+  getBook,
+  getCrawlState,
+  getPage,
+  listBlocks,
+  listBlocksForPage,
+  listBooks,
+  listDictionaryEntries,
+  listEntities,
+  listFetchedPageIndices,
+  listPageMeta,
+  listTocNodes,
+  putBlocks,
+  putBook,
+  putCrawlState,
+  putDictionaryEntries,
+  putEntities,
+  putPage,
+  putTocNodes,
+  searchBlocks,
+  searchBlocksLoose,
+  type SearchEntry,
+} from './idbLibrary';
 import {
   clearBiographyEntries,
   deleteNarratorShard,
@@ -102,22 +130,6 @@ import {
 // interface, so replacing this with native SQLite under Capacitor touches
 // nothing else.
 
-/** Minimal per-block record kept in memory for search. */
-interface SearchEntry {
-  id: string;
-  normalized: string;
-  /**
-   * Letters and single spaces only.
-   *
-   * Reader search wants `normalized`, which keeps punctuation, because a
-   * reader types punctuation. Matching one book's passage against another's
-   * wants this: the two editors punctuate differently, and a colon or a
-   * doubled bracket in one and not the other defeats an otherwise exact run.
-   * Computed once, when the index loads.
-   */
-  folded: string;
-}
-
 export class IdbStorageAdapter implements StorageAdapter {
   private db: IDBPDatabase<Schema> | null = null;
 
@@ -153,195 +165,85 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ---------------------------------------------------------------- books
 
   async putBook(book: Book): Promise<void> {
-    await this.handle.put('books', book);
+    return putBook(this.lazyHandle, book);
   }
 
   async getBook(id: string): Promise<Book | undefined> {
-    return this.handle.get('books', id);
+    return getBook(this.lazyHandle, id);
   }
 
   async listBooks(): Promise<Book[]> {
-    const books = await this.handle.getAll('books');
-    return books.sort((a, b) => b.importedAt - a.importedAt);
+    return listBooks(this.lazyHandle);
   }
 
   async deleteBook(id: string): Promise<void> {
-    const db = this.handle;
-    for (const store of BOOK_STORES) {
-      await purgeIndex(this.handle, store, 'byBook', id);
-    }
-    // Narrator profiles are filed by SHARD, not by book, so they are not in
-    // the loop above. A Taqrīb import's profiles belong to this book and must
-    // go with it; an installed Itqan shard belongs to no book and must not.
-    await this.deleteNarratorShard(`taqrib:${id}`);
-
-    // The book row goes last. An interrupted removal then still lists the book,
-    // so pressing Remove again finishes the job; deleting the row first would
-    // strand every other store's rows with nothing left to reach them by.
-    await db.delete('books', id);
-    await db.delete('crawlStates', id);
-    await db.delete('positions', id);
-    this.searchIndex.delete(id);
+    return deleteBook(this.lazyHandle, this.searchIndex, id);
   }
 
   // ------------------------------------------------------------------ toc
 
   async putTocNodes(nodes: TocNode[]): Promise<void> {
-    const tx = this.handle.transaction('tocNodes', 'readwrite');
-    await Promise.all(nodes.map((node) => tx.store.put(node)));
-    await tx.done;
+    return putTocNodes(this.lazyHandle, nodes);
   }
 
   async listTocNodes(bookId: string): Promise<TocNode[]> {
-    const nodes = await this.handle.getAllFromIndex('tocNodes', 'byBook', bookId);
-    return nodes.sort((a, b) => a.order - b.order);
+    return listTocNodes(this.lazyHandle, bookId);
   }
 
   // ---------------------------------------------------------------- pages
 
   async putPage(page: Page): Promise<void> {
-    await this.handle.put('pages', page);
+    return putPage(this.lazyHandle, page);
   }
 
   async getPage(bookId: string, pageIndex: number): Promise<Page | undefined> {
-    return this.handle.get('pages', `${bookId}:p${pageIndex}`);
+    return getPage(this.lazyHandle, bookId, pageIndex);
   }
 
-  /**
-   * Reads only the compound index keys, never the records themselves — the
-   * stored HTML for a whole book is tens of megabytes and must not be pulled
-   * into memory just to work out which pages are missing.
-   */
   async listFetchedPageIndices(bookId: string): Promise<number[]> {
-    const tx = this.handle.transaction('pages', 'readonly');
-    const indices: number[] = [];
-    let cursor = await tx.store
-      .index('byBookPage')
-      .openKeyCursor(IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]));
-    while (cursor) {
-      indices.push(cursor.key[1]);
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return indices.sort((a, b) => a - b);
+    return listFetchedPageIndices(this.lazyHandle, bookId);
   }
 
-  /**
-   * Cursors the page records and keeps only the three numbers the reader needs.
-   * The stored HTML passes through but is never retained, so the ج/ص margin
-   * costs a few hundred kilobytes of live memory instead of the whole book.
-   */
   async listPageMeta(bookId: string): Promise<PageMeta[]> {
-    const meta: PageMeta[] = [];
-    const tx = this.handle.transaction('pages', 'readonly');
-    let cursor = await tx.store
-      .index('byBookPage')
-      .openCursor(IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]));
-    while (cursor) {
-      meta.push({
-        pageIndex: cursor.value.pageIndex,
-        volume: cursor.value.volume,
-        printPage: cursor.value.printPage,
-      });
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return meta;
+    return listPageMeta(this.lazyHandle, bookId);
   }
 
   async countPages(bookId: string): Promise<number> {
-    return this.handle.countFromIndex('pages', 'byBook', bookId);
+    return countPages(this.lazyHandle, bookId);
   }
 
   // --------------------------------------------------------------- blocks
 
   async putBlocks(blocks: Block[]): Promise<void> {
-    if (blocks.length === 0) return;
-    const tx = this.handle.transaction('blocks', 'readwrite');
-    await Promise.all(blocks.map((block) => tx.store.put(block)));
-    await tx.done;
-    this.searchIndex.delete(blocks[0].bookId);
+    return putBlocks(this.lazyHandle, this.searchIndex, blocks);
   }
 
   async deleteBlocksForPage(pageId: string): Promise<void> {
-    const tx = this.handle.transaction('blocks', 'readwrite');
-    let cursor = await tx.store.index('byPage').openCursor(pageId);
-    let bookId: string | null = null;
-    while (cursor) {
-      bookId = cursor.value.bookId;
-      await cursor.delete();
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    if (bookId) this.searchIndex.delete(bookId);
+    return deleteBlocksForPage(this.lazyHandle, this.searchIndex, pageId);
   }
 
   async listBlocksForPage(pageId: string): Promise<Block[]> {
-    const blocks = await this.handle.getAllFromIndex('blocks', 'byPage', pageId);
-    return blocks.sort((a, b) => a.order - b.order);
+    return listBlocksForPage(this.lazyHandle, pageId);
   }
 
   async listBlocks(bookId: string): Promise<Block[]> {
-    const blocks = await this.handle.getAllFromIndex('blocks', 'byBook', bookId);
-    return blocks.sort((a, b) => a.order - b.order);
+    return listBlocks(this.lazyHandle, bookId);
   }
 
   async getBlock(id: string): Promise<Block | undefined> {
-    return this.handle.get('blocks', id);
+    return getBlock(this.lazyHandle, id);
   }
 
   async countBlocks(bookId: string): Promise<number> {
-    return this.handle.countFromIndex('blocks', 'byBook', bookId);
+    return countBlocks(this.lazyHandle, bookId);
   }
 
-  private async loadSearchIndex(bookId: string): Promise<SearchEntry[]> {
-    const cached = this.searchIndex.get(bookId);
-    if (cached) return cached;
-
-    const entries: SearchEntry[] = [];
-    const tx = this.handle.transaction('blocks', 'readonly');
-    let cursor = await tx.store.index('byBookOrder').openCursor(
-      IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]),
-    );
-    while (cursor) {
-      entries.push({
-        id: cursor.value.id,
-        normalized: cursor.value.normalized,
-        folded: letterFold(cursor.value.normalized),
-      });
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-
-    this.searchIndex.set(bookId, entries);
-    return entries;
-  }
-
-  /**
-   * Search on letters alone, for matching a passage across two books.
-   *
-   * Same scan as `searchBlocks`, against the folded field. Separate rather
-   * than a flag because the two have different meanings: one answers "where
-   * did the reader's words occur", the other "is this the same passage".
-   */
   async searchBlocksLoose(
     bookId: string,
     foldedQuery: string,
     limit: number,
   ): Promise<SearchHit[]> {
-    if (!foldedQuery) return [];
-    const entries = await this.loadSearchIndex(bookId);
-
-    const hits: SearchHit[] = [];
-    for (const entry of entries) {
-      const at = entry.folded.indexOf(foldedQuery);
-      if (at === -1) continue;
-      const block = await this.getBlock(entry.id);
-      if (!block) continue;
-      hits.push({ block, matchStart: at, matchLength: foldedQuery.length });
-      if (hits.length >= limit) break;
-    }
-    return hits;
+    return searchBlocksLoose(this.lazyHandle, this.searchIndex, bookId, foldedQuery, limit);
   }
 
   async searchBlocks(
@@ -349,57 +251,35 @@ export class IdbStorageAdapter implements StorageAdapter {
     normalizedQuery: string,
     limit: number,
   ): Promise<SearchHit[]> {
-    if (!normalizedQuery) return [];
-    const entries = await this.loadSearchIndex(bookId);
-
-    const hits: SearchHit[] = [];
-    for (const entry of entries) {
-      const at = entry.normalized.indexOf(normalizedQuery);
-      if (at === -1) continue;
-      const block = await this.getBlock(entry.id);
-      if (!block) continue;
-      hits.push({ block, matchStart: at, matchLength: normalizedQuery.length });
-      if (hits.length >= limit) break;
-    }
-    return hits;
+    return searchBlocks(this.lazyHandle, this.searchIndex, bookId, normalizedQuery, limit);
   }
 
   // ------------------------------------------------------------- entities
 
   async putEntities(entities: Entity[]): Promise<void> {
-    if (entities.length === 0) return;
-    for (let i = 0; i < entities.length; i += 500) {
-      const tx = this.handle.transaction('entities', 'readwrite');
-      await Promise.all(entities.slice(i, i + 500).map((entity) => tx.store.put(entity)));
-      await tx.done;
-    }
+    return putEntities(this.lazyHandle, entities);
   }
 
   async listEntities(bookId: string): Promise<Entity[]> {
-    return this.handle.getAllFromIndex('entities', 'byBook', bookId);
+    return listEntities(this.lazyHandle, bookId);
   }
 
   async clearEntities(bookId: string): Promise<void> {
-    await purgeIndex(this.handle, 'entities', 'byBook', bookId);
+    return clearEntities(this.lazyHandle, bookId);
   }
 
   // ----------------------------------------------------------- dictionary
 
   async putDictionaryEntries(entries: DictionaryEntry[]): Promise<void> {
-    if (entries.length === 0) return;
-    for (let i = 0; i < entries.length; i += 500) {
-      const tx = this.handle.transaction('dictionaryEntries', 'readwrite');
-      await Promise.all(entries.slice(i, i + 500).map((entry) => tx.store.put(entry)));
-      await tx.done;
-    }
+    return putDictionaryEntries(this.lazyHandle, entries);
   }
 
   async listDictionaryEntries(bookId: string): Promise<DictionaryEntry[]> {
-    return this.handle.getAllFromIndex('dictionaryEntries', 'byBook', bookId);
+    return listDictionaryEntries(this.lazyHandle, bookId);
   }
 
   async clearDictionaryEntries(bookId: string): Promise<void> {
-    await purgeIndex(this.handle, 'dictionaryEntries', 'byBook', bookId);
+    return clearDictionaryEntries(this.lazyHandle, bookId);
   }
 
   // ---------------------------------------------------------------- marks
@@ -535,11 +415,11 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ---------------------------------------------------------------- crawl
 
   async putCrawlState(state: CrawlState): Promise<void> {
-    await this.handle.put('crawlStates', state);
+    return putCrawlState(this.lazyHandle, state);
   }
 
   async getCrawlState(bookId: string): Promise<CrawlState | undefined> {
-    return this.handle.get('crawlStates', bookId);
+    return getCrawlState(this.lazyHandle, bookId);
   }
 
   // ------------------------------------------------------------- position

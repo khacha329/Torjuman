@@ -1473,7 +1473,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
 | 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
 | 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review PASS WITH NOTES | `284b7ef` |
-| 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review pending | this commit |
+| 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review PASS | `ab1c19b` |
+| 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1803,6 +1804,59 @@ holds)
   **D** PASS, identical (40 scenarios; `family/before-init` still records
   `putNarratorProfiles([])` and `findNarratorProfiles (two letters)`
   resolving). **Q** PASS. S and R not run (not required for 4g). **V owed**.
+- **Review of `ab1c19b`: PASS; "ready for 4h".** Nothing to fix.
+
+**Step 4h, measured 2026-11-16**
+- `SearchEntry` with its comments and 28 methods moved verbatim into the new
+  `platform/storage/idbLibrary.ts`, in the class's order, de-indented, in the
+  4e fetcher form: books (`putBook`, `getBook`, `listBooks`, `deleteBook`),
+  toc (`putTocNodes`, `listTocNodes`), pages (`putPage`, `getPage`,
+  `listFetchedPageIndices`, `listPageMeta`, `countPages`), blocks and search
+  (`putBlocks`, `deleteBlocksForPage`, `listBlocksForPage`, `listBlocks`,
+  `getBlock`, `countBlocks`, the private `loadSearchIndex`,
+  `searchBlocksLoose`, `searchBlocks`), entities (`putEntities`,
+  `listEntities`, `clearEntities`), dictionary (`putDictionaryEntries`,
+  `listDictionaryEntries`, `clearDictionaryEntries`) and crawl state
+  (`putCrawlState`, `getCrawlState`). Three doc comments moved with their
+  methods (`listFetchedPageIndices`, `listPageMeta`, `searchBlocksLoose`).
+  `SearchEntry` is exported (the class's `searchIndex` field is typed with
+  it); `loadSearchIndex` is a non-exported function (only this file calls
+  it) and leaves no delegate, like 4e's `untyped`. The `searchIndex` field
+  and its comment stay in the class.
+- 37 substitution sites: `this.handle` → `handle()` 27 (two in `deleteBook`,
+  three of them the 4d `purgeIndex(this.handle, ` calls in `deleteBook`,
+  `clearEntities`, `clearDictionaryEntries`); `this.searchIndex` →
+  `searchIndex` 5 (`deleteBook`, `putBlocks`, `deleteBlocksForPage`, two in
+  `loadSearchIndex`), a `searchIndex: Map<string, SearchEntry[]>` parameter
+  second after the fetcher in those four and both searches;
+  `this.loadSearchIndex(` → `loadSearchIndex(handle, searchIndex, ` 2;
+  `this.getBlock(` → `getBlock(handle, ` 2; `this.deleteNarratorShard(` →
+  `deleteNarratorShard(handle, ` 1, imported from `./idbReference`. A token
+  diff of each function against `ab1c19b` shows only those, `export
+  function` (`function` alone and `private` dropped for `loadSearchIndex`),
+  the parameters and wrapped signatures' trailing commas; `deleteBook`'s
+  statements are in the same order.
+- New file edges inside `platform/storage`: `idbLibrary` → `StorageAdapter`
+  (types), `idbSchema`, `idbPurge`, `idbReference`; `idbReference` does not
+  import `idbLibrary`, so no cycle. The adapter drops `letterFold`,
+  `purgeIndex` and `BOOK_STORES` from its imports and gains the
+  `./idbLibrary` block (27 functions and `type SearchEntry`). The class now
+  holds `db`, `searchIndex`, `init`, the `handle` getter, `lazyHandle`, 81
+  one-line delegates, the `schemaVersion` getter, and `exportWork`/
+  `importWork` (4i): 624 lines.
+- For 4n: `idbTransfer.ts` still types the map `Map<string, unknown>`; it
+  could now take `Map<string, SearchEntry[]>` and its header's sentence about
+  4h would go. The harness's `PRIVATE` set now also names the inert
+  `loadSearchIndex`. The class delegates for `listFetchedPageIndices`,
+  `listPageMeta` and `searchBlocksLoose` lost their doc comments with the move
+  (like `deleteShareRecord` at 4f).
+- **T** exit 0. **B** exit 0; main chunk 790,648 → 791,806 B (+1,158); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold, no cycle. **D**
+  PASS, identical (40 scenarios; `family/before-init` still records the empty
+  `putBlocks`, `putEntities`, `putDictionaryEntries` and both searches with
+  `""` resolving). **Q** PASS. **S** 30/30. **R** 28/28; landscape 240,000 px
+  33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px 24.4 s 1,904 nodes 0
+  long tasks. **V owed**.
 
 ## Open
 
