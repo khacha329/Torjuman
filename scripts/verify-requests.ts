@@ -1633,6 +1633,15 @@ values('values.offlineModels', () => {
   return { OFFLINE_MODELS, byProvider, byModel };
 });
 
+// Added in 3m (plan Design §8): the legacy-profile inference AppContext ran
+// inline, `isClaudeModel(profile.model) ? 'anthropic' : 'gemini'`, now the
+// registry's providerIdForModel. Every model id Q knows, the offline ones, and
+// the empty string.
+values('values.providerIdForModel', () => {
+  const ids = [...MODEL_IDS, ...OFFLINE_MODELS.map((model) => model.id), 'some-model', ''];
+  return Object.fromEntries(ids.map((model) => [model, registry.providerIdForModel(model)]));
+});
+
 // ------------------------------------------- the SDK-import allowlist (Q12)
 
 // Which files may import `@anthropic-ai/sdk` as a value (a type-only import is

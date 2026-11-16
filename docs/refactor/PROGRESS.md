@@ -867,7 +867,8 @@ four call sites build a client per call — the basis of check Q.
 | 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `034d11f` |
 | 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `d0ff6e1` |
 | 3k. `costOf` → `models.ts` | T B L Q S R U pass; V owed; review PASS WITH NOTES | `fff14db` |
-| 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review pending | this commit |
+| 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review PASS | `2655b79` |
+| 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1220,6 +1221,29 @@ FOUND_ISSUES 11.
 - **T** exit 0. **Q** PASS, identical — every compile scenario. **B** exit 0;
   main chunk 788,200 → 788,198 B (−2); only `index.js` differs; CSS
   byte-identical. SSR build resolves; **V owed**. **L**: rules hold.
+
+- **Review of 3l: PASS; "ready for 3m".** Both ids reach the same function
+  with the same arguments; the lookup and the old ternary both return the
+  inner promise from the async body, so errors still arrive as rejections;
+  the table names hoisted `async function` declarations, so there is no TDZ
+  (the bundle keeps that order).
+
+**Step 3m, measured 2026-11-16** (plan Design §4)
+- `providerIdForModel(model): CloudProviderId` in `providers/registry.ts`,
+  right after `providerFor`: the expression moved verbatim from
+  `AppContext.tsx:143`, whose comment stays where it is. The line now reads
+  `profile.providerId ?? providerIdForModel(profile.model)`. `AppContext` no
+  longer imports `isClaudeModel` (that line was its only use); the registry
+  imports it from `../models`, an edge `translation/providers → translation`
+  already had.
+- **Q**: section `values.providerIdForModel` added (every model id Q knows,
+  both offline ids, `'some-model'`, `''`); the record's diff is 21 lines
+  added, none removed. Checked by reading against `isClaudeModel`
+  (`startsWith('claude-')`): the seven Claude ids are `anthropic`, everything
+  else `gemini`. Then PASS, identical. **T** exit 0. **B** exit 0; main chunk
+  788,198 → 788,224 B (+26, an exported function); only `index.js` differs;
+  CSS byte-identical. SSR build resolves; **V owed**. **L**: 134 edges, rules
+  hold. **U** 180/180 (boot path changed).
 
 ## Open
 

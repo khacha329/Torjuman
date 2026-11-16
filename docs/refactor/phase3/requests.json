@@ -7390,6 +7390,27 @@
           }
         }
       }
+    },
+    {
+      "id": "values.providerIdForModel",
+      "values": {
+        "claude-fable-5-1": "anthropic",
+        "claude-haiku-4-5": "anthropic",
+        "claude-haiku-5-5": "anthropic",
+        "claude-opus-5": "anthropic",
+        "claude-opus-5-5": "anthropic",
+        "claude-sonnet-5": "anthropic",
+        "claude-sonnet-5-5": "anthropic",
+        "gemini-3.7-flash": "gemini",
+        "gemini-3.5-flash-lite": "gemini",
+        "gemini-2.5-flash": "gemini",
+        "gemini-2.5-pro": "gemini",
+        "some-unknown-model": "gemini",
+        "opus-mt-ar-en": "gemini",
+        "nllb-200-distilled-600M": "gemini",
+        "some-model": "gemini",
+        "": "gemini"
+      }
     }
   ]
 }

@@ -3,6 +3,7 @@ import { isCloudProvider } from '../../lib/providers';
 import type { CloudProviderId, ProviderId } from '../../types';
 import { AnthropicProvider } from './AnthropicProvider';
 import { GeminiProvider } from './GeminiProvider';
+import { isClaudeModel } from '../models';
 
 // The only place outside the settings screen that names a provider.
 //
@@ -33,6 +34,11 @@ export const DEFAULT_PROVIDER_ID: CloudProviderId = 'gemini';
 
 export function providerFor(id: ProviderId): TranslationProvider {
   return isCloudProvider(id) ? PROVIDERS[id] : PROVIDERS[DEFAULT_PROVIDER_ID];
+}
+
+/** Which provider a profile saved before providers existed was on (AppContext). */
+export function providerIdForModel(model: string): CloudProviderId {
+  return isClaudeModel(model) ? 'anthropic' : 'gemini';
 }
 
 /** How a card labels the thing that produced it. */
