@@ -869,7 +869,8 @@ four call sites build a client per call — the basis of check Q.
 | 3k. `costOf` → `models.ts` | T B L Q S R U pass; V owed; review PASS WITH NOTES | `fff14db` |
 | 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review PASS | `2655b79` |
 | 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review PASS | `b114143` |
-| 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q pass; U S R running; V owed; review pending | this commit |
+| 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q U S R pass; V owed; review PASS WITH NOTES | `309b5e2` |
+| 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1273,8 +1274,34 @@ FOUND_ISSUES 11.
   `modelsForIsProviderArray` still true. **B** exit 0; main chunk 788,224 →
   788,246 B (+22); only `index.js` differs; CSS byte-identical. SSR build
   resolves; **V owed** (`verify-parsers.ts:4196`). **L**: 134 edges, rules
-  hold. **U S R** were running when this was committed; results with the
-  review.
+  hold. **U S R** were running when 3n was committed, on the same
+  `src`/`scripts` content (the commit added only this text): **U** 180/180;
+  **S** 30/30; **R** 28/28, perf identical to the baseline in both
+  orientations.
+
+- **Review of 3n: PASS WITH NOTES; "ready for 3o".** All three ids give the
+  same results; nothing mutates `availableModels` or `knownModels` (grepped
+  for sort/push/splice/reverse and the rest); no stale `models.`-qualified
+  use anywhere. Notes, for 3r: `verify-requests.ts:333`'s "a value 3n's
+  knownModels may read" is untrue (`knownModels` does not read
+  `OFFLINE_MODELS`); the commit message says offline "still falls to Gemini"
+  without saying that holds while `DEFAULT_PROVIDER_ID` is `gemini` (this
+  entry and the plan's R6 do).
+
+**Step 3o, measured 2026-11-16** (plan Design §4)
+- `TranslationProvider` gains `keyPlaceholder` (comment from Design §4),
+  after `keyHelpUrl`; Anthropic `'sk-ant-…'`, Gemini `'AIza…'`. The strings
+  were taken by script from the two ternaries they replace, not retyped: both
+  end in U+2026. `SettingsScreen.tsx:273` and `OnboardingScreen.tsx:106` read
+  `placeholder={provider.keyPlaceholder}` (`provider` was already
+  `providerFor(providerId)` in both).
+- **U** 180/180; the captured DOM holds `placeholder="AIza…"` and
+  `placeholder="sk-ant-…"` eight times each (settings, settings--api-keys,
+  settings-proxy, onboarding, onboarding--claude, both sizes). **T** exit 0.
+  **Q** PASS, identical (the descriptor section lists fields by name and
+  does not record the new one, by design: the record does not change at 3o).
+  **B** exit 0; main chunk 788,246 → 788,258 B (+12); only `index.js`; CSS
+  byte-identical. **L**: rules hold.
 
 ## Open
 

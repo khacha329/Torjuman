@@ -41,6 +41,7 @@ export class AnthropicProvider implements TranslationProvider {
   readonly knownModels: ModelOption[] = [...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS];
   readonly defaultModel = ANTHROPIC_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://console.anthropic.com/settings/keys';
+  readonly keyPlaceholder = 'sk-ant-…';
   readonly isFree = false;
   readonly fitFor = 'For passages you intend to teach from.';
 

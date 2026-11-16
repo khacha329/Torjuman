@@ -58,6 +58,7 @@ export class GeminiProvider implements TranslationProvider {
   readonly knownModels: ModelOption[] = GEMINI_MODELS;
   readonly defaultModel = GEMINI_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://aistudio.google.com/apikey';
+  readonly keyPlaceholder = 'AIza…';
   readonly isFree = true;
   readonly fitFor =
     'Good for reading along and checking passages you would otherwise skip.';

@@ -270,7 +270,7 @@ function ProviderKeyField({ providerId }: { providerId: CloudProviderId }) {
         dir="ltr"
         type="password"
         autoComplete="off"
-        placeholder={providerId === 'anthropic' ? 'sk-ant-…' : 'AIza…'}
+        placeholder={provider.keyPlaceholder}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);

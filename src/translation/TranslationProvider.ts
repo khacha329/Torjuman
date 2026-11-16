@@ -91,6 +91,8 @@ export interface TranslationProvider {
   readonly defaultModel: string;
   /** Where the user goes to get a key. */
   readonly keyHelpUrl: string;
+  /** Shown in an empty key field: what this provider's keys start with. */
+  readonly keyPlaceholder: string;
   readonly isFree: boolean;
   /** One line describing what this provider is fit for. */
   readonly fitFor: string;
