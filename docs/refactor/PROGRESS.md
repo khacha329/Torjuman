@@ -841,6 +841,14 @@ owner's PC (steps 2b, 2d, 2e, 2f touch modules it builds), and **M** on the
 tablet with `npm run stage` — including one book exported and imported back,
 which no automated check covers.
 
+## Phase 3: provider seams (planning, branch `claude/restructure-phase-3`)
+
+Plan: [`plans/phase3-provider-seams.md`](plans/phase3-provider-seams.md),
+written by the `torjuman-planner` agent on `ef2c626`; **awaiting the owner's
+approval** (Q1–Q16). Checked here: the SDK takes `fetch` when a client is
+built (`client.mjs`: `options.fetch ?? Shims.getDefaultFetch()`), and all
+four call sites build a client per call — the basis of check Q.
+
 ## Open
 
 - V baseline count from the owner's PC.
