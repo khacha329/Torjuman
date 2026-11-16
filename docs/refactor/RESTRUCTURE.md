@@ -94,13 +94,17 @@ And concretely:
   `WorkBundle` field and a `WORK_STORES` entry in `idbBackup.ts` (`tsc` fails
   until the two agree); a `DB_VERSION` bump with a line in the schema
   history (CLAUDE.md's Never and trap 6); and in check D
-  (`scripts/verify-storage.mjs`), the new store in `TODAY`, an
-  `OLD_DATABASES` entry for the previous version *without* it, and the
-  version D expects moved to the new one, then a re-baseline after checking
-  that the diff is the new store and nothing else. The entry must be
-  `onUpgrade: 'if-missing'`: an existing tablet gets the store only that
-  way, and without the old-version database D cannot see a store wrongly
-  marked `'assumed'` — every database it builds would already contain it.
+  (`scripts/verify-storage.mjs`), the new store in `TODAY` and named in the
+  `without(...)` lists of the older entries, an `OLD_DATABASES` entry for
+  the previous version *without* it — named in `BUNDLE_SCENARIOS` and
+  `HARNESS_SCENARIOS`, since D builds only the databases a scenario names —
+  a reopen scenario at the new version, and the version D expects moved,
+  then a re-baseline after checking that the diff is the new store and
+  nothing else. The entry must be `onUpgrade: 'if-missing'`, the one value
+  that adds a store to an existing tablet and keeps its data (`'recreate'`
+  also creates a missing store, but empties it on every upgrade). Without
+  the old-version database D cannot see a store wrongly marked `'assumed'`:
+  every database it builds would already contain it.
   **Changing an existing store** (a new index, a different key path) is not
   a table edit at all: `upgradeDatabase` never alters a store that exists,
   except `'recreate'`, which empties it. A table edit alone gives fresh

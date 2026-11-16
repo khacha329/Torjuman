@@ -48,10 +48,11 @@ are kept out of backups".
   class delegate, `ShareStorageAdapter`, `perBook` with the `SameUnion`
   assertion and D's `EXPECTED_BOOK_STORES`, `WorkBundle` with `WORK_STORES`,
   the `DB_VERSION` bump and history line, and in check D `TODAY`, an
-  `OLD_DATABASES` entry for the previous version without the store, the
-  expected version, and a re-baseline. A new index or key path on an
-  existing store needs migration code in the upgrade branch: no `onUpgrade`
-  value alters a store that exists. Say in the PR what
+  `OLD_DATABASES` entry for the previous version without the store that a
+  scenario names, the expected version, and a re-baseline. A new index or
+  key path on an existing store needs migration code in the upgrade branch:
+  no `onUpgrade` value alters a store that exists, except `'recreate'`,
+  which empties it. Say in the PR what
   an old tablet does on first open, and what the tablet transfer does between
   two versions (it refuses a schema mismatch).
 - Before restructuring storage code, take a schema baseline on the old code:

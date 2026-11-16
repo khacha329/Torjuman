@@ -199,8 +199,9 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    assertion under `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if
    backed up, its `WorkBundle` field and a `WORK_STORES` entry; the
    `DB_VERSION` bump; and in check D the store in `TODAY`, an
-   `OLD_DATABASES` entry for the previous version without it, the expected
-   version moved, then a re-baseline (RESTRUCTURE §2). Its entry must be
+   `OLD_DATABASES` entry for the previous version without it that a
+   scenario names, the expected version moved, then a re-baseline
+   (RESTRUCTURE §2 has the detail). Its entry must be
    `onUpgrade: 'if-missing'`. A new index or key path on an existing store
    is **not** a table edit: the upgrade branch never alters a store that
    exists (`'recreate'` empties it), so it needs its own migration code, or

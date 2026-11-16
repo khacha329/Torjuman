@@ -2311,7 +2311,8 @@ today's behaviour. It needs its own change, if the owner wants one.
 ## Open
 
 - V baseline count from the owner's PC.
-- The owner's list of creed-book features (for the Phase 5b plan).
+- The owner's list of creed-book features (for the Phase 5b plan): set aside by the owner until the restructure is finished.
 
 ## Later
 
+None: Phase 3's recorded-request check and Phase 4's check D are built.
