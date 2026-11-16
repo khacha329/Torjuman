@@ -62,7 +62,8 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
   come from the `claude-api` skill (or the provider's docs), never memory, and
-  belong in `src/translation/models.ts` (known exceptions: FOUND_ISSUES 4).
+  belong in `src/translation/models.ts` (no model ID is inline elsewhere since Phase 3; the call parameters still
+  inline are listed in FOUND_ISSUES 4 and 11).
 - **Skip, weaken or delete a check** to get green.
 
 ## Working pattern
@@ -121,7 +122,8 @@ src/
   retrieval/           quran.com, sunnah.com, dorar.net, sharḥ, enrichment
   qul/                 Qurʾān Universal Library resources (seed, read, compile)
   translation/         provider contract, models, profiles, prompt, schema,
-                       parsing, Explain, gloss
+                       parsing, Explain, gloss; anthropic (the one SDK
+                       client, error mappings), gemini (the one POST)
     providers/         AnthropicProvider, GeminiProvider, the registry
     offline/           on-device model (transformers.js)
   library/             per-book transfer, whole-tablet transfer, relay, share target
@@ -166,7 +168,10 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    a text fallback (`parseSegments.ts`). Opus 5.5 takes `output_config.effort`.
    IDs, prices (with per-model cache-read multipliers and Haiku 5.5's long
    context tier), output ceilings and effort belong in `translation/models.ts`;
-   the few that are still inline elsewhere are listed in FOUND_ISSUES 4.
+   the call parameters still inline elsewhere are listed in FOUND_ISSUES 4
+   and 11. Every Claude call builds its client with `anthropicClient` in
+   `translation/anthropic.ts`; check Q (`npm run verify:requests`) fails if
+   another file imports the SDK as a value.
    Saved profiles are migrated when a model is retired (`successorModel`).
 5. **Translation cache keys** (`cacheKeyFor` in `translation/prompt.ts`) are
    a hash of selection, profile id and version, glossary hash, provider and

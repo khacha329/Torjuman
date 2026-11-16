@@ -48,6 +48,7 @@ Found by the Phase 0 review.
   `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and
   `ui/settings/OfflineTranslation.tsx` all do.
 - A model ID outside `models.ts`: `ui/settings/OfflineTranslation.tsx:210`
+  (`:206` by Phase 3)
   saves `model: 'gemini-3.7-flash'` inline. **Replaced in Phase 3 step 3p**
   (owner's Q6 (b)) by `GEMINI_DEFAULT_MODEL`, the same value; the provider
   literal `'gemini'` stays ("back to Gemini", not "back to the default").
@@ -59,7 +60,13 @@ Found by the Phase 0 review.
 
 Left as is: Phase 3 (provider seams) is where these move, as structure. The
 comment in `registry.ts` is corrected when the registry moves in Phase 1 step
-1h only if the plan names it; otherwise in Phase 3.
+1h only if the plan names it; otherwise in Phase 3. **Phase 3 status:** the
+model id and gloss's parameters moved (3j, 3p); the names in `AppContext`,
+`compile.ts`, `ReaderScreen.tsx` and `useExplanations.ts` became registry,
+table or module constants (3l, 3m, 3q); the registry's and
+`TranslationProvider.ts`'s comments were corrected in 3r. What still names a
+provider, and why, is the plan's Design §5. The call parameters still inline
+are in entry 11's last paragraph.
 
 ## 5. A detached and miscounted comment about the API keys (2026-11-15, measured)
 
@@ -174,8 +181,9 @@ Not duplicates: the nine red error boxes, which all differ.
 Found by the Phase 3 plan survey. Left as is (owner's answer to Phase 3 Q4:
 unifying them is a behaviour change for its own PR):
 
-- `translation/providers/AnthropicProvider.ts` (~359–363) reads `retry-after`
-  with `Number()`, so a date-form value gives `NaN` seconds (check Q records
+- `translation/providers/AnthropicProvider.ts` (~359–363; since Phase 3 step
+  3e `toTranslationError` in `translation/anthropic.ts` ~116–121) reads
+  `retry-after` with `Number()`, so a date-form value gives `NaN` seconds (check Q records
   it: `anthropic.translate.429-retry-after-http-date`).
 - Explain, gloss and compile map Anthropic errors more coarsely than
   translation: a 403 comes out as `api`, and a 429 carries no retry-after.
@@ -191,7 +199,7 @@ research turn limit, the web-search `max_uses`, Gemini's `MAX_RETRIES`.
 
 ## 12. A network failure passes the Claude key check (2026-11-16, measured)
 
-`AnthropicProvider.validateKey` (~62–80) returns `true` for every `APIError`
+`AnthropicProvider.validateKey` (~62–80; ~51–69 by Phase 3) returns `true` for every `APIError`
 that is not a 401 or 403, on the reasoning that a rate limit or a 400 still
 proves the key authenticated. But the SDK's `APIConnectionError` is an
 `APIError` with no status (`node_modules/@anthropic-ai/sdk/core/error.mjs`

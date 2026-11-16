@@ -919,3 +919,19 @@ Explain and gloss export their provider (Q10); the full record committed
 reader captures tried in 3b (Q13); the reviewer after every commit and the
 `torjuman-llm` agent reads the plan before 3a (Q14); one PR stacked on #10,
 merged after V and M (Q15); RESTRUCTURE §2's provider sentence reworded (Q16).
+
+## Corrections found in review (step 3r)
+
+The step reviews found these slips in the approved text. The text above is
+left as approved; what the code did is in PROGRESS.
+
+- Design §3, the `SettingsScreen.tsx` placeholder row: the line was `:273`,
+  not `:274` (3o review).
+- Design §4, "`registry.ts` imports `ModelOption` … and nothing new from
+  `models.ts`": nothing beyond `isClaudeModel`, which 3m's own
+  `providerIdForModel` needs (3m review).
+- Step 3k: `costOf` was at `AnthropicProvider.ts:282-307` by then, not
+  `:316-341`, and `scripts/verify-requests.ts` imports it too (the Steps row
+  names it; the paragraph does not) (3k review).
+- Step 3l says an id outside `CloudProviderId` would "throw a `TypeError`";
+  inside the async `compileAyah` it is a rejection (3l review).
