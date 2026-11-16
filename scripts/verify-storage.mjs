@@ -68,7 +68,9 @@
 //     three are in the one written with them;
 //   - after a whole-tablet restore every row equals the sending tablet's;
 //   - every refused whole-tablet file left rows and localStorage untouched;
-//   - the share adapter's ignored writes left the visitor's database untouched.
+//   - the share adapter's ignored writes left the visitor's database untouched;
+//   - the code's BOOK_STORES is EXPECTED_BOOK_STORES below, name for name and
+//     in order.
 //
 // Masked: nothing. Date.now and Math.random are pinned in the page, so the
 // ids `newId` makes on arrival (entities, the dictionary root index) are the
@@ -525,11 +527,12 @@ async function harnessPhase(browser, origin, phase, input) {
     const rows = await page.evaluate(() => window.__dcheckPage.rows());
     const local = await page.evaluate(() => window.__dcheckPage.local());
     const fakeKeys = await page.evaluate(() => window.__dcheckHarness.fakeKeys);
+    const bookStores = await page.evaluate(() => window.__dcheckHarness.bookStores);
     // Recorded, not fatal: an exception thrown inside the upgrade callback
     // reaches the page as an uncaught error event as well as a rejected
     // `init` (the odd database without qulResources), and that is the
     // behaviour being pinned.
-    return { result, schema: schemaRecord(schema), rows, local, fakeKeys, errors };
+    return { result, schema: schemaRecord(schema), rows, local, fakeKeys, bookStores, errors };
   } finally {
     await context.close();
   }
@@ -538,6 +541,19 @@ async function harnessPhase(browser, origin, phase, input) {
 // ------------------------------------------------------------------ assertions
 
 const failures = [];
+
+/**
+ * BOOK_STORES as it must be, written here by hand and never derived from the
+ * code under test. Its ORDER is `deleteBook`'s purge order, which decides what
+ * an interrupted removal leaves behind (plan R6); since step 4l the list is
+ * the table's `perBook` entries in table order, so moving an entry in the
+ * table reorders it. Neither `tsc` nor the record sees that: every purge
+ * completes here, so the rows end the same. Hence an assertion.
+ */
+const EXPECTED_BOOK_STORES = [
+  'tocNodes', 'pages', 'blocks', 'entities', 'dictionaryEntries',
+  'marks', 'cards', 'explanationCards', 'sharhCards', 'biographyEntries',
+];
 function assert(label, ok) {
   if (!ok) failures.push(label);
 }
@@ -647,6 +663,13 @@ try {
       for (const [label, untouched] of Object.entries(outputs.refusals.result.untouched)) {
         assert(`refusals: rows and localStorage untouched ${label}`, untouched === true);
       }
+    }
+    if (scenario.id === 'delete-book') {
+      const actual = outputs['delete-book'].bookStores;
+      assert(
+        `BOOK_STORES is ${JSON.stringify(actual)}, expected ${JSON.stringify(EXPECTED_BOOK_STORES)} in that order`,
+        JSON.stringify(actual) === JSON.stringify(EXPECTED_BOOK_STORES),
+      );
     }
     if (scenario.id === 'share-adapter') {
       assert('share adapter: ignored writes left the database untouched', outputs.share.result.ignoredLeftDatabaseUnchanged === true);

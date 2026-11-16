@@ -1479,7 +1479,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
 | 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review PASS WITH NOTES | `afffa50` |
 | 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review PASS WITH NOTES | `87b3b26` |
-| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review pending | this commit |
+| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review pending | `b60633e` |
+| 4l follow-up — D asserts `BOOK_STORES`' order against its own hand list (negative test 3 now caught) | T D pass; the record unchanged; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2105,16 +2106,26 @@ holds)
   2. `perBook: true` on `glossary`, which has no `byBook` index: `tsc` fails
      at the entry (TS2322). D on the bundle FAILs 2 of 41, `delete-book` and
      `book-transfer`.
-  3. `cards` moved above `marks` in the table: `tsc` passes and D PASSes,
-     identical. Neither sees the order of `BOOK_STORES`, which is
-     `deleteBook`'s purge order and so decides what an interrupted removal
-     leaves (R6). The reviewer compares the order. A D harness assertion
-     against its own hand list would catch it; not added here.
+  3. `cards` moved above `marks` in the table: `tsc` passes, and at first D
+     PASSed too, identical. The order of `BOOK_STORES` is `deleteBook`'s
+     purge order and so decides what an interrupted removal leaves (R6),
+     but every purge completes in D, so the rows end the same. **Closed in
+     the 4l follow-up:** D now asserts on every run, `--write` included, that the
+     real `BOOK_STORES` equals `EXPECTED_BOOK_STORES`, name for name and in
+     order. The harness page imports `BOOK_STORES` from `idbSchema.ts` and
+     exposes a copy; `verify-storage.mjs` compares it after `delete-book`
+     with its own hand-written list, never derived from the code. The
+     header's "Asserted on every run" list names it. The record is
+     unchanged, so there is no re-baseline. Re-run: `tsc` exit 0; D exit 1,
+     "FAIL — 1 assertion(s): BOOK_STORES is [… "cards","marks" …],
+     expected [… "marks","cards" …] in that order", and "the record is
+     identical … but the assertions above fail". Restored from a `cp` copy,
+     then D PASS, identical.
 - **T** exit 0. **B** exit 0; main chunk 790,745 → 790,779 B (+34); only
   `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
   identical (41 scenarios, `delete-book` over 4,097 blocks and
-  `book-transfer` among them). **Q** PASS. S, R and U not run (not required
-  for 4l). **V owed**.
+  `book-transfer` among them), with the new order assertion holding.
+  **Q** PASS. S, R and U not run (not required for 4l). **V owed**.
 
 ## Open
 

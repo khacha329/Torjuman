@@ -39,6 +39,7 @@ import { exportBook, importBookFile } from '../src/library/transfer';
 import { exportDevice, inspectDeviceFile, restoreDevice } from '../src/library/deviceTransfer';
 import { ShareStorageAdapter } from '../src/share/ShareStorageAdapter';
 import { letterFold, normalize } from '../src/lib/arabic';
+import { BOOK_STORES } from '../src/platform/storage/idbSchema';
 
 type Row = Record<string, unknown>;
 type Rows = Record<string, Row[]>;
@@ -1187,6 +1188,8 @@ async function same(before: { rows: Rows; local: [string, string][] }): Promise<
 
 (window as unknown as { __dcheckHarness: unknown }).__dcheckHarness = {
   fakeKeys: FAKE_KEYS,
+  // The real list, for the order assertion in verify-storage.mjs.
+  bookStores: [...BOOK_STORES],
   run: (name: string, input: Record<string, unknown> = {}) => {
     const phase = phases[name];
     if (!phase) throw new Error(`no harness phase "${name}"`);
