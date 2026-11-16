@@ -70,8 +70,9 @@ fixtures/            unmodified HTML fetched from shamela.ws (not committed)
 `platform/http/` is the only place that calls `fetch` through the proxy.
 A few modules fetch directly, on purpose, because they need what
 `HttpClient` — text `GET`s only — does not do or because their host allows
-browser requests: the Gemini API (`GeminiProvider.ts`, `qul/compile.ts`; their model calls go
-through `translation/gemini.ts`, the key check's `GET` does not), the
+browser requests: the Gemini API (`GeminiProvider.ts`, `qul/compile.ts`;
+their model calls go through `translation/gemini.ts`, the key check's `GET`
+does not), the
 transfer relay's binary `PUT`/`GET`/`DELETE` (`library/relayTransfer.ts`), and
 static files — the optional remote catalog (`catalog/catalogService.ts`),
 shared-chapter bundles (`share/loadShare.ts`), and the app's own bundled

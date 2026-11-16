@@ -53,10 +53,11 @@ and the code disagree, say so — do not silently pick one.
   load.
 
 Since Phase 3, adding a provider is its file in `translation/providers/`, its
-entry in `PROVIDERS` and `PROVIDER_ORDER`, its id in `ProviderId`, and every
-`Record<CloudProviderId, …>` that `tsc` then reports (`PROVIDER_KEYS` in
-`services/secrets.ts`, `COMPILERS` in `qul/compile.ts`, the reader's
-`requestsByProvider` in `ui/reader/useTranslator.ts`). What still names a
+entry in `PROVIDERS` and `PROVIDER_ORDER`, its id in `ProviderId`, and what
+`tsc` then reports: each `Record<CloudProviderId, …>` missing a key
+(`PROVIDER_KEYS` in `services/secrets.ts`, `COMPILERS` in `qul/compile.ts`)
+and the reader's `requestsByProvider: Record<ProviderId, number>` in
+`ui/reader/useTranslator.ts`. What still names a
 provider on purpose — the seeded profile, Onboarding's copy and toggle, the
 session totals and banner, Explain and gloss — is listed with the reason in
 `docs/refactor/plans/phase3-provider-seams.md` Design §5. Check Q

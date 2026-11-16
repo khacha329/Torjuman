@@ -873,7 +873,7 @@ four call sites build a client per call — the basis of check Q.
 | 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
 | 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review PASS WITH NOTES | `469aa90` |
 | 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) U S R pass; V owed; review PASS WITH NOTES | `4027b03` |
-| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 `afd3605` T B L Q U S R pass; review of 3r and the phase PASS WITH NOTES, fixes in the next commit | — |
+| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 `afd3605` T B L Q U S R pass; review of 3r and the phase PASS WITH NOTES; its fixes `0648b5a` (review FAIL: two wordings) and this commit | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1418,6 +1418,16 @@ FOUND_ISSUES 11.
   RESTRUCTURE §2 and the agent add `useTranslator.ts`'s
   `Record<ProviderId, number>` to what `tsc` reports; `TranslationProvider.ts`
   names compile's table.
+
+- **Review of `0648b5a` (the phase fixes): FAIL, two wordings, fixed here.**
+  RESTRUCTURE's Phase 3 row said compile, Explain and gloss "now read" the
+  registry's descriptors — they do not (compile has its own table, Explain
+  and gloss export a fixed provider); the row now says what each does and
+  lists them, and Offline's "back to Gemini" (Q6), among what still names a
+  provider. And `useTranslator.ts`'s request counts are a
+  `Record<ProviderId, number>`, not a `Record<CloudProviderId, …>`: the
+  registry comment, RESTRUCTURE §2 and the agent now say so. Three lines left
+  unwrapped (RESTRUCTURE §2, `registry.ts`, README) are re-wrapped.
 
 ## Phase 3 result
 

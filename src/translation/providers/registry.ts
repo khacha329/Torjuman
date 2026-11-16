@@ -9,12 +9,13 @@ import { isClaudeModel } from '../models';
 //
 // Everything else asks for the provider a profile pins and talks to the
 // interface. Adding a third provider means its file, one entry in PROVIDERS
-// and PROVIDER_ORDER, its id in ProviderId, and each Record<CloudProviderId, …>
-// tsc then reports (PROVIDER_KEYS in services/secrets.ts, COMPILERS in
-// qul/compile.ts, the reader's per-provider request counts in
-// ui/reader/useTranslator.ts). Corrected in restructure Phase 3: this comment used to say
-// it was the only place outside the settings screen that named a provider,
-// which was never true (FOUND_ISSUES 4).
+// and PROVIDER_ORDER, its id in ProviderId, and what tsc then reports: each
+// Record<CloudProviderId, …> missing a key (PROVIDER_KEYS in
+// services/secrets.ts, COMPILERS in qul/compile.ts) and the reader's
+// Record<ProviderId, number> request counts (ui/reader/useTranslator.ts).
+// Corrected in restructure Phase 3: this comment used to say it was the only
+// place outside the settings screen that named a provider, which was never
+// true (FOUND_ISSUES 4).
 
 const PROVIDERS: Record<CloudProviderId, TranslationProvider> = {
   gemini: new GeminiProvider(),
