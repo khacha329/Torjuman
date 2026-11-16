@@ -844,8 +844,8 @@ which no automated check covers.
 ## Phase 3: provider seams (planning, branch `claude/restructure-phase-3`)
 
 Plan: [`plans/phase3-provider-seams.md`](plans/phase3-provider-seams.md),
-written by the `torjuman-planner` agent on `ef2c626`; **awaiting the owner's
-approval** (Q1–Q16). Checked here: the SDK takes `fetch` when a client is
+written by the `torjuman-planner` agent on `ef2c626`; **approved 2026-11-16,
+all sixteen answers as recommended**. Checked here: the SDK takes `fetch` when a client is
 built (`client.mjs`: `options.fetch ?? Shims.getDefaultFetch()`), and all
 four call sites build a client per call — the basis of check Q.
 

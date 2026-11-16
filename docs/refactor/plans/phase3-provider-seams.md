@@ -1,6 +1,6 @@
 # Phase 3: provider seams — one Anthropic client, one Gemini call, providers that describe themselves
 
-Status: draft — awaiting the owner's approval
+Status: **approved by the owner, 2026-11-16** (answers at the end)
 Base commit: `ef2c626` (Phase 2 complete; PRs #8, #9, #10 stacked and open, not merged)
 Branch: `claude/restructure-phase-3`
 
@@ -878,5 +878,17 @@ Q, U, S, R, SSR build; then the reviewer on the phase.
     `ProviderId`, and whatever `tsc` then reports", with Onboarding and the
     session totals named as copy.
 
-## Owner's answers
+## Owner's answers (2026-11-16)
 
+**All sixteen as recommended** ("all as recommended, go ahead"): check Q as
+designed (Q1); shared code in `translation/anthropic.ts` and
+`translation/gemini.ts` (Q2); the three optional helper merges (Q3); the two
+Anthropic and two Gemini error mappings stay separate (Q4); compile's provider
+table (Q5); gloss's inline values into `models.ts` verbatim and
+`OfflineTranslation` on `GEMINI_DEFAULT_MODEL` (Q6); `costOf` into `models.ts`
+(Q7); `PROVIDER_KEYS` kept (Q8); only Onboarding's placeholder moves (Q9);
+Explain and gloss export their provider (Q10); the full record committed
+(Q11); the SDK-import allowlist inside Q, Q out of the deploy workflow (Q12);
+reader captures tried in 3b (Q13); the reviewer after every commit and the
+`torjuman-llm` agent reads the plan before 3a (Q14); one PR stacked on #10,
+merged after V and M (Q15); RESTRUCTURE §2's provider sentence reworded (Q16).
