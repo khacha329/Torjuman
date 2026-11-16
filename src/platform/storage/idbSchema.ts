@@ -331,7 +331,8 @@ true satisfies SameUnion<
   | 'biographyEntries'
 >;
 
-type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+/** `true` when two unions hold exactly the same members; for compile-time checks. */
+export type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
 /**
  * Creates one store from its table entry: the key path, then each index in

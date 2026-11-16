@@ -1479,8 +1479,9 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
 | 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review PASS WITH NOTES | `afffa50` |
 | 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review PASS WITH NOTES | `87b3b26` |
-| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review pending | `b60633e` |
-| 4l follow-up — D asserts `BOOK_STORES`' order against its own hand list (negative test 3 now caught) | T D pass; the record unchanged; review pending | this commit |
+| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review PASS WITH NOTES | `b60633e` |
+| 4l follow-up — D asserts `BOOK_STORES`' order against its own hand list (negative test 3 now caught) | T D pass; the record unchanged; review PASS WITH NOTES | `7bffce0` |
+| 4m. `WORK_STORES` drives `exportWork`/`importWork` (Q7); the 4l review's must-fix; D's order check no longer keyed on a scenario name | T B L D Q pass, the SSR build, and five negative tests; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2097,8 +2098,10 @@ holds)
   story ("Its absence here was not harmless …") sits on that entry, above
   its `perBook: true`. Both were found line for line by script.
 - **Readers:** `idbLibrary.ts` (`deleteBook`'s loop) and `idbPurge.ts`
-  (`purgeIndex`'s `store: BookStore | …`), both unchanged. D's harness has
-  its own rows and imports no `BOOK_STORES`.
+  (`purgeIndex`'s `store: BookStore | …`), both unchanged. D's harness
+  seeds its own rows; since the 4l follow-up it also imports `BOOK_STORES`
+  (`verify-storage-harness.ts:42`) and exposes it (`:1192`), only for the
+  order assertion against its own hand-written list.
 - **Negative tests** (in place, restored from a `cp` copy):
   1. `perBook` dropped from `marks`: `tsc` fails at the assertion (TS1360),
      and D on the unchecked bundle FAILs 2 of 41, `delete-book` and
@@ -2126,6 +2129,73 @@ holds)
   identical (41 scenarios, `delete-book` over 4,097 blocks and
   `book-transfer` among them), with the new order assertion holding.
   **Q** PASS. S, R and U not run (not required for 4l). **V owed**.
+- **Review of `b60633e` and `7bffce0`: PASS WITH NOTES; "ready for 4m".**
+  Must-fix, applied with 4m: the "Readers:" bullet above said D's harness
+  "imports no `BOOK_STORES`", which has been untrue since `7bffce0`. It now
+  names the import (`verify-storage-harness.ts:42`) and the exposure
+  (`:1192`). Two notes:
+  - **For 4n:** adding a per-book store is now three edits: the `perBook`
+    flag, the `SameUnion` assertion in `idbSchema.ts`, and D's
+    `EXPECTED_BOOK_STORES`. 4n's "Adding a store" text must name all three,
+    or the owner drops the assertion. (Since 4m, a backed-up store is one
+    `WORK_STORES` entry plus its `WorkBundle` field; see below.)
+  - D's order assertion was keyed on `scenario.id === 'delete-book'`, so a
+    rename would have dropped it silently. **Fixed with 4m (scripts):** every
+    harness phase already reports `bookStores`, so the list is now checked
+    on the first harness phase to run, and after the loop
+    `assert('BOOK_STORES was checked …', bookStoresChecked)` fails D if it
+    never was. Re-proven: `cards` above `marks` in the table → "FAIL — 1
+    assertion(s)" on `BOOK_STORES`, the record identical. **For 4n:** the
+    other assertions (work backup, per-book and whole-tablet files, share
+    adapter) are still keyed on scenario ids.
+
+**Step 4m, measured 2026-11-16**
+- `idbBackup.ts` gains `WORK_STORES` (`as const`, eleven names in the
+  plan's Design §4 order: cards, explanationCards, sharhCards, marks,
+  glossary, profiles, positions, wordGlosses, quranVerses, hadiths,
+  shareRecords), with a doc comment on why it is a list and not a table
+  flag. The comment "Absent on a backup written before shares existed,
+  which `write` handles." moved verbatim from the `write('shareRecords', …)`
+  call onto that entry.
+- **Typed against `WorkBundle`:** `BundleStore` is `WorkBundle`'s keys whose
+  (non-null) value is an array, minus `referencedBooks`, and `true satisfies
+  SameUnion<WorkStore, BundleStore>` fails `tsc` on a missing or an extra
+  name. `SameUnion` is now exported from `idbSchema.ts`, its one
+  definition, with a doc comment. `importWork`'s `write` is typed `<K
+  extends WorkStore>` in place of the hand-written eleven-name union.
+- **`exportWork`:** builds the object with `version`, `exportedAt`
+  (`Date.now()` at the same point as before, after the `books` read) and
+  `referencedBooks`, assigns each store's `getAll` in list order, then
+  `settings`. Insertion order is JSON key order, so the reads, their order
+  and the file's keys are the old literal's. Two casts, with a comment:
+  the object is incomplete until the loop has run.
+- **`importWork`:** the eleven `write` calls are `for (const store of
+  WORK_STORES) await write(store, bundle[store])`, in the same order with
+  the same 500-row batching (`write` itself is unchanged). Kept written out
+  in both functions, because they are not stores: `referencedBooks` (from
+  `books`), `settings` (`getSettings`/`putSettings`, the key added and
+  stripped there), the missing-books report and `searchIndex.clear()`.
+  Nothing else was handled per store.
+- **D PASS, identical** (41 scenarios). The `work-backup` phases (`export`
+  with the file's SHA-256 and length and the exported value,
+  `import-fresh`, `import-without-shareRecords`, `import-missing-books`,
+  `import-over-existing`) are byte-for-byte the record's.
+- **Negative tests** (each in place, restored from a `cp` copy):
+  1. `cards` and `explanationCards` swapped: `tsc` 0; D FAIL, 1 of 41,
+     `work-backup` (the file's key order and hash).
+  2. `hadiths` dropped: `tsc` fails at the assertion (TS1360); D FAIL, 1 of
+     41, `work-backup`.
+  3. `books` added: `tsc` fails (TS1360 and TS7053, `bundle['books']`);
+     D FAIL, 1 of 41, `work-backup`.
+  4. `cards` listed twice: `tsc` 0, D PASS. Not caught, and harmless: the
+     export reassigns the key in place, so the file is unchanged, and the
+     import writes the same rows twice.
+  5. The `BOOK_STORES` order check, re-run after its rework: see the review
+     bullet above.
+- **T** exit 0. **B** exit 0; main chunk 790,779 → 790,214 B (−565); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **Q** PASS. The
+  **SSR build** of `verify-parsers.ts` (`npx vite build --ssr … --outDir
+  .verify/ssr`) exit 0; its output was deleted after. **V owed**.
 
 ## Open
 

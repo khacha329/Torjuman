@@ -1,6 +1,6 @@
 import type { IDBPDatabase } from 'idb';
 import type { WorkBundle, WorkRestoreReport } from './StorageAdapter';
-import { DB_VERSION, type Schema } from './idbSchema';
+import { DB_VERSION, type SameUnion, type Schema } from './idbSchema';
 import type { SearchEntry } from './idbLibrary';
 import { getSettings, putSettings } from './idbWork';
 
@@ -11,11 +11,50 @@ import { getSettings, putSettings } from './idbWork';
 // as in idbTransfer.ts. `importWork` takes the in-memory search index to clear
 // it; settings go through idbWork.ts's functions.
 
+/**
+ * The stores a work backup carries, in the order the file lists them and a
+ * restore writes them (restructure Phase 4 step 4m; the plan's Design §4 and
+ * Q7). Not the table's order, and not a table flag: `BOOK_STORES` needs
+ * `marks` before `cards`, this list `cards` before `marks`, and this order is
+ * the JSON key order of a file the owner keeps. `referencedBooks` and
+ * `settings` are not stores and stay written out in both functions.
+ */
+const WORK_STORES = [
+  'cards',
+  'explanationCards',
+  'sharhCards',
+  'marks',
+  'glossary',
+  'profiles',
+  'positions',
+  'wordGlosses',
+  'quranVerses',
+  'hadiths',
+  // Absent on a backup written before shares existed, which `write` handles.
+  'shareRecords',
+] as const;
+
+type WorkStore = (typeof WORK_STORES)[number];
+
+/** `WorkBundle`'s fields that hold rows: every array field but `referencedBooks`. */
+type BundleStore = Exclude<
+  { [K in keyof WorkBundle]-?: NonNullable<WorkBundle[K]> extends unknown[] ? K : never }[keyof WorkBundle],
+  'referencedBooks'
+>;
+
+// The list names exactly the bundle's row fields: a store added to
+// `WorkBundle` and not here, or the reverse, fails `tsc`.
+true satisfies SameUnion<WorkStore, BundleStore>;
+
 export async function exportWork(handle: () => IDBPDatabase<Schema>): Promise<WorkBundle> {
   const db = handle();
   const books = await db.getAll('books');
 
-  return {
+  // Built in the order the file lists its fields: the three header fields,
+  // each store in WORK_STORES order, then settings. JSON keeps insertion
+  // order, so this is the same file as the object literal this replaced. The
+  // casts are because the object is complete only once the loop has run.
+  const bundle = {
     version: DB_VERSION,
     exportedAt: Date.now(),
     referencedBooks: books.map((book) => ({
@@ -23,19 +62,12 @@ export async function exportWork(handle: () => IDBPDatabase<Schema>): Promise<Wo
       bookId: book.id,
       title: book.title,
     })),
-    cards: await db.getAll('cards'),
-    explanationCards: await db.getAll('explanationCards'),
-    sharhCards: await db.getAll('sharhCards'),
-    marks: await db.getAll('marks'),
-    glossary: await db.getAll('glossary'),
-    profiles: await db.getAll('profiles'),
-    positions: await db.getAll('positions'),
-    wordGlosses: await db.getAll('wordGlosses'),
-    quranVerses: await db.getAll('quranVerses'),
-    hadiths: await db.getAll('hadiths'),
-    shareRecords: await db.getAll('shareRecords'),
-    settings: (await getSettings(handle)) ?? null,
-  };
+  } as WorkBundle;
+  for (const store of WORK_STORES) {
+    (bundle as unknown as Record<WorkStore, unknown[]>)[store] = await db.getAll(store);
+  }
+  bundle.settings = (await getSettings(handle)) ?? null;
+  return bundle;
 }
 
 export async function importWork(
@@ -45,10 +77,7 @@ export async function importWork(
 ): Promise<WorkRestoreReport> {
   const db = handle();
 
-  const write = async <
-    K extends 'cards' | 'explanationCards' | 'sharhCards' | 'marks' | 'glossary' | 'profiles' |
-      'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths' | 'shareRecords',
-  >(
+  const write = async <K extends WorkStore>(
     store: K,
     rows: Schema[K]['value'][] | undefined,
   ) => {
@@ -60,18 +89,9 @@ export async function importWork(
     }
   };
 
-  await write('cards', bundle.cards);
-  await write('explanationCards', bundle.explanationCards);
-  await write('sharhCards', bundle.sharhCards);
-  await write('marks', bundle.marks);
-  await write('glossary', bundle.glossary);
-  await write('profiles', bundle.profiles);
-  await write('positions', bundle.positions);
-  await write('wordGlosses', bundle.wordGlosses);
-  await write('quranVerses', bundle.quranVerses);
-  await write('hadiths', bundle.hadiths);
-  // Absent on a backup written before shares existed, which `write` handles.
-  await write('shareRecords', bundle.shareRecords);
+  for (const store of WORK_STORES) {
+    await write(store, bundle[store]);
+  }
   if (bundle.settings) await putSettings(handle, bundle.settings);
 
   // Work anchored to a book that is not on this device restores fine — block

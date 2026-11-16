@@ -554,6 +554,7 @@ const EXPECTED_BOOK_STORES = [
   'tocNodes', 'pages', 'blocks', 'entities', 'dictionaryEntries',
   'marks', 'cards', 'explanationCards', 'sharhCards', 'biographyEntries',
 ];
+let bookStoresChecked = false;
 function assert(label, ok) {
   if (!ok) failures.push(label);
 }
@@ -664,17 +665,21 @@ try {
         assert(`refusals: rows and localStorage untouched ${label}`, untouched === true);
       }
     }
-    if (scenario.id === 'delete-book') {
-      const actual = outputs['delete-book'].bookStores;
+    // Every harness phase reports the list, so it is checked on the first one
+    // to run rather than under a scenario's name, which a rename would drop.
+    if (!bookStoresChecked) {
+      const actual = Object.values(outputs)[0].bookStores;
       assert(
         `BOOK_STORES is ${JSON.stringify(actual)}, expected ${JSON.stringify(EXPECTED_BOOK_STORES)} in that order`,
         JSON.stringify(actual) === JSON.stringify(EXPECTED_BOOK_STORES),
       );
+      bookStoresChecked = true;
     }
     if (scenario.id === 'share-adapter') {
       assert('share adapter: ignored writes left the database untouched', outputs.share.result.ignoredLeftDatabaseUnchanged === true);
     }
   }
+  assert('BOOK_STORES was checked (no harness scenario ran)', bookStoresChecked);
   console.log(`  harness: ${HARNESS_SCENARIOS.length} scenarios`);
 } catch (error) {
   console.error(`\nFAIL — a scenario could not run: ${error.message}`);
