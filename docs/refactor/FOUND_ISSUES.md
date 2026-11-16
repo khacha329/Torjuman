@@ -205,3 +205,25 @@ cache keys (trap 5), for the same glossary — a cached card made on one would
 not be found on the other after a tablet transfer. Not known to have happened;
 the owner's tablets share a locale. Check Q pins `en-US`. Left as is. Found by
 the `torjuman-llm` plan read before Phase 3 step 3a.
+
+## 14. Five error paths check Q's added scenarios expose (2026-11-16, measured)
+
+Found while closing the 3a review's coverage gaps; each is recorded by a
+scenario in `docs/refactor/phase3/requests.json`. Left as is:
+
+1. A connection that drops after the headers (`TypeError` reading the body)
+   escapes unmapped from Gemini translate and Gemini compile — no
+   `TranslationError` (`gemini.translate.body-drop`,
+   `compile.gemini.body-drop`).
+2. At every Anthropic site the same drop maps to kind `api` with the message
+   "network error", not kind `network` (`anthropic.translate.body-drop`,
+   `explain.body-drop`, `gloss.body-drop`, `compile.anthropic.body-drop`).
+3. An error event inside the Anthropic stream reads "Anthropic API error
+   undefined: {…json…}" (`anthropic.translate.stream-error-event`).
+4. Gemini's `promptFeedback.blockReason` is ignored, so a blocked prompt is
+   reported as a parse failure, not a refusal
+   (`gemini.translate.prompt-blocked`).
+5. Research notes from successive turns are joined with no separator ("Turn
+   1: searching.Turn 2: …"), in translate and Explain
+   (`anthropic.translate.research-out-of-turns`,
+   `explain.research-out-of-turns`).

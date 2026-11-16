@@ -4041,6 +4041,1377 @@
       }
     },
     {
+      "id": "anthropic.translate.dig-deeper-cache-usage",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "وهذا مثال قصير",
+              "english": "And this is a short example",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "كتب للتجربة فقط.",
+              "english": "written only for the trial.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "synthetic",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 3311,
+            "outputTokens": 1719,
+            "cacheReadTokens": 6412,
+            "cacheWriteTokens": 8225
+          },
+          "costUsd": 0.0573532,
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+        }
+      },
+      "progress": {
+        "count": 10,
+        "last": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+      }
+    },
+    {
+      "id": "anthropic.translate.max-tokens-then-success-cache-usage",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":4096,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "وهذا مثال قصير",
+              "english": "And this is a short example",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "كتب للتجربة فقط.",
+              "english": "written only for the trial.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "synthetic",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 1818,
+            "outputTokens": 3600,
+            "cacheReadTokens": 5206,
+            "cacheWriteTokens": 3220
+          },
+          "costUsd": 0.053036599999999996,
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+        }
+      },
+      "progress": {
+        "count": 12,
+        "last": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+      }
+    },
+    {
+      "id": "explain.cache-usage",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nTurn 1: searching.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "explanation": "A synthetic explanation for check Q.",
+          "localSources": [
+            {
+              "bookId": "q-book-2",
+              "blockId": "q-book-2:p9:b1",
+              "bookTitle": "كتاب آخر",
+              "volume": null,
+              "printPage": null,
+              "excerpt": "نص ثان للتجربة."
+            }
+          ],
+          "webSources": [
+            {
+              "url": "https://example.org/q",
+              "title": "Example",
+              "siteName": "Example",
+              "excerpt": "One sentence."
+            }
+          ],
+          "usage": {
+            "inputTokens": 2208,
+            "outputTokens": 1508,
+            "cacheReadTokens": 6412,
+            "cacheWriteTokens": 3816
+          },
+          "costUsd": null
+        }
+      },
+      "progress": {
+        "count": 2,
+        "last": "Turn 1: searching."
+      }
+    },
+    {
+      "id": "anthropic.translate.research-out-of-turns",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 2: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn1\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 2\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn1\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q2\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\nBefore translating, research anything in this passage you are unsure of — a narrator, an unusual term, a disputed reading. Write your findings in prose. Do not produce the translation yet.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 2: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn1\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 2\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn1\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q2\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 3: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn2\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 3\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn2\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q3\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "وهذا مثال قصير",
+              "english": "And this is a short example",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "كتب للتجربة فقط.",
+              "english": "written only for the trial.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "synthetic",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 6927,
+            "outputTokens": 2641,
+            "cacheReadTokens": 17244,
+            "cacheWriteTokens": 10079
+          },
+          "costUsd": 0.0823044,
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+        }
+      },
+      "progress": {
+        "count": 14,
+        "last": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+      }
+    },
+    {
+      "id": "explain.research-out-of-turns",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 2: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn1\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 2\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn1\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q2\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 1: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn0\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 1\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn0\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q1\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 2: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn1\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 2\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn1\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q2\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Turn 3: searching.\",\"citations\":null},{\"type\":\"server_tool_use\",\"id\":\"srvtoolu_q_turn2\",\"name\":\"web_search\",\"input\":{\"query\":\"turn 3\"}},{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"srvtoolu_q_turn2\",\"content\":[{\"type\":\"web_search_result\",\"url\":\"https://example.org/q3\",\"title\":\"Example\",\"encrypted_content\":\"eq\",\"page_age\":null}]}]}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "explanation": "A synthetic explanation for check Q.",
+          "localSources": [
+            {
+              "bookId": "q-book-2",
+              "blockId": "q-book-2:p9:b1",
+              "bookTitle": "كتاب آخر",
+              "volume": null,
+              "printPage": null,
+              "excerpt": "نص ثان للتجربة."
+            }
+          ],
+          "webSources": [
+            {
+              "url": "https://example.org/q",
+              "title": "Example",
+              "siteName": "Example",
+              "excerpt": "One sentence."
+            }
+          ],
+          "usage": {
+            "inputTokens": 6927,
+            "outputTokens": 2641,
+            "cacheReadTokens": 17244,
+            "cacheWriteTokens": 10079
+          },
+          "costUsd": null
+        }
+      },
+      "progress": {
+        "count": 8,
+        "last": "Turn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching."
+      }
+    },
+    {
+      "id": "anthropic.translate.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "network error",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 2,
+        "last": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a "
+      }
+    },
+    {
+      "id": "anthropic.translate.empty-event-stream",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "request ended without sending any chunks",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "anthropic.translate.stream-error-event",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "Anthropic API error undefined: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "anthropic.validateKey.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-haiku-5-5\",\"max_tokens\":1,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "network error",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "explain.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":8000,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\"}],\"tools\":[{\"type\":\"web_search_20260209\",\"name\":\"web_search\",\"max_uses\":5}],\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "network error",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 1,
+        "last": "The phrase "
+      }
+    },
+    {
+      "id": "gloss.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-haiku-5-5\",\"max_tokens\":2000,\"output_config\":{\"effort\":\"low\"},\"system\":\"Give the English meaning of a single Arabic word as it is used in\\nthe sentence supplied — not its full lexical range. The reader is a non-native\\nEnglish speaker preparing a study circle on classical Islamic scholarship.\\n\\nGive the root. Note briefly if the classical usage differs from the modern. If\\nthe word is a technical term of fiqh, ḥadīth, or ʿaqīdah, say so.\\n\\nBe brief. This is a glance, not an article.\\n\\nGive your answer by calling the emit_gloss tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"Word: مِثَال\\n\\nSentence (the text of a hadith):\\nوهذا مثال قصير كتب للتجربة فقط.\"}],\"tools\":[{\"name\":\"emit_gloss\",\"description\":\"Return the meaning of the word as used in this sentence.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"word\":{\"type\":\"string\",\"description\":\"The word, as given.\"},\"root\":{\"type\":\"string\",\"description\":\"Its triliteral root, e.g. غ ف ر.\"},\"meaning\":{\"type\":\"string\",\"description\":\"Its English meaning AS USED IN THIS SENTENCE. One or two lines.\"},\"note\":{\"type\":\"string\",\"description\":\"Brief, only if the classical usage differs from the modern, or something else is worth flagging.\"},\"isTechnicalTerm\":{\"type\":\"boolean\",\"description\":\"True if this is a technical term of fiqh, ḥadīth, or ʿaqīdah.\"}},\"required\":[\"word\",\"root\",\"meaning\",\"isTechnicalTerm\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"}}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "network error",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      },
+      "storage": {
+        "lookups": [
+          "مثال"
+        ],
+        "stored": []
+      }
+    },
+    {
+      "id": "compile.anthropic.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":4000,\"system\":\"You are helping someone prepare a study circle on an Arabic\\ncommentary. Below is material about a single āyah that his app has already\\nretrieved and is already showing him: a translation, classical tafsīr, related\\nāyāt, and topical groupings.\\n\\nWrite one continuous account of the āyah drawing those pieces together.\\n\\nRULES\\n\\n1. Use ONLY what is given below. Add nothing from your own knowledge — no other\\n   tafsīr, no ḥadīth, no history, no reports, no scholarly opinions. If the\\n   material does not settle something, leave it unsettled.\\n2. Say where each point comes from, naming the tafsīr or the related āyah.\\n3. Do not translate any Arabic that is given to you without a translation. The\\n   Arabic of scripture and of the tafsīr is quoted, not rendered: if a tafsīr\\n   passage is supplied in Arabic only, describe what it addresses rather than\\n   producing an English version of it.\\n4. Plain English for a fluent Arabic reader who wants the material joined up,\\n   not simplified.\\n5. Six short paragraphs at most.\",\"messages\":[{\"role\":\"user\",\"content\":\"<ayah reference=\\\"1:1\\\" name=\\\"Synthetic 1:1\\\">\\nنص تجريبي\\n</ayah>\\n\\n<translation source=\\\"Check Q\\\">\\nA synthetic text.\\n</translation>\\n\\n<tafsir name=\\\"Tafsir Q\\\" covers=\\\"1:1\\\">\\nشرح تجريبي قصير.\\n</tafsir>\\n\\n<related_ayat>\\n  <ayah reference=\\\"1:2\\\">نص آخر\\n  Another text.</ayah>\\n</related_ayat>\\n\\n<topics>\\n  <topic name=\\\"Testing\\\">A synthetic topic.</topic>\\n</topics>\\n\\n<surah name=\\\"Q\\\">\\nA synthetic surah note.\\n</surah>\\n\\nCompile the material above into one account. Use nothing else.\"}]}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "network error",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "compile.gemini.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"You are helping someone prepare a study circle on an Arabic\\ncommentary. Below is material about a single āyah that his app has already\\nretrieved and is already showing him: a translation, classical tafsīr, related\\nāyāt, and topical groupings.\\n\\nWrite one continuous account of the āyah drawing those pieces together.\\n\\nRULES\\n\\n1. Use ONLY what is given below. Add nothing from your own knowledge — no other\\n   tafsīr, no ḥadīth, no history, no reports, no scholarly opinions. If the\\n   material does not settle something, leave it unsettled.\\n2. Say where each point comes from, naming the tafsīr or the related āyah.\\n3. Do not translate any Arabic that is given to you without a translation. The\\n   Arabic of scripture and of the tafsīr is quoted, not rendered: if a tafsīr\\n   passage is supplied in Arabic only, describe what it addresses rather than\\n   producing an English version of it.\\n4. Plain English for a fluent Arabic reader who wants the material joined up,\\n   not simplified.\\n5. Six short paragraphs at most.\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<ayah reference=\\\"1:1\\\" name=\\\"Synthetic 1:1\\\">\\nنص تجريبي\\n</ayah>\\n\\n<translation source=\\\"Check Q\\\">\\nA synthetic text.\\n</translation>\\n\\n<tafsir name=\\\"Tafsir Q\\\" covers=\\\"1:1\\\">\\nشرح تجريبي قصير.\\n</tafsir>\\n\\n<related_ayat>\\n  <ayah reference=\\\"1:2\\\">نص آخر\\n  Another text.</ayah>\\n</related_ayat>\\n\\n<topics>\\n  <topic name=\\\"Testing\\\">A synthetic topic.</topic>\\n</topics>\\n\\n<surah name=\\\"Q\\\">\\nA synthetic surah note.\\n</surah>\\n\\nCompile the material above into one account. Use nothing else.\"}]}],\"generationConfig\":{\"maxOutputTokens\":4000}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TypeError",
+          "name": "TypeError",
+          "message": "network error"
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "gemini.translate.body-drop",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TypeError",
+          "name": "TypeError",
+          "message": "network error"
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "gemini.translate.429-four-times-no-retry-after",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [
+        2000,
+        4000,
+        8000
+      ],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "rate-limit",
+          "message": "Gemini free-tier rate limit reached. Your key is fine — wait a moment and translate again, or check your current limits in Google AI Studio.",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "gemini.translate.429-http-date-none-3-then-200",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [
+        2000,
+        4000,
+        3000
+      ],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "وهذا مثال قصير",
+              "english": "And this is a short example",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "كتب للتجربة فقط.",
+              "english": "written only for the trial.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "synthetic",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 300,
+            "outputTokens": 75,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "costUsd": null,
+          "raw": "[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]"
+        }
+      },
+      "progress": {
+        "count": 3,
+        "last": "[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]"
+      }
+    },
+    {
+      "id": "gemini.translate.403",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "auth",
+          "message": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "gemini.translate.prohibited-content",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "refusal",
+          "message": "Gemini declined to translate this passage.",
+          "retryAfterSeconds": null,
+          "raw": "["
+        }
+      },
+      "progress": {
+        "count": 1,
+        "last": "["
+      }
+    },
+    {
+      "id": "gemini.translate.prompt-blocked",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "parse",
+          "message": "Gemini returned no structured output: No JSON array found in the response.",
+          "retryAfterSeconds": null,
+          "raw": ""
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "compile.gemini.400",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"You are helping someone prepare a study circle on an Arabic\\ncommentary. Below is material about a single āyah that his app has already\\nretrieved and is already showing him: a translation, classical tafsīr, related\\nāyāt, and topical groupings.\\n\\nWrite one continuous account of the āyah drawing those pieces together.\\n\\nRULES\\n\\n1. Use ONLY what is given below. Add nothing from your own knowledge — no other\\n   tafsīr, no ḥadīth, no history, no reports, no scholarly opinions. If the\\n   material does not settle something, leave it unsettled.\\n2. Say where each point comes from, naming the tafsīr or the related āyah.\\n3. Do not translate any Arabic that is given to you without a translation. The\\n   Arabic of scripture and of the tafsīr is quoted, not rendered: if a tafsīr\\n   passage is supplied in Arabic only, describe what it addresses rather than\\n   producing an English version of it.\\n4. Plain English for a fluent Arabic reader who wants the material joined up,\\n   not simplified.\\n5. Six short paragraphs at most.\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<ayah reference=\\\"1:1\\\" name=\\\"Synthetic 1:1\\\">\\nنص تجريبي\\n</ayah>\\n\\n<translation source=\\\"Check Q\\\">\\nA synthetic text.\\n</translation>\\n\\n<tafsir name=\\\"Tafsir Q\\\" covers=\\\"1:1\\\">\\nشرح تجريبي قصير.\\n</tafsir>\\n\\n<related_ayat>\\n  <ayah reference=\\\"1:2\\\">نص آخر\\n  Another text.</ayah>\\n</related_ayat>\\n\\n<topics>\\n  <topic name=\\\"Testing\\\">A synthetic topic.</topic>\\n</topics>\\n\\n<surah name=\\\"Q\\\">\\nA synthetic surah note.\\n</surah>\\n\\nCompile the material above into one account. Use nothing else.\"}]}],\"generationConfig\":{\"maxOutputTokens\":4000}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "Gemini API error: HTTP 400",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
+      "id": "anthropic.translate.429-retry-after-http-date-only",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "0",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "1",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        },
+        {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "headers": {
+            "accept": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "user-agent": "Anthropic/JS 0.120.0",
+            "x-api-key": "sk-ant-q-check-not-a-real-key",
+            "x-stainless-arch": "(platform, masked)",
+            "x-stainless-helper-method": "stream",
+            "x-stainless-lang": "js",
+            "x-stainless-os": "(platform, masked)",
+            "x-stainless-package-version": "0.120.0",
+            "x-stainless-retry-count": "2",
+            "x-stainless-runtime": "(platform, masked)",
+            "x-stainless-runtime-version": "(platform, masked)",
+            "x-stainless-timeout": "600"
+          },
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "otherInit": [
+            "signal"
+          ]
+        }
+      ],
+      "waits": [
+        30000,
+        30000
+      ],
+      "outcome": {
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "rate-limit",
+          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
+          "retryAfterSeconds": "NaN",
+          "raw": null
+        }
+      },
+      "progress": {
+        "count": 0,
+        "last": null
+      }
+    },
+    {
       "id": "values.glossaryHashOf",
       "values": {
         "twoEntries": "4cdcdc5d58dae38b",
@@ -4803,6 +6174,79 @@
           },
           "get": "q-secrets-sunnah",
           "hasAnyProviderKey": false
+        }
+      }
+    },
+    {
+      "id": "values.offlineModels",
+      "values": {
+        "OFFLINE_MODELS": [
+          {
+            "id": "opus-mt-ar-en",
+            "repo": "Xenova/opus-mt-ar-en",
+            "approxMB": 112,
+            "label": "OPUS-MT Arabic→English — small",
+            "note": "About 112 MB. Serviceable for getting the gist; the faster of the two."
+          },
+          {
+            "id": "nllb-200-distilled-600M",
+            "repo": "Xenova/nllb-200-distilled-600M",
+            "approxMB": 480,
+            "label": "NLLB-200 distilled — better",
+            "note": "About 480 MB. Noticeably better Arabic, slower, and a large download."
+          }
+        ],
+        "byProvider": {
+          "anthropic": {
+            "findModelOption": {
+              "opus-mt-ar-en": "(undefined)",
+              "nllb-200-distilled-600M": "(undefined)",
+              "some-unknown-model": "(undefined)"
+            },
+            "defaultModelFor": "claude-sonnet-5-5"
+          },
+          "gemini": {
+            "findModelOption": {
+              "opus-mt-ar-en": "(undefined)",
+              "nllb-200-distilled-600M": "(undefined)",
+              "some-unknown-model": "(undefined)"
+            },
+            "defaultModelFor": "gemini-3.7-flash"
+          },
+          "offline": {
+            "findModelOption": {
+              "opus-mt-ar-en": "(undefined)",
+              "nllb-200-distilled-600M": "(undefined)",
+              "some-unknown-model": "(undefined)"
+            },
+            "defaultModelFor": "gemini-3.7-flash"
+          }
+        },
+        "byModel": {
+          "opus-mt-ar-en": {
+            "offlineModelById": "opus-mt-ar-en",
+            "outputCeilingFor": 32000,
+            "outputConfigFor": "(undefined)",
+            "successorModel": "opus-mt-ar-en",
+            "isClaudeModel": false,
+            "costOf": null
+          },
+          "nllb-200-distilled-600M": {
+            "offlineModelById": "nllb-200-distilled-600M",
+            "outputCeilingFor": 32000,
+            "outputConfigFor": "(undefined)",
+            "successorModel": "nllb-200-distilled-600M",
+            "isClaudeModel": false,
+            "costOf": null
+          },
+          "some-unknown-model": {
+            "offlineModelById": "opus-mt-ar-en",
+            "outputCeilingFor": 32000,
+            "outputConfigFor": "(undefined)",
+            "successorModel": "some-unknown-model",
+            "isClaudeModel": false,
+            "costOf": null
+          }
         }
       }
     }

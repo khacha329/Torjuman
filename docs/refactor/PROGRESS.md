@@ -852,7 +852,8 @@ four call sites build a client per call — the basis of check Q.
 | Step | State | Commit |
 | --- | --- | --- |
 | 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review PASS WITH NOTES | `707095f` |
-| review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | this commit |
+| review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | `aacf81b` |
+| harness: check Q's coverage gaps closed, on the old code | Q proven; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -900,6 +901,31 @@ FOUND_ISSUES 11.
   (3e), running out of research turns (3h), Gemini's later backoff waits, 403
   and `PROHIBITED_CONTENT` (3i), offline model ids (3n), compile's Gemini 400.
   These are added to Q on the old code in a harness commit before 3b.
+
+**Harness, 2026-11-16: check Q's coverage gaps** (no `src/` change)
+- By the `torjuman-llm` agent, checked here: **21 scenarios and 1 value
+  section added** (now 95 scenarios, 152 requests, 8 value sections, 475,575
+  B). The 81 earlier entries are byte-identical (the new record minus the
+  added entries re-serialises to the old file exactly).
+- Added: per-turn cache-read/write usage (3g); research turns used up at both
+  sites (3h); a connection dropped mid-body at every site, an empty stream,
+  an in-stream error event — the realistic inputs that reach the mappings'
+  last branches (3e); Gemini backoff without retry-after (waits 2000, 4000,
+  8000), an HTTP-date retry-after, 403, `PROHIBITED_CONTENT`, a blocked prompt
+  (3i); offline model ids (3n); compile's Gemini 400. A new
+  `…-http-date-only` scenario reaches the SDK's own `Date.parse` branch (the
+  3a review found the old one never did); the header says so. The stub gained
+  `dropAfterBytes`.
+- Not reachable and not faked: in the streamed Anthropic path a genuinely
+  non-SDK error never reaches the last branch, because the SDK's stream wraps
+  it first.
+- **Proof**: two runs identical; 18 deliberate edits (usage arithmetic, turn
+  limits, last-branch kinds, Gemini backoff base and exponent, 403, refusal
+  reasons, offline labels, compile's 400, the SDK's date branch), each exit 1
+  naming the new scenarios — several caught *only* by them — and each restored
+  byte for byte. The one edit inside `node_modules/@anthropic-ai/sdk/client.mjs`
+  was checked here against the published 0.120.0 tarball: identical.
+- Behaviours the new scenarios expose: FOUND_ISSUES 14.
 
 ## Open
 

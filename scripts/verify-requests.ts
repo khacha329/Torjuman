@@ -35,6 +35,10 @@
 //     meaning, and the SDK builds them through its own merge), the body text
 //     exactly as passed to fetch (never re-serialized: JSON key order is what
 //     "byte-identical" means), and the names of any other init fields.
+//   * A canned response can also drop the connection part-way through its
+//     body (`dropAfterBytes`), the realistic way to reach the error mappings'
+//     last, not-an-API-error branch: see the scenarios added after the 3a
+//     review, near the end of the call-site scenarios.
 //   * Every `ANTHROPIC_*` environment variable is deleted before anything
 //     runs. The SDK reads ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
 //     ANTHROPIC_CUSTOM_HEADERS and ANTHROPIC_LOG from process.env when a
@@ -52,7 +56,11 @@
 //   * Math.random = 0.5: the SDK's retry jitter when no retry-after header
 //     is sent (the connection-failure scenarios).
 //   * Date.now = 2026-11-16T12:00:00Z: gloss's createdAt, and the SDK's
-//     reading of an HTTP-date retry-after.
+//     reading of an HTTP-date retry-after (Date.parse(header) - Date.now()).
+//     Only anthropic.translate.429-retry-after-http-date-only reaches that
+//     branch: the older anthropic.translate.429-retry-after-http-date also
+//     sends retry-after-ms, which the SDK reads first, so there the date is
+//     seen only by the app's Number(), which makes it NaN.
 //   * Number.prototype.toLocaleString and String.prototype.localeCompare
 //     default to 'en-US' when called without a locale: the truncation messages
 //     format the budget with toLocaleString(), and glossaryHashOf sorts with
@@ -86,7 +94,8 @@
 // canned responses are written from the SDK's and the providers' parsers, not
 // captured from the services. The UI paths that choose the inputs (which key,
 // which model, which profile) — they are checked by U and by reading. The
-// offline model. Explain's library search (searchLibrary), which sends no
+// offline model's translation (only its model list and ids are recorded, in
+// values.offlineModels). Explain's library search (searchLibrary), which sends no
 // request. AppContext's legacy-profile inference, which is inside a React
 // callback until step 3m.
 
@@ -182,6 +191,15 @@ type Canned =
       body?: string | null;
       /** Serve the body as a stream in pieces of this many bytes (mid-line, mid-character). */
       pieceBytes?: number;
+      /**
+       * The connection drops after this many bytes of the body: the stream
+       * serves them (in `pieceBytes` pieces, 61 if unset) and then errors with
+       * `TypeError('network error')`, which is what Chrome's fetch gives when a
+       * body read fails after the headers arrived. The SDK retries only a fetch
+       * that fails before the headers, so this reaches each site's error
+       * mapping as whatever the SDK or the site makes of a body read error.
+       */
+      dropAfterBytes?: number;
     }
   | { throws: string };
 
@@ -223,6 +241,24 @@ globalThis.setTimeout = ((handler: (...a: unknown[]) => void, ms?: number, ...re
 function makeResponse(canned: Extract<Canned, { status: number }>): Response {
   const init = { status: canned.status, headers: canned.headers ?? {} };
   if (canned.body == null) return new Response(null, init);
+  if (canned.dropAfterBytes !== undefined) {
+    // Pull-based, so the pieces before the drop are really read: an error
+    // raised in start() would discard whatever was queued.
+    const served = new TextEncoder().encode(canned.body).slice(0, canned.dropAfterBytes);
+    const size = canned.pieceBytes ?? 61;
+    let at = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (at >= served.length) {
+          controller.error(new TypeError('network error'));
+          return;
+        }
+        controller.enqueue(served.slice(at, at + size));
+        at += size;
+      },
+    });
+    return new Response(stream, init);
+  }
   if (!canned.pieceBytes) return new Response(canned.body, init);
   const bytes = new TextEncoder().encode(canned.body);
   const size = canned.pieceBytes;
@@ -293,6 +329,9 @@ const models = await import('../src/translation/models');
 const { createDefaultProfile, STUDY_CIRCLE_PROMPT } = await import('../src/translation/profiles');
 const { costOf } = await import('../src/translation/providers/AnthropicProvider');
 const { secrets, API_KEY_STORAGE_KEYS } = await import('../src/services/secrets');
+// Static imports only (the transformers.js import inside it is dynamic and
+// never runs here): its model list is a value 3n's knownModels may read.
+const { OFFLINE_MODELS, offlineModelById } = await import('../src/translation/offline/OfflineProvider');
 
 type TranslationRequest = import('../src/translation/TranslationProvider').TranslationRequest;
 type StorageAdapter = import('../src/platform/storage/StorageAdapter').StorageAdapter;
@@ -735,6 +774,9 @@ await scenario(
   times(3, () => anthropicError(429, { 'retry-after-ms': '7000', 'retry-after': '7' })),
   translateAnthropic(translationRequest()),
 );
+// retry-after-ms wins in the SDK, so the HTTP date here reaches only the app's
+// Number() (NaN); ...-http-date-only, further down, exercises the SDK's
+// Date.parse branch.
 await scenario(
   'anthropic.translate.429-retry-after-http-date',
   times(3, () => anthropicError(429, { 'retry-after-ms': '1000', 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
@@ -1021,6 +1063,186 @@ await scenario(
   compile('gemini', GEMINI_MODEL),
 );
 
+// ------------------------------- added after the step 3a review (gaps)
+//
+// Each group below covers a path a later Phase 3 step moves that the scenarios
+// above did not reach. They run after every scenario above, so the message ids
+// (msg_q…) and everything else those scenarios record are unchanged by them.
+
+/** Different, non-zero cache counts per turn, so a merge that drops, swaps or keeps only the last shows in usage and cost. */
+const TURN_USAGE = [
+  { input: 1103, output: 211, cacheRead: 0, cacheWrite: 4409 },
+  { input: 1301, output: 307, cacheRead: 4409, cacheWrite: 613 },
+  { input: 1709, output: 419, cacheRead: 5011, cacheWrite: 823 },
+  { input: 1907, output: 503, cacheRead: 5821, cacheWrite: 1031 },
+];
+const STRUCTURE_USAGE = { input: 907, output: 1201, cacheRead: 2003, cacheWrite: 3203 };
+const RETRY_USAGE = { input: 911, output: 2399, cacheRead: 3203, cacheWrite: 17 };
+
+/** One research turn with a search call and its result, ending as `stop`. */
+function researchTurn(model: string, turn: number, stop: string, usage = TURN_USAGE[turn]): Canned {
+  const toolId = `srvtoolu_q_turn${turn}`;
+  return anthropicStream({
+    model,
+    blocks: [
+      { type: 'text', deltas: [`Turn ${turn + 1}: `, 'searching.'] },
+      { type: 'server_tool_use', id: toolId, name: 'web_search', deltas: ['{"query":', `"turn ${turn + 1}"}`] },
+      {
+        type: 'web_search_tool_result',
+        block: {
+          type: 'web_search_tool_result',
+          tool_use_id: toolId,
+          content: [
+            { type: 'web_search_result', url: `https://example.org/q${turn + 1}`, title: 'Example', encrypted_content: 'eq', page_age: null },
+          ],
+        },
+      },
+    ],
+    stop,
+    usage,
+  });
+}
+
+function emitToolWithUsage(model: string, usage: typeof STRUCTURE_USAGE, stop = 'tool_use'): Canned {
+  return anthropicStream({
+    model,
+    blocks: [{ type: 'tool_use', id: 'toolu_q_emit', name: 'emit_translation', deltas: pieces(SEGMENTS_JSON, 40) }],
+    stop,
+    usage,
+  });
+}
+
+function explainToolWithUsage(model: string, usage: typeof STRUCTURE_USAGE): Canned {
+  return anthropicStream({
+    model,
+    blocks: [{ type: 'tool_use', id: 'toolu_q_explain', name: 'emit_explanation', deltas: pieces(EXPLANATION_JSON, 50) }],
+    stop: 'tool_use',
+    usage,
+  });
+}
+
+// (a) for 3g's shared addUsage: summed usage across turns, cache counts included.
+await scenario(
+  'anthropic.translate.dig-deeper-cache-usage',
+  [researchTurn(SONNET, 0, 'pause_turn'), researchTurn(SONNET, 1, 'end_turn'), emitToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+await scenario(
+  'anthropic.translate.max-tokens-then-success-cache-usage',
+  [emitToolWithUsage(SONNET, RETRY_USAGE, 'max_tokens'), emitToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'explain.cache-usage',
+  // The second turn's usage, so the research pass has a non-zero cache read
+  // of its own: keeping only the last pass's counts would then show.
+  [researchTurn(SONNET, 0, 'end_turn', TURN_USAGE[1]), explainToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  explain(),
+);
+
+// (c) for 3h: four pause_turns use up the research turns at both sites; the
+// fifth request is the structuring pass, with the notes of all four turns.
+await scenario(
+  'anthropic.translate.research-out-of-turns',
+  [...[0, 1, 2, 3].map((turn) => researchTurn(SONNET, turn, 'pause_turn')), emitToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+await scenario(
+  'explain.research-out-of-turns',
+  [...[0, 1, 2, 3].map((turn) => researchTurn(SONNET, turn, 'pause_turn')), explainToolWithUsage(SONNET, STRUCTURE_USAGE)],
+  explain(),
+);
+
+// (b) for 3e: the error mappings' last branch. A connection that drops after
+// the headers is the realistic input. For a streamed call (translate,
+// Explain) MessageStream wraps the body's TypeError in a plain AnthropicError
+// (lib/MessageStream.mjs, _MessageStream_handleError), which is no APIError
+// subclass, so it lands in the last branch with kind 'api'. For
+// messages.create (validateKey, gloss, compile) response.json() rejects with
+// the TypeError itself, a genuinely non-SDK error; in validateKey that is the
+// `throw toTranslationError(error)` line. Gemini translate and compile do not
+// catch a body read error at all: the TypeError leaves them unmapped.
+const dropped = (canned: Canned, bytes: number): Canned => ({ ...(canned as Extract<Canned, { status: number }>), dropAfterBytes: bytes });
+await scenario('anthropic.translate.body-drop', [dropped(emitTool(SONNET), 900)], translateAnthropic(translationRequest()));
+await scenario(
+  'anthropic.translate.empty-event-stream',
+  [{ status: 200, headers: { 'content-type': 'text/event-stream', 'request-id': 'req_q_empty' }, body: '' }],
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'anthropic.translate.stream-error-event',
+  [
+    {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream', 'request-id': 'req_q_overloaded' },
+      body: `event: error\ndata: ${JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } })}\n\n`,
+    },
+  ],
+  translateAnthropic(translationRequest()),
+);
+await scenario('anthropic.validateKey.body-drop', [dropped(keyCheckOk, 40)], validateAnthropic(ANTHROPIC_KEY));
+await scenario('explain.body-drop', [dropped(explainResearch(), 700)], explain());
+await glossScenario('gloss.body-drop', [dropped(glossTool, 40)]);
+await scenario('compile.anthropic.body-drop', [dropped(compiledAnthropic, 40)], compile('anthropic', SONNET));
+await scenario('compile.gemini.body-drop', [dropped(compiledGemini(' A compiled account.'), 40)], compile('gemini', GEMINI_MODEL));
+await scenario('gemini.translate.body-drop', [dropped(geminiOk(), 120)], translateGemini(geminiRequest()));
+
+// (d) for 3i: Gemini's own backoff past the first wait, 403, and the two
+// places Gemini reports blocked content.
+const gemini429 = (retryAfter?: string): Canned => ({
+  ...geminiError(429, 'Resource has been exhausted.', 'RESOURCE_EXHAUSTED'),
+  headers: { 'content-type': 'application/json', ...(retryAfter === undefined ? {} : { 'retry-after': retryAfter }) },
+});
+await scenario('gemini.translate.429-four-times-no-retry-after', times(4, () => gemini429()), translateGemini(geminiRequest()));
+await scenario(
+  'gemini.translate.429-http-date-none-3-then-200',
+  // An HTTP-date retry-after is NaN to readRetryAfter (Number()), so it backs
+  // off as if none were sent: 2000, then 4000, then the 3 s asked for.
+  [gemini429('Mon, 16 Nov 2026 12:00:30 GMT'), gemini429(), gemini429('3'), geminiOk()],
+  translateGemini(geminiRequest()),
+);
+await scenario('gemini.translate.403', [geminiError(403, 'Permission denied.', 'PERMISSION_DENIED')], translateGemini(geminiRequest()));
+await scenario(
+  'gemini.translate.prohibited-content',
+  [geminiStream([{ text: '[', finishReason: 'PROHIBITED_CONTENT', usage: { prompt: 300, candidates: 1 } }])],
+  translateGemini(geminiRequest()),
+);
+await scenario(
+  'gemini.translate.prompt-blocked',
+  // A blocked prompt: no candidates, only promptFeedback.blockReason, which
+  // GeminiProvider does not read, so it ends as an empty parse failure.
+  [
+    {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+      body: `data: ${JSON.stringify({
+        promptFeedback: { blockReason: 'PROHIBITED_CONTENT' },
+        usageMetadata: { promptTokenCount: 300, totalTokenCount: 300 },
+      })}\r\n\r\n`,
+      pieceBytes: 23,
+    },
+  ],
+  translateGemini(geminiRequest()),
+);
+
+// (f) compile with a bad Gemini key, which Gemini reports as 400, not 401.
+await scenario(
+  'compile.gemini.400',
+  [geminiError(400, 'API key not valid. Please pass a valid API key.', 'INVALID_ARGUMENT')],
+  compile('gemini', GEMINI_MODEL),
+);
+
+// The SDK's HTTP-date branch (client.mjs retryRequest: Date.parse(header) -
+// Date.now(), 30 000 ms with Date.now pinned). The older http-date scenario
+// above also sends retry-after-ms, which the SDK reads first, so its Date.parse
+// never runs; this one sends the date alone. The app's own reading, Number()
+// of the header, is NaN in both.
+await scenario(
+  'anthropic.translate.429-retry-after-http-date-only',
+  times(3, () => anthropicError(429, { 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
+  translateAnthropic(translationRequest()),
+);
+
 // --------------------------------------------------------- pure values
 
 // Every model ID models.ts names, in a fixed order, plus one it does not.
@@ -1171,6 +1393,30 @@ values('values.secrets', () => {
   steps.sunnah = { storage: snapshot(), get: secrets.getSunnahKey(), hasAnyProviderKey: secrets.hasAnyProviderKey() };
   storageMap.clear();
   return steps;
+});
+
+// For 3n: the offline model ids, which MODEL_IDS above does not hold, through
+// every function 3n moves or that takes a model id, for every provider id.
+values('values.offlineModels', () => {
+  const ids = [...OFFLINE_MODELS.map((model) => model.id), 'some-unknown-model'];
+  const byProvider: Record<string, unknown> = {};
+  for (const providerId of PROVIDER_IDS) {
+    const byModel: Record<string, unknown> = {};
+    for (const model of ids) byModel[model] = models.findModelOption(providerId, model);
+    byProvider[providerId] = { findModelOption: byModel, defaultModelFor: models.defaultModelFor(providerId) };
+  }
+  const byModel: Record<string, unknown> = {};
+  for (const model of ids) {
+    byModel[model] = {
+      offlineModelById: offlineModelById(model).id,
+      outputCeilingFor: models.outputCeilingFor(model),
+      outputConfigFor: models.outputConfigFor(model),
+      successorModel: models.successorModel(model),
+      isClaudeModel: models.isClaudeModel(model),
+      costOf: costOf(model, { inputTokens: 1_000, outputTokens: 500, cacheReadTokens: 2_000, cacheWriteTokens: 300 }),
+    };
+  }
+  return { OFFLINE_MODELS, byProvider, byModel };
 });
 
 // ------------------------------------------- the SDK-import allowlist (Q12)
