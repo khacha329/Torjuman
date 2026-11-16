@@ -7,7 +7,7 @@
 // this is deliberately the only place they appear.
 
 import type { ModelOption } from './TranslationProvider';
-import type { ProviderId, TranslationUsage } from '../types';
+import type { TranslationUsage } from '../types';
 
 // ---------------------------------------------------------------- Anthropic
 
@@ -74,7 +74,7 @@ export const ANTHROPIC_EXPLAIN_FALLBACK_MODEL = CLAUDE_SONNET_5_5;
  * Labels for models no longer offered, so a card made with one still shows
  * which model wrote it rather than a bare ID.
  */
-const SUPERSEDED_ANTHROPIC_MODELS: ModelOption[] = [
+export const SUPERSEDED_ANTHROPIC_MODELS: ModelOption[] = [
   { id: CLAUDE_SONNET_5, label: 'Sonnet 5', note: 'Previous generation' },
   { id: CLAUDE_HAIKU_4_5, label: 'Haiku 4.5', note: 'Previous generation' },
   { id: CLAUDE_OPUS_5, label: 'Opus 5', note: 'Previous generation' },
@@ -223,23 +223,6 @@ export function costOf(model: string, usage: TranslationUsage): number | null {
   const output = usage.outputTokens * rates.outputPerMTok;
 
   return (input + cacheRead + cacheWrite + output) / 1_000_000;
-}
-
-export function modelsFor(providerId: ProviderId): ModelOption[] {
-  return providerId === 'anthropic' ? ANTHROPIC_MODELS : GEMINI_MODELS;
-}
-
-/** The option for a model ID, including ones no longer offered. */
-export function findModelOption(providerId: ProviderId, model: string): ModelOption | undefined {
-  const known =
-    providerId === 'anthropic'
-      ? [...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS]
-      : GEMINI_MODELS;
-  return known.find((entry) => entry.id === model);
-}
-
-export function defaultModelFor(providerId: ProviderId): string {
-  return providerId === 'anthropic' ? ANTHROPIC_DEFAULT_MODEL : GEMINI_DEFAULT_MODEL;
 }
 
 /**

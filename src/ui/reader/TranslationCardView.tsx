@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { BidiText } from '../../components/BidiText';
 import type { ProviderId, TranslatedSegment, TranslationCard } from '../../types';
-import { findModelOption } from '../../translation/models';
 import { OFFLINE_MODELS } from '../../translation/offline/OfflineProvider';
-import { allProviders, badgeFor, providerFor } from '../../translation/providers/registry';
+import { allProviders, badgeFor, providerFor, findModelOption } from '../../translation/providers/registry';
 import { Spinner } from '../kit';
 import { isIncomplete } from '../../translation/coverage';
 import { useReadOnly } from '../../app/readOnly';

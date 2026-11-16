@@ -1564,13 +1564,13 @@ values('values.registry', () => {
   const byId: Record<string, unknown> = {};
   for (const id of PROVIDER_IDS) {
     const findModelOption: Record<string, unknown> = {};
-    for (const model of MODEL_IDS) findModelOption[model] = models.findModelOption(id, model);
+    for (const model of MODEL_IDS) findModelOption[model] = registry.findModelOption(id, model);
     byId[id] = {
       providerFor: registry.providerFor(id).id,
       badgeFor: registry.badgeFor(id),
-      modelsFor: models.modelsFor(id),
-      modelsForIsProviderArray: models.modelsFor(id) === registry.providerFor(id).availableModels,
-      defaultModelFor: models.defaultModelFor(id),
+      modelsFor: registry.modelsFor(id),
+      modelsForIsProviderArray: registry.modelsFor(id) === registry.providerFor(id).availableModels,
+      defaultModelFor: registry.defaultModelFor(id),
       findModelOption,
     };
   }
@@ -1616,8 +1616,8 @@ values('values.offlineModels', () => {
   const byProvider: Record<string, unknown> = {};
   for (const providerId of PROVIDER_IDS) {
     const byModel: Record<string, unknown> = {};
-    for (const model of ids) byModel[model] = models.findModelOption(providerId, model);
-    byProvider[providerId] = { findModelOption: byModel, defaultModelFor: models.defaultModelFor(providerId) };
+    for (const model of ids) byModel[model] = registry.findModelOption(providerId, model);
+    byProvider[providerId] = { findModelOption: byModel, defaultModelFor: registry.defaultModelFor(providerId) };
   }
   const byModel: Record<string, unknown> = {};
   for (const model of ids) {

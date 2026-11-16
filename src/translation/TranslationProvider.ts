@@ -86,6 +86,8 @@ export interface TranslationProvider {
   readonly id: CloudProviderId;
   readonly displayName: string;
   readonly availableModels: ModelOption[];
+  /** Every model a card may name: the offered ones, then superseded ones still labelled. */
+  readonly knownModels: ModelOption[];
   readonly defaultModel: string;
   /** Where the user goes to get a key. */
   readonly keyHelpUrl: string;

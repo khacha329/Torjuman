@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { newId } from '../../lib/id';
 import { DEFAULT_PROFILE_ID } from '../../translation/profiles';
-import { providerFor } from '../../translation/providers/registry';
-import { modelsFor } from '../../translation/models';
+import { providerFor, modelsFor } from '../../translation/providers/registry';
 import type { TranslationProfile } from '../../types';
 import { Button, Field, inputClass, SettingsSection } from '../kit';
 

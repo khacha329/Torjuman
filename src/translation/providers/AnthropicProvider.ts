@@ -15,6 +15,7 @@ import {
   outputCeilingFor,
   outputConfigFor,
   costOf,
+  SUPERSEDED_ANTHROPIC_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
 import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
@@ -37,6 +38,7 @@ export class AnthropicProvider implements TranslationProvider {
   readonly id = 'anthropic' as const;
   readonly displayName = 'Claude';
   readonly availableModels: ModelOption[] = ANTHROPIC_MODELS;
+  readonly knownModels: ModelOption[] = [...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS];
   readonly defaultModel = ANTHROPIC_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://console.anthropic.com/settings/keys';
   readonly isFree = false;

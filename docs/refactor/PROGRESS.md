@@ -868,7 +868,8 @@ four call sites build a client per call — the basis of check Q.
 | 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `d0ff6e1` |
 | 3k. `costOf` → `models.ts` | T B L Q S R U pass; V owed; review PASS WITH NOTES | `fff14db` |
 | 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review PASS | `2655b79` |
-| 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review pending | this commit |
+| 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review PASS | `b114143` |
+| 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q pass; U S R running; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1244,6 +1245,36 @@ FOUND_ISSUES 11.
   788,198 → 788,224 B (+26, an exported function); only `index.js` differs;
   CSS byte-identical. SSR build resolves; **V owed**. **L**: 134 edges, rules
   hold. **U** 180/180 (boot path changed).
+
+- **Review of 3m: PASS; "ready for 3n".** Types reduce to `ProviderId` before
+  and after; a legacy profile with no model still yields `gemini`; the
+  record's diff is strictly additive. Note for the plan, applied in 3r: Design
+  §4's "nothing new from `models.ts`" should read "nothing beyond
+  `isClaudeModel` (3m)".
+
+**Step 3n, measured 2026-11-16** (plan Design §4)
+- `TranslationProvider` gains `knownModels` (comment from Design §4):
+  Anthropic `[...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS]` (the
+  superseded list gains `export`), Gemini `GEMINI_MODELS`. `modelsFor`,
+  `findModelOption` (with its doc comment) and `defaultModelFor` are deleted
+  from `models.ts` and written in `registry.ts` as lookups on `providerFor`
+  — the one rewrite of the phase. `models.ts` drops its now-unused
+  `ProviderId` import; the registry imports `ModelOption`. Importers:
+  `SettingsScreen.tsx` and `ProfileEditor.tsx` merge the names into their
+  registry import, `TranslationCardView.tsx` likewise (its `models` import
+  line goes), `verify-parsers.ts:4196` uses the registry's `findModelOption`
+  (imported in that block), `verify-requests.ts` calls `registry.*`.
+- Equivalence: `anthropic` → the same arrays and default; `gemini` → Gemini's;
+  `offline` → the old else branch (Gemini) and now `providerFor`'s fallback
+  to `DEFAULT_PROVIDER_ID` (`gemini`). The one difference: `findModelOption`
+  used to build a fresh array per call; `knownModels` is one array per
+  provider, never mutated, and `find` returns the same option objects.
+- **T** exit 0. **Q** PASS, identical — every id × model, and
+  `modelsForIsProviderArray` still true. **B** exit 0; main chunk 788,224 →
+  788,246 B (+22); only `index.js` differs; CSS byte-identical. SSR build
+  resolves; **V owed** (`verify-parsers.ts:4196`). **L**: 134 edges, rules
+  hold. **U S R** were running when this was committed; results with the
+  review.
 
 ## Open
 

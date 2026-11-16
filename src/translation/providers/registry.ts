@@ -1,4 +1,4 @@
-import { type TranslationProvider } from '../TranslationProvider';
+import { type ModelOption, type TranslationProvider } from '../TranslationProvider';
 import { isCloudProvider } from '../../lib/providers';
 import type { CloudProviderId, ProviderId } from '../../types';
 import { AnthropicProvider } from './AnthropicProvider';
@@ -34,6 +34,19 @@ export const DEFAULT_PROVIDER_ID: CloudProviderId = 'gemini';
 
 export function providerFor(id: ProviderId): TranslationProvider {
   return isCloudProvider(id) ? PROVIDERS[id] : PROVIDERS[DEFAULT_PROVIDER_ID];
+}
+
+export function modelsFor(id: ProviderId): ModelOption[] {
+  return providerFor(id).availableModels;
+}
+
+/** The option for a model ID, including ones no longer offered. */
+export function findModelOption(id: ProviderId, model: string): ModelOption | undefined {
+  return providerFor(id).knownModels.find((entry) => entry.id === model);
+}
+
+export function defaultModelFor(id: ProviderId): string {
+  return providerFor(id).defaultModel;
 }
 
 /** Which provider a profile saved before providers existed was on (AppContext). */
