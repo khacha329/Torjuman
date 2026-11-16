@@ -1474,7 +1474,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
 | 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review PASS WITH NOTES | `284b7ef` |
 | 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review PASS | `ab1c19b` |
-| 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review pending | this commit |
+| 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review PASS | `b04c7f8` |
+| 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1857,6 +1858,41 @@ holds)
   `""` resolving). **Q** PASS. **S** 30/30. **R** 28/28; landscape 240,000 px
   33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px 24.4 s 1,904 nodes 0
   long tasks. **V owed**.
+- **Review of `b04c7f8`: PASS; "ready for 4i".** Nothing to fix; the
+  reviewer showed that no instance could reach a different
+  `deleteNarratorShard`, `getBlock` or `loadSearchIndex` body through the
+  direct calls.
+
+**Step 4i, measured 2026-11-16**
+- `exportWork` and `importWork` moved verbatim into the new
+  `platform/storage/idbBackup.ts`, de-indented, in the 4e fetcher form;
+  `importWork` takes `searchIndex: Map<string, SearchEntry[]>` second. The
+  `importWork` comments moved with it. `WORK_STORES` (Q7, 4m) is not part of
+  this step.
+- 5 substitution sites: `this.handle` → `handle()` 2 (one `const db = …` in
+  each); `this.getSettings()` → `getSettings(handle)` 1;
+  `this.putSettings(` → `putSettings(handle, ` 1 (both imported from
+  `./idbWork`, so they now call the functions directly rather than through
+  the class delegates); `this.searchIndex` → `searchIndex` 1. No other
+  `this.` call. A token diff of both functions against `b04c7f8` shows only
+  those, `export function`, the parameters and a wrapped signature's
+  trailing comma.
+- New file edges: `idbBackup` → `StorageAdapter` (types), `idbSchema`
+  (`DB_VERSION`, `Schema`), `idbLibrary` (type `SearchEntry`), `idbWork`;
+  none of those imports `idbBackup`, so no cycle. The adapter gains `import {
+  exportWork, importWork } from './idbBackup'` after the `./idbWork` block
+  and drops no import. The class now holds `db`, `searchIndex`, `init`, the
+  `handle` getter, `lazyHandle`, the `schemaVersion` getter and 83 one-line
+  delegates: 557 lines, the class at `:134-557`.
+- **T** exit 0. **B** exit 0; main chunk 791,806 → 791,869 B (+63); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold, no cycle. **D**
+  PASS, identical (40 scenarios, `work-backup/export`, `import-fresh`,
+  `import-without-shareRecords`, `import-missing-books`,
+  `import-over-existing` among them). **Q** PASS. S and R not run (not
+  required for 4i). **V owed**.
+- The adapter's header, which said Phase 4 "is moving" the class's code
+  into the `idb*.ts` files, now says it moved it and that the class hands
+  each method to its group — true from 4i, when the last body left (Q8).
 
 ## Open
 

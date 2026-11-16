@@ -123,12 +123,13 @@ import {
   putSharhCard,
   putWordGloss,
 } from './idbWork';
+import { exportWork, importWork } from './idbBackup';
 
 // This file and the idb*.ts files beside it are the ONLY code that talks to
-// IndexedDB (restructure Phase 4 is moving this class's code into them, store
-// group by store group). Everything else goes through the StorageAdapter
-// interface, so replacing this with native SQLite under Capacitor touches
-// nothing else.
+// IndexedDB (restructure Phase 4 moved this class's code into them by store
+// group; the class keeps the StorageAdapter methods and hands each to its
+// group). Everything else goes through the StorageAdapter interface, so
+// replacing this with native SQLite under Capacitor touches nothing else.
 
 export class IdbStorageAdapter implements StorageAdapter {
   private db: IDBPDatabase<Schema> | null = null;
@@ -547,78 +548,10 @@ export class IdbStorageAdapter implements StorageAdapter {
   // ---------------------------------------------------------- work backup
 
   async exportWork(): Promise<WorkBundle> {
-    const db = this.handle;
-    const books = await db.getAll('books');
-
-    return {
-      version: DB_VERSION,
-      exportedAt: Date.now(),
-      referencedBooks: books.map((book) => ({
-        shamelaId: book.shamelaId,
-        bookId: book.id,
-        title: book.title,
-      })),
-      cards: await db.getAll('cards'),
-      explanationCards: await db.getAll('explanationCards'),
-      sharhCards: await db.getAll('sharhCards'),
-      marks: await db.getAll('marks'),
-      glossary: await db.getAll('glossary'),
-      profiles: await db.getAll('profiles'),
-      positions: await db.getAll('positions'),
-      wordGlosses: await db.getAll('wordGlosses'),
-      quranVerses: await db.getAll('quranVerses'),
-      hadiths: await db.getAll('hadiths'),
-      shareRecords: await db.getAll('shareRecords'),
-      settings: (await this.getSettings()) ?? null,
-    };
+    return exportWork(this.lazyHandle);
   }
 
   async importWork(bundle: WorkBundle): Promise<WorkRestoreReport> {
-    const db = this.handle;
-
-    const write = async <
-      K extends 'cards' | 'explanationCards' | 'sharhCards' | 'marks' | 'glossary' | 'profiles' |
-        'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths' | 'shareRecords',
-    >(
-      store: K,
-      rows: Schema[K]['value'][] | undefined,
-    ) => {
-      if (!rows || rows.length === 0) return;
-      for (let i = 0; i < rows.length; i += 500) {
-        const tx = db.transaction(store, 'readwrite');
-        await Promise.all(rows.slice(i, i + 500).map((row) => tx.store.put(row as never)));
-        await tx.done;
-      }
-    };
-
-    await write('cards', bundle.cards);
-    await write('explanationCards', bundle.explanationCards);
-    await write('sharhCards', bundle.sharhCards);
-    await write('marks', bundle.marks);
-    await write('glossary', bundle.glossary);
-    await write('profiles', bundle.profiles);
-    await write('positions', bundle.positions);
-    await write('wordGlosses', bundle.wordGlosses);
-    await write('quranVerses', bundle.quranVerses);
-    await write('hadiths', bundle.hadiths);
-    // Absent on a backup written before shares existed, which `write` handles.
-    await write('shareRecords', bundle.shareRecords);
-    if (bundle.settings) await this.putSettings(bundle.settings);
-
-    // Work anchored to a book that is not on this device restores fine — block
-    // IDs are deterministic, so it will bind correctly once that book is
-    // imported. Say which ones are missing rather than failing.
-    const present = new Set((await db.getAll('books')).map((book) => book.shamelaId));
-    const missingBooks = (bundle.referencedBooks ?? [])
-      .filter((entry) => !present.has(entry.shamelaId))
-      .map((entry) => ({ shamelaId: entry.shamelaId, title: entry.title }));
-
-    this.searchIndex.clear();
-
-    return {
-      restoredCards: (bundle.cards?.length ?? 0) + (bundle.explanationCards?.length ?? 0),
-      restoredMarks: bundle.marks?.length ?? 0,
-      missingBooks,
-    };
+    return importWork(this.lazyHandle, this.searchIndex, bundle);
   }
 }
