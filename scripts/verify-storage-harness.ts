@@ -7,7 +7,7 @@
 // import's verse detection can fetch quran/uthmani.json from dist/ exactly as
 // the app does. It imports, by path and unchanged:
 //
-//   platform/storage/IdbStorageAdapter   the only IndexedDB code (Phase 4 splits it)
+//   platform/storage/IdbStorageAdapter   with the idb*.ts files beside it, the only IndexedDB code
 //   library/transfer                     the per-book file (exportBook, importBookFile)
 //   library/deviceTransfer               the whole-tablet file (export, inspect, restore)
 //   share/ShareStorageAdapter            the adapter over a shared bundle

@@ -33,22 +33,16 @@ import type {
   WorkBundle,
   WorkRestoreReport,
 } from './StorageAdapter';
-import { BOOK_STORES, DB_NAME, DB_VERSION, type BookStore, type Schema, upgradeDatabase } from './idbSchema';
+import { BOOK_STORES, DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from './idbSchema';
+import { purgeIndex } from './idbPurge';
 
-// This is the ONLY file that talks to IndexedDB. Everything else goes through
-// the StorageAdapter interface, so replacing this with native SQLite under
-// Capacitor touches nothing else.
+// This file and the idb*.ts files beside it are the ONLY code that talks to
+// IndexedDB (restructure Phase 4 split it by store group; this class keeps the
+// StorageAdapter methods and hands each to its group). Everything else goes
+// through the StorageAdapter interface, so replacing this with native SQLite
+// under Capacitor touches nothing else.
 
 const SETTINGS_KEY = 'app';
-
-/**
- * How many primary keys one purge round trip carries.
- *
- * Large enough that removing a 100,000-block commentary costs a couple of dozen
- * round trips instead of 200,000; small enough that the key array stays a few
- * hundred kilobytes rather than several megabytes.
- */
-const PURGE_BATCH = 4096;
 
 /** Minimal per-block record kept in memory for search. */
 interface SearchEntry {
@@ -91,46 +85,6 @@ export class IdbStorageAdapter implements StorageAdapter {
     return this.db;
   }
 
-  /**
-   * Delete every row an index points at, a batch of primary keys at a time.
-   *
-   * This replaces the obvious cursor idiom — `openCursor`, then
-   * `await cursor.delete()`, then `await cursor.continue()` — which was wrong
-   * here in two separate ways:
-   *
-   *   - It awaits two IndexedDB requests *per row*. Removing Fatḥ al-Bārī meant
-   *     something like two hundred thousand awaited round trips, which on the
-   *     tablet is minutes with no sign that anything is happening.
-   *   - A value cursor deserializes each record before throwing it away. On
-   *     `pages`, whose values hold the fetched HTML, that read tens of
-   *     megabytes it never looked at — the exact cost `listFetchedPageIndices`
-   *     was written with a key cursor to avoid.
-   *
-   * `getAllKeys` fetches primary keys only, one request per batch, and the
-   * deletes are queued together on the transaction rather than awaited singly.
-   */
-  private async purgeIndex(
-    store: BookStore | 'narratorProfiles' | 'qulEntries',
-    index: 'byBook' | 'byShard' | 'byResource',
-    key: string,
-  ): Promise<number> {
-    // idb's generics cannot express "this index belongs to this store" across a
-    // union of store names, and every call below passes a valid pair. The
-    // untyped handle is the library's own escape hatch for exactly this.
-    const db = this.handle as unknown as IDBPDatabase;
-    let removed = 0;
-    for (;;) {
-      const tx = db.transaction(store, 'readwrite');
-      const keys = await tx.store.index(index).getAllKeys(key, PURGE_BATCH);
-      if (keys.length > 0) {
-        await Promise.all(keys.map((primary) => tx.store.delete(primary)));
-      }
-      await tx.done;
-      removed += keys.length;
-      if (keys.length < PURGE_BATCH) return removed;
-    }
-  }
-
   // ---------------------------------------------------------------- books
 
   async putBook(book: Book): Promise<void> {
@@ -149,7 +103,7 @@ export class IdbStorageAdapter implements StorageAdapter {
   async deleteBook(id: string): Promise<void> {
     const db = this.handle;
     for (const store of BOOK_STORES) {
-      await this.purgeIndex(store, 'byBook', id);
+      await purgeIndex(this.handle, store, 'byBook', id);
     }
     // Narrator profiles are filed by SHARD, not by book, so they are not in
     // the loop above. A Taqrīb import's profiles belong to this book and must
@@ -361,7 +315,7 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   async clearEntities(bookId: string): Promise<void> {
-    await this.purgeIndex('entities', 'byBook', bookId);
+    await purgeIndex(this.handle, 'entities', 'byBook', bookId);
   }
 
   // ----------------------------------------------------------- dictionary
@@ -380,7 +334,7 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   async clearDictionaryEntries(bookId: string): Promise<void> {
-    await this.purgeIndex('dictionaryEntries', 'byBook', bookId);
+    await purgeIndex(this.handle, 'dictionaryEntries', 'byBook', bookId);
   }
 
   // ---------------------------------------------------------------- marks
@@ -492,7 +446,7 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   async clearBiographyEntries(bookId: string): Promise<void> {
-    await this.purgeIndex('biographyEntries', 'byBook', bookId);
+    await purgeIndex(this.handle, 'biographyEntries', 'byBook', bookId);
   }
 
   async listQulResources(): Promise<QulResource[]> {
@@ -507,7 +461,7 @@ export class IdbStorageAdapter implements StorageAdapter {
     // atomic, and the ordering is what makes that safe: an interrupted purge
     // still lists the resource, and pressing Remove again finishes it. The
     // reverse order would leave entries no longer reachable from anywhere.
-    await this.purgeIndex('qulEntries', 'byResource', id);
+    await purgeIndex(this.handle, 'qulEntries', 'byResource', id);
     await this.handle.delete('qulResources', id);
   }
 
@@ -629,7 +583,7 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   async deleteNarratorShard(shard: string): Promise<void> {
-    await this.purgeIndex('narratorProfiles', 'byShard', shard);
+    await purgeIndex(this.handle, 'narratorProfiles', 'byShard', shard);
   }
 
   // -------------------------------------------------------- shared chapters

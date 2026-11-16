@@ -1468,7 +1468,8 @@ Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
 | review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review FAIL (a lost cache-key hit) | `8a9cb4b` |
 | 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review PASS, "ready for 4b" | `c1d2cfb` |
 | 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `056290a` |
-| 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review pending | this commit |
+| 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review PASS WITH NOTES | `a4ba6af` |
+| 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review pending | this commit |
 
 **Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -1652,6 +1653,32 @@ holds)
   function); only `index.js`; CSS byte-identical. **L**: rules hold. **D**
   PASS, identical — every schema scenario, fresh and upgraded. **U** 180/180
   (a fresh install through the bundle). **Q** PASS. **V owed**.
+
+- **Review of 4c: PASS WITH NOTES; "ready for 4d".** idb calls `upgrade` as
+  a plain function (`this` was already undefined), so naming it changes
+  nothing; the body is verbatim. Note: the adapter's "ONLY file that talks to
+  IndexedDB" was already untrue at 4c, not first at 4d as the plan's §5 and
+  Q8 said — `upgradeDatabase` creates and deletes stores. So were the D
+  harness's header (fixed in 4d with the adapter's) and CLAUDE.md's Never
+  line and trap 6 ("both upgrade branches in `IdbStorageAdapter.init`"),
+  which 4n fixes; they misled no one in the meantime, since `init` names
+  `upgradeDatabase`.
+
+**Step 4d, measured 2026-11-16**
+- `PURGE_BATCH` with its comment and `purgeIndex` with its comment moved
+  verbatim into the new `platform/storage/idbPurge.ts`: the method became
+  `export async function purgeIndex(handle: IDBPDatabase<Schema>, store,
+  index, key)`, de-indented one level, and its one `this.handle` became
+  `handle` (the fifth adaptation, Q3); `PURGE_BATCH` gained `export`. The six
+  calls in the class became `purgeIndex(this.handle, …)`. Its comment
+  "every call below" is kept verbatim though the calls are now in the
+  adapter. The adapter drops its now-unused `BookStore` import. The
+  adapter's header now says this file and the `idb*.ts` files beside it are
+  the only IndexedDB code (Q8), and so does the D harness's header line.
+- **T** exit 0. **B** exit 0; main chunk 788,284 → 788,277 B (−7); only
+  `index.js`; CSS byte-identical. **L**: rules hold. **D** PASS, identical —
+  the per-book delete over 4,097 rows, `deleteQulResource`,
+  `deleteNarratorShard` and the clears among it. **Q** PASS. **V owed**.
 
 ## Open
 
