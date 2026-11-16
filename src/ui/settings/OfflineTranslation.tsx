@@ -14,6 +14,7 @@ import {
   type OfflineDtype,
   type OfflineLoadDiagnostics,
 } from '../../translation/offline/OfflineProvider';
+import { GEMINI_DEFAULT_MODEL } from '../../translation/models';
 import { Button, Field, inputClass, ProgressBar, SettingsSection } from '../kit';
 
 // Downloading, choosing and removing the on-device translation model.
@@ -202,7 +203,7 @@ export function OfflineTranslation() {
               onChange={(event) => {
                 const value = event.target.value;
                 if (value === '') {
-                  void saveProfile({ ...activeProfile, providerId: 'gemini', model: 'gemini-3.7-flash' });
+                  void saveProfile({ ...activeProfile, providerId: 'gemini', model: GEMINI_DEFAULT_MODEL });
                 } else {
                   void saveProfile({ ...activeProfile, providerId: 'offline', model: value });
                 }

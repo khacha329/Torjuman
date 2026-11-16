@@ -48,7 +48,9 @@ Found by the Phase 0 review.
   `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and
   `ui/settings/OfflineTranslation.tsx` all do.
 - A model ID outside `models.ts`: `ui/settings/OfflineTranslation.tsx:210`
-  saves `model: 'gemini-3.7-flash'` inline.
+  saves `model: 'gemini-3.7-flash'` inline. **Replaced in Phase 3 step 3p**
+  (owner's Q6 (b)) by `GEMINI_DEFAULT_MODEL`, the same value; the provider
+  literal `'gemini'` stays ("back to Gemini", not "back to the default").
 - Call parameters outside `models.ts`: `translation/gloss.ts:111,114` set
   `max_tokens: 2000` and `output_config: { effort: 'low' }` inline (with
   comments saying why). **Moved in Phase 3 step 3j** (owner's Q6) to

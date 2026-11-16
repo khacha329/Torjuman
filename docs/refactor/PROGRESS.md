@@ -870,7 +870,8 @@ four call sites build a client per call — the basis of check Q.
 | 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review PASS | `2655b79` |
 | 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review PASS | `b114143` |
 | 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q U S R pass; V owed; review PASS WITH NOTES | `309b5e2` |
-| 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review pending | this commit |
+| 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
+| 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review pending | this commit |
 
 **Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
 applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
@@ -1302,6 +1303,25 @@ FOUND_ISSUES 11.
   does not record the new one, by design: the record does not change at 3o).
   **B** exit 0; main chunk 788,246 → 788,258 B (+12); only `index.js`; CSS
   byte-identical. **L**: rules hold.
+
+- **Review of 3o: PASS WITH NOTES; "ready for 3p".** Both strings
+  byte-identical in source and bundle (`E2 80 A6`); `provider` is recomputed
+  each render from the same `providerId` in both screens; no `sk-ant`/`AIza`
+  left in `src` outside the two providers. Note, for 3r: the plan's Design §3
+  row says `SettingsScreen.tsx:274`; the line was 273.
+
+**Step 3p, measured 2026-11-16** (owner's Q6 (b), the first option)
+- `OfflineTranslation.tsx:206`: "No — use a cloud provider" saves
+  `{ providerId: 'gemini', model: GEMINI_DEFAULT_MODEL }` instead of the
+  inline `'gemini-3.7-flash'` (the same value, `models.ts:153`); the
+  provider literal stays — "back to Gemini", not a new "back to the default".
+  The file imports `GEMINI_DEFAULT_MODEL` from `translation/models` (an edge
+  `ui/settings → translation` already had). FOUND_ISSUES 4 notes it.
+- **T** exit 0. **Q** PASS, identical. **B** exit 0; main chunk 788,258 →
+  788,242 B (−16; the bundle's handler now reads the shared constant
+  `providerId:"gemini",model:bp`); only `index.js`; CSS byte-identical.
+  **L**: rules hold. **U** 180/180 (the section is unchanged; the handler
+  itself is read, not run: it needs an installed on-device model).
 
 ## Open
 
