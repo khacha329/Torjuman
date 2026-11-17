@@ -56,6 +56,7 @@ import {
   RAIL_WIDTH,
 } from '../useLayoutMode';
 import { useWordLookup } from './useWordLookup';
+import { useReadingPosition } from './useReadingPosition';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -116,7 +117,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
    */
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const restoredRef = useRef(false);
   const shareButtonRef = useRef<HTMLSpanElement>(null);
   const [showShare, setShowShare] = useState(false);
   /**
@@ -302,29 +302,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     [entities, blocks],
   );
 
-  // Restore the saved reading position once the blocks are in.
-  useEffect(() => {
-    if (loading || blocks.length === 0 || restoredRef.current) return;
-    restoredRef.current = true;
-    void storage.getReadingPosition(bookId).then((position) => {
-      if (position) {
-        requestAnimationFrame(() => listRef.current?.scrollToOrder(position.blockOrder));
-      }
-    });
-  }, [loading, blocks.length, storage, bookId]);
-
-  // Persist it as he reads, throttled so scrolling does not thrash IndexedDB.
-  useEffect(() => {
-    if (!visibleBlock) return;
-    const timer = setTimeout(() => {
-      void storage.putReadingPosition({
-        bookId,
-        blockOrder: visibleBlock.order,
-        updatedAt: Date.now(),
-      });
-    }, 900);
-    return () => clearTimeout(timer);
-  }, [visibleBlock, storage, bookId]);
+  useReadingPosition({ storage, bookId, loading, blocks, visibleBlock, listRef });
 
   // ------------------------------------------------------------- selection
 

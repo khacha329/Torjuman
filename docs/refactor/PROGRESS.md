@@ -2336,7 +2336,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review PASS WITH NOTES | `2d72185` |
 | 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review PASS | `24629fb` |
 | 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review PASS | `5561473` |
-| 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review pending | this commit |
+| 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review PASS WITH NOTES | `c0ea5e3` |
+| 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3235,8 +3236,9 @@ holds)
   (1,349).
 - **For 5j:** every FOUND_ISSUES reference into `ReaderScreen.tsx` past
   `:254` now sits 58 lines higher (26's `:1102-1115`, 27's `:649-666`,
-  28's `:1025`, 30's `:389-400`, 33's `:1043` → 985, 34's `:1089`, 39's
-  `:1240-1275`), and 31's `:124` 5 lines higher; 5g2–5h4 move them again,
+  28's `:1025`, 30's `:389-400`, 33's `:1043` → 985, 34's and 37's
+  `:1089` (37's added at 5g1's review), 39's `:1240-1275`), and 31's
+  `:124` 5 lines higher; 5g2–5h4 move them again,
   so 5j recomputes them from the final file.
 - **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
   exit 0, main chunk 790,460 B (+193 B, the hook's function and returned
@@ -3251,6 +3253,65 @@ holds)
   **P** PASS, identical to `phase5/translate.json` (6 groups, 23
   scenarios, 18 requests). P sends no gloss request; the gloss is U's
   `reader-meaning*`.
+- **Review of 5g1 (`c0ea5e3`): PASS WITH NOTES; "ready for 5g2".** The 55
+  lines identical; hook order and effect order confirmed, `loadDictionary`
+  still the screen's first own effect after the domain hooks; the seven
+  returned names exactly Design §6.1's. Note, applied above: FOUND_ISSUES
+  37's `ReaderScreen.tsx:1089` (the same line as 34's) added to the 5j list.
+
+**Step 5g2, measured 2026-11-17**
+- The reading-position region (`ReaderScreen.tsx:305-327` at `c0ea5e3`:
+  the restore effect `[loading, blocks.length, storage, bookId]` with its
+  comment, and the persist effect `[visibleBlock, storage, bookId]`, 900 ms,
+  with its comment — one contiguous block, directly after the
+  `entitiesByBlock` memo) and `restoredRef` (`:119`, between
+  `headerHeight` and `shareButtonRef`, used only by the restore) moved into
+  `export function useReadingPosition({ storage, bookId, loading, blocks,
+  visibleBlock, listRef })` in the new `ui/reader/useReadingPosition.ts`:
+  `restoredRef`'s line first, a blank line, then the region. `cmp`: both
+  identical, at the same indentation. Adaptations: (f) the six fields
+  Design §6.1 lists, same names; (i) their types, `ReturnType<typeof
+  useApp>['storage']`, `string`, `boolean`, `Block[]`, `Block | null` and
+  `RefObject<BlockListHandle | null>`; (g) nothing returned; (h) the call
+  `useReadingPosition({ storage, bookId, loading, blocks, visibleBlock,
+  listRef });` stands where the restore's comment was.
+- **Effect order, before and after:** … entities (`[storage, book,
+  blocks.length, readOnly]`), restore, persist, biography availability,
+  `selectionchange`, … — unchanged, the two effects called at the same
+  point in the same order. The only hook that moves is `restoredRef`'s
+  `useRef`, from among the screen's refs to the hook's start, as Design
+  §6.1 allows (no effect; hook order is fixed per build). The two storage
+  calls are unchanged in text, order and timing: `storage.getReadingPosition
+  (bookId)` once the blocks are in (and `listRef.current` still read inside
+  its `requestAnimationFrame`, not at call time), `storage.putReadingPosition`
+  900 ms after the visible block settles. FOUND_ISSUES 31 is preserved:
+  `restoredRef` lives as long as the mounted screen and is never reset when
+  `bookId` changes, as before.
+- Imports: `useReadingPosition.ts` takes `useEffect`/`useRef` (and `type
+  RefObject`, new for (i)), `type useApp`, `type Block` and `type
+  BlockListHandle`, filtered from the source's lines; `BlockList.tsx`
+  imports nothing back, so no cycle. `ReaderScreen` keeps every import
+  (`useRef` and `BlockListHandle` are still its own) and imports
+  `useReadingPosition`. A four-line header. `ReaderScreen.tsx` is 1,269
+  lines (1,291).
+- **For 5j:** FOUND_ISSUES 31's `ReaderScreen.tsx:124` (`restoredRef`) and
+  `:365` (the early return) are now `useReadingPosition.ts:26` and `:30`;
+  the screen's later references shift up a further 22.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,609 B (+149 B), only `index.js` differs
+  (`compare-bundles` against post-5g1; minified names), CSS byte-identical
+  (`cmp`); **L** 185 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5g1's run — "restored after a reload — before 700, after
+  700" / "after 699" and "restored 700, jumped to 95, 2.5 s later 95"
+  included — and every report line but the timings. The first run's
+  timings were high (33.9 s / 25.6 s); a second run, alone, gave 33.6 s /
+  24.5 s with every `ok` line again identical, so the first was noise
+  (the step adds no work to scrolling: the persist effect is the same
+  effect). Perf: 240,000 px in 33.6 s, 1,905 nodes, 0 long tasks / 175,800
+  px in 24.5 s, 1,904 nodes, 0 long tasks; **S** 30/30 (its "the reading
+  position follows the screen" checks among them); **U** 254/254; **P**
+  PASS, identical.
 
 ## Open
 
