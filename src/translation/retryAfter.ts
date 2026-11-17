@@ -3,9 +3,13 @@
  *
  * RFC 9110 allows two forms: a number of seconds, or an HTTP date. Both call
  * sites read only the first, with `Number()`, so a date gave `NaN` seconds on
- * the Claude path and no wait at all on the Gemini one (FOUND_ISSUES 11). A
- * date already past is a wait of 0, and anything else unreadable is null, so
- * the caller falls back to its own backoff.
+ * the Claude path, and on the Gemini path its own 2 s / 4 s / 8 s backoff
+ * instead of the wait asked for (FOUND_ISSUES 11).
+ *
+ * Null means "no usable wait". Gemini translate then falls back to its own
+ * backoff; on the Claude path (where the SDK does the waiting) no wait is
+ * reported. A date already past is null too, not 0: a tablet clock running
+ * ahead of the server would otherwise make Gemini retry with no backoff at all.
  */
 export function retryAfterSeconds(header: string | null | undefined): number | null {
   if (header === null || header === undefined) return null;
@@ -17,7 +21,8 @@ export function retryAfterSeconds(header: string | null | undefined): number | n
 
   const at = Date.parse(trimmed);
   if (Number.isNaN(at)) return null;
-  return Math.max(0, Math.ceil((at - Date.now()) / 1000));
+  const wait = Math.ceil((at - Date.now()) / 1000);
+  return wait > 0 ? wait : null;
 }
 
 /**

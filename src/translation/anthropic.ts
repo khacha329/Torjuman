@@ -120,7 +120,9 @@ export function toTranslationError(error: unknown): TranslationError {
   if (error instanceof Anthropic.RateLimitError) {
     return new TranslationError(
       'rate-limit',
-      'Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.',
+      // "try again", not "retranslate": since FOUND_ISSUES 11 Explain, gloss
+      // and compile show this message too.
+      'Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.',
       {
         // retry-after-ms first, as the SDK reads them: with only it the wait
         // the SDK knew was reported as null (FOUND_ISSUES 15.4).

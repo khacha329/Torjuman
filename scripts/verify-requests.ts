@@ -1290,10 +1290,10 @@ await scenario(
 // Like the group above, these run after every earlier scenario, so nothing
 // those record (message ids included) moves.
 
-// (3e) A 429 whose retry-after the app cannot read: retry-after-ms alone (the
-// SDK waits its 250 ms; the app's `header ? Number(header) : null` takes the
-// null branch), and no retry header at all (the SDK's own jittered backoff,
-// Math.random pinned; the same null branch).
+// (3e) A 429 whose retry-after the app could not read: retry-after-ms alone
+// (the SDK waits its 250 ms; the app read only retry-after, so it reported
+// null until FOUND_ISSUES 15.4, and reports 0.25 s since), and no retry header
+// at all (the SDK's own jittered backoff, Math.random pinned; still null).
 await scenario(
   'anthropic.translate.429-retry-after-ms-only',
   times(3, () => anthropicError(429, RETRY_MS)),
