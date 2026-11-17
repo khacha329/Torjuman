@@ -796,3 +796,22 @@ no scroll and no change in the panel's size (a block above it growing or
 shrinking, say). No concrete trigger was found: the virtualizer's own
 corrections move the page by scrolling, which is seen. A possibility, not a
 measured bug. Found by the review of 34. Left unfixed.
+
+## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading)
+
+`ui/reader/usePanelControls.ts`: while the divider is dragged, any
+pointer's `pointermove` resizes the panel and any pointer's `pointerup` or
+`pointercancel` ends the drag, so a second finger landing elsewhere during a
+drag moves or ends it. Pre-existing; found by the review of lane A's 27.
+Left unfixed.
+
+## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading)
+
+The divider's `onPointerDown` sets `body` `user-select: none`, and only the
+drag's `pointerup` or `pointercancel` restores it; the window listeners'
+effect (`ui/reader/usePanelControls.ts`) removes the listeners on unmount but
+does not restore `user-select`. A navigation away while a drag is under way
+leaves text unselectable on the next screen until a reload. Since lane A's 27
+such an unmount also loses the width reached (it is stored on release).
+Pre-existing; found by the review of lane A's 27. Left unfixed.
+

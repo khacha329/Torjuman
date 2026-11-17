@@ -5,8 +5,10 @@ import { clampPanelWidth } from '../useLayoutMode';
 // The card panel's controls: Ctrl/Cmd + \ to show or hide it, and the
 // divider dragged to resize it. `dragging` is returned because the divider's
 // onPointerDown, in the screen, sets it; `dragWidth` is the width while a drag
-// lasts, which the screen shows in place of the stored one. Moved verbatim from ReaderScreen.tsx
-// in restructure Phase 5 step 5g4 (docs/refactor/plans/phase5-big-ui-files.md).
+// lasts, which the screen shows in place of the stored one. Moved from
+// ReaderScreen.tsx in restructure Phase 5 step 5g4
+// (docs/refactor/plans/phase5-big-ui-files.md); the divider's handling
+// changed for FOUND_ISSUES 27 in lane A.
 
 export function usePanelControls({
   settings,
