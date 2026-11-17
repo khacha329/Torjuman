@@ -641,3 +641,45 @@ scenario records exactly that (the request is the plain one, the card says
 web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
+
+## 44. Dictionary-entry cards made before the fix to 26 keep the block's key (2026-11-17, by reading)
+
+Found by the review of lane B. A "Translate this entry" card stored before
+FOUND_ISSUES 26 was fixed has no `standalone` flag and holds the visible
+block's cache key, so a later Translate of that whole block, or Translate
+all over it, still returns the entry's card. Nothing migrates such cards.
+Left unfixed; a fix would need a way to tell an old entry card from a block
+card (its `sourceText` differs from the block's text).
+
+## 45. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
+
+Found by the review of lane B. FOUND_ISSUES 15.2 was fixed for translate
+(`withRaw` in `providers/AnthropicProvider.ts`); `translation/explain.ts`
+still throws the mapped error without the notes written so far. Its scope
+named translate only. Left unfixed.
+
+## 46. A failure after a paid reply in translate keeps no raw text (2026-11-17, by reading)
+
+Found by the review of lane B. In `ui/reader/useTranslator.ts`, if
+`enrichSegments` or `storage.putCard(finished)` throws after the provider has
+returned, the error is not a `TranslationError`, so `failedCard` sets no
+`rawResponse` and the paid reply is not kept on the failed card. Left
+unfixed.
+
+## 47. README still names the per-card "dig deeper" toggle (2026-11-17, by reading)
+
+Found by the review of lane B: README.md ~1108 says "beyond the per-card 'dig
+deeper' toggle", stale since Explain replaced it (FOUND_ISSUES 36). Lane D
+material. Left unfixed.
+
+## 48. Consequences of 41 and 42 as decided (2026-11-17, by reading)
+
+Found by the review of lane B, for the owner to know; each follows from
+DECISIONS 41 and 42, none is a defect of the fix:
+
+1. A passage that keeps failing gains one more failed card per attempt, and
+   a later success leaves the failed cards beside it. Translate all the same.
+2. If retranslating card A fails as F, and Retry on F then succeeds as B, A
+   is not replaced (B replaces F): two complete cards for one range.
+3. Two retranslations of one card started while the first is in flight both
+   survive.
