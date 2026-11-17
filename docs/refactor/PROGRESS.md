@@ -2344,7 +2344,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review PASS WITH NOTES | `0c52e6b` |
 | 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review PASS WITH NOTES | `1a3e6a6` |
 | 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review PASS WITH NOTES | `dbfa2c4` |
-| 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review pending | this commit |
+| 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
+| 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3804,7 +3805,7 @@ holds)
   './CardPanel'` (a filtered `{ type PanelScope }` would leave a
   side-effect import under `verbatimModuleSyntax`) and imports
   `ReaderCardPanel`. A five-line header. `ReaderScreen.tsx` is 854 lines
-  (850 before: the import and the 21-line header comment add 22, the
+  (850 before: the import and the 20-line header comment add 22, the
   element's 37 lines become 19), against Design §6's "about 750-850";
   `ReaderCardPanel.tsx` 95. 5g1–5h4 done.
 - **For 5j:** the screen's references from `:54` to `:541` move down 22
@@ -3827,6 +3828,106 @@ holds)
   `reader-sheet-open` (600×960) among them; **P** PASS, identical, its
   `retranslate`, `retranslate-with` and `retranslate-no-key` scenarios
   included.
+- **Review of 5h4 (`eec59a5`): PASS WITH NOTES; "ready for 5i1".** Every
+  claim in the screen's new header comment checked true against the code
+  and the plan; the element's identity and its two render sites (the aside
+  and the bottom sheet) unchanged; `import type { PanelScope }` right
+  under `verbatimModuleSyntax`. Notes: (n1) the header comment is 20 lines
+  (`ReaderScreen.tsx:56-75`), not 21; the +22 and every shift were right,
+  and the entry above now says "20-line"; (n2) the header's "(Q10)" is
+  more exact as "(Design §6.3, Q10)", fixed at 5i1 in the header comment
+  (new text in the screen, not moved text; one token, kept on its line, so
+  no line moves); (n3) for the PR: the owner's Q11 answer was "about 800",
+  and 854 is at the top of the plan's "about 750-850". Not FOUND_ISSUES, a
+  naming note: `selection.ts:20` exports a different `blockElementFor(node)`
+  that shares the name of `ReaderSheets.tsx`'s private helper; it predates
+  5h3.
+
+**Step 5i1, measured 2026-11-17**
+- Two runs of `translate` (adaptation (k), Design §7) moved into the new
+  `ui/reader/translationSteps.ts`, module-level and pure: the passage
+  statements (`useTranslator.ts:215-223` at `eec59a5`, the plan's line
+  numbers: `selected`, `before`/`after`, the verse comment and `known`),
+  contiguous, no free name reassigned, nothing read between them but
+  `selected` by `known` inside the run; and the request literal handed to
+  `providerFor(useProviderId).translate` (`:275-290`), one expression, no
+  free name reassigned (`apiKey`, the one `let`, is not in it).
+- Signatures: `passageFor(blocks: Block[], entities: Entity[], anchor:
+  Pick<SelectionAnchor, 'startBlockId' | 'endBlockId'>)`, its return
+  inferred (`{ selected, before, after, known }`); `translationRequestFor({
+  anchor, before, after, selected, activeProfile, glossary, useModel,
+  known, digDeeper })` → `TranslationRequest`, one object parameter (as (f)
+  for a hook, so no two same-typed names can swap by position: `before`,
+  `after` and `selected` are all `Block[]`), its fields the literal's nine
+  free names in order of first use, typed `Pick<SelectionAnchor,
+  'sourceText'>`, `Block[]` ×3, `TranslationProfile`, `GlossaryEntry[]`,
+  `string`, `ReturnType<typeof passageFor>['known']`, `boolean`. The
+  anchor types are `Pick`s of what each body reads, because
+  `TranslateRequest` is in `useTranslator.ts` and importing it back would
+  make a file-level cycle. The declared return type keeps the literal
+  contextually typed, as the argument position did.
+- Word diff (`git diff --no-index --word-diff` of the removed lines
+  against the bodies, indentation aside): `passageFor`'s nine lines
+  identical, its comment included, then one added `return { selected,
+  before, after, known };`; the literal identical but `{+return+}` before
+  its `{` and `[-},-]{+};+}` at its end (the argument's comma becomes the
+  statement's semicolon).
+- Call sites (h): `const { selected, before, after, known } =
+  passageFor(blocks, entities, anchor);` where `selected` was, so every
+  later line reads the same names; `translationRequestFor({ … })` as the
+  first argument of the same `translate` call, still after `providerFor`'s
+  lookup, before `apiKey`. No statement with a side effect moved: no
+  `await`, setter, storage call, `newId`, `Date.now` or `beginActivity`.
+  Both `cacheKeyFor` calls (`translate`'s `:195-205`, `isStale`'s
+  `:140-158`) untouched, so no cache key changes (trap 5); `translate`'s
+  deps array untouched. `SessionStats` and `EMPTY_STATS` stay.
+- What stays in `translate`, in order (Design §7's list): the provider
+  choice and key check with its `setNotice`; `cacheKeyFor`; the cache read
+  and `upsert`; the `passageFor` call; the loading card literal (5i2's);
+  `upsert`, `setBusy`, `setNotice`, `beginActivity`; the offline branch
+  with its `setStats` updater (5i3's); the provider call with
+  `translationRequestFor`; `coverageOf`; the finished card with its
+  `await enrichSegments`; `putCard`, `upsert`, the cloud `setStats`
+  updater (5i3's); the `catch` with the failed card (5i2's); `finally`.
+- Imports: `translationSteps.ts` takes `import type` of `Block`, `Entity`,
+  `GlossaryEntry`, `TranslationProfile` (`types`) and `TranslationRequest`
+  (`translation/TranslationProvider`), `TRANSLITERATION_INSTRUCTION`
+  (`translation/prompt`), and the functions the moved text calls:
+  `knownReferencesIn` (`quran/entityService`) and `blocksInRange`,
+  `contextAround` with `type SelectionAnchor` (`./selection`, value
+  imports, so no side-effect-only import). It does not import
+  `useTranslator`. `useTranslator.ts` drops `knownReferencesIn`,
+  `TRANSLITERATION_INSTRUCTION` and the two selection functions, keeps
+  `SelectionAnchor` as `import type { SelectionAnchor } from
+  './selection'` (`verbatimModuleSyntax`), and imports `passageFor`,
+  `translationRequestFor`. A six-line header. `useTranslator.ts` is 453
+  lines (466); `translationSteps.ts` 68. 5h4's review notes: n1 the
+  "20-line" above; n2 the screen header's "(Design §6.3, Q10)", one token
+  on `ReaderScreen.tsx:74`, the line left long rather than rewrapped so no
+  screen line moves.
+- **For 5j and 5i2–5i3:** `useTranslator.ts`'s `:9-19` up 1; `:20-214`
+  unchanged; `:215-223` now the call at `:215` (the text at
+  `translationSteps.ts:19-27`); `:224-274` up 8; `:275-290` now the call
+  at `:267-277` (the literal at `translationSteps.ts:52-67`); past `:290`
+  up 13. FOUND_ISSUES: 26's `:195-205` and `:207-213` unchanged, its
+  `:215-223` and `:277-288` now `translationSteps.ts:19-27` and `:54-65`;
+  `:32`, `:62`, `:66-68`, `:88-94` unchanged; `:246` now `:238`; `:330`
+  now `:317`; `:343-350` now `:330-337`; `:378-394` now `:365-381`. The
+  plan's 5i2/5i3 ranges: the loading card `:217-239`, the updaters
+  `:255-262` and `:309-318`, the failed card `:322-336`, `withoutStream`'s
+  `:343-347`.
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,551 B (+316 B), only `index.js` differs
+  (`compare-bundles` against post-5h4; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h4's run, the portrait restore too (699 both), and every
+  report line identical: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks
+  / 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U**
+  254/254; **P** PASS, identical — every request and card, its
+  `translate`, `cache-hit`, `retranslate`, `external-lookup`, `error`,
+  `block`, `batch` and `transliteration` scenarios included; **Q** PASS,
+  identical to `docs/refactor/phase3/requests.json`.
 
 ## Open
 

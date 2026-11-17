@@ -71,7 +71,7 @@ import { ReaderCardPanel } from './ReaderCardPanel';
 // useTranslator and every open would send its storage requests in a different
 // order; and the selection tracking, whose doc comment sits above the wrong
 // effect (FOUND_ISSUES 30). Splitting further means a context, which was
-// rejected (Q10): its value is new on every render, so every consumer would
+// rejected (Design §6.3, Q10): its value is new on every render, so every consumer would
 // re-render anyway, and its reads are harder to check than a props list.
 
 export function ReaderScreen({ bookId }: { bookId: string }) {

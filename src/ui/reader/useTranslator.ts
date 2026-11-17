@@ -5,10 +5,9 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
-import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
-import { cacheKeyFor, glossaryHashOf, TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
+import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
 import {
@@ -16,7 +15,8 @@ import {
   segmentSelection,
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
-import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
+import type { SelectionAnchor } from './selection';
+import { passageFor, translationRequestFor } from './translationSteps';
 
 // Orchestrates one translation: pick the provider the profile pins → cache
 // check → provider call → scripture retrieval → persist.
@@ -212,15 +212,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         }
       }
 
-      const selected = blocksInRange(blocks, anchor.startBlockId, anchor.endBlockId);
-      const { before, after } = contextAround(blocks, anchor.startBlockId, anchor.endBlockId);
-
-      // Verses in this passage were resolved locally at import, against the
-      // bundled muṣḥaf. No model call is needed to identify them.
-      const known = knownReferencesIn(
-        entities,
-        new Set(selected.map((block) => block.id)),
-      );
+      const { selected, before, after, known } = passageFor(blocks, entities, anchor);
 
       const card: TranslationCard = {
         id: newId('card'),
@@ -272,22 +264,17 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         }
 
         const result = await providerFor(useProviderId).translate(
-          {
-            targetText: anchor.sourceText,
-            contextBefore: before.map((block) => block.text).join('\n\n'),
-            contextAfter: after.map((block) => block.text).join('\n\n'),
-            blockTypes: selected.map((block) => block.type),
-            systemPrompt: activeProfile.useTransliteration
-              ? `${activeProfile.systemPrompt}\n\n${TRANSLITERATION_INSTRUCTION}`
-              : activeProfile.systemPrompt,
+          translationRequestFor({
+            anchor,
+            before,
+            after,
+            selected,
+            activeProfile,
             glossary,
-            model: useModel,
-            hadithNumbers: selected
-              .map((block) => block.hadithNumber)
-              .filter((value): value is string => Boolean(value)),
-            knownQuranRefs: known.quran,
-            allowExternalLookup: digDeeper || activeProfile.allowExternalLookup,
-          },
+            useModel,
+            known,
+            digDeeper,
+          }),
           apiKey,
           (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
         );
