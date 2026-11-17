@@ -2316,7 +2316,10 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | Step | State | Commit |
 | --- | --- | --- |
 | 5a. U's reader captures, baselined on the old code; FOUND_ISSUES 26–36 (the plan's A–K) | U: three runs (one FAIL on a PNG), five breakages; T B L R S pass; review FAIL (U as baselined cannot gate the moves) | `23bc734` |
-| 5a fix — the margin's place and the proposal bar made deterministic, dialogs screenshotted alone, `reader-page-cards` added; FOUND_ISSUES 37, 26 and 33 corrected | U five runs PASS in a row, two breakages; T B L R S pass; review pending | this commit |
+| 5a fix — the margin's place and the proposal bar made deterministic, dialogs screenshotted alone, `reader-page-cards` added; FOUND_ISSUES 37, 26 and 33 corrected | U five runs PASS in a row, two breakages; T B L R S pass; review PASS WITH NOTES | `5a141b6` |
+| 5a re-review's notes — FOUND_ISSUES 38 and a 37 wording fix | docs only | `7726a45` |
+| R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
+| 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2487,6 +2490,95 @@ holds)
   long tasks; 175,800 px in 24.4 s, 1,904 nodes); a seed made never to
   finish fails after 61 s with "timed out after 60000 ms: seeding the book"
   and exit 1, instead of hanging; restored from a copy (`cmp` equal).
+
+**Step 5b, measured 2026-11-17** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **27 new checks** in `scripts/verify-reader-scroll.mjs`, after the two
+  existing profiles, **each scenario in a fresh browser context** with its own
+  seed: R's 1,500 blocks plus three `read` marks (blocks 400, 450, 500), two
+  translation cards (blocks 300 and 1000) and a one-entry synthetic
+  dictionary book (`role: 'dictionary'`, root ع م ل). Landscape, 9 scenarios:
+  Ctrl+`\` (2 checks), Hide cards and the edge tab (2), a marker opening its
+  card in the panel and flashing its block, cleared after 1.6 s (2), a card
+  tap bringing block 1000 to the middle and flashing it (2), the read-mark
+  ↑ ↓ (4), double-tap (2), the restore applied once (1), the divider by mouse
+  (3), the divider by finger (report). Portrait, 4: the sheet's handle (2), a
+  marker opening a popover (1), the read-mark ↑ ↓ (4), double-tap (2). Every
+  setup and teardown wait is in `within()` and every scenario names its
+  `step()`; a scenario that throws is one named FAIL and the run goes on. The
+  28 existing checks keep their labels, order and values; R is now 55 checks.
+- **Run time** 134–137 s for the whole of R (was ≈90 s): the scenarios add
+  about 45 s.
+- **Five runs in a row**, each `timeout 1200 npm run verify:reader`, first and
+  alone: PASS 55/55 (137 s), PASS 55/55 (135 s), PASS 55/55 (136 s), PASS
+  55/55 (134 s), PASS 55/55 (135 s). Landscape 240,000 px in 33.4 / 33.3 /
+  33.3 / 33.3 / 33.4 s, 1,905 nodes, 0 long tasks; portrait 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks, every run — the baseline. Every new
+  check's line and every report line was byte-identical across the five; the
+  only difference in any line was an existing check's detail (portrait
+  "scrolling up into never-seen blocks": 5 or 6 pairs on screen, worst gap 0),
+  as before 5b. No flake to fix, no hang.
+- **Report lines** (not judged; every later step must print the same):
+  `{"fingerDrag":{"from":525,"to":645,"before":432,"after":405,"userSelect":"none","storedWidth":405,"afterStrayMouseMove":300}}`
+  — under CDP touch emulation the finger drag resized the panel for its first
+  30 px (432 → 405, stored), then the browser took the gesture, the drag was
+  never ended (`user-select` left `none`) and a later plain mouse move with no
+  button resized the panel to 300 px: FOUND_ISSUES 27 as measured in Chromium's
+  emulation; the tablet (M item 3) is still the answer. And, in both
+  profiles, `{"readMarkDown":{"from":450,"next":500,"atMiddle":450}}` — ↓ from
+  a mark that ↑ centred stays on it (FOUND_ISSUES 39, filed here).
+- **Departures from the plan's table.** (1) The pointer drag goes 120 px
+  **right** and then far left: at 960 px the saved 460 px already renders at
+  the clamp's ceiling (45% = 432 px), so a drag left cannot widen it; the far
+  drag checks the clamp instead. (2) The read marks are judged as ↓ once from
+  the top, then ↑ twice from past the marks, not "↓ twice and ↑ once": a
+  second ↓ does not move (FOUND_ISSUES 39), so that sequence would either fail
+  on today's code or bake the bug in; it is a report line. (3) "In the middle"
+  for the read marks means the block at the middle of the area below the
+  header, not a distance from the screen's middle: every centred jump lands
+  one header height below the screen's middle and `settleOn` retries it eight
+  times (FOUND_ISSUES 40, filed here); the card tap keeps the search check's
+  tolerance, as planned. (4) Every scenario has its own context, not one
+  context per profile, so a failure cannot leak into the next scenario and the
+  divider's width write is isolated anyway. (5) The plan's breakage for
+  "position, once" (`restoredRef` not set) changes nothing observable: the
+  restore effect's dependencies do not change within one book, so it runs
+  once with or without the guard (run 11 below passes 55/55); the only route
+  to a second restore today is a book-to-book hash change (FOUND_ISSUES 31).
+  The check is proven instead with the restore applied a second time, 2 s
+  after the first. (6) The plan's `torjuman-reader` reading of 5b's additions
+  before the baseline (Q16) was not done by this subagent, which cannot start
+  other agents; owed before the commit.
+- **Breakages**, each a temporary edit to `ui/reader/ReaderScreen.tsx`
+  restored from a `cp` backup (`cmp` equal, `git diff --quiet -- src` after
+  each), each a full `npm run verify:reader`; none failed any of the 28
+  existing checks:
+  1. the divider's `clampPanelWidth` removed from its move handler → exit 1,
+     54/55: "dragged far left it stops at the clamp…" (panel 432, stored 760);
+  2. Ctrl+`\` listening for `|` → 53/55: both Ctrl+`\` checks;
+  3. the header's Hide cards writing the current `panelCollapsed` → 53/55:
+     both Hide cards checks;
+  4. the marker's `if (panelVisible)` inverted → 52/55: both marker → panel
+     checks (a popover opened) and marker → popover;
+  5. the read-mark jump to `order + 1` → 49/55: the three judged read-mark
+     checks at both sizes (block 401, 501, 451 at the middle);
+  6. the saved position applied a second time, 2 s after the first → 54/55:
+     "after the restore, a jump elsewhere stays where it landed" (restored
+     700, jumped to 95, 2.5 s later 700); its second restore also landed in
+     the report's scroll (7.1 s / 6.1 s), which is not judged;
+  7. the `dblclick` listener not added → 51/55: both double-tap checks at both
+     sizes (no sheet; the word stays selected and the rail shows);
+  8. the sheet's handle not toggling → 53/55: both sheet checks;
+  9. `flash` a no-op → 53/55: the marker's flash and the card's flash;
+  10. `focusCard` not jumping → 53/55: both card → text checks;
+  11. (the plan's) `restoredRef.current = true` removed → exit 0, 55/55, as
+      explained in (5) above.
+- **S** PASS 30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged).
+  **L** `--check`: no file-level cycle, 11 rules hold. **U** last: PASS
+  254/254 (250 s).
+- FOUND_ISSUES **39** (↓ from a centred read mark) and **40** (centred jumps
+  one header low, `settleOn`'s eight passes) filed, left unfixed. RESTRUCTURE
+  §5's R row now says 55 and names the report lines.
 
 ## Open
 

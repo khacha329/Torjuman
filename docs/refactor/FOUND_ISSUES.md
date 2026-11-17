@@ -539,3 +539,45 @@ check U's Qurʾān sheet captures; whether the tablet's system Arabic font
 covers them is unconfirmed. Found by Phase 5 step 5a's captures; left
 unfixed (structure-only phase). Check U's Qurʾān PNGs depend on the
 container's fonts, which is stable here.
+
+## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
+
+Found while building check R's read-mark scenario (Phase 5 step 5b).
+`ReadMarkNav` (`ui/reader/ReaderScreen.tsx:1240-1276`) picks "next" as the
+first read mark after `currentOrder` (`:1250`), which is the order of the
+block at the **top** of the screen (`visibleBlock`, `:804`; `topIndex` in
+`ui/reader/BlockList.tsx:360-369`). Its jump **centres** the mark
+(`scrollToOrder(order, 'center')`, `:805`). A centred mark is below the top
+block unless it is tall enough to reach behind the header, so the next ↓
+finds the same mark and the page does not move. Measured in R, both
+profiles: with read marks on blocks 400, 450 and 500, ↑ from block 450
+centred and then ↓ leaves block 450 at the middle of the screen instead of
+bringing 500 (R prints this as a report line every run, judged by nothing).
+↑ is not affected: "previous" is before the top block, so a centred mark is
+skipped correctly. By the same reading, ↓ from the top of the book reaches the
+first mark and a second ↓ stays on it, so in a session ↓ never gets past the
+first mark below the top of the screen. **May make the session navigation
+look broken on the tablet.** Left unfixed (structure-only phase); R's judged
+checks (↓ once from the top, ↑ twice from past the marks) do not depend on
+it, so a fix changes only the report line.
+
+## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured)
+
+Found while building check R's 5b scenarios. The virtualizer has
+`scrollPaddingStart: topInset` (`ui/reader/BlockList.tsx:285`); for
+`align: 'center'` TanStack Virtual subtracts the padding and then centres in
+the whole viewport (`getOffsetForIndex`/`getOffsetForAlignment` in
+`@tanstack/virtual-core`), so the item's middle lands at
+`innerHeight / 2 + topInset`. `settleOn` (`BlockList.tsx:314-334`) tests a
+centred landing against `innerHeight / 2` (`:328`), finds it `topInset` off
+(51 px in landscape, 93 px in portrait — the header's height), more than its
+4 px, and calls `scrollToIndex` again, which lands in the same place, until
+`attempts >= 8` (`:323`). Measured in R: a card tap brings block 1000 to
+295–405 px on a 600 px screen (middle 350 = 300 + 51 − 1), and every read-mark
+jump is 51 or 93 px below the screen's middle. So every centred jump (a search
+result, a card tap, the read-mark ↑ ↓) runs all eight passes over sixteen
+frames, and its target sits half a header below the middle of the visible
+area (about 25 px in landscape, 46 px in portrait). Cosmetic and a little
+wasted work; left unfixed (structure-only phase). R's search and card checks
+use a tolerance and its read-mark checks judge which block is at the middle
+of the visible area, so a fix needs no re-baseline.
