@@ -43,8 +43,9 @@ export interface TranslateRequest {
   /**
    * Retranslate: the card this one replaces. It is removed only once the new
    * card is stored complete, so a refusal or a failure never costs the old
-   * card (FOUND_ISSUES 42; a paid response is never discarded). A failed old
-   * card is replaced by a new failure too, since keeping it saves nothing.
+   * card (FOUND_ISSUES 42; a paid response is never discarded). On a failure
+   * the old card stays whatever its status: a failed card can hold paid output
+   * in `rawResponse` (a truncated or unparsed reply).
    */
   replaces?: TranslationCard;
 }
@@ -211,12 +212,23 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     });
   }, []);
 
-  /** Remove the card a retranslation replaced, after its successor is stored. */
+  /**
+   * Remove the card a retranslation replaced, after its successor is stored.
+   *
+   * It never throws. It runs inside `translate`'s `try`, after the new card is
+   * stored complete, and a rejected delete reaching the `catch` would write a
+   * failed card over that complete one (same id). A delete that fails leaves
+   * both cards, which loses nothing, and says so.
+   */
   const dropReplaced = useCallback(
     async (replaced: TranslationCard | undefined) => {
       if (!replaced) return;
-      await storage.deleteCard(replaced.id);
-      setCards((previous) => previous.filter((existing) => existing.id !== replaced.id));
+      try {
+        await storage.deleteCard(replaced.id);
+        setCards((previous) => previous.filter((existing) => existing.id !== replaced.id));
+      } catch {
+        setNotice('The new translation is saved, but the old card could not be removed.');
+      }
     },
     [storage],
   );
@@ -347,7 +359,6 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         const failed = failedCard(card, caught);
         await storage.putCard(failed);
         upsert(failed);
-        if (replaces?.status === 'error') await dropReplaced(replaces);
         return failed;
       } finally {
         endActivity();
