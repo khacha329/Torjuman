@@ -2343,7 +2343,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review PASS WITH NOTES | `98f44f8` |
 | 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review PASS WITH NOTES | `0c52e6b` |
 | 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review PASS WITH NOTES | `1a3e6a6` |
-| 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review pending | this commit |
+| 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review PASS WITH NOTES | `dbfa2c4` |
+| 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3636,7 +3637,10 @@ holds)
   left to the owner's tablet check 8. Note (a): adaptation (i) was read to
   allow restating an anonymous state shape (`batchProposal`'s) when no
   hook's return type can express it. **For 5j, the plan's "Corrections
-  found in review"** (started here): that reading of (i); with it, 5e3's
+  found in review"** (started here): that reading of (i) — widened at
+  5h3's review to: restating anonymous state shapes and the screen's
+  `useCallback`/`useMemo` signatures (locals with no exported type) when
+  no hook's return type can express them; with it, 5e3's
   correction to Design §10 (`quran/quranIndex.ts:427` untrue from 5e4, not
   5e3) and 5f2's `settleOn as settleOnBlock` import alias (the module
   function and the `useCallback` share Q8's name).
@@ -3729,6 +3733,100 @@ holds)
   PASS, identical, its `translate`, `block`, `no-key` and `batch`
   scenarios (the rail's Translate, the entity sheet's surrounding passage,
   the refusal, and Translate all…) included.
+- **Review of 5h3 (`dbfa2c4`): PASS WITH NOTES; "ready for 5h4".** The 195
+  lines and `blockElementFor` byte-identical; all 40 props checked
+  `name={name}`, the same 40 names in the same order at the call site, in
+  the destructuring and in the type keys, so no swap is possible; every
+  `onClose` still inline; no sheet remounts. Both extra items on the 5j
+  Corrections list (5e3's §10, 5f2's alias) belong there. Notes, applied
+  at 5h4: (c) the Corrections item on (i) widened to the screen's
+  `useCallback`/`useMemo` signatures (above); (d) `ReaderSheets.tsx`'s new
+  header said "`blockElementFor` is its own helper", true but odd, now
+  "with `blockElementFor`, the helper only the rail uses" (header only,
+  not moved text).
+
+**Step 5h4, measured 2026-11-17**
+- The `cardPanel` element's `<CardPanel …>` (`ReaderScreen.tsx:542-578` at
+  `dbfa2c4`, the plan's 712-750; defined after the early returns and
+  `activeTocTitle`, not inside a conditional, reading nothing computed
+  between it and its two uses) moved into `export function
+  ReaderCardPanel(…)` in the new `ui/reader/ReaderCardPanel.tsx`, returned
+  as is (`return ( <CardPanel …/> )`, no wrapper, no `memo`, no effect, no
+  `useApp()`). `cmp`: the 37 lines identical, at the same indentation.
+  `const cardPanel = ( <ReaderCardPanel … /> );` stays in the screen, so
+  its two render sites, the aside (`{cardPanel}`) and the bottom sheet,
+  are unchanged. The per-kind collapse and delete now sit in one named
+  place, the "card kinds" of Design §8.
+- Adaptation (f), 17 props, each `x={x}`, in the moved text's order of
+  first use: `allCards`, `blocks`, `pageMeta`, `translator`,
+  `activeCardId`, `readOnly`, `sharedScope`, `settings`, `settledRange`,
+  `sectionNodeId`, `setSharedScope`, `updateSettings`, `focusCard`,
+  `marks`, `explanations`, `sharh`, `editNote`. Objects passed whole
+  (`translator.streaming`, `.stats`, `.isStale`, `settings.panelScope`,
+  `marks.noteCards` as written). The element's inline arrows
+  (`onScopeChange`, `onToggleCollapse`, `onCollapseAll`, `onRetranslate`,
+  `onDelete`, `onEditNote`, `onAddGlossaryTerm`) stay inline in the moved
+  text. (i) types: `Card[]`, `Block[]`, `Map<number, PageMeta>`,
+  `ReturnType<typeof useTranslator>`, `string | null` (twice), `boolean`,
+  `PanelScope`, `ReturnType<typeof useApp>['settings']` and
+  `['updateSettings']`, `VisibleRange | null`,
+  `Dispatch<SetStateAction<PanelScope>>`, `ReturnType<typeof
+  useReaderNavigation>['focusCard']`, `ReturnType<typeof useMarks>`,
+  `useExplanations`, `useSharh`, and `editNote`'s restated `(card: Card)
+  => Promise<void>`.
+- Same-typed: `activeCardId` and `sectionNodeId` (`string | null`; the
+  first only `activeCardId={activeCardId}`, the second only
+  `sectionNodeId={sectionNodeId}`). No two callback props share a type;
+  the per-kind collapse and delete are not props but the moved text's own
+  `onToggleCollapse` and `onDelete` arrows, each dispatching on
+  `card.kind` to `marks`, `explanations`, `sharh` or `translator`, as
+  before.
+- Two render sites, no state or identity change: `cardPanel` was one
+  `CardPanel` element rendered in the aside (beside) or the bottom sheet
+  (sheet), never both at once; it is now one `ReaderCardPanel` element
+  rendered in the same two places. `CardPanel` holds state (its `filter`
+  `useState`, a `containerRef`); that state is per render site, as before:
+  each site is its own instance, a switch between beside and sheet
+  unmounts one and mounts the other, as it did. `ReaderCardPanel` never
+  changes type, so no `CardPanel` remounts otherwise.
+- The screen's header: `ReaderScreen.tsx` had none; a new comment after
+  the imports says what the screen owns, which parts and hooks it uses,
+  and why it stays at about 850 lines (Design §6.5, Q11): the shared state
+  and the code that writes it, the columns' JSX and the props; the data
+  loading left in because a hook holding the blocks would run before
+  `useTranslator` and reorder every open's storage requests; the selection
+  tracking left in because its doc comment sits above the wrong effect
+  (FOUND_ISSUES 30); a context rejected (Q10). 5h3's review note (d):
+  `ReaderSheets.tsx`'s header reworded.
+- Imports: `ReaderCardPanel.tsx` takes `CardPanel` (with `type
+  PanelScope`) and the types it names; none imports it back, so no cycle.
+  `ReaderScreen` keeps `PanelScope` as `import type { PanelScope } from
+  './CardPanel'` (a filtered `{ type PanelScope }` would leave a
+  side-effect import under `verbatimModuleSyntax`) and imports
+  `ReaderCardPanel`. A five-line header. `ReaderScreen.tsx` is 854 lines
+  (850 before: the import and the 21-line header comment add 22, the
+  element's 37 lines become 19), against Design §6's "about 750-850";
+  `ReaderCardPanel.tsx` 95. 5g1–5h4 done.
+- **For 5j:** the screen's references from `:54` to `:541` move down 22
+  (the new import and the header comment); past `:579` down 4 (the
+  element's 37 lines became 19).
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 793,235 B (+404 B), only `index.js` differs
+  (`compare-bundles` against post-5h3; minified names), CSS byte-identical
+  (`cmp`); **L** 192 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h3's run but the portrait restore (699 here, 700 there,
+  the known noise) — the card panel "held under the header… aside
+  51–600", Ctrl+\\ and Hide cards with the edge tab, the marker that
+  makes its card active "in the panel", the card tap to the middle, and
+  "the handle opens a sheet 55% of the screen tall" and closes it,
+  included — and every report line identical, the timings too: 240,000 px
+  in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-cards`,
+  `reader-retranslate` (both sizes), `reader-collapsed` (960×600) and
+  `reader-sheet-open` (600×960) among them; **P** PASS, identical, its
+  `retranslate`, `retranslate-with` and `retranslate-no-key` scenarios
+  included.
 
 ## Open
 

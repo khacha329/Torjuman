@@ -25,9 +25,10 @@ import type { useReaderNavigation } from './useReaderNavigation';
 
 // The reader's sheets and popovers: the selection rail, the biography and
 // dictionary sheets, the margin menu, the entity sheet, the card popover,
-// Share and the contents drawer, each shown under its own condition.
-// `blockElementFor` is its own helper. Moved verbatim from ReaderScreen.tsx in
-// restructure Phase 5 step 5h3 (docs/refactor/plans/phase5-big-ui-files.md).
+// Share and the contents drawer, each shown under its own condition, with
+// `blockElementFor`, the helper only the rail uses. Moved verbatim from
+// ReaderScreen.tsx in restructure Phase 5 step 5h3
+// (docs/refactor/plans/phase5-big-ui-files.md).
 
 export function ReaderSheets({
   selection,

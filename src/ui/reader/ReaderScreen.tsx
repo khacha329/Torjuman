@@ -24,7 +24,7 @@ import {
 } from '../../translation/hadithRange';
 import { LinkButton, Spinner } from '../kit';
 import { BlockList, type BlockListHandle } from './BlockList';
-import { CardPanel, type PanelScope } from './CardPanel';
+import type { PanelScope } from './CardPanel';
 import {
   buildMarkers,
   coveredBlockIds,
@@ -51,6 +51,28 @@ import { useHeaderHeight } from './useHeaderHeight';
 import { ReaderHeader } from './ReaderHeader';
 import { CommentaryBars } from './CommentaryBars';
 import { ReaderSheets } from './ReaderSheets';
+import { ReaderCardPanel } from './ReaderCardPanel';
+
+// The reader. It owns the state its parts share — the book and its blocks,
+// the selection, the visible block and range, the open sheet and popover,
+// the active card — and the five domain hooks over it (translator, marks,
+// explanations, sharḥ, batch), and it lays out the columns: the rail spacer,
+// the block list, the search column, the divider and the card panel, or the
+// bottom sheet. Its parts (ReaderHeader, CommentaryBars, ReaderSheets,
+// ReaderCardPanel) and hooks (useWordLookup, useReadingPosition,
+// useReaderNavigation, usePanelControls, useHeaderHeight) take what they use
+// as props and parameters of the same names.
+//
+// It stays at about 850 lines on purpose (restructure Phase 5, Design §6.5
+// and Q11 of docs/refactor/plans/phase5-big-ui-files.md). What is left is the
+// state those parts share and the code that writes it, the columns' JSX, and
+// the props handed to the parts. Two candidates were left here: the data
+// loading, because a hook holding the blocks would be called before
+// useTranslator and every open would send its storage requests in a different
+// order; and the selection tracking, whose doc comment sits above the wrong
+// effect (FOUND_ISSUES 30). Splitting further means a context, which was
+// rejected (Q10): its value is new on every render, so every consumer would
+// re-render anyway, and its reads are harder to check than a props list.
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -539,42 +561,24 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const activeTocTitle = tocNodes.find((node) => node.id === activeTocNodeId)?.title;
 
   const cardPanel = (
-    <CardPanel
-      cards={allCards}
+    <ReaderCardPanel
+      allCards={allCards}
       blocks={blocks}
       pageMeta={pageMeta}
-      streaming={translator.streaming}
+      translator={translator}
       activeCardId={activeCardId}
-      stats={translator.stats}
-      scope={readOnly ? sharedScope : settings.panelScope}
-      visibleRange={settledRange}
+      readOnly={readOnly}
+      sharedScope={sharedScope}
+      settings={settings}
+      settledRange={settledRange}
       sectionNodeId={sectionNodeId}
-      isStale={translator.isStale}
-      onScopeChange={(scope: PanelScope) =>
-        readOnly ? setSharedScope(scope) : void updateSettings({ panelScope: scope })
-      }
-      onFocusCard={focusCard}
-      onToggleCollapse={(card) => {
-        if (card.kind === 'note') void marks.setCollapsed(card.markId, !card.collapsed);
-        else if (card.kind === 'explanation') void explanations.setCollapsed(card, !card.collapsed);
-        else if (card.kind === 'sharh') void sharh.setCollapsed(card, !card.collapsed);
-        else void translator.setCollapsed(card, !card.collapsed);
-      }}
-      onCollapseAll={(collapsed) => {
-        void translator.setAllCollapsed(collapsed);
-        for (const card of marks.noteCards) void marks.setCollapsed(card.markId, collapsed);
-        for (const card of explanations.cards) void explanations.setCollapsed(card, collapsed);
-        for (const card of sharh.cards) void sharh.setCollapsed(card, collapsed);
-      }}
-      onRetranslate={(card, options) => void translator.retranslate(card, options)}
-      onDelete={(card) => {
-        if (card.kind === 'note') void marks.removeMark(card.markId);
-        else if (card.kind === 'explanation') void explanations.remove(card);
-        else if (card.kind === 'sharh') void sharh.remove(card);
-        else void translator.remove(card);
-      }}
-      onEditNote={(card) => void editNote(card)}
-      onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
+      setSharedScope={setSharedScope}
+      updateSettings={updateSettings}
+      focusCard={focusCard}
+      marks={marks}
+      explanations={explanations}
+      sharh={sharh}
+      editNote={editNote}
     />
   );
 
