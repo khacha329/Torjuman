@@ -51,7 +51,9 @@ interface Piece {
 }
 
 /**
- * Cut the selected text at every entity boundary it contains.
+ * Cut the selected text at the boundaries of the resolved verses and ḥadīth it
+ * contains. Marked names (`narrator`, `person`) and unresolved entities cut
+ * nothing (FOUND_ISSUES 52; for unresolved ḥadīth, see FOUND_ISSUES 59).
  *
  * Offsets are block-relative, so the selection is walked block by block and the
  * entity ranges intersecting it are projected onto the selected substring.
@@ -88,12 +90,12 @@ export function segmentSelection(options: {
     const covering: Piece[] = [];
     for (const entity of entities) {
       if (entity.matchQuality === 'unresolved') continue;
-      // Only scripture is cut out of the prose. A marked name ('narrator',
-      // 'person') is a reading aid, not a passage: it was emitted as a ḥadīth
-      // here, so on device a name in the selection was cut from the prose,
-      // shown untranslated with the no-offline-source note, and, inside a
-      // ḥadīth, shown twice (FOUND_ISSUES 52). It stays in the prose, which is
-      // the text around it.
+      // Only verses and ḥadīth are cut out of the prose. A marked name
+      // ('narrator', 'person') is a reading aid, not a passage, and stays in
+      // the prose around it. Until FOUND_ISSUES 52 it was emitted as a ḥadīth:
+      // on device a name in the selection was cut from the prose, shown
+      // untranslated with the no-offline-source note, and, inside a ḥadīth,
+      // shown twice.
       if (entity.type !== 'quran' && entity.type !== 'hadith') continue;
 
       const entityStart = entity.startBlockId === block.id ? entity.startOffset : 0;
@@ -118,10 +120,13 @@ export function segmentSelection(options: {
 
     // Walk the block's share, emitting prose between entities. A piece that
     // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
-    // skipped, and one that runs past it emits only the part not yet shown:
-    // `cursor` moved on, but the piece was still sliced from its own start,
-    // so overlapping text appeared twice (FOUND_ISSUES 52). Neither changes
-    // what reaches the model: only `pushProse` adds to `prose`.
+    // skipped, and one that runs past it emits only the part not yet shown.
+    // (Until FOUND_ISSUES 52 each piece was sliced from its own start after
+    // `cursor` had moved past it, so overlapping text appeared twice.) Neither
+    // changes what reaches the model: prose is only ever the gap before a
+    // piece and the tail after the last, and only `pushProse` adds to `prose`.
+    // A skipped verse is still read inside the ḥadīth's Arabic, without its
+    // own bundled English; see FOUND_ISSUES 52.
     let cursor = from;
     for (const piece of covering) {
       if (piece.end <= cursor) continue;

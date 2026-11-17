@@ -1908,6 +1908,56 @@ expect(
     ),
     '',
   );
+
+  // The same-start tie-break: a verse that opens the ḥadīth, listed first, is
+  // inside the ḥadīth, not a piece before it (the longer piece goes first).
+  const opening = `${verse} وإنما لكل امرئ ما نوى`;
+  const openingText = `قال الشيخ ${opening}`;
+  const openingAt = openingText.indexOf(opening);
+  const tied = segmentSelection({
+    blocks: [{ ...block, text: openingText, normalized: normalize(openingText) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: openingAt, endOffset: openingAt + verse.length },
+      { ...entity('e-hadith', 'hadith', opening, 'riyadussalihin:1'), startOffset: openingAt, endOffset: openingAt + opening.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: openingText.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse opening a ḥadīth is inside it', tied.segments.map((s) => s.type), ['prose', 'hadith']);
+  check('and nothing is shown twice', tied.segments.map((s) => s.arabic).join(''), openingText);
+
+  // A partial overlap: a verse that starts in the commentary and runs into the
+  // ḥadīth. The ḥadīth is emitted from where the verse ends, not from its own
+  // start, so the shared words are not shown twice — and neither part is prose.
+  const straddle = `قال الشيخ ${verse} وإنما لكل امرئ ما نوى`;
+  const verseAt = straddle.indexOf(verse);
+  const hadithAt = straddle.indexOf('بالنيات');
+  const clipped = segmentSelection({
+    blocks: [{ ...block, text: straddle, normalized: normalize(straddle) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: verseAt, endOffset: verseAt + verse.length },
+      { ...entity('e-hadith', 'hadith', verse, 'riyadussalihin:1'), startOffset: hadithAt, endOffset: straddle.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: straddle.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse running into a ḥadīth: prose, verse, the rest of the ḥadīth', clipped.segments.map((s) => s.type), ['prose', 'quran', 'hadith']);
+  check('the overlap is shown once', clipped.segments.map((s) => s.arabic).join(''), straddle);
+  expect(
+    'and the prose is only the commentary before the verse',
+    clipped.prose.length === 1 && clipped.prose[0].text.trim() === 'قال الشيخ',
+    '',
+  );
 }
 
 console.log('\n=== Offline: sentence splitting and glossary placeholders ===');

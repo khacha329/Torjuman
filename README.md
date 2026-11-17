@@ -301,7 +301,8 @@ The same principle governs `public/qul/` — see [docs/RESOURCES.md](docs/RESOUR
 > a fallback, not as a last resort.
 
 This is structural, not remembered. `offline/segmentSelection.ts` cuts the
-selection at every entity boundary *before* anything is translated, and returns
+selection at every resolved verse and ḥadīth boundary *before* anything is
+translated (a marked name cuts nothing; FOUND_ISSUES 52), and returns
 two things: finished segments, and a list of plain prose spans. Verses are
 resolved from the bundled muṣḥaf; ḥadīth take a verified local translation if
 one is cached, and Arabic plus an honest note if not. **Scripture is never added
