@@ -58,6 +58,7 @@ import {
 import { useWordLookup } from './useWordLookup';
 import { useReadingPosition } from './useReadingPosition';
 import { useReaderNavigation } from './useReaderNavigation';
+import { usePanelControls } from './usePanelControls';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -514,46 +515,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  /**
-   * Toggling the panel from the keyboard.
-   *
-   * Ctrl/Cmd + \ is the editor convention for a side panel, and on a desktop
-   * browser this is the reading app's only full-width gesture — there is no
-   * equivalent of the phone's sheet handle.
-   */
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '\\' || !(event.ctrlKey || event.metaKey)) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, [contenteditable]')) return;
-      event.preventDefault();
-      void updateSettings({ panelCollapsed: !settings.panelCollapsed });
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [settings.panelCollapsed, updateSettings]);
-
-  // --------------------------------------------------------------- divider
-
-  const dragging = useRef(false);
-  useEffect(() => {
-    const move = (event: PointerEvent) => {
-      if (!dragging.current) return;
-      const width = clampPanelWidth(window.innerWidth - event.clientX, window.innerWidth);
-      void updateSettings({ panelWidth: width });
-    };
-    const stop = () => {
-      dragging.current = false;
-      document.body.style.userSelect = '';
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', stop);
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', stop);
-    };
-  }, [updateSettings]);
+  const { dragging } = usePanelControls({ settings, updateSettings });
 
   useLayoutEffect(() => {
     const header = headerRef.current;

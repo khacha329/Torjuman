@@ -2338,7 +2338,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review PASS | `5561473` |
 | 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review PASS WITH NOTES | `c0ea5e3` |
 | 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review PASS WITH NOTES | `63f03d7` |
-| 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review pending | this commit |
+| 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review PASS WITH NOTES | `24d1188` |
+| 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3356,8 +3357,10 @@ holds)
   every import (it still uses `useCallback`, `useState`, `Card`) and
   imports `useReaderNavigation`. A four-line header. `ReaderScreen.tsx` is
   1,239 lines (1,269); `useReaderNavigation.ts` 55.
-- **For 5j:** the screen's references past `:442` shift up a further 30,
-  those between `:97` and `:442` by 1.
+- **For 5j:** the screen's references past `:473` (the old end of the
+  region) shift up a further 30; those from `:60` to `:96` move down 1
+  (the added import); `:98` to `:441` do not move (the import's +1 and
+  `flashBlockId`'s removed line −1 cancel). Corrected at 5g4's review.
 - **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
   exit 0, main chunk 790,823 B (+214 B), only `index.js` differs
   (`compare-bundles` against post-5g2; minified names), CSS byte-identical
@@ -3370,6 +3373,62 @@ holds)
   tasks / 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30;
   **U** 254/254; **P** PASS, identical (6 groups, 23 scenarios, 18
   requests).
+- **Review of 5g3 (`24d1188`): PASS WITH NOTES; "ready for 5g4".** Region
+  and state byte-identical, deps character for character, callers
+  unchanged. Keeping the `navigation` divider in the screen judged right.
+  Notes: the 5j shift sentence was wrong (lines `:98`–`:441` do not move;
+  `:60`–`:96` move down 1), corrected above at 5g4; `flash`'s `setTimeout`
+  is never cleared, as before the move — a no-op after unmount in React 19,
+  so not a FOUND_ISSUES entry.
+
+**Step 5g4, measured 2026-11-17**
+- The panel-controls region (`ReaderScreen.tsx:517-556` at `24d1188`, the
+  plan's 627-666: the "Toggling the panel from the keyboard" doc comment,
+  the keydown effect `[settings.panelCollapsed, updateSettings]`, the
+  `divider` section heading, `dragging = useRef(false)` and the window
+  `pointermove`/`pointerup` effect `[updateSettings]`, one contiguous
+  block between `handleMarkerClick` and the header's layout effect) moved
+  into `export function usePanelControls({ settings, updateSettings })` in
+  the new `ui/reader/usePanelControls.ts`, then (g) `return { dragging }`.
+  The `divider` heading sits inside the region, so it moved with it. `cmp`:
+  the 40 lines identical, at the same indentation; both deps arrays
+  character for character. (f) Design §6.1's two fields, `settings` passed
+  whole (`settings.panelCollapsed` as written); (i) `ReturnType<typeof
+  useApp>['settings']` and `['updateSettings']`; (h) the call `const {
+  dragging } = usePanelControls({ settings, updateSettings });` stands
+  where the doc comment was. The row's I/O list is complete: `dragging`
+  (written by the divider's `onPointerDown` in the screen) is the only name
+  the screen still reads from the region.
+- Effect order: … `dblclick`, keydown, divider, then the header's layout
+  effect — unchanged, the two effects called at the same point in the same
+  order. Each effect's listeners are still created inside it and removed
+  in its own cleanup (`keydown` on `document`; `pointermove` and
+  `pointerup` on `window`), so their identities and pairing are as before.
+  FOUND_ISSUES 27 kept exactly: still no `pointercancel` listener.
+- Imports: `usePanelControls.ts` takes `useEffect`/`useRef`, `type
+  useApp` and `clampPanelWidth`; `ReaderScreen` keeps every import (it
+  still uses `useEffect`, `useRef` and `clampPanelWidth`, for the panel's
+  width) and imports `usePanelControls`. A four-line header.
+  `ReaderScreen.tsx` is 1,201 lines (1,239); `usePanelControls.ts` 59.
+- **For 5j:** the screen's references past `:556` shift up a further 38
+  (40 lines become 1, the import adds 1); `:61`–`:516` move down 1. FOUND_ISSUES 27's
+  `:649-666` is now `usePanelControls.ts`.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,918 B (+95 B), only `index.js` differs
+  (`compare-bundles` against post-5g3; minified names), CSS byte-identical
+  (`cmp`); **L** 187 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; every `ok` line
+  identical to 5g3's run but the portrait restore (699 here, 700 there,
+  the known noise), "Ctrl+\\ hides the panel… stored panelCollapsed
+  true", "dragging the divider 120 px right… panel 432 → 315, stored 315",
+  the clamp ("panel 432, stored 432") and "text selection is off during
+  each drag" included; `fingerDrag` and `readMarkDown` reports unchanged.
+  The first run's portrait perf had one long task (61 ms, 11 ms blocking)
+  for the first time since Phase 4 (R.log had one of 55 ms on unchanged
+  code); a second run, alone, gave 0, with the same `ok` lines, so it is
+  noise — the step adds nothing to scrolling. Perf (second run): 240,000
+  px in 33.5 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P** PASS, identical.
 
 ## Open
 
