@@ -1,12 +1,16 @@
+import type { RefObject } from 'react';
+import type { useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Block, BlockType } from '../../types';
 
-// How each block type is laid out, and how tall a block's text is before it
-// has been: the type's classes, the margin and padding those classes put
-// around the text, and the text-height estimate the virtualizer adds that to.
-// One file because TYPE_CHROME must equal TYPE_CLASS's margins (CLAUDE.md
-// trap 7). Moved verbatim from BlockList.tsx in restructure Phase 5 step 5f1
-// (docs/refactor/plans/phase5-big-ui-files.md); `textHeightFor` is the body
-// of BlockList's `estimateTextHeight`, which now calls it.
+// How each block type is laid out, how tall a block's text is before it has
+// been laid out, and how a jump makes sure it landed: the type's classes, the
+// margin and padding those classes put around the text, the text-height
+// estimate the virtualizer adds that to, and `settleOn`. One file because
+// TYPE_CHROME must equal TYPE_CLASS's margins (CLAUDE.md trap 7). Moved
+// verbatim from BlockList.tsx in restructure Phase 5 steps 5f1 and 5f2
+// (docs/refactor/plans/phase5-big-ui-files.md); `textHeightFor` and
+// `settleOn` are the bodies of BlockList's `estimateTextHeight` and
+// `settleOn`, which now call them.
 
 export const TYPE_CLASS: Record<BlockType, string> = {
   chapter_title: 'text-center font-bold my-10 text-[1.35em] leading-relaxed',
@@ -54,4 +58,42 @@ export function textHeightFor(
   const charsPerLine = Math.max(8, columnWidth / (fontSize * 0.43));
   const lines = Math.max(1, Math.ceil(block.text.length / charsPerLine));
   return lines * fontSize * lineHeight;
+}
+
+/**
+ * Scroll to a block and make sure it got there.
+ *
+ * A jump is computed from the heights the virtualizer knows, and most of the
+ * mounted blocks are off screen, skipped by content-visibility, holding an
+ * estimate or a height remembered from an earlier width. Landing draws the
+ * paragraphs around the target at their real size, which moves it. So the
+ * target is checked where it actually ended up, a couple of frames later,
+ * and the jump repeated until it stays put — each pass lays out more real
+ * text around it, so it converges within a few.
+ */
+export function settleOn(
+  virtualizer: ReturnType<typeof useWindowVirtualizer>,
+  listRef: RefObject<HTMLDivElement | null>,
+  topInset: number,
+  index: number,
+  align: 'start' | 'center',
+): void {
+  let attempts = 0;
+  const attempt = () => {
+    virtualizer.scrollToIndex(index, { align });
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        attempts++;
+        const element = listRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`);
+        if (!element || attempts >= 8) return;
+        const rect = element.getBoundingClientRect();
+        const off =
+          align === 'start'
+            ? rect.top - topInset
+            : rect.top + rect.height / 2 - window.innerHeight / 2;
+        if (Math.abs(off) > 4) attempt();
+      }),
+    );
+  };
+  attempt();
 }

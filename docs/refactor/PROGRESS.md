@@ -2333,7 +2333,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review PASS | `bdd5a5c` |
 | 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review PASS | `aa423d9` |
 | 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `539de97` |
-| 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review pending | this commit |
+| 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review PASS WITH NOTES | `2d72185` |
+| 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3075,7 +3076,8 @@ holds)
   `BlockList.tsx`). Also line references that shift up here: FOUND_ISSUES
   `BlockList.tsx` ~134 (`pageIndexOf`, now 105), `:285` (now 245),
   `:314-334` and `:328` (`settleOn`, now 274-294 and 288), `:360-369` (now
-  320-329), `:559` (now 519).
+  320-329), `:559` (now 519); and FOUND_ISSUES 40's `attempts >= 8`
+  (`:323`, now 283; added at 5f1's review).
 - **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
   exit 0, main chunk 790,249 B (+35 B, the new function and its call),
   only `index.js` differs (`compare-bundles` against post-5e4; the first
@@ -3086,6 +3088,62 @@ holds)
   175,800 px in 24.5 s, 1,904 nodes, 0 long tasks), and every one of its
   `ok` lines, measured positions included (jump to ص 120 top 66 / 109,
   contents entry top 66 / 109, restore 700 → 95), identical to 5e4's run;
+  **S** 30/30; **U** 254/254.
+- **Review of 5f1 (`2d72185`): PASS WITH NOTES; "ready for 5f2".** The
+  maps byte-identical but for `export`; the estimate's text identical but
+  for indentation; the `useCallback`'s deps character for character. Tailwind
+  v4 detects `.ts` sources on its own, so the classes in `blockLayout.ts`
+  are scanned (and CSS was byte-identical). Notes, applied in 5f2's commit:
+  the header's "before it has been" finished as "before it has been laid
+  out"; FOUND_ISSUES 40's `attempts >= 8` (`:323`) added to the 5j list
+  above.
+
+**Step 5f2, measured 2026-11-17**
+- `settleOn`'s doc comment (`BlockList.tsx:263-273` at `2d72185`) and the
+  body of its `useCallback` (`:276-293`) moved, adaptation (j), into
+  `export function settleOn(virtualizer, listRef, topInset, index, align):
+  void` at the end of `blockLayout.ts`. **No text substitution:** the three
+  names the body closed over became parameters with the same names, and
+  `index`/`align` were already the callback's. Only indentation changed
+  (comment 2 → 0, statements 6 → 2): with it removed, `diff` is identical,
+  the 8 attempts, the 4 px, the two `requestAnimationFrame`s and FOUND_ISSUES
+  40's centring test against `window.innerHeight / 2` included.
+- When each input is read is unchanged (Phase 4's correction 1): `listRef`
+  is passed as the ref object and `.current` is read inside the second
+  frame, as before; `virtualizer` is the same object the `useCallback`
+  closes over, its `scrollToIndex` called at each attempt; `topInset` is
+  the number the callback closed over (a prop, not a ref), as before;
+  `window.innerHeight` is still read inside the frame.
+- In `BlockList` the `useCallback` stays, `[topInset, virtualizer],` and its
+  first and last lines character for character, its body `(index: number,
+  align: 'start' | 'center') => settleOnBlock(virtualizer, listRef,
+  topInset, index, align)`. The module function is imported as `settleOn as
+  settleOnBlock`: Design §5 and Q8 name it `settleOn`, the same name as the
+  `useCallback` it is called from, so it needs a local name there (an
+  import alias; no symbol renamed). `useImperativeHandle` and its deps
+  `[blocks, settleOn]` untouched. Its parameter types are new, rule (i):
+  `ReturnType<typeof useWindowVirtualizer>` and `RefObject<HTMLDivElement |
+  null>`, from two type-only imports in `blockLayout.ts`. Outside the moved
+  text, `BlockList.tsx` is the old file but for the import line and the
+  callback (`diff`); 659 lines (688 before). `blockLayout.ts`'s header now
+  names `settleOn` and both steps.
+- **Made untrue here, for 5j:** the 5f1 line references to `settleOn` now
+  point into `blockLayout.ts` — FOUND_ISSUES 40's `:314-334` →
+  `blockLayout.ts:74-99`, `:328` → `blockLayout.ts:93`, `attempts >= 8`
+  (`:323`) → `blockLayout.ts:88`; and `BlockList.tsx` `:360-369` → 291-300,
+  `:559` → 490 (`:285` → 245 and `pageIndexOf` → 105 as at 5f1).
+  `.claude/agents/torjuman-reader.md`'s "`settleOn` retries `scrollToIndex`"
+  under `BlockList.tsx` (Design §10 lists 5f1 and 5h1 for that file).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,267 B (+18 B), only `index.js` differs
+  (`compare-bundles` against post-5f1; the first difference is a minified
+  name), CSS byte-identical (`cmp`); **L** 182 files (no new file), 134
+  edges, 0 directory and 0 file-level cycles, rules hold; **R** first and
+  alone 55/55, every `ok` line identical to 5f1's run (`diff`), and every
+  report line identical but the two perf timings: `readMarkDown` `{"from":
+  450, "next":500, "atMiddle":450}` twice (FOUND_ISSUES 40 and 39 intact),
+  `fingerDrag` unchanged; 240,000 px in 33.7 s (33.4 at 5f1), 1,905 nodes,
+  0 long tasks / 175,800 px in 24.4 s (24.5), 1,904 nodes, 0 long tasks;
   **S** 30/30; **U** 254/254.
 
 ## Open

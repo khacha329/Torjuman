@@ -21,7 +21,7 @@ import { isDivider } from '../../shamela/structure';
 import { BlockText } from './BlockText';
 import type { CardMarker, VisibleRange } from './cardLayout';
 import { pinnedBlockIds, trackSelectionPins } from './selectionPins';
-import { TYPE_CHROME, TYPE_CLASS, textHeightFor } from './blockLayout';
+import { TYPE_CHROME, TYPE_CLASS, settleOn as settleOnBlock, textHeightFor } from './blockLayout';
 
 // Virtualized reading surface.
 //
@@ -260,38 +260,9 @@ export function BlockList({
 
   const items = virtualizer.getVirtualItems();
 
-  /**
-   * Scroll to a block and make sure it got there.
-   *
-   * A jump is computed from the heights the virtualizer knows, and most of the
-   * mounted blocks are off screen, skipped by content-visibility, holding an
-   * estimate or a height remembered from an earlier width. Landing draws the
-   * paragraphs around the target at their real size, which moves it. So the
-   * target is checked where it actually ended up, a couple of frames later,
-   * and the jump repeated until it stays put — each pass lays out more real
-   * text around it, so it converges within a few.
-   */
   const settleOn = useCallback(
-    (index: number, align: 'start' | 'center') => {
-      let attempts = 0;
-      const attempt = () => {
-        virtualizer.scrollToIndex(index, { align });
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            attempts++;
-            const element = listRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`);
-            if (!element || attempts >= 8) return;
-            const rect = element.getBoundingClientRect();
-            const off =
-              align === 'start'
-                ? rect.top - topInset
-                : rect.top + rect.height / 2 - window.innerHeight / 2;
-            if (Math.abs(off) > 4) attempt();
-          }),
-        );
-      };
-      attempt();
-    },
+    (index: number, align: 'start' | 'center') =>
+      settleOnBlock(virtualizer, listRef, topInset, index, align),
     [topInset, virtualizer],
   );
 
