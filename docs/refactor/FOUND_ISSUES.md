@@ -578,7 +578,8 @@ Chromium's `CSS.getPlatformFontsForNode`: Amiri and Scheherazade New each draw
 all 68 distinct non-ASCII characters of `public/quran/uthmani.json` (ٱ, the
 small high signs U+06D6–06ED, U+08F0–08F2 included) with no fallback; the old
 system stack fell back to DejaVu Sans and FreeSerif. U's Qurʾān captures no
-longer depend on the container's fonts.
+longer depend on the container's fonts for the Arabic (their English and
+labels still do).
 
 ## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
 
@@ -706,7 +707,7 @@ first line of a `RelatedAyahView` (`ui/reader/QuranTabs.tsx`) reaches into its
 label line ("… words · N% coverage", `mb-1` above an `ArabicVerse` at 17 px
 with line height 2.1). In U's `reader-quran-similar` at 960×600, the pause
 mark ۗ (U+06D7) over 42:53's ٱلۡأَرۡضِ overlaps the "c" of "coverage", and 34:1's
-marks come close to "53%". Overlap, not clipping: nothing is cut off. The
+ۚ (U+06DA, after ٱلۡأٓخِرَةِ) touches the bottom of "53%". Overlap, not clipping: nothing is cut off. The
 Translation tab's single verse has the tab bar's padding above it and is
 clear. Before 38 these marks drew as empty boxes inside the line, so the collision
 was hidden. Cosmetic. Left unfixed.
