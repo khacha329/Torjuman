@@ -83,3 +83,10 @@ lane B found.
   reports whether its research pass used the search tool, and the card
   records that. The label also requires a Claude card, for cards stored
   before. Gemini gains no search.
+- **52. The offline translator fix.** LANES.md's "fix to the offline
+  translator" is FOUND_ISSUES 52, by the owner's word (2026-11-17). Only
+  verses and ḥadīth are cut out of the prose on the on-device path; a marked
+  name (`narrator`, `person`) stays in the prose around it. A piece inside
+  one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
+  runs past it emits only the part not yet shown, so no text appears twice.
+  What reaches the model is still only prose.

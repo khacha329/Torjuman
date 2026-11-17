@@ -88,6 +88,13 @@ export function segmentSelection(options: {
     const covering: Piece[] = [];
     for (const entity of entities) {
       if (entity.matchQuality === 'unresolved') continue;
+      // Only scripture is cut out of the prose. A marked name ('narrator',
+      // 'person') is a reading aid, not a passage: it was emitted as a ḥadīth
+      // here, so on device a name in the selection was cut from the prose,
+      // shown untranslated with the no-offline-source note, and, inside a
+      // ḥadīth, shown twice (FOUND_ISSUES 52). It stays in the prose, which is
+      // the text around it.
+      if (entity.type !== 'quran' && entity.type !== 'hadith') continue;
 
       const entityStart = entity.startBlockId === block.id ? entity.startOffset : 0;
       const entityEnd = entity.endBlockId === block.id ? entity.endOffset : block.text.length;
@@ -105,16 +112,25 @@ export function segmentSelection(options: {
       }
     }
 
-    covering.sort((a, b) => a.start - b.start);
+    // At one start, the longer piece first, so a verse quoted inside a ḥadīth
+    // that begins at the same offset is inside the ḥadīth, not before it.
+    covering.sort((a, b) => a.start - b.start || b.end - a.end);
 
-    // Walk the block's share, emitting prose between entities.
+    // Walk the block's share, emitting prose between entities. A piece that
+    // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
+    // skipped, and one that runs past it emits only the part not yet shown:
+    // `cursor` moved on, but the piece was still sliced from its own start,
+    // so overlapping text appeared twice (FOUND_ISSUES 52). Neither changes
+    // what reaches the model: only `pushProse` adds to `prose`.
     let cursor = from;
     for (const piece of covering) {
-      if (piece.start > cursor) {
-        pushProse(block.text.slice(cursor, piece.start));
+      if (piece.end <= cursor) continue;
+      const start = Math.max(piece.start, cursor);
+      if (start > cursor) {
+        pushProse(block.text.slice(cursor, start));
       }
-      pushEntity(piece.entity!, block.text.slice(piece.start, piece.end));
-      cursor = Math.max(cursor, piece.end);
+      pushEntity(piece.entity!, block.text.slice(start, piece.end));
+      cursor = piece.end;
     }
     if (cursor < to) pushProse(block.text.slice(cursor, to));
   }

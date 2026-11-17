@@ -744,6 +744,8 @@ finish hides the bar (inferred, not checked). Left unfixed.
 
 ## 52. On device, a marked name in the selection is treated as a ḥadīth (2026-11-17, by reading)
 
+**Fixed in lane B** (commit "52." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
+
 Found by the review of lane B. `translation/offline/segmentSelection.ts`
 `pushEntity` emits every entity that is not a verse as a `hadith` segment,
 and the reader passes it every entity, `narrator` and `person` included. So

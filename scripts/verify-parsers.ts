@@ -1829,6 +1829,87 @@ expect(
   );
 }
 
+// FOUND_ISSUES 52: a marked name is not scripture. A narrator inside the
+// ḥadīth and a person in the commentary were each emitted as a 'hadith'
+// segment: the person's name was cut from the prose and shown untranslated,
+// and the narrator's text appeared twice (once inside the ḥadīth, once on its
+// own). A verse quoted inside the ḥadīth is likewise not shown a second time.
+{
+  const person = 'ابن عثيمين';
+  const narrator = 'عمر بن الخطاب';
+  const verse = 'إنما الأعمال بالنيات';
+  const hadith = `عن ${narrator} قال ${verse} وإنما لكل امرئ ما نوى`;
+  const text = `قال الشيخ ${person} في شرحه ${hadith}`;
+  const at = (part: string) => text.indexOf(part);
+
+  const block = {
+    id: 'y:p1:0',
+    bookId: 'y',
+    pageId: 'y:p1',
+    order: 0,
+    type: 'sharh' as const,
+    text,
+    normalized: normalize(text),
+    contentHash: '',
+    hadithNumber: null,
+    tocNodeId: null,
+    spans: [],
+    anchor: null,
+  };
+  const entity = (id: string, type: string, part: string, reference: string) => ({
+    id,
+    bookId: 'y',
+    startBlockId: 'y:p1:0',
+    startOffset: at(part),
+    endBlockId: 'y:p1:0',
+    endOffset: at(part) + part.length,
+    type,
+    reference,
+    matchQuality: 'exact' as const,
+    detectedAt: 0,
+  });
+
+  const segmented = segmentSelection({
+    blocks: [block] as never,
+    entities: [
+      entity('e-person', 'person', person, normalize(person)),
+      entity('e-hadith', 'hadith', hadith, 'riyadussalihin:1'),
+      entity('e-narrator', 'narrator', narrator, normalize(narrator)),
+      entity('e-verse', 'quran', verse, '1:1'),
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: text.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+
+  check(
+    'a marked name splits nothing: prose, then the one ḥadīth',
+    segmented.segments.map((s) => s.type),
+    ['prose', 'hadith'],
+  );
+  expect(
+    'the person in the commentary reaches the model with the text around it',
+    segmented.prose.length === 1 && segmented.prose[0].text.includes(person),
+    '',
+  );
+  check(
+    'the segments together are the selection, once',
+    segmented.segments.map((s) => s.arabic).join(''),
+    text,
+  );
+  expect(
+    'and the ḥadīth, its narrator and the verse inside it still never reach the model',
+    !segmented.prose.some(
+      (span) => span.text.includes(narrator) || span.text.includes(verse) || span.text.includes(hadith),
+    ),
+    '',
+  );
+}
+
 console.log('\n=== Offline: sentence splitting and glossary placeholders ===');
 
 check(
