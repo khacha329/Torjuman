@@ -67,8 +67,8 @@
 //     default to 'en-US' when called without a locale: the truncation messages
 //     format the budget with toLocaleString(). localeCompare stays pinned
 //     in case a call site reaches one; glossaryHashOf, which once sorted with
-//     it, sorts by code point since FOUND_ISSUES 13. Pinned in-process rather than by running under
-//     LANG=C.UTF-8, because an environment prefix in an npm script does not
+//     it, sorts by code point since FOUND_ISSUES 13. Pinned in-process
+//     rather than by running under LANG=C.UTF-8, because an environment prefix in an npm script does not
 //     work in every shell, and on some systems Node takes its default locale
 //     from the OS rather than LANG.
 //   * navigator.onLine (Node's navigator has none): true, false in one gloss
