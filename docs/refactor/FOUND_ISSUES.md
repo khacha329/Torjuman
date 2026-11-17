@@ -839,3 +839,14 @@ Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
 an offline card. Pre-existing. Left unfixed.
+
+## 61. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
+
+Found by the `torjuman-llm` review of lane B's fix to 52. `pushProse` in
+`translation/offline/segmentSelection.ts` merges a prose span into the one
+before it with `previous.arabic += text`, so the last word of one block and
+the first word of the next reach the on-device model glued together ("one
+twothree four" in the probe). Pre-existing; since 52 it is more common,
+because a marked name at a block edge no longer cuts the prose there. A fix
+would join with a newline or a space, which `splitSentences` already treats
+as a boundary. Left unfixed.
