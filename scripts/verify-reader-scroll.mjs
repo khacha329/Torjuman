@@ -23,7 +23,8 @@
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
 //     bringing its block to the middle; the read-mark ↑ ↓; double-tap
-//     opening the dictionary; the restored position applied once; the
+//     opening the dictionary; the restored position applied once; a second
+//     book opened by its URL at its own position (FOUND_ISSUES 31); the
 //     divider dragged with a mouse; the divider dragged with a finger
 //     (reported, not judged: FOUND_ISSUES 27)
 //   - portrait: the cards sheet's handle; the handle's count of every card
@@ -462,6 +463,10 @@ const MARKER_BLOCK = 300;
 const CARD_BLOCK = 1000;
 /** A block given a note by the one scenario that counts the sheet handle's cards. */
 const NOTE_BLOCK = 200;
+/** A second book, opened by a hash change from the first, and its saved position. */
+const SECOND_BOOK = 'shamela-515153';
+const SECOND_BLOCKS = 400;
+const SECOND_POSITION = 300;
 /** Three read marks, for the header's ↑ ↓. */
 const READ_MARKS = [400, 450, 500];
 /** A ج/ص page past the last read mark (block 545 opens it). */
@@ -799,6 +804,42 @@ async function landscapeControls(browser, base, profile) {
       'after the restore, a jump elsewhere stays where it landed',
       Math.abs(restored - 700) <= 1 && jumped === firstBlockOfPage(20) && later === jumped,
       `restored ${restored}, jumped to ${jumped}, 2.5 s later ${later}`,
+    );
+  });
+
+  // A hash change straight from one book to another (FOUND_ISSUES 31): the
+  // second book opens at its own saved position, not at the top. Reachable
+  // only by editing the URL — the Library is otherwise between two books —
+  // but a reader screen reused across books also restored nothing and could
+  // save the first book's place under the second's id.
+  await scenario(browser, base, profile, 'a second book opened by its URL restores its own position', async (page) => {
+    const id = (index) => `${SECOND_BOOK}:p${Math.floor(index / PER_PAGE) + 1}:${index}`;
+    const pages = Math.ceil(SECOND_BLOCKS / PER_PAGE);
+    await putRows(page, 'seeding the second book', {
+      books: [{
+        id: SECOND_BOOK, shamelaId: 515153, title: 'كتاب ثان', author: '', publisher: '', edition: '',
+        volumeCount: 1, category: '', structureProfile: 'generic', importedAt: 2, importStatus: 'complete',
+        totalPages: pages, fetchedPages: pages, volumeStarts: [1], hadithCollection: null,
+      }],
+      pages: Array.from({ length: pages }, (_, i) => ({
+        id: `${SECOND_BOOK}:p${i + 1}`, bookId: SECOND_BOOK, pageIndex: i + 1, volume: 1, printPage: i + 1, rawHtml: '', fetchedAt: 1,
+      })),
+      blocks: Array.from({ length: SECOND_BLOCKS }, (_, i) => ({
+        id: id(i), bookId: SECOND_BOOK, pageId: `${SECOND_BOOK}:p${Math.floor(i / PER_PAGE) + 1}`, order: i, type: 'body',
+        text: textOf(i), normalized: textOf(i), contentHash: `s${i}`, hadithNumber: null, tocNodeId: null, spans: [], anchor: null,
+      })),
+      positions: [{ bookId: SECOND_BOOK, blockOrder: SECOND_POSITION, updatedAt: 1 }],
+    });
+    await page.evaluate((book) => { location.hash = `#/read/${encodeURIComponent(book)}`; }, SECOND_BOOK);
+    await page.locator(`[data-block-id^="${SECOND_BOOK}:"]`).first().waitFor({ timeout: 10_000 });
+    await page.waitForFunction(() => window.scrollY > 1000, null, { timeout: 10_000 }).catch(() => {});
+    await settle(page, 900);
+    const top = await topBlock(page);
+    const firstBookLeft = await page.locator(`[data-block-id^="${BOOK}:"]`).count();
+    check(
+      'a hash change to another book opens it at its own saved position',
+      top !== null && Math.abs(top - SECOND_POSITION) <= 1 && firstBookLeft === 0,
+      `top block ${top}, saved ${SECOND_POSITION}, first book's blocks still mounted ${firstBookLeft}`,
     );
   });
 

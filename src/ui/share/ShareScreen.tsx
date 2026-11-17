@@ -143,7 +143,8 @@ export function ShareScreen({ id, keyText }: { id: string; keyText: string }) {
   return (
     <ReadOnlyContext.Provider value={true}>
       <StorageOverride storage={shareStorage!}>
-        <ReaderScreen bookId={state.bundle.sourceBook.bookId} />
+        {/* Keyed by book for the reason App gives its reader a key. */}
+        <ReaderScreen key={state.bundle.sourceBook.bookId} bookId={state.bundle.sourceBook.bookId} />
       </StorageOverride>
     </ReadOnlyContext.Provider>
   );

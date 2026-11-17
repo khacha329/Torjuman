@@ -460,7 +460,7 @@ biography-availability effect (`:332-347`), whose own comment follows it
 biography-availability effect to directly above the `selectionchange` effect
 it describes. No code changed.
 
-## 31. The reader is not keyed by book (2026-11-16, by reading)
+## 31. The reader is not keyed by book (2026-11-16, by reading, fixed in lane A)
 
 `App.tsx:94` renders `<ReaderScreen bookId={route.bookId} />` and
 `ui/share/ShareScreen.tsx:146` `<ReaderScreen bookId={…} />`, neither with a
@@ -471,6 +471,17 @@ at its saved position; and `useTranslator`'s `listCards` effect
 (`ui/reader/useTranslator.ts:104-106`) has no cancellation, so a slow first list
 can land after the second. Only reachable by editing the URL (the Library is
 always between two books). Phase 5 plan, Design §9 F.
+
+**Fixed in lane A:** both call sites pass `key` = the book id, so a hash
+change from one book to another mounts a fresh `ReaderScreen`. `restoredRef`
+starts false, and the second book opens at its saved position. The first
+screen's `listCards` resolves into an unmounted component, whose `setCards`
+React drops, so `useTranslator.ts` (lane B's) needed no cancellation. Keying
+also stops a third problem, found by reading: the debounced position save
+(`useReadingPosition.ts:41-51`) could write the first book's visible block
+order under the second book's id. A remount resets only what going through
+the Library already reset. R's "a second book opened by its URL restores its
+own position" guards it: on the old code the second book opened at block 0.
 
 ## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
 
