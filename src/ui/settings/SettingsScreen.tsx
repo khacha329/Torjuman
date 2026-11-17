@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { listEnglishTranslations, type TranslationResource } from '../../retrieval/quran';
@@ -15,7 +15,7 @@ import {
 import type { CloudProviderId, PanelPosition } from '../../types';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
-import { Button, Field, inputClass, LinkButton, TopBar, SettingsSection } from '../kit';
+import { Button, Field, inputClass, LinkButton, TopBar } from '../kit';
 import { EntitySection } from './EntitySection';
 import { GlossaryTable } from './GlossaryTable';
 import { HadithSourceSection } from './HadithSourceSection';
@@ -26,6 +26,7 @@ import { BuildSection } from './BuildSection';
 import { RetrievalSection } from './RetrievalSection';
 import { NarratorSources } from './NarratorSources';
 import { PublishedShares } from './PublishedShares';
+import { Section } from './Section';
 
 export function SettingsScreen() {
   return (
@@ -64,24 +65,6 @@ export function SettingsScreen() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <SettingsSection>
-      <h2 className="text-base font-semibold">{title}</h2>
-      {description && <p className="mt-0.5 mb-4 text-sm text-muted">{description}</p>}
-      <div className={description ? '' : 'mt-4'}>{children}</div>
-    </SettingsSection>
   );
 }
 

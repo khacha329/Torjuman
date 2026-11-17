@@ -2321,6 +2321,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
 | 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
 | 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review PASS WITH NOTES | `ea6c34e` |
+| 5d1. `Section` → `ui/settings/Section.tsx` | T pass; B L R S U running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2756,6 +2757,19 @@ holds)
   group — now Claude's error paths and retries; and the cost sum is seen
   only from zero, so its accumulation joins the steps 5i3's reviewer checks
   by reading (header and above).
+
+**Step 5d1, measured 2026-11-17**
+- `Section` (`SettingsScreen.tsx:70-87`) moved verbatim into the new
+  `ui/settings/Section.tsx`, `export` added (rule 4 (b)); a four-line
+  header. It imports `type ReactNode` and `SettingsSection` (copies of the
+  source's import lines, filtered); `SettingsScreen` drops both and imports
+  `Section`. The move was done by a script that copies each declaration with
+  the comment above it; its first run cut the function at `}: {` and was
+  caught by the typecheck, restored, and the script fixed before any check
+  ran. Comments made untrue here, for 5j (Q13): `ui/kit/SettingsSection.tsx`'s
+  header still says "SettingsScreen's local Section".
+- **T** exit 0. **B L R S U** were running when this was committed;
+  results with the review.
 
 ## Open
 
