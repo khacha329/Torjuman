@@ -1,8 +1,8 @@
 # Lanes after Phase 5
 
 The fixes for `FOUND_ISSUES.md` are split into four lanes, each with its own
-branch and PR. They apply `DECISIONS.md`. The owner set this order on
-2026-11-17. Phase 6 waits for lane D.
+branch and PR. They apply `DECISIONS.md`. The owner set them on
+2026-11-17. Phase 6 is part of lane D, which starts after A–C merge.
 
 | Lane | Branch | Where it runs | Issues |
 | --- | --- | --- | --- |
