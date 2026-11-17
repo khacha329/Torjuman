@@ -698,8 +698,9 @@ is, since a held height can still be an estimate. Its test uses the same
 place. A centred landing found on target is looked at once more two frames
 later, because a block still drawn at its content-visibility placeholder can
 have grown to its real height by the next check (block 1100, in the column the
-search panel narrows, measured 196 px at one check and 633 px at the next). `start` jumps are unchanged. R's "a centred jump lands
-at the middle below the header" guards it in both layouts: on the old code
+search panel narrows, measured 196 px at one check and 633 px at the next).
+`start` jumps are unchanged. R's "a centred jump lands at the middle below the
+header" guards it in both layouts: on the old code
 the block's middle was 24 and 46 px low and the jump made 8 and 10 jump
 writes; now 0–1 px, and 2 and 4. Portrait takes three passes, not two: its
 taller visible area brings more estimated blocks above the target into view
