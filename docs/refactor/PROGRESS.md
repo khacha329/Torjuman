@@ -2329,7 +2329,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d6. `DisplaySection` → its file | T B L R S U pass; review PASS | `8589497` |
 | 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
 | 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
-| 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review pending | this commit |
+| 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `ad81ec7` |
+| 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2928,6 +2929,37 @@ holds)
   33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904 nodes,
   0 long tasks); **S** 30/30; **U** 254/254, `reader-hadith` and
   `reader-hadith-diagnostics` at both sizes among them.
+- **Review of 5e1 (`ad81ec7`): PASS WITH NOTES; "ready for 5e2".** Both
+  blocks byte-identical (only `export` added); the `ḥadīth` divider travels
+  with its section rather than being left over nothing at the file's end;
+  `HadithSheet.tsx` imports nothing from `EntitySheet.tsx`, so no cycle,
+  type-only or other.
+
+**Step 5e2, measured 2026-11-17**
+- `interface QuranSheetData` (`EntitySheet.tsx:88-99` at `ad81ec7`; no
+  comment directly above it, so the `Qurʾān` divider at `:86` stays with
+  `QuranSheet`) moved verbatim into the new `ui/reader/quranSheetData.ts`,
+  `export` added; a four-line header. Byte diff: identical but for the
+  `export`; `EntitySheet.tsx` is the old file minus lines 88-100 and the
+  import changes, nothing reordered. The new file imports
+  `QuranEnglish`/`QuranIndex`, `RelatedAyah`/`SurahInfoResult`/
+  `TafsirResult`/`TopicResult` and `QuranVerse`, filtered from the source's
+  lines and written `import type` (rule 4 (a)): the source's inline
+  `type` modifiers, filtered to types alone, would under
+  `verbatimModuleSyntax` leave a bare side-effect import of
+  `quran/quranIndex` and `qul/service`. `EntitySheet` drops those seven
+  names from its three lines (`loadQuranEnglish`/`loadQuranIndex` and the
+  `qul/service` functions stay) and adds `import type { QuranSheetData }`.
+  `quranSheetData.ts` imports nothing from `ui/reader`, so 5e3 and 5e4 can
+  both import it without a cycle. `EntitySheet.tsx` is 424 lines. No
+  comment made untrue.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), **every chunk identical after
+  masking** (`compare-bundles` against post-5e1, exit 0, `index.js`
+  included), CSS byte-identical (`cmp`); **L** 179 files, 134 edges, 0
+  directory and 0 file-level cycles, rules hold; **R** first and alone
+  55/55 (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.6 s, 1,904 nodes, 0 long tasks); **S** 30/30; **U** 254/254.
 
 ## Open
 

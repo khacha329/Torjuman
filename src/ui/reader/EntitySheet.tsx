@@ -6,7 +6,7 @@ import { secrets } from '../../services/secrets';
 import { useOnline } from '../../app/useOnline';
 import { BidiText } from '../../components/BidiText';
 import { fetchVerse } from '../../retrieval/quran';
-import { loadQuranEnglish, loadQuranIndex, type QuranEnglish, type QuranIndex } from '../../quran/quranIndex';
+import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
 import {
   compileAyah,
   compileCacheKey,
@@ -18,10 +18,6 @@ import {
   surahInfoFor,
   tafsirFor,
   topicsFor,
-  type RelatedAyah,
-  type SurahInfoResult,
-  type TafsirResult,
-  type TopicResult,
 } from '../../qul/service';
 import { isCloudProvider } from '../../lib/providers';
 import type {
@@ -29,7 +25,6 @@ import type {
   Entity,
   ProviderId,
   QulCompilation,
-  QuranVerse,
 } from '../../types';
 import { AnchoredPanel } from './AnchoredPanel';
 import {
@@ -42,6 +37,7 @@ import {
 } from './QuranTabs';
 import { Button, Spinner } from '../kit';
 import { HadithSheet } from './HadithSheet';
+import type { QuranSheetData } from './quranSheetData';
 
 // The sheet that opens when a verse or ḥadīth is tapped.
 //
@@ -84,19 +80,6 @@ export function EntitySheet(props: {
 }
 
 // ------------------------------------------------------------------ Qurʾān
-
-interface QuranSheetData {
-  verse: QuranVerse | null;
-  bundledEnglish: string;
-  bundledName: string;
-  tafsir: TafsirResult[];
-  similar: RelatedAyah[];
-  topics: TopicResult[];
-  surah: SurahInfoResult | null;
-  quran: QuranIndex;
-  english: QuranEnglish;
-  resourceIds: string[];
-}
 
 function QuranSheet({
   entity,
