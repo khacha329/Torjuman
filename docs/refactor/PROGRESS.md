@@ -2340,7 +2340,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review PASS WITH NOTES | `63f03d7` |
 | 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review PASS WITH NOTES | `24d1188` |
 | 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review PASS WITH NOTES | `8810abb` |
-| 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review pending | this commit |
+| 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review PASS WITH NOTES | `98f44f8` |
+| 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3473,8 +3474,10 @@ holds)
   `useHeaderHeight`. A three-line header. `ReaderScreen.tsx` is 1,187
   lines (1,201); `useHeaderHeight.ts` 28. 5g1–5g5 done: Design §6's
   "about 750-850" is for after 5h4.
-- **For 5j:** the screen's references from `:64` to `:113` move down 1;
-  `:121` to `:519` up 6; past `:528` up 14.
+- **For 5j:** the screen's references from `:62` to `:113` move down 1
+  (corrected at 5g5's review: old `:62`, blank, and `:63`, `export
+  function ReaderScreen`, move too); `:121` to `:519` up 6; past `:528` up
+  14.
 - **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
   exit 0, main chunk 791,027 B (+109 B), only `index.js` differs
   (`compare-bundles` against post-5g4; minified names), CSS byte-identical
@@ -3488,6 +3491,76 @@ holds)
   109, search 50 / 300, card 295) included; report lines identical but the
   timings: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in
   24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
+  PASS, identical.
+- **Review of 5g5 (`98f44f8`): PASS WITH NOTES; "ready for 5h1".** State
+  and layout effect byte-identical, deps character for character, the
+  layout effect at its place; every reader of `headerHeight` checked;
+  dropping the unused `useLayoutEffect` import is rule (a). Note: the "For
+  5j" shift started at `:64`; it starts at `:62` (old `:62` and `:63` move
+  down 1 too), corrected above at 5h1.
+
+**Step 5h1, measured 2026-11-17**
+- The `<header>` subtree (`ReaderScreen.tsx:602-664` at `98f44f8`, the
+  plan's 764-826) moved into `export function ReaderHeader(…)` in the new
+  `ui/reader/ReaderHeader.tsx`, returned as is (`return ( <header …> )`,
+  no wrapper, no `Fragment`, the same conditions inside, no `memo`, no
+  effect, no `useApp()`); `ref={headerRef}` stays on the `<header>`. With
+  it, whole and in their order, `ReadMarkNav` (`:1072-1113`, with its doc
+  comment) and `JumpToPage` (`:1142-1187`, with its doc comment), private
+  to the file — the header was their only user (`grep` over `src/` and
+  `scripts/`: only the header renders them; the scripts name
+  `ReadMarkNav` in comments). Byte diff: the subtree identical after
+  removing 2 spaces of indentation (it is one level shallower under
+  `return (`); both components identical (`cmp`). Outside those lines,
+  `ReaderScreen.tsx` is the old file but for two import lines and the
+  call (`diff`).
+- Adaptation (f): 17 props, each the screen's own name passed `x={x}`, in
+  the subtree's order of first use: `headerRef`, `readOnly`, `book`,
+  `activeTocTitle`, `currentMeta`, `pageMeta`, `jumpToPage`, `marks`,
+  `visibleBlock`, `listRef`, `setShowToc`, `setShowSearch`,
+  `shareButtonRef`, `setShowShare`, `sideBySide`, `updateSettings`,
+  `settings`. `headerRef` and `shareButtonRef` are props of those names,
+  not `ref`, like `BlockList`'s `handleRef`. Objects passed whole
+  (`marks.readPositions`, `settings.panelCollapsed` as written). The
+  subtree's inline arrows (`onJump={(order) => listRef.current?.
+  scrollToOrder(order, 'center')}`, `() => setShowToc(true)`, the Search,
+  Share and Show/Hide cards handlers) stay inline in the moved text, as
+  (f) says, each over a prop of its own name; `listRef.current` is still
+  read when ↑/↓ is tapped. (i) types: `ReturnType<typeof useHeaderHeight>
+  ['headerRef']`, `ReturnType<typeof useReaderNavigation>['jumpToPage']`,
+  `ReturnType<typeof useMarks>`, `ReturnType<typeof useApp>['settings']`
+  and `['updateSettings']`, `Dispatch<SetStateAction<boolean>>` for the
+  three setters, `RefObject<BlockListHandle | null>`,
+  `RefObject<HTMLSpanElement | null>`, `Book`, `Block | null`, `PageMeta |
+  undefined`, `string | undefined`, `Map<number, PageMeta>`, `boolean`.
+  (h) `<ReaderHeader … />` stands where the `<header>` was, between
+  `NoKeyBanner` and the importing notice.
+- Imports: `ReaderHeader.tsx` takes `useState` (and `type Dispatch`/
+  `RefObject`/`SetStateAction`), `type useApp`, `parseArabicNumber`/
+  `toArabicNumerals`, `type PageMeta`, `type Block`/`Book`, `type
+  useMarks`, `Button`/`LinkButton`, `type BlockListHandle`, `type
+  useReaderNavigation`, `type useHeaderHeight`; none imports it back, so
+  no cycle. `ReaderScreen` drops `parseArabicNumber` and `Button` (no other
+  use) and imports `ReaderHeader`. A six-line header. `ReaderScreen.tsx`
+  is 1,054 lines (1,187); `ReaderHeader.tsx` 211.
+- **For 5j:** the screen's references from `:63` to `:601` move down 1;
+  `:665` to `:1071` up 43; `:1115` to `:1140` (`blockElementFor`,
+  `NoKeyBanner`) up 86. FOUND_ISSUES 39's `ReadMarkNav`
+  (`ReaderScreen.tsx:1240-1275` at the plan's base) is now in
+  `ReaderHeader.tsx`.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,495 B (+468 B: the props object and the part's
+  function), only `index.js` differs (`compare-bundles` against post-5g5;
+  minified names), CSS byte-identical (`cmp`); **L** 189 files, 134 edges,
+  0 directory and 0 file-level cycles, rules hold; **R** first and alone
+  55/55, every `ok` line identical to 5g5's run (`diff`, no difference at
+  all) — the header lines ("stays at the top… headerBottom 51 / 93"), the
+  ج/ص jumps (top 66 / 109), and the read-mark lines (counter "3", ↓ to
+  block 400, ↑ to 500 and 450, in both profiles) included — and every
+  report line but the portrait timing (`readMarkDown` unchanged): 240,000
+  px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.6 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-header`,
+  `reader-page` and `reader-page-cards` at both sizes among them; **P**
   PASS, identical.
 
 ## Open
