@@ -22,7 +22,8 @@
 //
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
-//     bringing its block to the middle; the read-mark ↑ ↓; double-tap
+//     bringing its block to the middle; the read-mark ↑ ↓; a centred jump at
+//     the middle below the header, settled in a few passes (FOUND_ISSUES 40); double-tap
 //     opening the dictionary; the restored position applied once; a second
 //     book opened by its URL at its own position (FOUND_ISSUES 31); an open
 //     popover's outside-tap listener kept while the page scrolls
@@ -32,7 +33,7 @@
 //     reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓;
-//     double-tap
+//     the centred jump (FOUND_ISSUES 40); double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
 // out of `npm run verify` because jsdom has no layout. SCREENSHOT_DIR, if set,
@@ -482,6 +483,9 @@ const CARD_BLOCK = 1000;
 const NOTE_BLOCK = 200;
 /** Where the verse is put before its popover is opened to follow a scroll: high enough that the popover fits below it. */
 const POPOVER_ANCHOR_Y = 120;
+/** A centred jump's tolerance, and the most jumps it may take to settle (FOUND_ISSUES 40). */
+const CENTRED_TOLERANCE_PX = 4;
+const CENTRED_MAX_JUMPS = 4;
 /** The verse's place, and the small scrolls, for the outside-tap listener check: the verse stays on screen. */
 const LISTENER_ANCHOR_Y = 450;
 const LISTENER_SCROLL_STEPS = 8;
@@ -621,6 +625,58 @@ async function atMiddle(page, index) {
     }
     return { ...found, middle: Math.round(middle), ok: found?.block === target };
   }, index);
+}
+
+/**
+ * A centred jump (FOUND_ISSUES 40): the read-mark ↓ from the top of the book
+ * centres the first mark. Its block's middle must land within a few px of the
+ * middle of the area below the header — the place `atMiddle` judges — and the
+ * jump must settle in a few passes. They are counted as the jump writes the
+ * page gets from the tap until a second after it: the `window.scrollTo` calls
+ * that carry a `behavior`, which are the virtualizer's scrollToIndex and
+ * scrollToOffset (one per settleOn pass) and its reconciling pass; its
+ * adjustments for blocks measured for the first time pass no behavior and
+ * are not counted. Before the fix every centred jump ran all eight of
+ * settleOn's passes: 8 writes in landscape, 10 in portrait. After it,
+ * measured: 2 in landscape (the first pass lands a few px off, from estimated
+ * heights next to the target, the second on it), 4 in portrait — three
+ * passes, since the taller visible area brings more estimated blocks above
+ * the target into view and so moves it once more, and one reconciling
+ * re-write of the same offset.
+ */
+async function centredJump(page) {
+  await page.evaluate(() => {
+    window.__jumps = 0;
+    const scrollTo = window.scrollTo.bind(window);
+    window.scrollTo = (...args) => {
+      const options = args[0];
+      if (options && typeof options === 'object' && options.behavior !== undefined) window.__jumps++;
+      return scrollTo(...args);
+    };
+  });
+  await page.getByTitle('Next passage marked to read').click();
+  await settle(page, 1000);
+  const jumps = await page.evaluate(() => window.__jumps);
+  // The virtual item, margins and all — what settleOn centres.
+  const found = await page.evaluate((index) => {
+    const element = document.querySelector(`[data-index="${index}"]`);
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, headerBottom: document.querySelector('header').getBoundingClientRect().bottom, viewport: window.innerHeight };
+  }, READ_MARKS[0]);
+  const middle = found && Math.round((found.top + found.bottom) / 2);
+  const visibleMiddle = found && Math.round((found.headerBottom + found.viewport) / 2);
+  const off = found ? middle - visibleMiddle : null;
+  check(
+    `a centred jump (↓ to block ${READ_MARKS[0]}) puts its block's middle at the middle of the area below the header`,
+    off !== null && Math.abs(off) <= CENTRED_TOLERANCE_PX,
+    `block middle ${middle}, middle below the header ${visibleMiddle}, off by ${off}`,
+  );
+  check(
+    `  and settles in at most ${CENTRED_MAX_JUMPS} jump writes`,
+    jumps <= CENTRED_MAX_JUMPS,
+    `${jumps} jump writes`,
+  );
 }
 
 /** The jump to ج/ص page `printed`, as the header's Go does it. */
@@ -810,6 +866,7 @@ async function landscapeControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', centredJump);
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 
   await scenario(browser, base, profile, 'the reading position is restored once', async (page) => {
@@ -1184,6 +1241,7 @@ async function portraitControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', centredJump);
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }
 

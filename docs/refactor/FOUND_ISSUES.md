@@ -650,7 +650,7 @@ look broken on the tablet.** Left unfixed (structure-only phase); R's judged
 checks (↓ once from the top, ↑ twice from past the marks) do not depend on
 it, so a fix changes only the report line.
 
-## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured)
+## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured, fixed in lane A)
 
 Found while building check R's 5b scenarios. The virtualizer has
 `scrollPaddingStart: topInset` (`ui/reader/BlockList.tsx:243`); for
@@ -670,6 +670,25 @@ area (about 25 px in landscape, 46 px in portrait). Cosmetic and a little
 wasted work; left unfixed (structure-only phase). R's search and card checks
 use a tolerance and its read-mark checks judge which block is at the middle
 of the visible area, so a fix needs no re-baseline.
+
+**Fixed in lane A:** `settleOn` (`ui/reader/blockLayout.ts`) computes a
+centred landing itself: the block's top at
+`topInset + (innerHeight - topInset - height) / 2`, so its middle is at the
+middle of the area below the header, or at `topInset`, as a `start` jump, for
+a block taller than that area (where TanStack's centring had also put it).
+The first pass aims from the virtualizer's held heights through
+`scrollToOffset` (`scrollToIndex` would have its reconciling pass re-aim at
+TanStack's own centre); later passes correct from where the block actually
+is, since a held height can still be an estimate. Its test uses the same
+place. A centred landing found on target is looked at once more two frames
+later, because a block still drawn at its content-visibility placeholder
+grows a frame after (block 1100, in the column the search panel narrows, was
+196 px and then 633). `start` jumps are unchanged. R's "a centred jump lands
+at the middle below the header" guards it in both layouts: on the old code
+the block's middle was 24 and 46 px low and the jump made 8 and 10 jump
+writes; now 0–1 px, and 2 and 4. Portrait takes three passes, not two: its
+taller visible area brings more estimated blocks above the target into view
+and moves it once more.
 
 ## 41. A failed card is served from the translation cache (2026-11-17, measured)
 

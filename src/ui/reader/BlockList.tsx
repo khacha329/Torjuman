@@ -94,8 +94,9 @@ interface BlockListProps {
   handleRef: Ref<BlockListHandle>;
   /**
    * Height of the sticky header covering the top of the page. A jump lands
-   * just below it rather than under it, and a block hidden behind it does not
-   * count as the one being read.
+   * just below it rather than under it, a centred jump in the middle of what
+   * it leaves visible (settleOn, blockLayout.ts), and a block hidden behind it
+   * does not count as the one being read.
    */
   topInset: number;
 }
