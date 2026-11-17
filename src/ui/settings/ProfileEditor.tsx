@@ -120,7 +120,7 @@ export function ProfileEditor() {
             Allow external lookup on every request
             <span className="block text-xs text-muted">
               Off by default. It adds latency, cost, and unverified-source risk —
-              Explain, on a selection, searches for a single passage instead.
+              Explain, on a selection, researches the meaning of one phrase instead.
             </span>
           </span>
         </label>
