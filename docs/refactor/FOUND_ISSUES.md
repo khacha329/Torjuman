@@ -675,15 +675,18 @@ of the visible area, so a fix needs no re-baseline.
 centred landing itself: the block's top at
 `topInset + (innerHeight - topInset - height) / 2`, so its middle is at the
 middle of the area below the header, or at `topInset`, as a `start` jump, for
-a block taller than that area (where TanStack's centring had also put it).
+a block taller than that area. (TanStack's centring had put such a block's top
+under the header, at `topInset + (innerHeight - height) / 2`: about 17 px under
+it for block 1100's 633 px on a 600 px screen, only its text reaching the
+header's edge.)
 The first pass aims from the virtualizer's held heights through
 `scrollToOffset` (`scrollToIndex` would have its reconciling pass re-aim at
 TanStack's own centre); later passes correct from where the block actually
 is, since a held height can still be an estimate. Its test uses the same
 place. A centred landing found on target is looked at once more two frames
-later, because a block still drawn at its content-visibility placeholder
-grows a frame after (block 1100, in the column the search panel narrows, was
-196 px and then 633). `start` jumps are unchanged. R's "a centred jump lands
+later, because a block still drawn at its content-visibility placeholder can
+have grown to its real height by the next check (block 1100, in the column the
+search panel narrows, measured 196 px at one check and 633 px at the next). `start` jumps are unchanged. R's "a centred jump lands
 at the middle below the header" guards it in both layouts: on the old code
 the block's middle was 24 and 46 px low and the jump made 8 and 10 jump
 writes; now 0–1 px, and 2 and 4. Portrait takes three passes, not two: its

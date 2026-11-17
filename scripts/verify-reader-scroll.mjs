@@ -23,14 +23,13 @@
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
 //     bringing its block to the middle; the read-mark ↑ ↓; a centred jump at
-//     the middle below the header, settled in a few passes (FOUND_ISSUES 40); double-tap
-//     opening the dictionary; the restored position applied once; a second
-//     book opened by its URL at its own position (FOUND_ISSUES 31); an open
-//     popover's outside-tap listener kept while the page scrolls
-//     (FOUND_ISSUES 34); the
-//     divider dragged with a mouse; a divider drag ended by pointercancel
-//     (FOUND_ISSUES 27); the divider dragged with a finger (its width
-//     reported, its end judged)
+//     the middle below the header, settled in a few passes (FOUND_ISSUES
+//     40); double-tap opening the dictionary; the restored position applied
+//     once; a second book opened by its URL at its own position
+//     (FOUND_ISSUES 31); an open popover's outside-tap listener kept while
+//     the page scrolls (FOUND_ISSUES 34); the divider dragged with a mouse; a
+//     divider drag ended by pointercancel (FOUND_ISSUES 27); the divider
+//     dragged with a finger (its width reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓;
 //     the centred jump (FOUND_ISSUES 40); double-tap
@@ -483,9 +482,10 @@ const CARD_BLOCK = 1000;
 const NOTE_BLOCK = 200;
 /** Where the verse is put before its popover is opened to follow a scroll: high enough that the popover fits below it. */
 const POPOVER_ANCHOR_Y = 120;
-/** A centred jump's tolerance, and the most jumps it may take to settle (FOUND_ISSUES 40). */
+/** A centred jump's tolerance, and the most jump writes it may take to settle in each layout (FOUND_ISSUES 40). */
 const CENTRED_TOLERANCE_PX = 4;
-const CENTRED_MAX_JUMPS = 4;
+const CENTRED_MAX_JUMPS_LANDSCAPE = 2;
+const CENTRED_MAX_JUMPS_PORTRAIT = 4;
 /** The verse's place, and the small scrolls, for the outside-tap listener check: the verse stays on screen. */
 const LISTENER_ANCHOR_Y = 450;
 const LISTENER_SCROLL_STEPS = 8;
@@ -606,11 +606,10 @@ async function flashed(page, index) {
 
 /**
  * The block at the middle of the screen below the header, and whether it is
- * `index`. Judged this way, and not by how far the block's middle is from
- * the screen's, because a centred jump lands one header height below the
- * screen's middle today (the virtualizer centres in the screen and adds its
- * scrollPaddingStart; settleOn tests against the screen's middle: FOUND_ISSUES
- * 40). A jump off by one block puts another block there; a fix of 40 would not.
+ * `index`: a jump off by one block puts another block there. A centred jump
+ * lands its block's middle on that point (FOUND_ISSUES 40, fixed in lane A;
+ * before, it landed half a header lower), and `centredJump` judges how close
+ * it lands; this judges only which block is there.
  */
 async function atMiddle(page, index) {
   return page.evaluate((target) => {
@@ -637,14 +636,18 @@ async function atMiddle(page, index) {
  * scrollToOffset (one per settleOn pass) and its reconciling pass; its
  * adjustments for blocks measured for the first time pass no behavior and
  * are not counted. Before the fix every centred jump ran all eight of
- * settleOn's passes: 8 writes in landscape, 10 in portrait. After it,
- * measured: 2 in landscape (the first pass lands a few px off, from estimated
- * heights next to the target, the second on it), 4 in portrait — three
- * passes, since the taller visible area brings more estimated blocks above
- * the target into view and so moves it once more, and one reconciling
- * re-write of the same offset.
+ * settleOn's passes: 8 writes in landscape, 10 in portrait.
+ *
+ * The bound is per layout (`maxJumps`), from what the fix measured. Landscape
+ * takes 2: the first pass lands a few px off, from estimated heights next to
+ * the target, and the second on it. Portrait takes 4: three passes and one
+ * reconciling re-write of the same offset. Its taller visible area holds a
+ * block between the header and the target that is first measured after the
+ * second pass and shrinks about 55 px; the virtualizer compensates only for
+ * blocks above the top of the window, so the target moves and needs a third
+ * pass.
  */
-async function centredJump(page) {
+async function centredJump(page, maxJumps) {
   await page.evaluate(() => {
     window.__jumps = 0;
     const scrollTo = window.scrollTo.bind(window);
@@ -673,8 +676,8 @@ async function centredJump(page) {
     `block middle ${middle}, middle below the header ${visibleMiddle}, off by ${off}`,
   );
   check(
-    `  and settles in at most ${CENTRED_MAX_JUMPS} jump writes`,
-    jumps <= CENTRED_MAX_JUMPS,
+    `  and settles in at most ${maxJumps} jump writes`,
+    jumps <= maxJumps,
     `${jumps} jump writes`,
   );
 }
@@ -866,7 +869,7 @@ async function landscapeControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
-  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', centredJump);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_LANDSCAPE));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 
   await scenario(browser, base, profile, 'the reading position is restored once', async (page) => {
@@ -1241,7 +1244,7 @@ async function portraitControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
-  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', centredJump);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_PORTRAIT));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }
 

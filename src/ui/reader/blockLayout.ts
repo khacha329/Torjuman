@@ -10,7 +10,8 @@ import type { Block, BlockType } from '../../types';
 // verbatim from BlockList.tsx in restructure Phase 5 steps 5f1 and 5f2
 // (docs/refactor/plans/phase5-big-ui-files.md); `textHeightFor` and
 // `settleOn` are the bodies of BlockList's `estimateTextHeight` and
-// `settleOn`, which now call them.
+// `settleOn`, which now call them. `settleOn`'s centred path has since been
+// rewritten by the fix for FOUND_ISSUES 40 (lane A).
 
 export const TYPE_CLASS: Record<BlockType, string> = {
   chapter_title: 'text-center font-bold my-10 text-[1.35em] leading-relaxed',
@@ -76,7 +77,10 @@ export function textHeightFor(
  * `center` puts the block's middle at the middle of what the header leaves
  * visible, `topInset + (innerHeight - topInset) / 2`, and is computed here;
  * a block taller than that area lands as `start` does, its beginning just
- * below the header.
+ * below the header. (TanStack's centring put such a block's top under the
+ * header, at `topInset + (innerHeight - height) / 2`: about 17 px under it for
+ * a 633 px block on a 600 px screen, only its text reaching the header's
+ * edge.)
  * TanStack's own centring subtracts the padding and then centres in the
  * whole window, which put the middle at `innerHeight / 2 + topInset`, half a
  * header low; and this check, which tested against `innerHeight / 2`, found
@@ -96,15 +100,15 @@ export function settleOn(
   const visible = () => window.innerHeight - topInset;
   // Where a block's top should land: centred in what the header leaves
   // visible, or — for a block taller than that — just below the header, so
-  // its beginning is not hidden under it (where TanStack's centring had put
-  // such a block too).
+  // its beginning is not hidden under it, as TanStack's centring partly hid
+  // it.
   const landingTop = (height: number) =>
     align === 'start' || height >= visible() ? topInset : topInset + (visible() - height) / 2;
   // A centred jump is aimed from the heights the virtualizer holds the first
   // time; once the block is on the page it is corrected from where it
   // actually is, since a held height can still be an estimate for a block
-  // that has landed (a 601 px block held at its estimate came back to the
-  // same wrong place on every pass).
+  // that has landed (a block held at its 196 px estimate and drawn at 633
+  // came back to the same wrong place on every pass).
   const jump = (landed: { top: number; height: number } | null) => {
     if (align === 'start') {
       virtualizer.scrollToIndex(index, { align });
@@ -125,10 +129,10 @@ export function settleOn(
   };
   // A centred landing that is on target is looked at once more, two frames
   // later, before it counts: the block may still be drawn at its
-  // content-visibility placeholder, the estimate, and grow to its real height
-  // a frame after (a search result in the column the search panel narrows
-  // was held at 196 px and laid out at 601), which moves its middle. Only a
-  // block that moved is aimed again.
+  // content-visibility placeholder, the estimate, and have grown to its real
+  // height by the next check (a search result in the column the search panel
+  // narrows measured 196 px at one check and 633 px at the next), which moves
+  // its middle. Only a block that moved is aimed again.
   const check = (confirming: boolean) =>
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
