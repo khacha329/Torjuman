@@ -2348,7 +2348,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
 | 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
 | 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review PASS WITH NOTES | `6ed8c0d` |
-| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T B L R S U P Q D and the SSR build pass; phase review pending | `6284661` and the commit after it |
+| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T B L R S U P Q D and the SSR build pass; phase review PASS WITH NOTES | `6284661`, `bc3aa1f`, `be69914` |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -4264,7 +4264,10 @@ statement in `src/` or `scripts/` changed: every `+`/`-` line of `git diff
 | main JS chunk | 790,214 B | 793,868 B (+3,654: the parts' props objects and the new functions), CSS byte-identical at every step |
 | layers | 134 directory edges, no cycle | 134 directory edges, no directory or file-level cycle, all eleven rules |
 
-Every step was reviewed before the next began; 5j's review is pending.
+Every step was reviewed before the next began. The whole-phase review X
+(`9afb2c7..bc3aa1f`) is PASS WITH NOTES, no must-fix; its three docs notes
+are fixed in `be69914` (the plan's corrections item 9, item 8's size, P's
+header count).
 **Owed before merge:**
 - **V**, `npm run verify` on the owner's PC. Phase 5 changes one module it
   imports, a comment in `quran/quranIndex.ts` (5j); the count should be
