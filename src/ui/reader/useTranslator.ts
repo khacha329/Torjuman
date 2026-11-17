@@ -112,7 +112,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
   const [cards, setCards] = useState<TranslationCard[]>([]);
   const [streaming, setStreaming] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
+  // How many translations are in flight, not one flag: with a manual
+  // Translate during a batch, or a retranslate during either, the first to
+  // finish cleared the flag and the rail's Translate and Explain came back
+  // while the other was still running (FOUND_ISSUES 29).
+  const [inFlight, setInFlight] = useState(0);
+  const busy = inFlight > 0;
   const [notice, setNotice] = useState<string | null>(null);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
 
@@ -313,7 +318,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // Held in memory only while in flight — a card left mid-request by a
       // closed tab should not come back as a permanently spinning row.
       upsert(card);
-      setBusy(true);
+      setInFlight((count) => count + 1);
       setNotice(null);
       // Also held app-wide, so the service-worker update prompt waits: a reload
       // mid-request loses the passage and the tokens already spent on it.
@@ -382,7 +387,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         return failed;
       } finally {
         endActivity();
-        setBusy(false);
+        setInFlight((count) => count - 1);
         setStreaming((previous) => withoutStream(previous, card));
       }
     },
