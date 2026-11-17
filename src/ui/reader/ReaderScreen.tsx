@@ -8,20 +8,13 @@ import type { PageMeta } from '../../platform/storage/StorageAdapter';
 import type { Block, Book, Card, Entity, TocNode, TranslationCard } from '../../types';
 import { useMarks } from './useMarks';
 import { useExplanations } from './useExplanations';
-import { MarginMenu } from './MarginMenu';
-import { DictionarySheet } from './DictionarySheet';
-import { BiographySheet } from './BiographySheet';
 import { ensureBiographyIndexes } from '../../biography/service';
 import { ensureNarratorSources } from '../../biography/narratorService';
-import { GLOSS_PROVIDER_ID } from '../../translation/gloss';
 import { isSingleWord } from '../../dictionary/roots';
 import {
   ensureEntities,
-  entityContext,
-  entityText,
   markableByBlock,
 } from '../../quran/entityService';
-import { EntitySheet } from './EntitySheet';
 import { useSharh } from './useSharh';
 import { useBatchTranslate } from './useBatchTranslate';
 import {
@@ -32,7 +25,6 @@ import {
 import { LinkButton, Spinner } from '../kit';
 import { BlockList, type BlockListHandle } from './BlockList';
 import { CardPanel, type PanelScope } from './CardPanel';
-import { CardPopover } from './CardPopover';
 import {
   buildMarkers,
   coveredBlockIds,
@@ -41,10 +33,7 @@ import {
   type VisibleRange,
 } from './cardLayout';
 import { SearchPanel, type SearchResult } from './SearchPanel';
-import { ShareChapter } from './ShareChapter';
-import { TocDrawer } from './TocDrawer';
 import { peekSelection, readSelection, type SelectionAnchor } from './selection';
-import { SelectionRail } from './SelectionRail';
 import { useDebounced } from './useAnimatedList';
 import { useTranslator } from './useTranslator';
 import {
@@ -61,6 +50,7 @@ import { usePanelControls } from './usePanelControls';
 import { useHeaderHeight } from './useHeaderHeight';
 import { ReaderHeader } from './ReaderHeader';
 import { CommentaryBars } from './CommentaryBars';
+import { ReaderSheets } from './ReaderSheets';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -792,209 +782,50 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         </div>
       )}
 
-      {selection.active && (
-        <SelectionRail
-          singleWord={selection.singleWord}
-          shortSelection={selection.shortSelection}
-          centerY={selection.centerY}
-          busy={translator.busy}
-          dictionaryAvailable={dictionary !== null}
-          biographyAvailable={biographyAvailable}
-          meaningAvailable={navigator.onLine || secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}
-          onBiography={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              if (element) setBiography({ selection: anchor.sourceText, anchor: element });
-            })
-          }
-          onTranslate={() => withSelection((anchor) => void runTranslate(anchor))}
-          onExplain={() =>
-            withSelection((anchor) => {
-              void explanations.explain(anchor, translator.cards).then((card) => {
-                if (card) setActiveCardId(card.id);
-              });
-            })
-          }
-          onDictionary={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              if (element) {
-                setGloss(null);
-                lookUpWord(anchor.sourceText, element);
-              }
-            })
-          }
-          onMeaning={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              const block = blocks.find((entry) => entry.id === anchor.startBlockId);
-              if (element && block) {
-                // Both results share one sheet, so the dictionary entry is
-                // fetched alongside — asking for one never blocks the other.
-                if (dictionary) lookUpWord(anchor.sourceText, element);
-                void requestGloss(anchor.sourceText, block.text, block.type, element);
-              }
-            })
-          }
-          onMarkRead={() => withSelection((anchor) => void marks.markSelection(anchor, 'read'))}
-          onMarkSkip={() => withSelection((anchor) => void marks.markSelection(anchor, 'skip'))}
-          onClearMarks={() => withSelection((anchor) => void marks.clearMarksIn(anchor))}
-        />
-      )}
-
-      {biography && (
-        <BiographySheet
-          selection={biography.selection}
-          anchor={biography.anchor}
-          onClose={() => setBiography(null)}
-        />
-      )}
-
-      {lookup && (
-        <DictionarySheet
-          result={lookup.result}
-          gloss={gloss}
-          anchor={lookup.anchor}
-          onClose={() => {
-            setLookup(null);
-            setGloss(null);
-          }}
-          onTranslateEntry={(text) => {
-            setLookup(null);
-            const block = blocks.find((entry) => entry.id === visibleBlock?.id) ?? blocks[0];
-            if (!block) return;
-            void translator.translate({
-              anchor: {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-                sourceText: text,
-              },
-            });
-          }}
-        />
-      )}
-
-      {marginMenu && !readOnly && (
-        <MarginMenu
-          block={marginMenu.block}
-          anchor={marginMenu.anchor}
-          current={marks.marks.find(
-            (mark) => mark.scope === 'block' && mark.startBlockId === marginMenu.block.id,
-          )}
-          onSkip={(block) =>
-            void marks.setMark(
-              {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-              },
-              'skip',
-              'block',
-            )
-          }
-          onRead={(block) =>
-            void marks.setMark(
-              {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-              },
-              'read',
-              'block',
-            )
-          }
-          onClear={(block) => void marks.clearBlock(block)}
-          onAddNote={(block) => void addNoteToBlock(block)}
-          onTranslateAll={(block) => proposeBatch(block.id)}
-          onClose={() => setMarginMenu(null)}
-        />
-      )}
-
-      {entitySheet && (
-        <EntitySheet
-          entity={entitySheet.entity}
-          anchor={entitySheet.anchor}
-          // dorar.net looks a ḥadīth up by its text, not by a number, so the
-          // sheet needs the Arabic the entity actually covers.
-          sourceText={entityText(entitySheet.entity, blocks)}
-          // …and the passage around it, because «وعن أبي هريرة رضي الله عنه
-          // قال» sits before the matn. The narrator is what decides which of
-          // dorar's records belong to this narration.
-          contextText={entityContext(entitySheet.entity, blocks)}
-          onClose={() => setEntitySheet(null)}
-          onTranslateSurrounding={() => {
-            const block = blocks.find(
-              (entry) => entry.id === entitySheet.entity.startBlockId,
-            );
-            if (!block) return;
-            void runTranslateBlock(block);
-          }}
-          // The matn as this book prints it is the search key. Not the
-          // reference: the commentary numbers its ḥadīth on its own collection's
-          // scheme, and no arithmetic connects the two.
-          onSharh={(work) => {
-            void sharh.lookup(
-              entitySheet.entity,
-              work,
-              entityText(entitySheet.entity, blocks),
-            );
-          }}
-          // The entity is anchored on the matn block, which is exactly where a
-          // commentary range starts.
-          onTranslateAll={() => proposeBatch(entitySheet.entity.startBlockId)}
-        />
-      )}
-
-      {popover && (
-        <CardPopover
-          marker={popover.marker}
-          anchor={popover.anchor}
-          cards={translator.cards}
-          citationFor={citationFor}
-          isStale={translator.isStale}
-          onClose={() => setPopover(null)}
-          onToggleCollapse={(card) => void translator.setCollapsed(card, !card.collapsed)}
-          onRetranslate={(card, options) => void translator.retranslate(card, options)}
-          onDelete={(card) => void translator.remove(card)}
-          onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
-        />
-      )}
-
-      {showShare && shareButtonRef.current && (
-        <ShareChapter
-          bookId={bookId}
-          blocks={blocks}
-          tocNodes={tocNodes}
-          // The chapter on screen, which is what "share this chapter" means.
-          tocNodeId={activeTocNodeId}
-          anchor={shareButtonRef.current}
-          onClose={() => setShowShare(false)}
-        />
-      )}
-
-      {showToc && (
-        <TocDrawer
-          nodes={tocNodes}
-          activeNodeId={activeTocNodeId}
-          onClose={() => setShowToc(false)}
-          onSelect={(node) => {
-            setShowToc(false);
-            jumpToPage(node.pageIndex);
-          }}
-        />
-      )}
+      <ReaderSheets
+        selection={selection}
+        translator={translator}
+        dictionary={dictionary}
+        biographyAvailable={biographyAvailable}
+        withSelection={withSelection}
+        setBiography={setBiography}
+        runTranslate={runTranslate}
+        explanations={explanations}
+        setActiveCardId={setActiveCardId}
+        setGloss={setGloss}
+        lookUpWord={lookUpWord}
+        blocks={blocks}
+        requestGloss={requestGloss}
+        marks={marks}
+        biography={biography}
+        lookup={lookup}
+        gloss={gloss}
+        setLookup={setLookup}
+        visibleBlock={visibleBlock}
+        marginMenu={marginMenu}
+        readOnly={readOnly}
+        addNoteToBlock={addNoteToBlock}
+        proposeBatch={proposeBatch}
+        setMarginMenu={setMarginMenu}
+        entitySheet={entitySheet}
+        setEntitySheet={setEntitySheet}
+        runTranslateBlock={runTranslateBlock}
+        sharh={sharh}
+        popover={popover}
+        citationFor={citationFor}
+        setPopover={setPopover}
+        showShare={showShare}
+        shareButtonRef={shareButtonRef}
+        bookId={bookId}
+        tocNodes={tocNodes}
+        activeTocNodeId={activeTocNodeId}
+        setShowShare={setShowShare}
+        showToc={showToc}
+        setShowToc={setShowToc}
+        jumpToPage={jumpToPage}
+      />
     </div>
   );
-}
-
-/** The mounted element for a block, for anchoring a sheet to it. */
-function blockElementFor(blockId: string): HTMLElement | null {
-  const element = document.querySelector(`[data-block-id="${blockId}"]`);
-  return element instanceof HTMLElement ? element : null;
 }
 
 /** Unobtrusive, persistent, and dismissable only by actually adding a key. */

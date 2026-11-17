@@ -2342,7 +2342,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review PASS WITH NOTES | `8810abb` |
 | 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review PASS WITH NOTES | `98f44f8` |
 | 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review PASS WITH NOTES | `0c52e6b` |
-| 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review pending | this commit |
+| 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review PASS WITH NOTES | `1a3e6a6` |
+| 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3625,6 +3626,109 @@ holds)
   capture shows the sharḥ notice or the sharḥ search bar; `reader-notice`
   is the translator's notice, still in the screen); **P** PASS, identical,
   its `batch`, `batch-again` and `no-key-batch` scenarios included.
+- **Review of 5h2 (`1a3e6a6`): PASS WITH NOTES; "ready for 5h3".** The 42
+  lines identical, the five props `x={x}`, the same-typed pairs inside the
+  moved text unchanged. The reconciliation question answered: the four
+  bars move from the root `div`'s children into a `Fragment` under a
+  component that mounts with the screen and never changes type, so nothing
+  remounts after the first render. The sharḥ notice and sharḥ search bars
+  have no capture: the documented gap of the plan's §1.1, not a 5a miss,
+  left to the owner's tablet check 8. Note (a): adaptation (i) was read to
+  allow restating an anonymous state shape (`batchProposal`'s) when no
+  hook's return type can express it. **For 5j, the plan's "Corrections
+  found in review"** (started here): that reading of (i); with it, 5e3's
+  correction to Design §10 (`quran/quranIndex.ts:427` untrue from 5e4, not
+  5e3) and 5f2's `settleOn as settleOnBlock` import alias (the module
+  function and the `useCallback` share Q8's name).
+
+**Step 5h3, measured 2026-11-17**
+- The eight sheet conditionals (`ReaderScreen.tsx:795-989` at `1a3e6a6`,
+  the plan's 1035-1229: `SelectionRail`, `BiographySheet`,
+  `DictionarySheet`, `MarginMenu`, `EntitySheet`, `CardPopover`,
+  `ShareChapter`, `TocDrawer`, adjacent, blank lines only between them,
+  from just after the bottom sheet to the root `div`'s close) moved into
+  `export function ReaderSheets(…)` in the new
+  `ui/reader/ReaderSheets.tsx`, returned as one `Fragment`: `return ( <>
+  … </> )`, no wrapper, every condition inside, no `memo`, no effect, no
+  `useApp()`. With them, whole, `blockElementFor` (`:994-998`, with its
+  doc comment), a module function used only by the rail's three handlers
+  (`:806`, `:820`, `:829`). `cmp`: the 195 lines identical at the same
+  indentation, `blockElementFor` identical. Outside them `ReaderScreen.tsx`
+  is the old file but for eleven import lines and the call (`diff`).
+- Adaptation (f), 40 props, each `x={x}`, in the moved text's order of
+  first use: `selection`, `translator`, `dictionary`, `biographyAvailable`,
+  `withSelection`, `setBiography`, `runTranslate`, `explanations`,
+  `setActiveCardId`, `setGloss`, `lookUpWord`, `blocks`, `requestGloss`,
+  `marks`, `biography`, `lookup`, `gloss`, `setLookup`, `visibleBlock`,
+  `marginMenu`, `readOnly`, `addNoteToBlock`, `proposeBatch`,
+  `setMarginMenu`, `entitySheet`, `setEntitySheet`, `runTranslateBlock`,
+  `sharh`, `popover`, `citationFor`, `setPopover`, `showShare`,
+  `shareButtonRef`, `bookId`, `tocNodes`, `activeTocNodeId`,
+  `setShowShare`, `showToc`, `setShowToc`, `jumpToPage`. Objects passed
+  whole (`translator`, `marks`, `explanations`, `sharh`, `selection`).
+  (i) types from the hooks where one returns it (`ReturnType<typeof
+  useTranslator>`, `useMarks`, `useExplanations`, `useSharh`; the seven
+  `useWordLookup` fields; `useReaderNavigation`'s `jumpToPage`), the
+  screen's anonymous state shapes restated (as 5h2's review allowed), and
+  the screen's `useCallback`s' signatures restated (`withSelection`,
+  `runTranslate`, `runTranslateBlock`, `addNoteToBlock`, `proposeBatch`,
+  `citationFor`). (h) `<ReaderSheets … />` stands where `selection.active
+  && (` was, the last child of the root `div`.
+- Same-typed props, for the reviewer: `Dispatch<SetStateAction<boolean>>`
+  — `setShowShare` (only `ShareChapter`'s `onClose`) and `setShowToc`
+  (only `TocDrawer`'s `onClose` and `onSelect`); `boolean` — `showShare`
+  (`ShareChapter`'s condition), `showToc` (`TocDrawer`'s),
+  `biographyAvailable` (the rail's prop), `readOnly` (`MarginMenu`'s
+  condition); `Dispatch<SetStateAction<string | null>>` — only
+  `setActiveCardId` (the rail's `onExplain`); `(block: Block) =>
+  Promise<void>` — `addNoteToBlock` (`MarginMenu`'s `onAddNote`) and
+  `runTranslateBlock` (`EntitySheet`'s `onTranslateSurrounding`); the four
+  `{… anchor: HTMLElement} | null` setters differ by shape, so `tsc` would
+  catch a swap among them. Every `onClose` stays an inline arrow, so
+  `AnchoredPanel` re-registers its outside tap on the same renders as
+  before (FOUND_ISSUES 34, 37).
+- Sheets with state of their own: `SelectionRail`, `BiographySheet`,
+  `DictionarySheet`, `CardPopover`, `ShareChapter`, `TocDrawer` (each
+  `useState`), and the entity sheet through `QuranSheet`/`HadithSheet`;
+  `MarginMenu` has none. Each mounts and unmounts under its own
+  condition, as before; `ReaderSheets` renders whenever the book is
+  loaded, never changes type, so no sheet remounts. `shareButtonRef.current`
+  is still read in the same render pass.
+- Imports: `ReaderSheets.tsx` takes the eight sheet components, `secrets`,
+  `GLOSS_PROVIDER_ID`, `entityContext`/`entityText` and the types it names;
+  none imports it back, so no cycle. `ReaderScreen` drops the eight sheet
+  imports, `GLOSS_PROVIDER_ID`, and `entityContext`/`entityText` from the
+  `entityService` line, keeps `secrets` (its `hasKey`), and imports
+  `ReaderSheets`. A five-line header. `ReaderScreen.tsx` is 850 lines
+  (1,019), at the top of Design §6's "about 750-850" with 5h4 to come;
+  `ReaderSheets.tsx` 325.
+- **For 5j:** the screen's references among the imports move up 3 to 11;
+  `:64` to `:794` up 10; past `:989` up 163 (the root `div`'s close) and
+  169 (`NoKeyBanner`). FOUND_ISSUES 26's `:1102-1115`, 33's `:1043` and
+  34's and 37's `:1089`, `:1098`, `:1168`, `:1199` (the plan's base) are
+  now in `ReaderSheets.tsx`; 28's `:1025` (the bottom sheet's handle)
+  stays in the screen.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 792,831 B (+1,147 B: the 40-prop object and the
+  part's destructuring), within ±2 KB; only `index.js` differs
+  (`compare-bundles` against post-5h2; minified names), CSS byte-identical
+  (`cmp`); **L** 191 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h2's run but the portrait restore (700 here, 699 there,
+  the known noise) — the popover that follows its anchor, the double-tap
+  dictionary sheet and "no rail" after it, the marker popover and the
+  contents landings included — and every report line but the portrait
+  timing: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30 (it taps Translate on the
+  rail); **U** 254/254 — the sheet captures `reader-rail`,
+  `reader-biography`, `reader-meaning`, `reader-meaning-cached`,
+  `reader-margin-menu`, `reader-hadith`, `reader-hadith-diagnostics`,
+  `reader-quran`, `reader-quran-similar`, `reader-quran-compiled`,
+  `reader-popover` (600×960), `reader-share`, `reader-toc` and
+  `reader-batch-proposal` (opened from the margin menu) all match; **P**
+  PASS, identical, its `translate`, `block`, `no-key` and `batch`
+  scenarios (the rail's Translate, the entity sheet's surrounding passage,
+  the refusal, and Translate all…) included.
 
 ## Open
 
