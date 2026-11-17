@@ -68,6 +68,13 @@ export interface TranslationCard extends CardBase {
   /** Distinguishes "your key is wrong" from "wait a minute". */
   errorKind?: TranslationErrorKind;
   usedExternalLookup?: boolean;
+  /**
+   * Translated as its own text, not as part of the block it is anchored on:
+   * the dictionary's "Translate this entry". Its cache key carries a hash of
+   * the text, and its request carries no surrounding context, block types,
+   * ḥadīth numbers or verses (FOUND_ISSUES 26). Absent on every other card.
+   */
+  standalone?: boolean;
 }
 
 /**

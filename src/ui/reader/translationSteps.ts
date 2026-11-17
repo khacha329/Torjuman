@@ -7,6 +7,7 @@ import type {
   TranslationProfile,
 } from '../../types';
 import { newId } from '../../lib/id';
+import { sha256 } from '../../lib/hash';
 import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError, type TranslationRequest } from '../../translation/TranslationProvider';
 import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
@@ -26,6 +27,43 @@ import { blocksInRange, contextAround, type SelectionAnchor } from './selection'
 // restructure Phase 5 steps 5i1, 5i2 and 5i3
 // (docs/refactor/plans/phase5-big-ui-files.md, Design §7 and the amendment
 // to Q12).
+
+/**
+ * The block ids a translation's cache key is built from.
+ *
+ * A selection is keyed by where it sits, as always. A standalone text — the
+ * dictionary's "Translate this entry" — is anchored on the visible block only
+ * so its card has a place in the panel; its key carries a hash of the text
+ * instead, so it can never be served as, or served instead of, that block's own
+ * translation (FOUND_ISSUES 26). `cacheKeyFor` itself is unchanged, so every
+ * existing card keeps its key.
+ */
+export function cacheAnchorFor(
+  anchor: Pick<
+    SelectionAnchor,
+    'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
+  >,
+  standalone: boolean,
+): Pick<SelectionAnchor, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset'> {
+  if (!standalone) {
+    return {
+      startBlockId: anchor.startBlockId,
+      startOffset: anchor.startOffset,
+      endBlockId: anchor.endBlockId,
+      endOffset: anchor.endOffset,
+    };
+  }
+  const id = `${anchor.startBlockId}#entry:${sha256(anchor.sourceText).slice(0, 16)}`;
+  return { startBlockId: id, startOffset: 0, endBlockId: id, endOffset: anchor.sourceText.length };
+}
+
+/** A standalone text's passage: nothing around it, nothing known in it. */
+export const STANDALONE_PASSAGE = {
+  selected: [] as Block[],
+  before: [] as Block[],
+  after: [] as Block[],
+  known: { quran: [] as string[], hadith: [] as string[] },
+};
 
 export function passageFor(
   blocks: Block[],
@@ -89,6 +127,7 @@ export function loadingCard({
   useProviderId,
   useModel,
   cacheKey,
+  standalone,
 }: {
   bookId: string;
   anchor: Pick<
@@ -100,6 +139,7 @@ export function loadingCard({
   useProviderId: ProviderId;
   useModel: string;
   cacheKey: string;
+  standalone: boolean;
 }): TranslationCard {
   return {
     id: newId('card'),
@@ -123,6 +163,7 @@ export function loadingCard({
     cacheKey,
     status: 'loading',
     usedExternalLookup: activeProfile.allowExternalLookup,
+    ...(standalone ? { standalone: true } : {}),
   };
 }
 

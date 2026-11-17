@@ -200,6 +200,9 @@ export function ReaderSheets({
                 endOffset: block.text.length,
                 sourceText: text,
               },
+              // The block only gives the card a place; the entry is keyed and
+              // sent as its own text (FOUND_ISSUES 26).
+              standalone: true,
             });
           }}
         />

@@ -17,9 +17,11 @@ import {
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
 import {
+  cacheAnchorFor,
   failedCard,
   loadingCard,
   passageFor,
+  STANDALONE_PASSAGE,
   translationRequestFor,
   withoutStream,
 } from './translationSteps';
@@ -48,6 +50,12 @@ export interface TranslateRequest {
    * in `rawResponse` (a truncated or unparsed reply).
    */
   replaces?: TranslationCard;
+  /**
+   * Translate `anchor.sourceText` as a text of its own, not as the passage the
+   * anchor points at: the dictionary's "Translate this entry" (FOUND_ISSUES
+   * 26). See `cacheAnchorFor` and `TranslationCard.standalone`.
+   */
+  standalone?: boolean;
 }
 
 /** Running totals for the reader's status line. */
@@ -186,10 +194,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     (card: TranslationCard) =>
       card.cacheKey !==
       cacheKeyFor({
-        startBlockId: card.startBlockId,
-        startOffset: card.startOffset,
-        endBlockId: card.endBlockId,
-        endOffset: card.endOffset,
+        ...cacheAnchorFor(card, card.standalone === true),
         profileId: activeProfile.id,
         profileVersion: activeProfile.version,
         glossaryHash,
@@ -240,12 +245,24 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       providerId,
       model,
       replaces,
+      standalone = false,
     }: TranslateRequest) => {
       // The profile pins provider and model; an explicit override is only for
       // the card-level "retranslate with…" action.
       const useProviderId = providerId ?? activeProfile.providerId;
       const useModel = model ?? activeProfile.model;
       const offline = useProviderId === 'offline';
+
+      // The on-device path cuts a passage out of the stored blocks by its
+      // anchor (segmentSelection), so it cannot translate a text that is not
+      // in the book. Refused rather than translating the visible block in
+      // its place (FOUND_ISSUES 26).
+      if (offline && standalone) {
+        setNotice(
+          'A dictionary entry is translated by a cloud provider. Choose Claude or Gemini in the profile to translate it.',
+        );
+        return null;
+      }
 
       let apiKey = '';
       if (!offline) {
@@ -259,10 +276,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       }
 
       const cacheKey = cacheKeyFor({
-        startBlockId: anchor.startBlockId,
-        startOffset: anchor.startOffset,
-        endBlockId: anchor.endBlockId,
-        endOffset: anchor.endOffset,
+        ...cacheAnchorFor(anchor, standalone),
         profileId: activeProfile.id,
         profileVersion: activeProfile.version,
         glossaryHash,
@@ -278,7 +292,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         }
       }
 
-      const { selected, before, after, known } = passageFor(blocks, entities, anchor);
+      // A standalone text is sent alone: the visible block it is anchored on
+      // is not its context, and that block's types, ḥadīth numbers and verses
+      // are not its own (FOUND_ISSUES 26).
+      const { selected, before, after, known } = standalone
+        ? STANDALONE_PASSAGE
+        : passageFor(blocks, entities, anchor);
 
       const card: TranslationCard = loadingCard({
         bookId,
@@ -288,6 +307,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         useProviderId,
         useModel,
         cacheKey,
+        standalone,
       });
 
       // Held in memory only while in flight — a card left mid-request by a
@@ -397,6 +417,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         model: options.model,
         force: true,
         replaces: card,
+        standalone: card.standalone === true,
       }),
     [translate],
   );
