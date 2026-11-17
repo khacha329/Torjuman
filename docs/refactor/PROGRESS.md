@@ -2328,7 +2328,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d5. `ReadingSection` → its file | T B L R S U pass; review PASS | `35463d9` |
 | 5d6. `DisplaySection` → its file | T B L R S U pass; review PASS | `8589497` |
 | 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
-| 5d8. `BackupSection` → its file | T pass; B L R S U D running at commit; review pending | this commit |
+| 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2886,7 +2886,17 @@ holds)
   lines: its imports and the list, as Design §3 said (about 70). Made untrue
   here, for 5j (Q13): `scripts/verify-storage-harness.ts:901` names
   `SettingsScreen` as the backup's caller.
-- **T** exit 0. **B L R S U** running at commit; results with the review.
+- **T** exit 0. **B L R S U D**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 177 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254; **D** PASS, identical.
+- **Review of 5d8: PASS WITH NOTES; "ready for 5e1".** `exportWork` and
+  `importWork` still go through `storage`; "adding a section is one file
+  and one line" is now true. Comments made untrue by 5d1–5d8, for 5j: the
+  kit's `SettingsSection.tsx:3-9` and `verify-storage-harness.ts:901`, as
+  the plan lists, and FOUND_ISSUES 32's line reference
+  (`SettingsScreen.tsx:533-546`, now `BackupSection.tsx:26-39`).
 
 ## Open
 
