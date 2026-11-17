@@ -2334,7 +2334,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review PASS | `aa423d9` |
 | 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `539de97` |
 | 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review PASS WITH NOTES | `2d72185` |
-| 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review pending | this commit |
+| 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review PASS | `24629fb` |
+| 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3145,6 +3146,56 @@ holds)
   `fingerDrag` unchanged; 240,000 px in 33.7 s (33.4 at 5f1), 1,905 nodes,
   0 long tasks / 175,800 px in 24.4 s (24.5), 1,904 nodes, 0 long tasks;
   **S** 30/30; **U** 254/254.
+- **Review of 5f2 (`24629fb`): PASS; "ready for 5f3".** Text identical but
+  for indentation, no substitution; `listRef.current` still read inside the
+  second frame, `window.innerHeight` likewise; deps `[topInset,
+  virtualizer]` unchanged; the `settleOn as settleOnBlock` import alias
+  confirmed as the smallest legal way round the name clash. The reviewer's
+  own R run gave 33.4 s, so 5f2's 33.7 s was noise.
+
+**Step 5f3, measured 2026-11-17**
+- `BlockRow` (`BlockList.tsx:382-516` at `24629fb`, with its doc comment),
+  `MarginTarget` (`:518-622`) and `CardMarkerDot` (`:624-659`), each with
+  its doc comment, moved verbatim, in their order, into the new
+  `ui/reader/BlockRow.tsx`; only `BlockRow` is exported (`export const
+  BlockRow = memo(…)`), the other two are its private parts, as Design §5
+  says. `cmp` of the block against the old lines: identical but for the
+  `export`. `memo` is still evaluated once, at module load. `BlockList`
+  renders `<BlockRow …/>` where it did, with the same props: no key,
+  wrapper or memo change. A five-line header.
+- Imports: `BlockRow.tsx` takes `memo`/`useRef`, `Block`/`EntityRange`/
+  `MarkRange`, `PageMeta`, `toArabicNumerals`, `isDivider`, `BlockText`,
+  `CardMarker` and `TYPE_CLASS` (filtered copies of the source's lines),
+  and nothing from `BlockList.tsx`, so no cycle. `BlockList` drops `memo`,
+  `toArabicNumerals`, `isDivider`, `BlockText` and `TYPE_CLASS`, keeps
+  `useRef` (its `listRef`) and the types it uses, and imports `BlockRow`.
+  Outside the moved lines, `BlockList.tsx` is the old file but for those
+  import lines (`diff`). **`BlockList.tsx` is 377 lines**, against Design
+  §5's "about 370".
+- The margin-layout comment (`BlockList.tsx:56-62`) stays where it was:
+  Design §5 keeps it and lists only the three components for 5f3.
+- **Made untrue here, for 5j (Q13):** that margin-layout comment now
+  describes `BlockRow.tsx`'s gutters ("nothing here narrows the Arabic
+  column") from `BlockList.tsx`; `BlockList.tsx:82`'s "see MarginTarget"
+  now points to another file (true, but the reader looks for it in
+  `BlockRow.tsx`); `.claude/agents/torjuman-reader.md:25` ("`BlockRow` is
+  memoized…", under `BlockList.tsx`); FOUND_ISSUES 38's `BlockList.tsx:559`
+  (490 after 5f2) is now `BlockRow.tsx:127`.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,267 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5f2: the module's place), CSS
+  byte-identical (`cmp`); **L** 183 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55. Against
+  5f2's run every report line is identical but the landscape timing
+  (`readMarkDown` twice and `fingerDrag` unchanged), and every `ok` line
+  but one: the portrait restore "before 700, after 700" where 5f2 had
+  "after 699". Both values pass and both occur on code this step does not
+  touch: of R's 15 runs in 5d1–5f3, the portrait restore read 699 in 12
+  and 700 in 3 (5d2, 5d6 and this run), so it is run-to-run noise. Perf
+  240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-page`,
+  `reader-page-cards` (the `CardMarkerDot`s) and `reader-margin-menu` at
+  both sizes among them.
 
 ## Open
 
