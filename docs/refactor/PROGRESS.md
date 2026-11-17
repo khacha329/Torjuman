@@ -2327,7 +2327,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d4. `KeysSection` with `TestState`, `ProviderKeyField`, `SunnahKeyField` | T B L R S U pass; review PASS | `857ad17` |
 | 5d5. `ReadingSection` → its file | T B L R S U pass; review PASS | `35463d9` |
 | 5d6. `DisplaySection` → its file | T B L R S U pass; review PASS | `8589497` |
-| 5d7. `QuranSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
+| 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
+| 5d8. `BackupSection` → its file | T pass; B L R S U D running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2868,6 +2869,23 @@ holds)
   `Field`/`inputClass` and `Section`; `SettingsScreen` drops `useEffect`,
   the `retrieval/quran` import, `Field` and `inputClass`, and imports
   `QuranSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 176 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d7: PASS; "ready for 5d8".** Its effect and `[http]` deps
+  moved unchanged; imports minimal.
+
+**Step 5d8, measured 2026-11-17**
+- `BackupSection` with its doc comment moved verbatim into the new
+  `ui/settings/BackupSection.tsx`, `export` added; a three-line header. It
+  imports `useRef`/`useState`, `useApp`, `WorkBundle`, `saveFile`, `Button`
+  and `Section`; `SettingsScreen` drops all of them but `LinkButton` and
+  `TopBar`, and imports `BackupSection`. `SettingsScreen.tsx` is now 62
+  lines: its imports and the list, as Design §3 said (about 70). Made untrue
+  here, for 5j (Q13): `scripts/verify-storage-harness.ts:901` names
+  `SettingsScreen` as the backup's caller.
 - **T** exit 0. **B L R S U** running at commit; results with the review.
 
 ## Open
