@@ -41,6 +41,13 @@ export interface TranslateRequest {
   /** "Retranslate with…" — run this one on a different provider/model. */
   providerId?: ProviderId;
   model?: string;
+  /**
+   * Retranslate: the card this one replaces. It is removed only once the new
+   * card is stored complete, so a refusal or a failure never costs the old
+   * card (FOUND_ISSUES 42; a paid response is never discarded). A failed old
+   * card is replaced by a new failure too, since keeping it saves nothing.
+   */
+  replaces?: TranslationCard;
 }
 
 /** Running totals for the reader's status line. */
@@ -205,6 +212,16 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     });
   }, []);
 
+  /** Remove the card a retranslation replaced, after its successor is stored. */
+  const dropReplaced = useCallback(
+    async (replaced: TranslationCard | undefined) => {
+      if (!replaced) return;
+      await storage.deleteCard(replaced.id);
+      setCards((previous) => previous.filter((existing) => existing.id !== replaced.id));
+    },
+    [storage],
+  );
+
   const translate = useCallback(
     async ({
       anchor,
@@ -212,6 +229,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       force = false,
       providerId,
       model,
+      replaces,
     }: TranslateRequest) => {
       // The profile pins provider and model; an explicit override is only for
       // the card-level "retranslate with…" action.
@@ -277,6 +295,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           const finished = await runOffline(card, useModel);
           await storage.putCard(finished);
           upsert(finished);
+          await dropReplaced(replaces);
           setStats((previous) => withOfflineRequest(previous));
           return finished;
         }
@@ -323,6 +342,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         await storage.putCard(finished);
         upsert(finished);
+        await dropReplaced(replaces);
 
         setStats((previous) => withCloudRequest(previous, useProviderId, result));
 
@@ -331,6 +351,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         const failed = failedCard(card, caught);
         await storage.putCard(failed);
         upsert(failed);
+        if (replaces?.status === 'error') await dropReplaced(replaces);
         return failed;
       } finally {
         endActivity();
@@ -350,25 +371,28 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       settings.quranTranslationName,
       storage,
       upsert,
+      dropReplaced,
     ],
   );
 
+  // The old card is no longer deleted first: `translate` checks the key and
+  // every other precondition, and removes the old card only after the new one
+  // is stored (`replaces`). Deleting it up front lost a paid Claude card when
+  // the chosen provider had no key (FOUND_ISSUES 42).
   const retranslate = useCallback(
     async (
       card: TranslationCard,
       options: { digDeeper?: boolean; providerId?: ProviderId; model?: string } = {},
-    ) => {
-      await storage.deleteCard(card.id);
-      setCards((previous) => previous.filter((existing) => existing.id !== card.id));
-      return translate({
+    ) =>
+      translate({
         anchor: card,
         digDeeper: options.digDeeper,
         providerId: options.providerId,
         model: options.model,
         force: true,
-      });
-    },
-    [storage, translate],
+        replaces: card,
+      }),
+    [translate],
   );
 
   const remove = useCallback(
