@@ -33,7 +33,12 @@ import {
   type VisibleRange,
 } from './cardLayout';
 import { SearchPanel, type SearchResult } from './SearchPanel';
-import { peekSelection, readSelection, type SelectionAnchor } from './selection';
+import {
+  peekSelection,
+  readSelection,
+  type SelectionAnchor,
+  type SelectionPeek,
+} from './selection';
 import { useDebounced } from './useAnimatedList';
 import { useTranslator } from './useTranslator';
 import {
@@ -94,11 +99,12 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [showSearch, setShowSearch] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const [selection, setSelection] = useState({
+  const [selection, setSelection] = useState<SelectionPeek>({
     active: false,
     singleWord: false,
     shortSelection: false,
-    centerY: null as number | null,
+    text: '',
+    centerY: null,
   });
   /** The name being looked up, and what the sheet anchors to. */
   const [biography, setBiography] = useState<{
@@ -372,6 +378,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         active: false,
         singleWord: false,
         shortSelection: false,
+        text: '',
         centerY: null,
       });
     },
@@ -405,6 +412,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         active: false,
         singleWord: false,
         shortSelection: false,
+        text: '',
         centerY: null,
       });
       }

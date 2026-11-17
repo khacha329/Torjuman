@@ -129,6 +129,13 @@ export interface SelectionPeek {
   /** Short enough to be a personal name — see NAME_MAX_WORDS. */
   shortSelection: boolean;
   /**
+   * The selected text, trimmed, as the DOM reports it. Used only to ask
+   * whether a single word's gloss is cached, so the rail can offer Meaning
+   * offline (FOUND_ISSUES 33); every action still resolves its anchor with
+   * `readSelection`.
+   */
+  text: string;
+  /**
    * Viewport y of the middle of the selection, for positioning the rail.
    *
    * A *position*, deliberately, not a Range: nothing about the selection is
@@ -144,6 +151,7 @@ const NO_SELECTION: SelectionPeek = {
   active: false,
   singleWord: false,
   shortSelection: false,
+  text: '',
   centerY: null,
 };
 
@@ -173,6 +181,7 @@ export function peekSelection(): SelectionPeek {
     active: true,
     singleWord: !/\s/.test(text) && text.length <= 40,
     shortSelection: words >= 1 && words <= NAME_MAX_WORDS && text.length <= 120,
+    text,
     centerY: selectionCenterY(selection),
   };
 }

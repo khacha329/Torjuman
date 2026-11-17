@@ -179,7 +179,7 @@ export function SelectionRail({
               label={
                 meaningAvailable
                   ? 'Meaning — English, as used in this sentence'
-                  : 'Meaning — offline and not cached; Dictionary works offline'
+                  : 'Meaning — not cached; needs a connection and a key. Dictionary works offline'
               }
               onClick={onMeaning}
               disabled={!meaningAvailable}
