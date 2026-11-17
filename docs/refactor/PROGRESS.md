@@ -2319,7 +2319,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5a fix — the margin's place and the proposal bar made deterministic, dialogs screenshotted alone, `reader-page-cards` added; FOUND_ISSUES 37, 26 and 33 corrected | U five runs PASS in a row, two breakages; T B L R S pass; review PASS WITH NOTES | `5a141b6` |
 | 5a re-review's notes — FOUND_ISSUES 38 and a 37 wording fix | docs only | `7726a45` |
 | R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
-| 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review pending | this commit |
+| 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
