@@ -776,7 +776,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             onClick={() => setSheetOpen((open) => !open)}
             className="shrink-0 border-t border-rule bg-white py-2 text-sm text-muted"
           >
-            {sheetOpen ? '▼ Hide cards' : `▲ Cards (${translator.cards.length})`}
+            {sheetOpen ? '▼ Hide cards' : `▲ Cards (${allCards.length})`}
           </button>
           {sheetOpen && (
             <div className="h-[55vh] shrink-0 border-t border-rule bg-parchment">

@@ -26,8 +26,9 @@
 //     opening the dictionary; the restored position applied once; the
 //     divider dragged with a mouse; the divider dragged with a finger
 //     (reported, not judged: FOUND_ISSUES 27)
-//   - portrait: the cards sheet's handle; a marker opening a popover; the
-//     read-mark ↑ ↓; double-tap
+//   - portrait: the cards sheet's handle; the handle's count of every card
+//     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓;
+//     double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
 // out of `npm run verify` because jsdom has no layout. SCREENSHOT_DIR, if set,
@@ -459,6 +460,8 @@ async function screenshotSelection(page, screenshot) {
 /** Two translation cards: one for the marker scenarios, one far down for the card tap. */
 const MARKER_BLOCK = 300;
 const CARD_BLOCK = 1000;
+/** A block given a note by the one scenario that counts the sheet handle's cards. */
+const NOTE_BLOCK = 200;
 /** Three read marks, for the header's ↑ ↓. */
 const READ_MARKS = [400, 450, 500];
 /** A ج/ص page past the last read mark (block 545 opens it). */
@@ -502,7 +505,12 @@ async function seedControls(page) {
     cards: [card('marker', MARKER_BLOCK), card('far', CARD_BLOCK)],
     marks: READ_MARKS.map(read),
   };
-  await within(60_000, 'seeding the controls rows', page.evaluate(async (rows) => {
+  await putRows(page, 'seeding the controls rows', rows);
+}
+
+/** Write synthetic rows ({ store: [row, …] }) straight into the app's database. */
+async function putRows(page, label, rows) {
+  await within(60_000, label, page.evaluate(async (rows) => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('shamela-reader');
       request.onsuccess = () => resolve(request.result);
@@ -901,6 +909,25 @@ async function portraitControls(browser, base, profile) {
       open.height !== null && !closed.sheet && handle === 1 && closed.scrollY === scrolled,
       `${JSON.stringify(closed)}, handle ${handle}`,
     );
+  });
+
+  // The handle counts every card kind the sheet lists (FOUND_ISSUES 28), as
+  // the landscape edge tab does: the controls seed has two translation cards,
+  // and one note is added here, so a handle counting translations alone says 2.
+  await scenario(browser, base, profile, 'the sheet handle counts notes too', async (page) => {
+    await putRows(page, 'seeding a note', {
+      marks: [{
+        id: 'mark-note', bookId: BOOK, startBlockId: blockId(NOTE_BLOCK), startOffset: 0,
+        endBlockId: blockId(NOTE_BLOCK), endOffset: textOf(NOTE_BLOCK).length, kind: 'skip', scope: 'block',
+        note: 'A placeholder note, not from a real book.', createdAt: 1 + NOTE_BLOCK, collapsed: false,
+      }],
+    });
+    await page.reload();
+    await page.locator(`[data-block-id="${blockId(0)}"]`).waitFor();
+    await settle(page);
+    const handle = page.getByRole('button', { name: /^▲ Cards/ });
+    const text = (await handle.count()) === 1 ? (await handle.innerText()).trim() : null;
+    check('the sheet handle counts translations and notes alike', text === '▲ Cards (3)', `handle ${JSON.stringify(text)}`);
   });
 
   await scenario(browser, base, profile, 'a margin marker opens a popover', async (page) => {

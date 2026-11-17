@@ -425,7 +425,7 @@ the panel on the tablet at all is not known: check R's touch report (Phase 5
 step 5b) shows what Chromium's emulation does, and the tablet run (M) is the
 answer. **May make a feature unusable on the tablet.** Phase 5 plan, Design §9 B.
 
-## 28. The sheet handle counts translations only (2026-11-16, by reading)
+## 28. The sheet handle counts translations only (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/ReaderScreen.tsx:779`: the portrait sheet's handle says
 `▲ Cards (${translator.cards.length})`, while the collapsed edge tab in
@@ -433,6 +433,11 @@ landscape counts every card kind (`allCards.length`, `:763`), and the sheet,
 once open, lists notes, explanations and sharḥ cards too. A reader with only
 notes sees "Cards (0)" over a sheet that is not empty. Cosmetic. Phase 5 plan,
 Design §9 C.
+
+**Fixed in lane A:** the handle now counts `allCards.length`, the same memo
+(translations, notes, explanations, sharḥ) that the edge tab counts and the
+sheet lists. Its format is unchanged: it still shows "(0)" when there are no
+cards, where the edge tab drops the count.
 
 ## 29. `busy` is one flag for every translation (2026-11-16, by reading)
 
@@ -651,6 +656,10 @@ cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
 `ui/reader/ReaderScreen.tsx:338` ("Track whether a selection exists, so the
 bottom bar can show.") names the bottom bar of Amendment 10. README "Selection
 actions are a left rail" records that the bar was replaced by `SelectionRail`,
-a vertical rail on the left. The rest of the comment (why `selectionchange`
-and not `pointerup`, why debounced) still holds. Found while moving the comment
-for 30. Docs only. Left unfixed.
+a vertical rail on the left. The debounce paragraph's last sentence ("Nothing
+is resolved or stored — only whether a selection exists and whether it is one
+word.") is out of date too: `peekSelection` (`ui/reader/selection.ts:172-177`)
+also stores `shortSelection` and `centerY`. A fix corrects both sentences. The
+rest of the comment (why `selectionchange` and not `pointerup`, why debounced)
+still holds. Found while moving the comment for 30; the second sentence by the
+review of 30. Docs only. Left unfixed.
