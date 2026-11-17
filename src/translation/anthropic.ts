@@ -170,9 +170,11 @@ export function toTranslationError(error: unknown): TranslationError {
   // labelled "network": the reply shaping in Explain, gloss and compile (which
   // is guarded), gloss's storage write, and the stream listeners (onChunk,
   // onProgress, the streamEvent handler), which MessageStream calls
-  // synchronously, so their TypeError arrives as an AnthropicError cause. All
-  // of them are `setState` calls or guarded reads; a mislabel would cost the
-  // heading and message only, and raw is still kept. Narrowing by message is
+  // synchronously, so their TypeError arrives as an AnthropicError cause. The
+  // listeners are `setState` calls and the shaping is guarded reads, and an
+  // IndexedDB rejection is a DOMException, not a TypeError. A mislabel would
+  // cost the heading and message only, and in translate (withRaw) the raw
+  // text is still kept. Narrowing by message is
   // brittle ("network error" in Chrome, "terminated" in undici, others in
   // WebViews), so the check stays by type.
   if (
