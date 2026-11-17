@@ -107,7 +107,8 @@ export interface VisibleRange {
  * remain, because "everything in this bāb" and "everything in the book" are
  * both real questions — just not the one you have while reading.
  *
- * The type itself is in types.ts, since the choice is persisted in AppSettings.
+ * The type itself is in types/reader.ts, since the choice is persisted in
+ * AppSettings.
  */
 
 /**

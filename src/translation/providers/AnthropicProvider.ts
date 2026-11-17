@@ -1,12 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { TranslatedSegment } from '../../types';
+import type { TranslatedSegment, TranslationUsage } from '../../types';
 import {
   TranslationError,
   type ModelOption,
   type TranslationProvider,
   type TranslationRequest,
   type TranslationResult,
-  type TranslationUsage,
 } from '../TranslationProvider';
 import {
   ANTHROPIC_DEFAULT_MODEL,

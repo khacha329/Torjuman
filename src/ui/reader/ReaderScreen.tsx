@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { hrefFor } from '../../app/router';
 import { parseArabicNumber, toArabicNumerals } from '../../lib/arabic';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';
@@ -51,7 +51,7 @@ import { SearchPanel, type SearchResult } from './SearchPanel';
 import { ShareChapter } from './ShareChapter';
 import { TocDrawer } from './TocDrawer';
 import { peekSelection, readSelection, type SelectionAnchor } from './selection';
-import { RAIL_WIDTH, SelectionRail } from './SelectionRail';
+import { SelectionRail } from './SelectionRail';
 import { useDebounced } from './useAnimatedList';
 import { useTranslator } from './useTranslator';
 import {
@@ -59,6 +59,7 @@ import {
   DIVIDER_WIDTH,
   useLayoutMode,
   useViewportWidth,
+  RAIL_WIDTH,
 } from '../useLayoutMode';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {

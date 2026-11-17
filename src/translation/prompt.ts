@@ -1,7 +1,7 @@
-import type { BlockType, GlossaryEntry } from '../types';
+import type { BlockType, GlossaryEntry, ProviderId } from '../types';
 import { sha256 } from '../lib/hash';
 import { estimateTokens } from './models';
-import type { ProviderId, TranslationRequest } from './TranslationProvider';
+import type { TranslationRequest } from './TranslationProvider';
 
 // Prompt assembly, shared by every provider.
 //

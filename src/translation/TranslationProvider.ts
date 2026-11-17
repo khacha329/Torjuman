@@ -1,4 +1,11 @@
-import type { BlockType, GlossaryEntry, TranslatedSegment } from '../types';
+import type {
+  BlockType,
+  CloudProviderId,
+  GlossaryEntry,
+  TranslatedSegment,
+  TranslationErrorKind,
+  TranslationUsage,
+} from '../types';
 
 // The seam between the app and whichever service actually does the translating.
 //
@@ -9,20 +16,6 @@ import type { BlockType, GlossaryEntry, TranslatedSegment } from '../types';
 // Both providers are bring-your-own-key. No key is embedded in the app: a key
 // shipped inside a distributed client is trivially extractable and the bill
 // would be unbounded.
-
-/**
- * `offline` labels a card produced by the on-device model. It is a label, not a
- * member of the provider registry — see registry.ts for why the offline path is
- * deliberately not interchangeable with the cloud ones.
- */
-export type ProviderId = 'anthropic' | 'gemini' | 'offline';
-
-/** The providers that talk to a network service and take an API key. */
-export type CloudProviderId = Exclude<ProviderId, 'offline'>;
-
-export function isCloudProvider(id: ProviderId): id is CloudProviderId {
-  return id !== 'offline';
-}
 
 export interface ModelOption {
   id: string;
@@ -57,14 +50,6 @@ export interface TranslationRequest {
   allowExternalLookup?: boolean;
 }
 
-/** Token counts, normalized across providers. */
-export interface TranslationUsage {
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-}
-
 export interface TranslationResult {
   segments: TranslatedSegment[];
   usage: TranslationUsage;
@@ -73,23 +58,6 @@ export interface TranslationResult {
   /** Raw model output, kept so a parse failure loses nothing. */
   raw: string;
 }
-
-/**
- * Why a translation failed, in the terms the user needs.
- *
- * `auth` and `rate-limit` in particular must stay distinguishable: one means
- * "your key is wrong", the other means "wait a minute". A generic error message
- * sends the user hunting in entirely the wrong place.
- */
-export type TranslationErrorKind =
-  | 'auth'
-  | 'rate-limit'
-  | 'network'
-  | 'refusal'
-  | 'parse'
-  /** The token limit was reached mid-answer. A different remedy from a parse error. */
-  | 'truncated'
-  | 'api';
 
 export class TranslationError extends Error {
   readonly kind: TranslationErrorKind;

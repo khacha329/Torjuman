@@ -1,13 +1,8 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import type { Book } from '../types';
+import type { Book, NarratorProfile, StoredNarratorProfile } from '../types';
 import { foldName } from '../retrieval/narrator';
-import { recordRetrieval } from '../app/retrievalLog';
-import {
-  mergeProfiles,
-  hasContent,
-  type NarratorProfile,
-  type StoredNarratorProfile,
-} from './narratorProfile';
+import { recordRetrieval } from '../services/retrievalLog';
+import { mergeProfiles, hasContent } from './narratorProfile';
 import { isTaqrib, parseTaqribEntry, TAQRIB_WORK } from './taqrib';
 import { readItqanShard } from './itqan';
 

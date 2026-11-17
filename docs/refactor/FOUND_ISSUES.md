@@ -12,8 +12,8 @@ dictionary ingest lib library platform qul quran retrieval shamela translation
 ui`. `src/biography/` and `src/share/` exist and are imported, but are not on
 the list, so a `.gitignore` accident that dropped either would surface as
 cryptic compiler errors — exactly what the check was written to prevent. The
-build itself is unaffected. Phase 1 asks (Q4) whether to add them when it adds
-`core`. Left as is. Found by the Phase 0 survey.
+build itself is unaffected. Found by the Phase 0 survey. **Fixed in Phase 1
+step 1c** (owner's answer to Q4), when the list gained `services`.
 
 ## 2. README "How it fits together" was stale (2026-11-15, fixed in Phase 0)
 
@@ -41,7 +41,8 @@ owner runs it. Not a bug; recorded so the gap stays visible.
 
 Found by the Phase 0 review.
 
-- `translation/registry.ts:10` says it is "The only place outside the
+- `translation/registry.ts:10` (since Phase 1 step 1h
+  `translation/providers/registry.ts:7`) says it is "The only place outside the
   settings screen that names a provider". Not so: `app/AppContext.tsx`,
   `translation/profiles.ts`, `qul/compile.ts`, `ui/OnboardingScreen.tsx`,
   `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and
@@ -55,3 +56,22 @@ Found by the Phase 0 review.
 Left as is: Phase 3 (provider seams) is where these move, as structure. The
 comment in `registry.ts` is corrected when the registry moves in Phase 1 step
 1h only if the plan names it; otherwise in Phase 3.
+
+## 5. A detached and miscounted comment about the API keys (2026-11-15, measured)
+
+`src/types.ts` (~824–828 at `16e16a3`): the comment "Everything except the two
+API keys … (see app/secrets.ts)" belongs to `AppSettings`, but sits before the
+next interface's doc comment (`BiographyEntry`), far from it — already so at
+`810b059`, before the restructure. It also says "two API keys", and README
+(~174) says "Both keys": `services/secrets.ts` holds three (Anthropic, Gemini,
+sunnah.com). Found by the 1e review. **Placement fixed in Phase 1 step 1m**
+by the owner's decision: the comment now sits directly above `AppSettings` in
+`types/settings.ts`, word for word. The "two API keys" wording (and README's
+"Both keys") is left for a later fix.
+
+Related, not a defect: since Phase 1 step 1e the key store is in layer 1,
+which every domain directory may import. "Only `secrets.ts` reads and writes
+keys" still holds, but by convention; a `layers.json` rule could restrict
+which files import `services/secrets.ts` (today: `App.tsx`,
+`ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
+settings files). For the owner to decide.

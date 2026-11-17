@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
-import type { BatchState } from './importBatch';
+import type { BatchState } from '../catalog/importBatch';
 
 // A view onto the app-level batch, not an owner of it.
 //
@@ -9,7 +9,7 @@ import type { BatchState } from './importBatch';
 // the catalog screen be closed and reopened, and the Library show the same
 // progress, without an import being lost or duplicated.
 
-export type { EntryState, EntryStatus, BatchState } from './importBatch';
+export type { EntryState, EntryStatus, BatchState } from '../catalog/importBatch';
 
 export function useCatalogImport() {
   const { batch } = useApp();

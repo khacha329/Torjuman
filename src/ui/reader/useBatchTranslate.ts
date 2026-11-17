@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Block, TranslationCard } from '../../types';
-import { beginActivity } from '../../app/activity';
+import { beginActivity } from '../../services/activity';
 
 // Translating a whole ḥadīth's commentary, one block at a time.
 //

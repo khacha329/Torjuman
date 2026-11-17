@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, ExplanationCard, TranslationCard } from '../../types';
 import { TranslationError } from '../../translation/TranslationProvider';

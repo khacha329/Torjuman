@@ -1,11 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { sha256 } from '../lib/hash';
 import { GEMINI_BASE } from '../translation/models';
-import {
-  TranslationError,
-  type CloudProviderId,
-  type TranslationUsage,
-} from '../translation/TranslationProvider';
+import { TranslationError } from '../translation/TranslationProvider';
+import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
 //

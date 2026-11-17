@@ -16,7 +16,7 @@ import { CatalogImportBatch } from '../catalog/importBatch';
 import type { AppSettings, GlossaryEntry, TranslationProfile } from '../types';
 import { createDefaultProfile, DEFAULT_PROFILE_ID } from '../translation/profiles';
 import { isClaudeModel, successorModel } from '../translation/models';
-import { DEFAULT_PROVIDER_ID } from '../translation/registry';
+import { DEFAULT_PROVIDER_ID } from '../translation/providers/registry';
 import { DEFAULT_TRANSLATION_ID, DEFAULT_TRANSLATION_NAME } from '../retrieval/quran';
 import { seedQulResources, type SeedOutcome, type SeedProgress } from '../qul/seed';
 

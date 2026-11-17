@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/AppContext';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { listEnglishTranslations, type TranslationResource } from '../../retrieval/quran';
-import { allProviders, providerFor } from '../../translation/registry';
+import { allProviders, providerFor } from '../../translation/providers/registry';
 import { defaultModelFor, modelsFor } from '../../translation/models';
-import type { CloudProviderId } from '../../translation/TranslationProvider';
 import type { WorkBundle } from '../../platform/storage/StorageAdapter';
 import { DeviceTransfer } from './DeviceTransfer';
 import { LibraryTransfer } from './LibraryTransfer';
@@ -14,7 +13,7 @@ import {
   SIDE_BY_SIDE_MIN_WIDTH,
   useLayoutMode,
 } from '../useLayoutMode';
-import type { PanelPosition } from '../../types';
+import type { CloudProviderId, PanelPosition } from '../../types';
 import { OfflineTranslation } from './OfflineTranslation';
 import { OfflineCapabilities } from './OfflineCapabilities';
 import { Button, Field, inputClass, LinkButton, TopBar } from '../common';

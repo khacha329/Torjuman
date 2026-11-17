@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import type { PanelPosition } from '../types';
-import { RAIL_WIDTH } from './reader/SelectionRail';
 
 // Whether the card panel sits beside the text or comes up as a bottom sheet.
 //
@@ -11,6 +10,8 @@ import { RAIL_WIDTH } from './reader/SelectionRail';
 // tablet with a wider viewport got the side panel. The question is not what
 // kind of device this is but whether both panes fit, so that is what decides.
 
+/** Comfortable on a tablet with an S Pen, and above the 44px floor. */
+export const RAIL_WIDTH = 52;
 /** The narrowest Arabic column worth reading beside a panel, in CSS pixels. */
 export const MIN_READING_WIDTH = 420;
 /** The draggable divider between the text and the panel. */

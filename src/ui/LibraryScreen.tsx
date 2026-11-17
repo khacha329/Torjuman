@@ -4,7 +4,7 @@ import { navigate } from '../app/router';
 import type { Book } from '../types';
 import { Button, LinkButton, Spinner, TopBar } from './common';
 import { useCrawlProgress } from './useCrawlProgress';
-import { useCatalogImport } from '../catalog/useCatalogImport';
+import { useCatalogImport } from './useCatalogImport';
 
 export function LibraryScreen() {
   const { storage, crawler } = useApp();

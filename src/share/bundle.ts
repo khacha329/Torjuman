@@ -5,10 +5,10 @@ import type {
   HadithRecord,
   Mark,
   SharhCard,
+  StoredNarratorProfile,
   TocNode,
   TranslationCard,
 } from '../types';
-import type { StoredNarratorProfile } from '../biography/narratorProfile';
 import type { PageMeta } from '../platform/storage/StorageAdapter';
 
 // What a shared chapter is, on the wire.

@@ -3,7 +3,9 @@
 //
 //   node scripts/check-layers.mjs            print the report
 //   node scripts/check-layers.mjs --check    also fail (exit 1) on any edge
-//                                            docs/refactor/layers.json forbids
+//                                            docs/refactor/layers.json forbids,
+//                                            on any cycle (directory or file),
+//                                            or if that file is missing
 //
 // This is the measurable half of the restructure in docs/refactor/. A step
 // that claims to untangle something has to move these numbers, and a step that
@@ -36,8 +38,11 @@ function walk(dir, out = []) {
 
 /**
  * `src/ui/reader/BlockList.tsx` → `ui/reader`; `src/App.tsx` → `(root)`.
- * `src/types.ts` is its own unit: everything imports it, so folding it into
- * `(root)` with App.tsx would put every directory in one cycle through App.
+ * The types are their own unit, `types`: everything imports them, so folding
+ * them into `(root)` with App.tsx would put every directory in one cycle
+ * through App. Since Phase 1 step 1i they live in `src/types/`, which maps to
+ * `types` like any directory; the `types.ts` case below is for running this
+ * script on commits from before that step.
  */
 function unitOf(file) {
   const parts = relative(ROOT, file).split(sep);
@@ -199,6 +204,15 @@ if (unresolved.length > 0) {
 // some — the restructure adds a rule in the same step that makes it true.
 
 let violations = [];
+if (process.argv.includes('--check') && !existsSync(RULES)) {
+  violations.push(`${relative(process.cwd(), RULES)} is missing, so no rule can be checked`);
+}
+// Since Phase 1 the graph has no cycle; --check keeps it that way, for cycles
+// among directories no rule names as well as the ones the rules prevent.
+if (process.argv.includes('--check')) {
+  for (const component of unitCycles) violations.push(`directory cycle: {${component.join(', ')}}`);
+  for (const component of fileCycles) violations.push(`file-level cycle: {${component.join(', ')}}`);
+}
 if (existsSync(RULES)) {
   const { forbidden = [] } = JSON.parse(readFileSync(RULES, 'utf8'));
   for (const rule of forbidden) {
@@ -219,6 +233,8 @@ if (existsSync(RULES)) {
 console.log(lines.join('\n'));
 
 if (process.argv.includes('--check') && violations.length > 0) {
-  console.error(`\n${violations.length} forbidden import${violations.length === 1 ? '' : 's'}.`);
+  // Listed again here: with the rules file missing there is no rules section.
+  console.error(`\n${violations.length} problem${violations.length === 1 ? '' : 's'}:`);
+  for (const violation of violations) console.error(`  ${violation}`);
   process.exit(1);
 }

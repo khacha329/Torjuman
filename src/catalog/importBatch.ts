@@ -4,7 +4,7 @@ import type { Crawler } from '../ingest/crawler';
 import { createBookFromPreview, fetchBookPreview } from '../ingest/importer';
 import type { CatalogEntry } from '../types';
 import { importOrder } from './catalogService';
-import { beginActivity } from '../app/activity';
+import { beginActivity } from '../services/activity';
 
 // Importing a selection from the catalog, one book after another.
 //

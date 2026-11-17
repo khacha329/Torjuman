@@ -22,8 +22,8 @@ import type {
   TocNode,
   TranslationCard,
   TranslationProfile,
+  StoredNarratorProfile,
 } from '../../types';
-import type { StoredNarratorProfile } from '../../biography/narratorProfile';
 
 // The only interface the app knows about for persistence.
 //

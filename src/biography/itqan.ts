@@ -1,10 +1,6 @@
 import { foldName } from '../retrieval/narrator';
-import {
-  emptyProfile,
-  type NarratorProfile,
-  type ScholarStatement,
-  type StoredNarratorProfile,
-} from './narratorProfile';
+import { emptyProfile } from './narratorProfile';
+import type { NarratorProfile, ScholarStatement, StoredNarratorProfile } from '../types';
 
 // Reading an Itqan rijāl shard into narrator profiles.
 //

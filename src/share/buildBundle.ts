@@ -1,6 +1,5 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import type { Block, HadithRecord, TocNode } from '../types';
-import type { StoredNarratorProfile } from '../biography/narratorProfile';
+import type { Block, HadithRecord, StoredNarratorProfile, TocNode } from '../types';
 import { SHARE_VERSION, type ShareBundle } from './bundle';
 import { generateShareId } from './shareLink';
 

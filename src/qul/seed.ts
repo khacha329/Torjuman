@@ -1,7 +1,7 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { QulEntry, QulResource } from '../types';
 import { inspectQulBytes } from './importResource';
-import { recordRetrieval } from '../app/retrievalLog';
+import { recordRetrieval } from '../services/retrievalLog';
 
 // QUL resources that install themselves on first boot, when present.
 //

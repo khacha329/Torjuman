@@ -1,8 +1,5 @@
-import {
-  isCloudProvider,
-  type CloudProviderId,
-  type ProviderId,
-} from '../translation/TranslationProvider';
+import { isCloudProvider } from '../lib/providers';
+import type { CloudProviderId, ProviderId } from '../types';
 
 // API keys, kept apart from the rest of the settings.
 //

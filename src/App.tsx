@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppProvider } from './app/AppContext';
-import { secrets } from './app/secrets';
+import { secrets } from './services/secrets';
 import { navigate, useRoute } from './app/router';
 import { LibraryScreen } from './ui/LibraryScreen';
 import { CatalogScreen } from './ui/CatalogScreen';

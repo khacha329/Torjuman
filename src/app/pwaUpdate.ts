@@ -1,5 +1,5 @@
 import { registerSW } from 'virtual:pwa-register';
-import { isBusy, subscribeActivity } from './activity';
+import { isBusy, subscribeActivity } from '../services/activity';
 
 // Service-worker updates, offered rather than applied.
 //

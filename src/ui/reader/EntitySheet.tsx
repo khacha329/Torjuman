@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { navigate } from '../../app/router';
-import { secrets } from '../../app/secrets';
+import { secrets } from '../../services/secrets';
 import { useOnline } from '../../app/useOnline';
 import { BidiText } from '../../components/BidiText';
 import { fetchVerse } from '../../retrieval/quran';
@@ -25,7 +25,7 @@ import {
   type TafsirResult,
   type TopicResult,
 } from '../../qul/service';
-import { isCloudProvider } from '../../translation/TranslationProvider';
+import { isCloudProvider } from '../../lib/providers';
 import type {
   Book,
   Entity,

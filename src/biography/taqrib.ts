@@ -1,6 +1,6 @@
-import type { Block } from '../types';
+import type { Block, NarratorProfile } from '../types';
 import { foldName } from '../retrieval/narrator';
-import { emptyProfile, type NarratorProfile } from './narratorProfile';
+import { emptyProfile } from './narratorProfile';
 
 // Reading Taqrīb at-Tahdhīb's entries out of the book's own body.
 //

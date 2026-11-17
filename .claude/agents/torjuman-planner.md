@@ -17,16 +17,19 @@ scripts or other docs, and never commit. In Bash, read-only commands only
    record; a plan that contradicts a recorded decision must say so and why.
 2. Find the real extension points by reading code, not by guessing. Known
    ones (verify they are still true):
-   - translation provider: `translation/TranslationProvider.ts` (`ProviderId`),
-     `translation/registry.ts`, `translation/models.ts`, `app/secrets.ts`
-     (`PROVIDER_KEYS`), Settings key fields, Onboarding, profile migration.
+   - translation provider: `ProviderId` in `types/translation.ts`,
+     `translation/TranslationProvider.ts`, `translation/providers/registry.ts`,
+     `translation/models.ts`, `services/secrets.ts` (`PROVIDER_KEYS`),
+     Settings key fields, Onboarding, profile migration.
    - retrieval source: `retrieval/HadithSource.ts`, `HadithSourceId` in
-     `types.ts`, `app/retrievalLog.ts` kinds, the three proxy route lists.
+     `types/retrieval.ts`, `services/retrievalLog.ts` kinds, the three proxy
+     route lists.
    - IndexedDB store: trap 6 in CLAUDE.md.
    - route: `app/router.ts` (`Route`, `hrefFor`, `parseHash`) + `App.tsx`.
    - settings section: `ui/settings/SettingsScreen.tsx` list + `AppSettings`
      + `DEFAULT_SETTINGS` in `app/AppContext.tsx`.
-3. Run `node scripts/check-layers.mjs` and say which edges the change adds.
+3. Run `node scripts/check-layers.mjs` and say which edges the change adds,
+   and whether any breaks a rule in `docs/refactor/layers.json`.
 
 ## The plan file
 

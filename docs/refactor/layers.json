@@ -1,4 +1,55 @@
 {
   "comment": "Directory imports that must not exist. Read by `npm run layers -- --check` (scripts/check-layers.mjs). `from` and `to` are regular expressions over directory units as the report prints them (e.g. `ui/reader`, `types`; the root unit must be written `\\(root\\)`, since parentheses are regex groups). `typesAllowed: true` lets type-only imports through. A rule is added in the restructure step that makes it true — see docs/refactor/RESTRUCTURE.md §2 and the phase plans.",
-  "forbidden": []
+  "forbidden": [
+    {
+      "from": "types",
+      "to": ".*",
+      "why": "types imports nothing (layer 0; Phase 1 step 1a)"
+    },
+    {
+      "from": "lib",
+      "to": "(?!types$).*",
+      "why": "lib imports only types (layer 0; Phase 1 step 1a)"
+    },
+    {
+      "from": "platform/.*",
+      "to": "(?!(lib|types)$).*",
+      "why": "platform imports only lib and types (layer 1; Phase 1 step 1b)"
+    },
+    {
+      "from": "services",
+      "to": "(?!(lib|types)$).*",
+      "why": "services imports only lib and types (layer 1; Phase 1 step 1e)"
+    },
+    {
+      "from": "(shamela|ingest|dictionary|quran|biography|retrieval|qul|translation(/.*)?|library|share|catalog)",
+      "to": "(app|ui(/.*)?|components)",
+      "why": "domain code imports neither the composition root nor the UI, shared components included (layer 2; Phase 1 steps 1e, 1f, 1n)"
+    },
+    {
+      "from": "ui",
+      "to": "ui/.+",
+      "why": "top-level ui (screens, shared hooks) does not reach into a screen's folder (Phase 1 step 1g)"
+    },
+    {
+      "from": "translation",
+      "to": "translation/providers",
+      "why": "the translation core does not know its providers; the registry lives with them (Phase 1 step 1h)"
+    },
+    {
+      "from": "app",
+      "to": "(ui(/.*)?|components)",
+      "why": "the composition root does not import the UI, shared components included (layer 3 below layer 4; Phase 1 step 1n)"
+    },
+    {
+      "from": "components",
+      "to": "(?!(lib|types)$).*",
+      "why": "shared components import only lib and types (Phase 1 step 1n)"
+    },
+    {
+      "from": "(?!\\(root\\)$).*",
+      "to": "\\(root\\)",
+      "why": "nothing outside the root imports main.tsx or App.tsx (Phase 1 step 1n)"
+    }
+  ]
 }

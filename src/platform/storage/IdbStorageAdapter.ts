@@ -23,8 +23,8 @@ import type {
   TranslationCard,
   TranslationProfile,
   WordGloss,
+  StoredNarratorProfile,
 } from '../../types';
-import type { StoredNarratorProfile } from '../../biography/narratorProfile';
 import { letterFold } from '../../lib/arabic';
 import type {
   PageMeta,
