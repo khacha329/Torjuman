@@ -294,11 +294,25 @@ async function runChecks(page, layout) {
     if ((await verse.count()) === 0) {
       check('the verse is detected, so its popover can be tested', false, 'no entity marked');
     } else {
+      // The verse is put high on the screen and the popover's content waited
+      // for, so the popover is measured at its final size and fits below the
+      // verse both before and after the 60 px scroll. Before FOUND_ISSUES 37
+      // was fixed it kept the place chosen for its short loading state, which
+      // this check then measured; once it places itself again as it grows,
+      // a verse lower down could find it clamped above (top 12) before the
+      // scroll and below after it, depending on whether the translation had
+      // arrived — a race in the check, not a fault in following the anchor.
       await verse.scrollIntoViewIfNeeded();
+      await page.evaluate(({ id, y }) => {
+        const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+        window.scrollBy(0, element.getBoundingClientRect().top - y);
+      }, { id: blockId(VERSE_BLOCK), y: POPOVER_ANCHOR_Y });
       await settle(page, 300);
       await verse.click();
       const close = page.getByRole('button', { name: 'Close', exact: true });
       await close.waitFor({ timeout: 5000 });
+      await page.locator('[role="dialog"]').getByText('(bundled)').waitFor({ timeout: 10_000 });
+      await settle(page, 300);
       const panelTop = () =>
         page.evaluate(() => {
           const button = Array.from(document.querySelectorAll('button[aria-label="Close"]')).pop();
@@ -463,6 +477,11 @@ const MARKER_BLOCK = 300;
 const CARD_BLOCK = 1000;
 /** A block given a note by the one scenario that counts the sheet handle's cards. */
 const NOTE_BLOCK = 200;
+/** Where the verse is put before its popover is opened to follow a scroll: high enough that the popover fits below it. */
+const POPOVER_ANCHOR_Y = 120;
+/** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
+const GROWTH_DELAY_MS = 2500;
+const LOW_ANCHOR_Y = 380;
 /** A second book, opened by a hash change from the first, and its saved position. */
 const SECOND_BOOK = 'shamela-515153';
 const SECOND_BLOCKS = 400;
@@ -804,6 +823,47 @@ async function landscapeControls(browser, base, profile) {
       'after the restore, a jump elsewhere stays where it landed',
       Math.abs(restored - 700) <= 1 && jumped === firstBlockOfPage(20) && later === jumped,
       `restored ${restored}, jumped to ${jumped}, 2.5 s later ${later}`,
+    );
+  });
+
+  // A popover whose content arrives after it opens is placed again at its
+  // final size (FOUND_ISSUES 37). The bundled translation is held back, so the
+  // Qurʾān popover first places itself in its short loading state, below a
+  // verse low on the screen; when the translation arrives it is several times
+  // taller and no longer fits below. Nothing renders the reader in between —
+  // no scroll, no resize, no tap — so only the popover's own size change can
+  // place it again, not the reader re-rendering it.
+  await scenario(browser, base, profile, 'a popover is placed again when its content grows', async (page) => {
+    let held = 0;
+    await page.route('**/quran/english.json', async (route) => {
+      held++;
+      await new Promise((resolve) => setTimeout(resolve, GROWTH_DELAY_MS));
+      await route.continue();
+    });
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: LOW_ANCHOR_Y });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.waitFor({ timeout: 5000 });
+    await settle(page, 300);
+    const box = () => page.evaluate(() => {
+      const panel = document.querySelector('[role="dialog"]');
+      const rect = panel.getBoundingClientRect();
+      return { top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height), viewport: window.innerHeight };
+    });
+    const loading = await box();
+    await dialog.getByText('(bundled)').waitFor({ timeout: GROWTH_DELAY_MS + 10_000 });
+    await settle(page, 500);
+    const grown = await box();
+    check(
+      'a popover that grows after opening is placed again, wholly on screen',
+      held === 1 && grown.height > loading.height + 100 && grown.top >= 0 && grown.bottom <= grown.viewport,
+      `loading ${JSON.stringify(loading)}, grown ${JSON.stringify(grown)}, translation requests held ${held}`,
     );
   });
 

@@ -533,7 +533,7 @@ Design §9 J.
 replaced by Explain (`ui/reader/TranslationCardView.tsx:229-232`). A dead
 option, kept by Phase 5. Phase 5 plan, Design §9 K.
 
-## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured)
+## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured, fixed in lane A)
 
 Found while baselining Phase 5 step 5a's U captures. `AnchoredPanel`
 (`ui/reader/AnchoredPanel.tsx:59-95`) places a popover in `reposition`, a
@@ -555,6 +555,22 @@ rendered less often than the screen would change when — or whether — the
 popover is re-placed. Check U now captures every sheet after a resize event so
 its pixels do not depend on the race. On the tablet in landscape a ḥadīth sheet
 can open partly off screen. Left unfixed (structure-only phase).
+
+**Fixed in lane A:** `AnchoredPanel` observes its own panel with a
+`ResizeObserver` and runs `reposition` whenever the panel's size changes,
+disconnecting in the effect's cleanup; the scroll and resize listeners stay.
+Placing moves only `top` and `left` (the width is fixed, the height is the
+content's), so the observer does not answer its own placement. A sheet
+(`asSheet`) is never placed, so it is not observed. R's "a popover is placed
+again when its content grows" guards it: the bundled translation is held back
+2.5 s, so the Qurʾān popover opens in its loading state below a verse low on
+the screen with no reader render after. On the old code it stayed at top 433
+as it grew from 138 to 297 px, ending at 730 on a 600 px screen. U's resize
+step before each dialog capture stays. R's older "a popover follows its anchor
+as the page scrolls" had measured that same stale placement (330 → 270, the
+grown popover's bottom at 627); with the fix it raced the translation's arrival
+(one run 12 → 270, see 47), so its setup now puts the verse at 120 px and waits
+for the popover's content before measuring. Its assertion is unchanged.
 
 ## 38. The Qurʾān sheet's verse uses the device's font, not the bundled one (2026-11-16, measured in the container, fixed in lane A)
 
@@ -711,3 +727,17 @@ mark ۗ (U+06D7) over 42:53's ٱلۡأَرۡضِ overlaps the "c" of "coverage",
 Translation tab's single verse has the tab bar's padding above it and is
 clear. Before 38 these marks drew as empty boxes inside the line, so the collision
 was hidden. Cosmetic. Left unfixed.
+
+## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
+
+`AnchoredPanel`'s `reposition` (`ui/reader/AnchoredPanel.tsx`) puts the
+popover below its anchor if it fits, and otherwise at
+`Math.max(MARGIN, rect.top - 8 - panelHeight)`: when it fits on neither side,
+that clamps it to the top of the screen, over the anchored text. In R's
+landscape run, the Qurʾān popover (297 px) over a verse whose top was near
+277 px sat at top 12 to 309, covering the verse; a 60 px scroll then let it fit
+below and it jumped to 270. Found while fixing 37, which made the popover
+measure its real height (before, it placed itself at its 138 px loading height
+and ran off the bottom instead). The placement rule itself is unchanged by
+37. A product choice (cover the anchor, run off the screen, or shrink the
+panel to the larger side). Left unfixed.
