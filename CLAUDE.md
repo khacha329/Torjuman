@@ -1,305 +1,198 @@
-# CLAUDE.md
+# Ḥāshiya (Torjuman) — working rules for Claude
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+A personal Arabic study app: a React 19 + Vite + TypeScript PWA that reads
+books imported from the Shamela library, translates selected passages with an
+LLM into cards, and works offline on an Android tablet. Everything runs in the
+browser; IndexedDB is the only store. Deployed to GitHub Pages from `v*` tags.
 
-## What this is
+The owner is the only user and the only other developer. The main device is an
+**Android tablet** (touch, Chrome or DuckDuckGo, 960×600 landscape and
+600×960 portrait). A change that works on a desktop mouse and not on the
+tablet does not work.
 
-Ḥāshiya / Torjuman — a personal Arabic study application for reading Islamic texts from the Shamela
-digital library (shamela.ws) with on-demand, LLM-powered English translation of selected passages.
-It is being prepared to lead a multi-year study circle. Target device is a Samsung Galaxy Tab with
-S Pen; it deploys as a PWA to `https://khacha329.github.io/Torjuman/`.
-
-**Everything runs client-side. There is no backend** — no server, no database, no accounts. The only
-network traffic is to shamela.ws (through a proxy), the retrieval APIs, and the user's own LLM
-provider.
-
-`README.md` is the project's design document, and it is unusually load-bearing: for nearly every
-decision it records the measurement or the failure that forced it. Read the relevant section before
-changing a subsystem. Most of what looks like an odd choice is deliberate and the README says what
-it is protecting.
+`README.md` is the design record: every non-obvious decision has a section
+there, and the code comments say *why* at length. Read the README section for
+the area before changing it. `docs/refactor/` holds the restructure plan and
+its progress log.
 
 ## Commands
 
-| Command | Notes |
-|---|---|
-| `npm run dev` | Vite on `:5173`, bound to all interfaces so the tablet can reach it over the LAN |
-| `npm run build` | `tsc -b && vite build` — the typecheck gate *is* the build |
-| `npm run typecheck` | Types only |
-| `npm run verify` | The whole test suite. 770 checks, ~1 min |
-| `npm run stage` | Builds the working tree and deploys it to the staging Worker (HTTPS, its own origin) |
-| `npm run catalog` | Rebuilds `public/catalog.json` by refetching each book page off Shamela. Needs `npm run dev` running, for the proxy |
-| `npm run glossary` | Merges `glossary-sources/*.json` into `glossary-import.json`, reporting every override |
-| `npm run share:add -- <file\|dir>` | Files a downloaded share bundle into `public/shares/` under the id in its own header |
+| Command | What | Where it runs |
+| --- | --- | --- |
+| `npm run typecheck` | `tsc -b --noEmit` | anywhere |
+| `npm run build` | typecheck + production bundle into `dist/` | anywhere |
+| `npm run verify` | ~5,500 lines of checks over real Shamela pages and QUL data | **owner's PC only** — needs the gitignored `fixtures/` and `qul/` |
+| `npm run verify:selection` | Playwright: touch selection across scrolling, 3 profiles | anywhere (Chromium is in the cloud container) |
+| `npm run verify:reader` | Playwright: every scroll-dependent reader feature | anywhere |
+| `npm run layers` | import graph by directory, cycles, layer rules | anywhere |
+| `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
-There is no linter and no ESLint config — the compiler is the only static gate, and it is a strict
-one. `tsconfig.app.json` sets `strict`, `noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`
-and `verbatimModuleSyntax`, so a leftover variable or an unused import **fails the build**, and
-type-only imports must be written `import type`.
+In the cloud container `npm run verify` fails at once on the missing
+`fixtures/`; that is expected. Say so, and ask the owner to run it when the
+change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
+`components/`, `translation/`, `quran/`, `qul/`, the reader's card logic).
 
-### Tests
+## Never
 
-`scripts/verify-parsers.ts` is a single ~5,000-line script, not a test framework. It runs the real
-parsers and services over real fetched HTML and real QUL files, in Node, with jsdom supplying the
-DOM and the reader's window globals. There are no describe blocks, no watch mode, and **no way to
-run one test** — it is one pass over 45 sections, each check printing `ok` or `FAIL`, ending in
-`PASS — n/n checks passed` and a non-zero exit on any failure.
+- **Commit book or third-party data.** The repository is public. No
+  `fixtures/`, `qul/`, `glossary-sources/`, share links (`*.link.txt`), book
+  text in tests or screenshots beyond what is already committed. A new
+  `.gitignore` pattern that names a top-level directory gets a leading slash
+  (see the comment at the top of `.gitignore` — `qul/` once excluded
+  `src/qul/`); extension patterns like `*.pem` stay unanchored.
+- **Let an API key leave `localStorage`.** Keys live only behind
+  `app/secrets.ts`. Never in `AppSettings`, a backup, a log, the retrieval
+  log, an error message or a URL. The one exception is the whole-tablet
+  transfer, and only when its "Include my API keys" box is ticked.
+- **Add a dependency** without the owner's OK. Name it, its size, and why the
+  platform cannot do it.
+- **Force-push, rebase a pushed branch, amend a pushed commit, or move a tag.**
+  Merge `main` into a branch instead.
+- **Push a tag or release.** Deploys happen when the owner pushes a `v*` tag
+  (this container cannot push tags anyway). Tell the owner the exact commit
+  hash to tag.
+- **Merge a PR** without the owner's word in this conversation.
+- **Delete** a file, store, setting or saved data path without the owner's OK.
+- **Change the IndexedDB schema** without bumping `DB_VERSION` and editing
+  *both* upgrade branches in `IdbStorageAdapter.init` — see trap 6.
+- **Force a tool call** (`tool_choice: tool` or `any`) on current Claude
+  models — they reject it with a 400. See trap 4.
+- **Guess model facts.** Model IDs, prices, context windows and output limits
+  come from the `claude-api` skill (or the provider's docs), never memory, and
+  belong in `src/translation/models.ts` (known exceptions: FOUND_ISSUES 4).
+- **Skip, weaken or delete a check** to get green.
 
-So filter the output, not the run:
+## Working pattern
 
-```bash
-npm run verify 2>&1 | grep FAIL                              # only what broke
-npm run verify 2>&1 | sed -n '/=== Shared views ===/,/^$/p'  # one section
-grep -n '===' scripts/verify-parsers.ts | grep console       # list the sections
+- One branch and one PR per change, named `claude/<topic>`. The PR lists every
+  feature the change touches and how each was checked; a UI change carries
+  screenshots at the tablet sizes.
+- A restructure phase starts only after its written plan in
+  `docs/refactor/plans/` is approved by the owner, with the owner's answers to
+  its questions recorded in the plan. See `docs/refactor/RESTRUCTURE.md`.
+- **A refactor commit changes structure only.** A bug found while moving code
+  is written in `docs/refactor/FOUND_ISSUES.md` and left; it is fixed later in
+  its own change, if the owner wants.
+- Before pushing: typecheck, build, the Playwright checks the change can
+  affect, `npm run layers`, and the `torjuman-reviewer` agent on the commit.
+  Never start the next step until the review is in.
+- Say plainly what was verified by running, what by reading, and what was not
+  checked (above all: what only the tablet can show).
+
+## Subagents (`.claude/agents/`)
+
+| Agent | Use it for |
+| --- | --- |
+| `torjuman-planner` | Turning a feature request into a written plan in `docs/plans/` — files, extension points, risks, checks, questions for the owner. Read-only on code. |
+| `torjuman-reviewer` | Adversarial review of a commit or PR against these rules and the plan. Read-only. Fixed verdict format. Run on every commit before the next step. |
+| `torjuman-verifier` | Running the gates (typecheck, build, Playwright, layers) and reporting exact results, so long output stays out of the main context. Changes nothing. |
+| `torjuman-llm` | Anything touching providers, models, prompts, schemas, cache keys, Explain/gloss, offline translation. |
+| `torjuman-reader` | Anything touching the reader: scrolling, virtualization, selection, the card panel, layout modes, popovers, marks. |
+| `torjuman-storage` | IndexedDB schema and migrations, the storage adapters, backups, book/tablet transfer, the relay, shares. |
+
+The main session plans with the owner, delegates to a specialist where the
+change is in its area, and always closes a step with the reviewer.
+
+## Map
+
+```
+src/
+  main.tsx, App.tsx    mount, PWA registration, route switch + onboarding gates
+  types.ts             the domain types (to be split, Phase 1)
+  app/                 composition root (AppContext), hash router, secrets,
+                       retrieval log, activity, PWA update, online state
+  platform/http/       HttpClient + WebHttpClient (proxy routing)
+  platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
+  lib/                 pure helpers: arabic, hash, id, saveFile, takhrij
+  components/          BidiText
+  shamela/             HTML parsers for shamela.ws pages
+  ingest/              book import + resumable crawler
+  dictionary/          roots and the root index
+  quran/               verse/ḥadīth detection, bundled muṣḥaf index
+  biography/           narrator names, rijāl profiles (itqan, taqrīb)
+  retrieval/           quran.com, sunnah.com, dorar.net, sharḥ, enrichment
+  qul/                 Qurʾān Universal Library resources (seed, read, compile)
+  translation/         provider contract, registry, models, profiles, prompt,
+                       schema, parsing, Explain, gloss
+    providers/         AnthropicProvider, GeminiProvider
+    offline/           on-device model (transformers.js)
+  library/             per-book transfer, whole-tablet transfer, relay, share target
+  share/               encrypted shared chapters
+  catalog/             recommended books + batch import
+  ui/                  screens; reader/ and settings/ hold most of the UI
+proxy/                 Cloudflare Worker: CORS proxy + transfer relay (KV)
+scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 ```
 
-**It only runs in a local checkout.** It reads `fixtures/` (unmodified pages fetched from
-shamela.ws) and `qul/` (resources downloaded from the Qurʾān Universal Library), both gitignored
-because this repository is public and neither is this project's to redistribute. A fresh clone
-cannot run it. CI therefore runs `npm run build` alone — **verification is a local gate, so run it
-before pushing.**
+`npm run layers` prints the real dependency graph; trust it over this map.
 
-### What the dev server cannot do
+## Traps
 
-`npm run dev` serves plain HTTP on a LAN address, and three consequences follow:
+Things that have already gone wrong once. Most have a README section; 5, 6,
+10 and 12 are recorded only here and in the code.
 
-- `crypto.subtle` and `crypto.randomUUID` are absent — both are secure-context only. SHA-256 and id
-  generation are hand-written in plain JS for exactly this reason (`src/lib/hash.ts`,
-  `src/lib/id.ts`). Share encryption genuinely needs `crypto.subtle` and fails there with a named
-  error rather than silently.
-- Service workers do not register, so nothing about offline or install is testable.
-- IndexedDB is per-origin, and a LAN IP is a different origin from the deployed site — with its own
-  empty database.
+1. **`.gitignore` without a leading slash matches at every level.** And the
+   deploy workflow's "source tree arrived intact" list names `src/`
+   directories — a new top-level `src/` directory goes on that list
+   (`biography` and `share` are missing from it today: FOUND_ISSUES 1).
+2. **API keys** — see Never. `app/secrets.ts` is the only reader and writer.
+3. **Public repo** — see Never. Screenshots for a PR use the synthetic books
+   the Playwright scripts build, not a real imported book.
+4. **Claude API.** Current models reject forced `tool_choice`; the code uses
+   `auto` plus a prompt instruction plus `strict: true` tools, and strict needs
+   `additionalProperties: false` on every object in the schema. Every call has
+   a text fallback (`parseSegments.ts`). Opus 5.5 takes `output_config.effort`.
+   IDs, prices (with per-model cache-read multipliers and Haiku 5.5's long
+   context tier), output ceilings and effort belong in `translation/models.ts`;
+   the few that are still inline elsewhere are listed in FOUND_ISSUES 4.
+   Saved profiles are migrated when a model is retired (`successorModel`).
+5. **Translation cache keys** (`cacheKeyFor` in `translation/prompt.ts`) are
+   a hash of selection, profile id and version, glossary hash, provider and
+   model. Changing any input, or the join, silently invalidates every cached
+   card. `npm run verify` pins this.
+6. **IndexedDB.** `DB_VERSION` in `IdbStorageAdapter.ts`; the existing-DB
+   branch uses `objectStoreNames.contains` guards, the fresh-install branch
+   creates everything — both must agree. A new store also needs:
+   `StorageAdapter` methods, `ShareStorageAdapter` (it implements the whole
+   interface), `BOOK_STORES` if per book, `WorkBundle` if backed up. The
+   whole-tablet transfer copies every store raw and refuses a different
+   schema version, so both tablets must run the same app version.
+7. **The reader scrolls the page, not a box.** `useWindowVirtualizer` with
+   `scrollMargin` measured from the screen root (observing `body` never fires:
+   `html, body { height: 100% }`), a sticky header, a sticky card-panel
+   column, overscan 200, `content-visibility: auto` on block text.
+   `TYPE_CHROME` in `BlockList.tsx` must match the CSS margins of each block
+   type or every jump lands off target. Selection endpoints are pinned
+   (`selectionPins.ts`) and `readSelection` takes text from stored blocks, not
+   the DOM. Run both Playwright checks after any reader change.
+8. **WebView browsers (DuckDuckGo on Android).** `blob:` downloads come out
+   0 B, a `data:` link the size of a library crashes the tab, and the Web
+   Share API refuses gzip files. `lib/saveFile.ts` (`needsDataUrl`) picks
+   `blob:` or `data:` for a download; for a whole library the owner uses
+   "Send through the proxy" instead (`library/relayTransfer.ts` and the
+   Worker's `/transfer/` route), which the transfer screen promotes in those
+   browsers.
+9. **Plain-HTTP LAN dev** has no `crypto.subtle` or `crypto.randomUUID`;
+   `lib/hash.ts` and `lib/id.ts` are plain JS for that reason.
+10. **The PWA** uses `registerType: 'prompt'`; the update bar appears on
+    reopen, reload or hourly. `public/share-target.js` is pulled into the
+    service worker by workbox `importScripts`. The Pages base path is derived
+    from `GITHUB_REPOSITORY` in `vite.config.ts`.
+11. **Proxy routes are listed in three places** that must agree:
+    `PROXIED_ORIGINS` in `platform/http/WebHttpClient.ts`, the dev proxy in
+    `vite.config.ts`, and `ROUTES` in `proxy/worker.js`. The Worker is
+    deployed by the owner with `wrangler` from the branch that has the change.
+12. **GitHub Pages deploys sometimes sit "queued"** on GitHub's side. Not a
+    code problem; the owner force-cancels and re-runs.
 
-Use `npm run stage` to test anything in that list.
+## Style
 
-## Architecture
-
-### Two swap points and one composition root
-
-The app is written so it can move to Capacitor later, and the whole of that preparation is two
-interfaces:
-
-- [`src/platform/http/HttpClient.ts`](src/platform/http/HttpClient.ts) — the only place that fetches
-  shamela.ws or the retrieval APIs. `WebHttpClient` rewrites those URLs onto a proxy path.
-- [`src/platform/storage/StorageAdapter.ts`](src/platform/storage/StorageAdapter.ts) — the only
-  persistence interface the app knows about. `IdbStorageAdapter.ts` is the single file in the
-  codebase that mentions IndexedDB.
-
-Both concretes are chosen in [`src/app/AppContext.tsx`](src/app/AppContext.tsx) and nowhere else.
-Every screen reaches its data through `useApp().storage` and none of them know which implementation
-that is.
-
-`StorageAdapter` has ~79 methods. A new object store must be created in **both** paths of
-`IdbStorageAdapter`'s `upgrade` callback — the incremental `oldVersion` branch *and* the
-fresh-create path below it. Missing the second one has happened twice; it works on your device
-(which upgrades) and throws on a new install (which creates).
-
-### Shared views are an adapter swap, not a second reader
-
-Three files, and understanding one without the others is misleading:
-
-1. [`src/share/ShareStorageAdapter.ts`](src/share/ShareStorageAdapter.ts) — a read-only
-   `StorageAdapter` over a downloaded bundle. Every method either reads the bundle, delegates to the
-   visitor's own storage (verses, tafsīr — data that lives on their device), or is an ignored no-op.
-   Writes go nowhere; `exportWork`/`importWork` throw.
-2. `StorageOverride` in `AppContext.tsx` — re-provides the whole app context with that adapter for
-   one subtree.
-3. [`src/app/readOnly.ts`](src/app/readOnly.ts) — a React context gating every mutating control.
-
-The payoff: [`ShareScreen.tsx`](src/ui/share/ShareScreen.tsx) renders the ordinary `ReaderScreen`
-unchanged. There is no second reading surface to keep in sync.
-
-Two rules for that gating. It is a **context, not a prop**, because the mutating controls sit in six
-components at three nesting levels and a missed prop means a visitor gets a button that spends
-somebody's money. And it **hides, never disables** — always `{!readOnly && <Thing/>}`, never
-`disabled={readOnly}`, because a visitor has no key and no provider and a greyed-out control only
-invites them to debug a setup they do not have.
-
-### Routing
-
-[`src/app/router.ts`](src/app/router.ts) is a ~40-line hash router over `useSyncExternalStore` — no
-routing dependency for six routes, and hash routing keeps the app working on a static host with no
-rewrite rules. `App.tsx` dispatches on it.
-
-The `share` route is checked **before** the onboarding and catalog gates, and that is load-bearing:
-a first-time visitor arrives in exactly the state both gates fire on, so without it they would be
-asked to pick a provider and import books before being allowed to read a chapter someone sent them.
-
-### The data model
-
-[`src/types.ts`](src/types.ts) holds it all. Four things that matter more than the rest:
-
-- **Block IDs are derived, not allocated**: `bookId:p{page}:{index}`. Same book, same page, same
-  position, same id — on any device, in any order. This is what lets a work backup restore onto a
-  device where the books were imported separately. An earlier monotonic counter was not
-  reproducible, and a re-import stranded every card and mark pointing at the old ids.
-- **`Block.text` is lossless and never mutated.** Harakāt preserved, nothing rewritten.
-  `Block.normalized` is a *parallel* string used only as a search index. Qurʾānic verses appear
-  inline mid-sentence rather than as their own blocks, so `Block.spans: InlineSpan[]` records inline
-  runs by character offset into `text`.
-- **Entities (verses, ḥadīth) are derived data** in their own store. Re-running detection over a
-  book rebuilds markers only and leaves cards, glossary and caches untouched — `regenerateEntities`
-  is a supported operation, not a migration.
-- **Cards extend a shared `CardBase`** carrying the anchor fields. The card panel sorts, scopes and
-  renders against `CardBase`, not against translation specifics, so note/explanation/sharḥ cards
-  drop into the same list.
-
-### Normalization: one frozen fold, with domain folds layered on top
-
-`normalize` in [`src/lib/arabic.ts`](src/lib/arabic.ts) built every block index in every user's
-database. **Treat it as frozen** — changing it invalidates those indexes.
-
-Where a domain needs a different fold, it adds its own on top rather than editing `normalize`:
-`quranFold` (muṣḥaf vs. plene orthography), `foldName` (dorar narrator matching), `foldQuery`
-(biographical names), `foldRoot` (dictionary roots), `letterFold`. Each exists because three or four
-systematic differences survive `normalize` and each one alone is enough to make a lookup silently
-return nothing. Follow that pattern.
-
-### Translation
-
-`src/translation/` is the seam. Nothing outside it names a provider except the registry and the
-settings screen; everything else asks [`registry.ts`](src/translation/registry.ts) for the provider a
-profile pins and calls the `TranslationProvider` interface.
-
-**The offline path is deliberately not a `TranslationProvider`.** It is absent from `PROVIDERS`, and
-`ProviderId` is narrowed to `CloudProviderId` wherever a real provider is required, so no code can
-treat the three interchangeably and hand the on-device NMT model a whole selection with scripture in
-it. The type checker enforces this.
-
-Structured output is **enforced, not requested**: Anthropic gets a forced tool call
-(`emit_translation`), Gemini a `responseSchema`. Anything needing web search runs as **two passes** —
-search and reason with `tool_choice: auto`, then structure with the tool forced — because a forced
-`tool_choice` prevents the model from calling search at all. Read text from *every* content block,
-never `content[0]`. Check `stop_reason`/`finishReason` on every response and distinguish truncation
-from a parse failure. **A paid response is never discarded**: on any failure the card shows what came
-back, with the reason, a Retry, and the raw text persisted.
-
-### Retrieval and enrichment
-
-`src/retrieval/` handles quran.com, sunnah.com and dorar.net. `src/quran/` matches quoted verses
-against the bundled Uthmānī muṣḥaf locally — no model call, no network. `src/lib/takhrij.ts` renders
-the ~30 fixed takhrīj phrases from a table, and both translation paths call it (offline finishes them
-in `segmentSelection`, cloud overwrites the model in `enrich.ts`).
-
-Detection throughout is **by content, not by delimiter or class name**. Shamela's inline classes
-(`c2`/`c4`/`c5`) are generated and unstable across volumes; dorar's fields are read by the Arabic
-label it prints, not by class; QUL files are identified by their first bytes and inner shape, not by
-filename.
-
-### Reaching Shamela: three deployments
-
-shamela.ws sends no CORS headers, so a browser can only reach it through something that adds them.
-
-| `PROXY_URL` | Requests go to | Importing |
-|---|---|---|
-| dev server | `/shamela/...`, same origin (Vite forwards it) | works |
-| set | `https://…workers.dev/shamela/...` (`proxy/worker.js`) | works |
-| unset | refused up front with `ProxyUnavailableError` | desktop import + Library transfer |
-
-Dev-server proxy routes: `/shamela`, `/quran-api`, `/dorar`. `/sunnah` is **commented out on
-purpose** — `api.sunnah.com` authenticates with a header, and a key goes nowhere but its own
-provider's endpoint. `api.anthropic.com` sends CORS headers and is called directly; the Anthropic key
-never touches the Worker.
-
-In the deployed PWA the import screen still renders, with the button disabled and the reason given.
-There is no button that cannot succeed.
-
-### Build-time configuration is derived, not hard-coded
-
-`vite.config.ts` computes all of it from `GITHUB_REPOSITORY`, which Actions always sets:
-
-- `base` — a project site serves from `/<repo>/`, and the same value is threaded through `VitePWA`'s
-  `base` and `scope`, the manifest's `id`/`scope`/`start_url`, and Workbox's `navigateFallback`. **A
-  mismatched scope is the quiet failure**: the service worker registers, controls nothing, and the app
-  appears installed while never working offline. Override with `BASE_PATH`.
-- `VITE_CATALOG_URL` and `VITE_SHARE_BASE_URL` — `raw.githubusercontent.com` on `main`, deliberately
-  *not* the tag, so correcting the catalog or publishing a share is one commit rather than a release.
-- `VITE_PROXY_URL` / `PROXY_URL` — unset is a supported state.
-
-## Rules that are not style preferences
-
-These are invariants. Each one is in the README with the reasoning; breaking one produces a quiet,
-serious failure rather than a bug report.
-
-**Scripture is never model-generated.** The load-bearing one:
-
-> A ḥadīth with no offline source must never reach the translation model. Not as a fallback, not as
-> a last resort.
-
-This is structural rather than remembered. `offline/segmentSelection.ts` cuts the selection at every
-entity boundary *before* anything is translated and returns two things: finished segments, and a list
-of plain prose spans. Scripture is never added to the prose list, and the prose list is the only
-thing the model receives — so the guard is the shape of the data, not a conditional someone could
-forget. Keep it that way. The same holds for verses: when retrieval fails, show the Arabic with an
-explicit "translation unavailable" marker and never substitute a model's rendering. Everything else
-degrades gracefully; a rough commentary translation is just rough, and the badge says so.
-
-**Never guess markup.** Inspect real Shamela (or dorar, or QUL) output and add it to `fixtures/`
-before writing a selector. That rule is what `npm run verify` exists to keep honest.
-
-**Never mutate `Block.text`.** If you find yourself assigning a `normalize()` result to it, stop.
-
-**No API key is ever embedded**, logged, interpolated into an error message, or sent anywhere but its
-own provider's endpoint. Both providers are bring-your-own-key; a key in a distributed client is
-trivially extractable and the bill is unbounded. Keys live in `localStorage` via
-[`src/app/secrets.ts`](src/app/secrets.ts) and are deliberately **not** part of `AppSettings`, so no
-backup file has ever carried one.
-
-**Ship pointers, not content.** This repository is public and most of the works involved are in
-copyright. The catalog names books rather than containing them; `public/qul/` names resources rather
-than carrying them. Licences differ **per resource** — check each one individually, on its own page,
-and record the judgement beside the decision in `src/qul/seed.ts`. "Exclusively licensed" in a README
-means redistribution is not ours to grant; don't push it. `npm run verify` scans the built output for
-commentary phrasing as a backstop.
-
-**Leading slashes in `.gitignore` are load-bearing.** A pattern naming a top-level directory without
-one matches at *every* level: `qul/` silently excluded `src/qul/` too, and that surfaced in CI as
-sixteen unrelated-looking TS2307/TS7006 errors. Anchor them, and note that
-`/dir/` excludes the directory so a later `!` cannot re-include anything — `/dir/*` is the idiom that
-makes negations work.
-
-**A share bundle and its key must never travel together.** `public/shares/` is default-deny: the
-`.bin` ciphertext is committed (opaque without the key), everything else is excluded. The app's
-"save link as a file" writes `<id>.link.txt`, and those carry the decryption key — they belong in
-`/share-links/`, which is gitignored. Dropping one into `public/shares/` and running `git add -A`
-would publish the keys and make the encryption pointless.
-
-**Ask before adding a dependency.** The three beyond the original spec list are each flagged in the
-README with a reason.
-
-## Deploying
-
-Pages deploys from `v*` tags, not from pushes to `main` — testers install this as a PWA and keep it,
-so what they get should be something deliberately released. The tag name becomes the version shown in
-Settings.
-
-**Push `main` first, then tag.** A tag pointing at an older commit deploys that commit, and the
-symptom is a change that "did not deploy" while the build log reports success:
-
-```bash
-git push origin main
-git log v0.6.5..HEAD --oneline     # confirm only the new commits
-git tag -a v0.6.6 -m "…" && git push origin v0.6.6
-```
-
-`npm run stage` is the way to look at a change before releasing it — a separate origin, a separate
-build, no tester pointed at it. Use `workflow_dispatch` to redeploy the current tag without cutting a
-new one.
-
-Publishing a shared chapter is: Share in the reader (which downloads `<id>.bin` plus a link sidecar)
-→ `npm run share:add -- <the .bin>` → commit `public/shares/<id>.bin` to `main`. No tag needed; the
-loader reads from `main` via raw.githubusercontent. Note that republishing currently mints a **new**
-id and key, so an updated chapter does not keep its old link.
-
-## Code conventions
-
-Match what is there. The distinctive thing about this codebase is its comments: most files open with
-a block explaining *why* the file is shaped the way it is, usually naming the alternative that was
-tried and what went wrong with it, and tricky decisions carry the measurement that settled them.
-Inline comments explain reasoning, not mechanics. When you change a decision, update the comment that
-justified the old one — a stale rationale is worse than none here, because these comments are what
-the next change is reasoned from.
-
-Other conventions: no abbreviations in type names; Arabic in UI strings is written out properly with
-diacritics where the real text has them; user-facing failures land as a sentence naming what happened
-and what to do, never as a blank screen or a greyed control.
+- Comments explain *why*, in full sentences, the way the existing ones do —
+  what went wrong, what was measured, what the alternative was. Moved code
+  keeps its comments verbatim.
+- Names say what a thing is in the reader's terms ("block", "card", "mark",
+  "profile"), matching the README.
+- TypeScript strict, no `any` without a comment saying why. No default
+  exports. Tailwind for styling, tokens in `src/index.css`.
+- Arabic text handling goes through `lib/arabic.ts` (`normalize`, folding) —
+  never an ad-hoc regex over diacritics.

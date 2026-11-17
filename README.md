@@ -33,20 +33,53 @@ ID generation are written in plain JS for exactly this reason
 
 ```
 src/
+  main.tsx, App.tsx  mount, PWA registration, route switch + onboarding gates
+  types.ts           the domain types
+  app/               composition root (AppContext), hash router, secrets,
+                     retrieval log, activity, PWA update, online state
   platform/          the two swap points for Capacitor
-    http/            HttpClient interface + WebHttpClient (uses the dev proxy)
+    http/            HttpClient interface + WebHttpClient (uses the proxy)
     storage/         StorageAdapter interface + IdbStorageAdapter
+  lib/               pure helpers: arabic, hash, id, saveFile, takhrij
+  components/        BidiText
   shamela/           parsers: parseBook, parsePage, structure, quranRefs, urls
   ingest/            importer (metadata, TOC, block building) + crawler
-  translate/         profiles, prompt building, Anthropic client, JSON parsing
-  retrieval/         quran.com, sunnah.com, and the enrichment step
-  ui/                library, import wizard, reader, settings
-scripts/             verify-parsers.ts
-fixtures/            unmodified HTML fetched from shamela.ws
+  dictionary/        roots and the root index
+  quran/             verse and ḥadīth detection, the bundled muṣḥaf index
+  biography/         narrator names and rijāl profiles
+  retrieval/         quran.com, sunnah.com, dorar.net, sharḥ, enrichment
+  qul/               Qurʾān Universal Library resources
+  translation/       provider contract and registry, models, profiles,
+                     prompt, schema, parsing, Explain, word gloss
+    providers/       Anthropic, Gemini
+    offline/         the on-device model
+  library/           moving a book or a whole tablet, the relay
+  share/             encrypted shared chapters
+  catalog/           the recommended books and batch import
+  ui/                screens; reader/ and settings/ hold most of it
+proxy/               the Cloudflare Worker: CORS proxy + transfer relay
+scripts/             verify-*, check-layers, build tools
+fixtures/            unmodified HTML fetched from shamela.ws (not committed)
 ```
 
-`IdbStorageAdapter.ts` is the only file that mentions IndexedDB, and
-`platform/http/` is the only place that calls `fetch` against an external host.
+`IdbStorageAdapter.ts` is the only file that uses the IndexedDB API, and
+`platform/http/` is the only place that calls `fetch` through the proxy.
+A few modules fetch directly, on purpose, because they need what
+`HttpClient` — text `GET`s only — does not do or because their host allows
+browser requests: the Gemini API (`GeminiProvider.ts`, `qul/compile.ts`), the
+transfer relay's binary `PUT`/`GET`/`DELETE` (`library/relayTransfer.ts`), and
+static files — the optional remote catalog (`catalog/catalogService.ts`),
+shared-chapter bundles (`share/loadShare.ts`), and the app's own bundled
+assets (`qul/seed.ts`, `quran/quranIndex.ts`). Two libraries make their own
+requests: the Anthropic SDK calls the Anthropic API from the browser
+(`AnthropicProvider.ts`, `explain.ts`, `gloss.ts`, `qul/compile.ts`), and
+transformers.js downloads the offline model's weights from the Hugging Face
+Hub (`translation/offline/OfflineProvider.ts`).
+
+`npm run layers` prints the actual dependency graph by directory. The code is
+being restructured into clean layers, one approved phase at a time; the plan,
+the rules and the progress log are in [`docs/refactor/`](docs/refactor/), and
+the working rules for Claude are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Notes on the Shamela markup
 
