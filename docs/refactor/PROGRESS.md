@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phases 0–4 complete (PRs khacha329/Torjuman#8, #9, #10, #11, and Phase 4's on `claude/restructure-phase-4`), awaiting the owner's `npm run verify`, the tablet checks and merge
+## Current state: Phases 0–5 complete (PRs khacha329/Torjuman#8, #9, #10, #11, Phase 4's on `claude/restructure-phase-4` and Phase 5's on `claude/restructure-phase-5`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -2307,6 +2307,1990 @@ a Library transfer file deletes its cards, marks, explanations, sharḥ cards
 and position, though the dialog says they are kept; and a replacement that
 fails part way leaves no copy of the book. Check D's `book-transfer` pins
 today's behaviour. It needs its own change, if the owner wants one.
+
+## Phase 5: big UI files (complete, branch `claude/restructure-phase-5`)
+
+Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
+**approved 2026-11-16, all seventeen answers as recommended** (`79171e4`).
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 5a. U's reader captures, baselined on the old code; FOUND_ISSUES 26–36 (the plan's A–K) | U: three runs (one FAIL on a PNG), five breakages; T B L R S pass; review FAIL (U as baselined cannot gate the moves) | `23bc734` |
+| 5a fix — the margin's place and the proposal bar made deterministic, dialogs screenshotted alone, `reader-page-cards` added; FOUND_ISSUES 37, 26 and 33 corrected | U five runs PASS in a row, two breakages; T B L R S pass; review PASS WITH NOTES | `5a141b6` |
+| 5a re-review's notes — FOUND_ISSUES 38 and a 37 wording fix | docs only | `7726a45` |
+| R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
+| 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
+| 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review PASS WITH NOTES | `ea6c34e` |
+| 5d1. `Section` → `ui/settings/Section.tsx` | T B L R S U pass; review PASS WITH NOTES | `541ab15` |
+| 5d2. `CatalogSection` → its file | T B L R S U pass; review PASS WITH NOTES | `d7c2838` |
+| 5d3. `TranslationSection` → its file | T B L R S U pass; review PASS | `ec12f28` |
+| 5d4. `KeysSection` with `TestState`, `ProviderKeyField`, `SunnahKeyField` | T B L R S U pass; review PASS | `857ad17` |
+| 5d5. `ReadingSection` → its file | T B L R S U pass; review PASS | `35463d9` |
+| 5d6. `DisplaySection` → its file | T B L R S U pass; review PASS | `8589497` |
+| 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
+| 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
+| 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `ad81ec7` |
+| 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review PASS | `bdd5a5c` |
+| 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review PASS | `aa423d9` |
+| 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `539de97` |
+| 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review PASS WITH NOTES | `2d72185` |
+| 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review PASS | `24629fb` |
+| 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review PASS | `5561473` |
+| 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review PASS WITH NOTES | `c0ea5e3` |
+| 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review PASS WITH NOTES | `63f03d7` |
+| 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review PASS WITH NOTES | `24d1188` |
+| 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review PASS WITH NOTES | `8810abb` |
+| 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review PASS WITH NOTES | `98f44f8` |
+| 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review PASS WITH NOTES | `0c52e6b` |
+| 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review PASS WITH NOTES | `1a3e6a6` |
+| 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review PASS WITH NOTES | `dbfa2c4` |
+| 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
+| 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
+| 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
+| 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review PASS WITH NOTES | `6ed8c0d` |
+| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T B L R S U P Q D and the SSR build pass; phase review PASS WITH NOTES | `6284661`, `bc3aa1f`, `be69914` |
+
+**Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **35 captures** (17 at 960×600, 18 at 600×960), plain build, each an
+  `.html` and a `.png`: **70 manifest lines added, none removed or changed**
+  (`git diff --numstat`: `70 0`); the manifest is 250 files. Each in a fresh
+  context from a new seed option, `seedReader` (blocks 1–5 of the seeded book
+  rewritten in place as a verse, a numbered matn, two sharḥ blocks and the
+  next numbered matn; a Qurʾān, a ḥadīth and a narrator entity; three `read`
+  marks; one cached gloss; `compileEnabled` for the compile capture only), or
+  from 3b's `seedCards`; no earlier context's data changed. Synthetic only;
+  the verse is read from the committed muṣḥaf. Names: `reader-page`,
+  `reader-collapsed` (960), `reader-sheet-open` (600), `reader-quran`,
+  `reader-quran-similar`, `reader-quran-compiled`, `reader-hadith`,
+  `reader-hadith-diagnostics`, `reader-biography`, `reader-rail`,
+  `reader-meaning`, `reader-meaning-cached`, `reader-margin-menu`,
+  `reader-batch-proposal`, `reader-notice`, `reader-popover` (600),
+  `reader-toc`, `reader-search`, `reader-share`. Only `reader-page` is the
+  whole body; every other capture is the element its state adds.
+- **Run time** 223 s and 226 s for the whole of U (was ≈150 s at 3b); builds
+  ≈6 s each.
+- **Masked in the DOM: nothing.** Three causes of flakes were found and
+  handled in how the states are reached, each in the script:
+  (1) a bare `click` on text below the fold let Playwright scroll it in, and
+  the page landed at scrollY 386 or 163 on different runs, so the ḥadīth
+  popover had the same DOM and different pixels — taps now scroll the target
+  to the middle and wait for the scroll to stop (`centre`); (2) the ḥadīth
+  popover was placed at top 12 px on most runs and **275.8 px on one**, running
+  off the bottom of the screen with "Show dorar diagnostics" out of reach:
+  AnchoredPanel places a popover from its height at mount and again only on a
+  scroll, a resize or a new `onClose` (a reader render; FOUND_ISSUES 37), so
+  content that arrives later keeps the first place unless the reader happens
+  to render — every sheet and popover is now captured after a `resize` event
+  (`captureDialog`); (3) in **screenshots only**, the sticky header's backdrop
+  blur is switched off for those captures (Playwright's `style` option): a
+  popover over the header showed it through its corner, a few levels (≤ 7/255)
+  apart between runs. **Residual:** after (3), of the three full runs compared
+  with the final manifest outside a breakage, one differed in
+  `960x600/reader-quran.png` alone (DOM identical; the dump was overwritten
+  before it could be inspected); four reader-only reruns in separate processes,
+  and the captures outside each edit in the five breakage runs, were
+  identical. (Corrected after the review, which found the first wording's
+  "one of seven" counted breakage runs as clean runs.) Item (2) is now
+  FOUND_ISSUES 37.
+- **Departures from the plan, each in the script's header:** the verse is
+  Ibrāhīm **2**, not 14:7 — the bundled matching-ayah resource has no entry
+  for 14:7, so its sheet would have had no Similar tab; 14:2 has two matches.
+  `reader-collapsed` and `reader-sheet-open` use `seedCards` so the edge tab
+  has a count ("Cards (5)") and the sheet has cards. The Tafsīr, Topics and
+  Surah tabs are not reachable (no such QUL file is committed); the rest of
+  the plan's "not captured" list is in the script's.
+- **Proof.** Run 1 `--write-manifest` (`git diff --numstat`: 70 added, 0
+  removed); then `npm run verify:markup` three times: FAIL 249/250 (the
+  residual PNG above), PASS 250/250, and, as the last gate after R and S,
+  PASS 250/250. Breakages, each a temporary edit restored from a `cp`
+  backup, `git diff --quiet -- src` after each, every run exit 1:
+  1. `backdrop-blur` removed from the header (`ReaderScreen.tsx:766`): DOM of
+     `reader-page` and `reader-header` at both sizes, as planned; and the
+     **PNGs** of `reader-rail`, `reader-toc` (both sizes) and
+     `reader-batch-proposal` (600) — their element boxes overlap the sticky
+     header, which shows through the rail's and the drawer's translucency
+     (237/250).
+  2. "Translate all…" removed from the ḥadīth footer: `reader-hadith` at both
+     sizes only (246/250).
+  3. The compile blocked message changed: `reader-quran-compiled` at both
+     sizes only (246/250).
+  4. `preferSheet` dropped from QuranSheet: `reader-quran-similar` **and
+     `reader-quran-compiled`** at 960 (at 600 every panel is a sheet anyway);
+     the plan named only the first, but the prop governs every
+     non-Translation tab, Compiled included (246/250).
+  5. The batch bar's text changed ("cost nothing" → "cost nothing at all"):
+     `reader-batch-proposal` at both sizes only (246/250). Its heading was not
+     the edit, because the capture finds the bar by it.
+- **R** first and alone (`timeout 1200 npm run verify:reader`, 1 min 30 s):
+  PASS 28/28; landscape 240,000 px in 33.4 s, 1,905 nodes, **1 long task
+  (55 ms, 5 ms blocking)**; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long
+  tasks. With no `src/` change the one long task is noise against 4n's 0.
+  **S** PASS 30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged).
+  **L** `--check`: no file-level cycle, 11 rules hold.
+
+- **Review of 5a: FAIL** — the commit was clean, but U as baselined could not
+  gate the moves. In the reviewer's first of two runs U failed 248/250:
+  `600x960/reader-margin-menu.html` (MarginMenu at top 331.375 px against the
+  baseline's 386.375 px — it places itself at the margin target's top, and
+  after `centre` the target's place varied by 55 px with scrollY settled,
+  which was all `centre` waited on) and `600x960/reader-batch-proposal.png`.
+  The baselined `600x960/reader-batch-proposal.png` showed the reader's header,
+  not the bar, which sat under the sticky header. `960x600/reader-quran.png`'s
+  flake was left unexplained. No capture held a CardMarkerDot, which 5f3 moves.
+  The placement race belonged in FOUND_ISSUES; 33 cited the wrong lines for
+  the key check; 26 left out what the request sends. PROGRESS's run counts
+  ("two runs", "one of seven") did not match the log.
+
+**5a fix, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- `centre` waits on the target's rectangle and scrollY together, before and
+  after scrolling, and repeats the scroll until the target's middle is within
+  1 px of the screen's (or the page is at the top, for a target that cannot be
+  centred), failing after four tries.
+- The proposal is captured after scrolling back to the top and waiting for the
+  bar's place to be still; the 600×960 PNG now shows the bar (looked at).
+- `captureDialog`'s screenshot `style` makes everything but the dialog
+  invisible (`body *` outside the dialog `visibility: hidden`, the dialog
+  `visible`), in place of only turning off the header's blur; the DOM is
+  untouched, and `reader-page`/`reader-header` capture what is hidden. It
+  applies to every sheet and popover capture, `reader-popover` included.
+- New `reader-page-cards`, both sizes: the body with `seedCards`' five cards
+  — the five margin markers (CardMarkerDot), the translated-range strips and,
+  at 960, the panel with the cards.
+- FOUND_ISSUES 37 filed (the AnchoredPanel placement race); 26 gains what the
+  request sends; 33 cites `gloss.ts:108-110` for the key check. The script's
+  header points at 37.
+- **Manifest:** against `79171e4` (before 5a) `git diff --numstat` is `74 0`,
+  so the 180 earlier lines are byte-identical; against `23bc734` it is `22
+  18`: the four `reader-page-cards` lines added and 18 lines changed, all
+  PNGs — the 17 sheet and popover screenshots (their corners) and
+  `600x960/reader-batch-proposal.png`. No `.html` changed. 254 files, 37
+  captures (18 at 960, 19 at 600).
+- **U five runs in a row, full, against the rewritten manifest:** after `--write-manifest`
+  (242 s), `npm run verify:markup` five times, each `PASS — 254/254 files
+  match docs/refactor/phase2/markup.sha256` (248 s, 243 s, 246 s, 242 s,
+  239 s for the captures; about 4 min each with the builds). Before that, two
+  reader-only runs of the new harness in separate processes were identical
+  (74/74).
+- **Breakages** (temporary edits restored from a `cp` backup, `src/` clean
+  after each): (1) the batch bar's text ("cost
+  nothing" → "cost nothing at all") → exit 1, 250/254: `reader-batch-proposal`
+  `.html` and `.png` at both sizes, the 600×960 PNG among them; (2)
+  CardMarkerDot's title ("Open this translation" → "Open this one
+  translation", `BlockList.tsx`) → exit 1, 252/254: `reader-page-cards.html`
+  at both sizes (a title does not paint, so the PNGs match).
+- **Not a check's fault, seen while looking:** in every QuranSheet capture
+  the verse's Uthmani marks (ٱ, the small high signs) draw as "NO GLYPH" boxes.
+  `ArabicVerse` sets no font, so the sheet's Arabic falls back from
+  `system-ui` to this container's fonts, which lack them; the blocks set the
+  reader's font inline and render the same verse whole. On the tablet the
+  system Arabic font decides; only the tablet can show it.
+- **R** first and alone: the first run **hung** after the landscape report
+  (landscape 240,000 px, 33.3 s, 1,905 nodes, 0 long tasks), the CPU idle, and
+  was killed at 10 min; re-run once alone, as the plan's Design §1.5 says:
+  PASS 28/28 in 1 min 35 s, landscape 240,000 px in 33.3 s, 1,905 nodes, 0
+  long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks — as
+  4n. This is the second R hang on an unchanged bundle (4n's was the first);
+  the plan says a second hang in a row stops the step, and these were not in a
+  row (5a's R ran clean), but it is recorded for the reviewer. **S** PASS
+  30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged). **L**
+  `--check`: no file-level cycle, 11 rules hold.
+
+**Check R's hang, 2026-11-17** (the owner's amendment to Q2)
+- R hung twice on unchanged bundles at two different points (4n; the 5a
+  fix). Five runs with `DEBUG=pw:api` afterwards all passed (28/28, 88–90 s,
+  performance as the baseline), so the cause was not caught. The 5a
+  re-review's candidate: the seed's IndexedDB transactions had `oncomplete`
+  and `onerror` but no `onabort`, so an aborted write would wait forever.
+- By the owner's choice, `scripts/verify-reader-scroll.mjs` now gives the
+  setup and teardown waits limits of their own (`within(ms, label, …)`: the
+  seed, the
+  onboarding write, opening and closing each context, closing the browser
+  and the preview server), adds `onabort` to the seed's transactions and
+  `onblocked` to its open, and runs a ten-minute watchdog that bounds every
+  other wait (the checks' own `evaluate` calls, `newPage`,
+  `addInitScript`), printing the step it was in and exiting 2. No assertion
+  changed. Review of `2b2f9da`: PASS WITH NOTES — no failure can become a
+  pass, `onblocked` cannot fire on a version-less open, the limits are
+  generous; this wording corrected, and §1.5 and Q2 now point at the
+  amendment.
+- **Proven:** a normal run PASS 28/28 (240,000 px in 33.4 s, 1,905 nodes, 0
+  long tasks; 175,800 px in 24.4 s, 1,904 nodes); a seed made never to
+  finish fails after 61 s with "timed out after 60000 ms: seeding the book"
+  and exit 1, instead of hanging; restored from a copy (`cmp` equal).
+
+**Step 5b, measured 2026-11-17** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **27 new checks** in `scripts/verify-reader-scroll.mjs`, after the two
+  existing profiles, **each scenario in a fresh browser context** with its own
+  seed: R's 1,500 blocks plus three `read` marks (blocks 400, 450, 500), two
+  translation cards (blocks 300 and 1000) and a one-entry synthetic
+  dictionary book (`role: 'dictionary'`, root ع م ل). Landscape, 9 scenarios:
+  Ctrl+`\` (2 checks), Hide cards and the edge tab (2), a marker opening its
+  card in the panel and flashing its block, cleared after 1.6 s (2), a card
+  tap bringing block 1000 to the middle and flashing it (2), the read-mark
+  ↑ ↓ (4), double-tap (2), the restore applied once (1), the divider by mouse
+  (3), the divider by finger (report). Portrait, 4: the sheet's handle (2), a
+  marker opening a popover (1), the read-mark ↑ ↓ (4), double-tap (2). Every
+  setup and teardown wait is in `within()` and every scenario names its
+  `step()`; a scenario that throws is one named FAIL and the run goes on. The
+  28 existing checks keep their labels, order and values; R is now 55 checks.
+- **Run time** 134–137 s for the whole of R (was ≈90 s): the scenarios add
+  about 45 s.
+- **Five runs in a row**, each `timeout 1200 npm run verify:reader`, first and
+  alone: PASS 55/55 (137 s), PASS 55/55 (135 s), PASS 55/55 (136 s), PASS
+  55/55 (134 s), PASS 55/55 (135 s). Landscape 240,000 px in 33.4 / 33.3 /
+  33.3 / 33.3 / 33.4 s, 1,905 nodes, 0 long tasks; portrait 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks, every run — the baseline. Every new
+  check's line and every report line was byte-identical across the five; the
+  only difference in any line was an existing check's detail (portrait
+  "scrolling up into never-seen blocks": 5 or 6 pairs on screen, worst gap 0),
+  as before 5b. No flake to fix, no hang.
+- **Report lines** (not judged; every later step must print the same):
+  `{"fingerDrag":{"from":525,"to":645,"before":432,"after":405,"userSelect":"none","storedWidth":405,"afterStrayMouseMove":300}}`
+  — under CDP touch emulation the finger drag resized the panel for its first
+  30 px (432 → 405, stored), then the browser took the gesture, the drag was
+  never ended (`user-select` left `none`) and a later plain mouse move with no
+  button resized the panel to 300 px: FOUND_ISSUES 27 as measured in Chromium's
+  emulation; the tablet (M item 3) is still the answer. And, in both
+  profiles, `{"readMarkDown":{"from":450,"next":500,"atMiddle":450}}` — ↓ from
+  a mark that ↑ centred stays on it (FOUND_ISSUES 39, filed here).
+- **Departures from the plan's table.** (1) The pointer drag goes 120 px
+  **right** and then far left: at 960 px the saved 460 px already renders at
+  the clamp's ceiling (45% = 432 px), so a drag left cannot widen it; the far
+  drag checks the clamp instead. (2) The read marks are judged as ↓ once from
+  the top, then ↑ twice from past the marks, not "↓ twice and ↑ once": a
+  second ↓ does not move (FOUND_ISSUES 39), so that sequence would either fail
+  on today's code or bake the bug in; it is a report line. (3) "In the middle"
+  for the read marks means the block at the middle of the area below the
+  header, not a distance from the screen's middle: every centred jump lands
+  one header height below the screen's middle and `settleOn` retries it eight
+  times (FOUND_ISSUES 40, filed here); the card tap keeps the search check's
+  tolerance, as planned. (4) Every scenario has its own context, not one
+  context per profile, so a failure cannot leak into the next scenario and the
+  divider's width write is isolated anyway. (5) The plan's breakage for
+  "position, once" (`restoredRef` not set) changes nothing observable: the
+  restore effect's dependencies do not change within one book, so it runs
+  once with or without the guard (run 11 below passes 55/55); the only route
+  to a second restore today is a book-to-book hash change (FOUND_ISSUES 31).
+  The check is proven instead with the restore applied a second time, 2 s
+  after the first. (6) Q16 asked for a `torjuman-reader` reading of 5b's
+  additions before the baseline. The additions were built by the
+  `torjuman-reader` agent itself, which cannot start another agent, so the
+  independent read was the `torjuman-reviewer`'s, after the baseline was
+  committed (`ad16fdc`) — as for 5a. A departure from Q16, reported to the
+  owner.
+- **Breakages**, each a temporary edit to `ui/reader/ReaderScreen.tsx`
+  restored from a `cp` backup (`cmp` equal, `git diff --quiet -- src` after
+  each), each a full `npm run verify:reader`; none failed any of the 28
+  existing checks:
+  1. the divider's `clampPanelWidth` removed from its move handler → exit 1,
+     54/55: "dragged far left it stops at the clamp…" (panel 432, stored 760);
+  2. Ctrl+`\` listening for `|` → 53/55: both Ctrl+`\` checks;
+  3. the header's Hide cards writing the current `panelCollapsed` → 53/55:
+     both Hide cards checks;
+  4. the marker's `if (panelVisible)` inverted → 52/55: both marker → panel
+     checks (a popover opened) and marker → popover;
+  5. the read-mark jump to `order + 1` → 49/55: the three judged read-mark
+     checks at both sizes (block 401, 501, 451 at the middle);
+  6. the saved position applied a second time, 2 s after the first → 54/55:
+     "after the restore, a jump elsewhere stays where it landed" (restored
+     700, jumped to 95, 2.5 s later 700); its second restore also landed in
+     the report's scroll (7.1 s / 6.1 s), which is not judged;
+  7. the `dblclick` listener not added → 51/55: both double-tap checks at both
+     sizes (no sheet; the word stays selected and the rail shows);
+  8. the sheet's handle not toggling → 53/55: both sheet checks;
+  9. `flash` a no-op → 53/55: the marker's flash and the card's flash;
+  10. `focusCard` not jumping → 53/55: both card → text checks;
+  11. (the plan's) `restoredRef.current = true` removed → exit 0, 55/55, as
+      explained in (5) above.
+- **S** PASS 30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged).
+  **L** `--check`: no file-level cycle, 11 rules hold. **U** last: PASS
+  254/254 (250 s).
+- FOUND_ISSUES **39** (↓ from a centred read mark) and **40** (centred jumps
+  one header low, `settleOn`'s eight passes) filed, left unfixed. RESTRUCTURE
+  §5's R row now says 55 and names the report lines.
+
+- **Review of 5b (`ad16fdc`): PASS WITH NOTES; "ready for 5c".** Two R runs
+  55/55, every new line identical to the builder's; each new check can fail
+  and none passes when its element is missing; the departures acceptable
+  (the read-mark checks do not build FOUND_ISSUES 39 in); 39 and 40
+  accurate. Coverage gaps for the parts to come, guarded by reading the
+  same-name props only: CommentaryBars' sharḥ notice and busy bar, the card
+  panel's per-kind collapse/delete/note/glossary actions, the sheets' close
+  paths. Note: the portrait read-mark checks pass by 8–9 px, deterministic;
+  a header-height change of ~17 px would flip them (U would show it too).
+  Applied: the script header said nothing "checked" those states before 5b,
+  untrue given U's captures — now "asserted the behaviour of"; departure (6)
+  above records what happened; FOUND_ISSUES 39's line range.
+
+**Step 5c, measured 2026-11-17** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **Check P** (`scripts/verify-translate.mjs`, `npm run verify:translate`,
+  record `docs/refactor/phase5/translate.json`): the production build under
+  `vite preview`, Chromium 960×600 touch, en-US, UTC, service workers
+  blocked; a synthetic 12-block book (a verse — Ibrāhīm 2 from the committed
+  muṣḥaf, as U — a numbered matn, two sharḥ blocks, the next matn, test
+  sentences) with a Qurʾān and a ḥadīth entity. The two model hosts are
+  answered from canned responses copied from Q's (Gemini's SSE and error
+  JSON; Anthropic's Messages event stream with the strict emit_translation
+  tool and a web-search research turn, non-zero cache read and write), **each
+  request held until its scenario answers it**; every other host is aborted.
+  Every scenario goes through the reader's own controls (a selection and the
+  rail's Translate, the card's Retranslate menu, the verse sheet's footer, a
+  600 ms press on the matn's margin and Translate all…). Watchdog,
+  `within()` and `step()` as R (the amendment to Q2).
+- **23 scenarios in 6 groups, 18 requests.** With Gemini and sunnah.com keys,
+  the default profile: `translate` (three blocks, the middle a verse;
+  recorded while held, and again with a second selection showing the rail's
+  busy button), `cache-hit` (no request), `retranslate` (same model, forced),
+  `retranslate-with` (Flash Lite 3.5: the model in the URL and on the card),
+  `stale` (a glossary row written, reloaded: the old card's stale note —
+  `isStale`'s `cacheKeyFor` — then a cache miss with the glossary in the
+  prompt), `block` (the verse sheet's "Translate the surrounding passage"),
+  `error-400` (api), `error-auth` (403, auth), `error-truncated` (MAX_TOKENS
+  twice: two requests, the doubled budget, `rawResponse`), `error-network`
+  (dropped), `error-cached` (the failed card served from the cache, no
+  request: FOUND_ISSUES 41), `retranslate-no-key` (a Claude model with no
+  Claude key: 7 cards → 6, FOUND_ISSUES 42), `batch` (the proposal; each of
+  three requests held, "Translating k of 3…"; the third a 500: "Finished — 2
+  of 3 blocks translated, 1 did not complete."), `batch-again` (all from the
+  cache, no request). Without a key: `no-key` (banner, notice, no request, no
+  card), `no-key-dismiss`, `no-key-batch` ("0 of 3 …, 3 did not complete",
+  the notice). Gemini profiles: `external-lookup` (GeminiProvider sends no
+  flag, so this pins only the card's `usedExternalLookup` and its "web
+  search" label — FOUND_ISSUES 43), `transliteration`
+  (`TRANSLITERATION_INSTRUCTION` in the system prompt). A Claude profile
+  (fake Anthropic key): `claude-translate` (one request with the tool; the
+  card's cost and usage; "Claude: 1 · $0.0072", "2,048 tokens from cache")
+  and `claude-external-lookup` (a second profile with allowExternalLookup made
+  active, reloaded: the research request carries the `web_search` tool, then
+  the structure request; "Claude: 1 · $0.014"). On the device:
+  `offline-no-bundle` (the bundled English refused: a plain Error, mapped by
+  `translate` itself to `api` — the only route found to that branch) and
+  `offline` (the model download refused: OfflineProvider's own `network`).
+- **Recorded per scenario:** each model request (method, URL, every header
+  Chromium sends — `allHeaders()` — and the body, parsed JSON that
+  re-serializes to the exact text sent), the `cards` rows in key order as
+  IndexedDB holds them, and the screen: the bars above the text, the session
+  line, each panel card's text, the rail's Translate when up; some scenarios
+  also a state while a request is held. **Record 352,616 bytes, 4,951
+  lines.**
+- **Masked:** `x-goog-api-key`'s and `x-api-key`'s values (after each is
+  asserted to be its host's fake key, so the record can be asserted
+  key-free); the SDK's `x-stainless-os`, `-arch`, `-runtime`,
+  `-runtime-version` exactly as Q masks them; `user-agent`, `sec-ch-ua`,
+  `sec-ch-ua-platform` (the OS and Chromium build, which would differ on the
+  owner's PC); the preview origin in `origin` and `referer` (its port is the
+  first free one). No id, timestamp or card field.
+- **Pinned:** `page.clock` fixed, **one instant per page load, a minute after
+  the last**; `Math.random` seeded (D's mulberry32) before the app's scripts.
+  Found while building: with one instant for every load, `newId` repeated
+  its ids after a reload (its counter restarts with the page, the seed is
+  installed afresh), and a card written after the reload overwrote an older
+  one (`error-400`'s card replaced `retranslate-with`'s).
+- **Asserted** every run: each model key in its own header (`x-goog-api-key`,
+  `x-api-key`) of every request to its own host and nowhere else; the
+  sunnah.com key only in a request to sunnah.com (directly or through the
+  proxy's `/sunnah/`), never in a model request or a card; no key in any
+  request's URL, body or other header (`allHeaders()`), any IndexedDB store,
+  sessionStorage, a cookie, Cache Storage's names, the DOM, the page's URL,
+  `history.state`, `window.name`, the console or page errors, the record; in
+  localStorage only its own entry; no `Authorization`; every held request
+  answered and none unexpected; a request is tagged with the scenario it
+  arrived in, so one that comes late fails its own scenario rather than
+  being taken by the next.
+- **Not seen by any scenario, so 5i3's reviewer checks them by reading**
+  (also in the script's header): the offline stats updater
+  (`useTranslator.ts:263-270` — both offline scenarios fail before it, and
+  `translateProse` always loads the model, `OfflineProvider.ts:365`); the
+  streaming entry's removal in `finally` (`:356-360` — the streaming text
+  renders only while a card is loading, and a fulfilled response arrives at
+  once); `SessionStats.cacheWriteTokens` (`:330` — summed, read nowhere in
+  `src/ui`); and the cost sum's accumulation (`previous.costUsd +`,
+  `:322-331` — each Claude session line follows one translation after a
+  fresh load, so a sum that dropped the previous total would show the same
+  figure). Everything else Design §7 moves is seen, the per-provider count
+  and the cost of a single Claude translation through the Claude group.
+- **Run time** 62–63 s for the script, about 70 s for `npm run
+  verify:translate` with its build.
+- **Determinism:** the final script: a run with `--out`, then `--write` from
+  a second run, byte-identical to each other; a compare under
+  `TZ=America/St_Johns` PASS; and the gate run PASS. Earlier versions were as
+  stable (before the Claude group: five identical, under two other zones).
+- **Breakages**, each a temporary edit restored from a `cp` backup (`cmp`
+  equal; `git diff --quiet -- src` after each run), each a full
+  `npm run verify:translate` against the final record, all exit 1:
+  1. the cache check skipped when not forced → 25 assertions (an unexpected
+     request at `cache-hit`, named there, and every later scenario off);
+  2. the no-key notice's text changed → 3 assertions;
+  3. `errorKind` dropped from the failed card → 10 scenarios differ;
+  4. `isStale`'s `cacheKeyFor` dropped (never stale) → 11 scenarios differ;
+  5. `contextBefore` joined with `\n` → 9 scenarios differ;
+  6. `TRANSLITERATION_INSTRUCTION` dropped → `transliteration` differs;
+  7. the cloud stats not incremented → 18 scenarios differ;
+  8. the non-TranslationError kind `api` → `network` → the two offline
+     scenarios differ;
+  9. (`useBatchTranslate.ts`) the range run in reverse → `batch`,
+     `batch-again` differ;
+  10. the Gemini key written into a failed card's `rawResponse` → 3
+      assertions (IndexedDB, the DOM, the record);
+  11. `setBusy(true)` dropped → `translate` differs (the rail's busy button);
+  12. `allowExternalLookup` dropped from the request literal → 1 assertion
+      (`claude-external-lookup` gets no research request; 17 requests);
+  13. the cost sum dropped in the cloud stats updater → both Claude
+      scenarios differ (the session line's $);
+  14. the `requestsByProvider` key swapped (always `gemini`) → both Claude
+      scenarios differ;
+  15. the sunnah.com key written into a failed card → 3 assertions.
+- **Gates**, after the fixes: R first and alone, `timeout 1200 npm run
+  verify:reader`: PASS 55/55; landscape 240,000 px in 33.4 s, 1,905 nodes, 0
+  long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks;
+  report lines as at 5b. **T** exit 0. **B** main chunk 790,214 B
+  (unchanged; its hash moves with the build time). **L** `--check`: 169
+  files, 134 directory edges, no file-level cycle, 11 rules hold. **Q** PASS.
+  **S** PASS 30/30. **P** PASS.
+- **Departures from the plan.** (1) Masked: the machine and SDK platform
+  headers and the preview origin beside the keys (above); the plan said
+  "nothing masked" of ids and timestamps, which holds. (2) More than Design
+  §1.4's nine scenarios and five breakages (the plan's five are 1, 3, 5, 6,
+  7), and a Claude group, which §1.4 put out of scope ("the hook is
+  provider-blind") but which is the only way to see the request's external
+  lookup flag, the cost sum and the per-provider count. (3) Breakage 9 is in
+  `useBatchTranslate.ts`: the batch's order lives there. (4) The CLAUDE.md
+  Commands row is written by the main session.
+- **The `torjuman-llm` read (Q16): NOT READY, two must-fixes, both done.**
+  M1: GeminiProvider never reads `allowExternalLookup` and its cost is
+  always null, so deleting the flag from the request literal, the cost sum
+  or the per-provider key would have passed P, and the `external-lookup`
+  scenario's description claimed a flag it did not record — fixed by the
+  Claude group (fake Anthropic key, Q's Anthropic stream copied, SDK platform
+  headers masked as Q does, the key asserted only in `x-api-key`), the
+  description corrected, and breakages 12–14. M2: the claim that every step
+  Design §7 moves is seen was false — the three unseen steps are now named
+  (above, and in the script's "Not covered"). Also taken from its optional
+  list: `allHeaders()` for the record and the key scan, the page's URL,
+  `history.state` and `window.name` scanned, a fake sunnah.com key (breakage
+  15), and late requests failing in their own scenario. FOUND_ISSUES 41, 42
+  and 43 filed from its read, left unfixed.
+
+- **Review of 5c (`ea6c34e`): PASS WITH NOTES; "ready for 5d1".** Two P runs
+  identical (one under `TZ=Asia/Riyadh`); key containment traced — each fake
+  key in its own header to its own host and nowhere else, no scan vacuous
+  where it matters; the masks cover nothing `useTranslator` produces;
+  FOUND_ISSUES 41–43 accurate. Applied: the script header still said "the
+  Claude provider in the browser" is not covered, untrue since the Claude
+  group — now Claude's error paths and retries; and the cost sum is seen
+  only from zero, so its accumulation joins the steps 5i3's reviewer checks
+  by reading (header and above).
+
+**Step 5d1, measured 2026-11-17**
+- `Section` (`SettingsScreen.tsx:70-87`) moved verbatim into the new
+  `ui/settings/Section.tsx`, `export` added (rule 4 (b)); a four-line
+  header. It imports `type ReactNode` and `SettingsSection` (copies of the
+  source's import lines, filtered); `SettingsScreen` drops both and imports
+  `Section`. The move was done by a script that copies each declaration with
+  the comment above it; its first run cut the function at `}: {` and was
+  caught by the typecheck, restored, and the script fixed before any check
+  ran. Comments made untrue here, for 5j (Q13): `ui/kit/SettingsSection.tsx`'s
+  header still says "SettingsScreen's local Section".
+- **T** exit 0. **B L R S U**, run on the tree just before the commit
+  (which added only this entry): **B** exit 0, main chunk 790,214 B
+  (unchanged), only `index.js` differs (the function's place), CSS
+  byte-identical; **L** 170 files, 134 edges, rules hold; **R** first and
+  alone 55/55, 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px
+  in 24.4 s, 1,904 nodes; **S** 30/30; **U** 254/254.
+- **Review of 5d1: PASS WITH NOTES; "ready for 5d2".** Byte-identical
+  move; all seven `<Section` uses resolve to the import; the filtered
+  `import { type ReactNode }` is rule 4 (a); the kit comment deferred to 5j
+  as Q13 says.
+
+**Step 5d2, measured 2026-11-17**
+- `CatalogSection` with its doc comment moved verbatim into the new
+  `ui/settings/CatalogSection.tsx`, `export` added; a two-line header. It
+  imports `LinkButton` and `Section`; `SettingsScreen` imports
+  `CatalogSection` and keeps `LinkButton`, which its header's Library button
+  uses (the commit message says it drops it; it does not).
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 171 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d2: PASS WITH NOTES; "ready for 5d3".** A pure move; the
+  note on `LinkButton` corrected above.
+
+**Step 5d3, measured 2026-11-17**
+- `TranslationSection` moved verbatim into the new
+  `ui/settings/TranslationSection.tsx`, `export` added; a three-line header.
+  It imports `useApp`, `secrets`, `allProviders`/`defaultModelFor`/
+  `modelsFor`, `CloudProviderId`, `Field`/`inputClass` and `Section`
+  (filtered copies of the source's lines); `SettingsScreen` drops
+  `defaultModelFor` and `modelsFor` and imports `TranslationSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 172 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d3: PASS; "ready for 5d4".** The doc comment moved with the
+  function; every import kept or dropped is right.
+
+**Step 5d4, measured 2026-11-17**
+- `KeysSection` and its private parts `TestState`, `ProviderKeyField` and
+  `SunnahKeyField` moved verbatim, in their order, into the new
+  `ui/settings/KeysSection.tsx`; only `KeysSection` is exported. A
+  four-line header. It imports `useState`, `secrets`, `allProviders`/
+  `providerFor`, `CloudProviderId`, `Button`/`inputClass` and `Section`;
+  `SettingsScreen` drops `secrets`, `allProviders`, `providerFor` and
+  `CloudProviderId` and imports `KeysSection`. `SunnahKeyField`, one of the
+  ḥadīth-only pieces Design §8 names, now lives in this file, rendered only
+  by `KeysSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 173 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d4: PASS; "ready for 5d5".** The four declarations
+  byte-identical in their order; the three parts used nowhere else; keys
+  still only through `secrets`.
+
+**Step 5d5, measured 2026-11-17**
+- `ReadingSection` moved verbatim into the new
+  `ui/settings/ReadingSection.tsx`, `export` added; a three-line header. It
+  imports `useApp`, `Field`/`inputClass` and `Section`, all still used by
+  `SettingsScreen` too, which only gains the import of `ReadingSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 174 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d5: PASS; "ready for 5d6".** Byte-identical; no comment
+  above it to move; imports minimal.
+
+**Step 5d6, measured 2026-11-17**
+- `DisplaySection` with its doc comment moved verbatim into the new
+  `ui/settings/DisplaySection.tsx`, `export` added; a three-line header. It
+  imports `useApp`, the `useLayoutMode` line (copied whole, multi-line),
+  `PanelPosition`, `Field`/`inputClass` and `Section`; `SettingsScreen`
+  drops the `useLayoutMode` import and `PanelPosition`, and imports
+  `DisplaySection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 175 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d6: PASS; "ready for 5d7".** Byte-identical with its doc
+  comment; the `ui/settings → ui` edge only moved file.
+
+**Step 5d7, measured 2026-11-17**
+- `QuranSection` moved verbatim into the new `ui/settings/QuranSection.tsx`,
+  `export` added; a three-line header. It imports `useEffect`/`useState`,
+  `useApp`, `listEnglishTranslations`/`TranslationResource`,
+  `Field`/`inputClass` and `Section`; `SettingsScreen` drops `useEffect`,
+  the `retrieval/quran` import, `Field` and `inputClass`, and imports
+  `QuranSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 176 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d7: PASS; "ready for 5d8".** Its effect and `[http]` deps
+  moved unchanged; imports minimal.
+
+**Step 5d8, measured 2026-11-17**
+- `BackupSection` with its doc comment moved verbatim into the new
+  `ui/settings/BackupSection.tsx`, `export` added; a three-line header. It
+  imports `useRef`/`useState`, `useApp`, `WorkBundle`, `saveFile`, `Button`
+  and `Section`; `SettingsScreen` drops all of them but `LinkButton` and
+  `TopBar`, and imports `BackupSection`. `SettingsScreen.tsx` is now 62
+  lines: its imports and the list, as Design §3 said (about 70). Made untrue
+  here, for 5j (Q13): `scripts/verify-storage-harness.ts:901` names
+  `SettingsScreen` as the backup's caller.
+- **T** exit 0. **B L R S U D**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 177 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254; **D** PASS, identical.
+- **Review of 5d8: PASS WITH NOTES; "ready for 5e1".** `exportWork` and
+  `importWork` still go through `storage`; "adding a section is one file
+  and one line" is now true. Comments made untrue by 5d1–5d8, for 5j: the
+  kit's `SettingsSection.tsx:3-9` and `verify-storage-harness.ts:901`, as
+  the plan lists, and FOUND_ISSUES 32's line reference
+  (`SettingsScreen.tsx:533-546`, now `BackupSection.tsx:26-39`).
+
+**Step 5e1, measured 2026-11-17**
+- `HadithSheet` (`EntitySheet.tsx:457-756`, with the `ḥadīth` divider and
+  its doc comment) and its private part `Diagnostic` (`:68-77`) moved
+  verbatim, in their order, into the new `ui/reader/HadithSheet.tsx`; only
+  `HadithSheet` is exported (rule 4 (b)). A five-line header. Byte diff of
+  each block against the old file: `Diagnostic` identical, `HadithSheet`
+  identical but for the added `export`; what stays in `EntitySheet.tsx` is
+  the old file minus those lines and four import lines, nothing reordered.
+  `HadithSheet.tsx` imports `useEffect`/`useState`, `useApp`, `useReadOnly`,
+  `navigate`, `secrets`, `useOnline`, `BidiText`, `lookupHadith`,
+  `DorarDiagnostics`, `Book`/`Entity`/`HadithRecord`, `commentaryWorks`,
+  `AnchoredPanel` and `Button`/`Spinner` (filtered copies of the source's
+  lines); `EntitySheet` drops `lookupHadith`, `DorarDiagnostics`,
+  `HadithRecord` and `commentaryWorks`, keeps every other import (the
+  Qurʾān sheet and CompileTab use them), and imports `HadithSheet`.
+  `HadithSheet.tsx` imports nothing from `EntitySheet.tsx`, so no cycle.
+  `EntitySheet.tsx` is 441 lines. No comment made untrue: `:49` ("a verse
+  or ḥadīth is tapped") is still the dispatcher's, and nothing outside the
+  file names the moved lines (`plans/phase3-provider-seams.md:710`'s
+  `EntitySheet.tsx:341-359` is a closed plan's record of CompileTab, whose
+  lines shift up by 14 here and move at 5e3).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5d8: the module's place), CSS
+  byte-identical (`cmp`); **L** 178 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-hadith` and
+  `reader-hadith-diagnostics` at both sizes among them.
+- **Review of 5e1 (`ad81ec7`): PASS WITH NOTES; "ready for 5e2".** Both
+  blocks byte-identical (only `export` added); the `ḥadīth` divider travels
+  with its section rather than being left over nothing at the file's end;
+  `HadithSheet.tsx` imports nothing from `EntitySheet.tsx`, so no cycle,
+  type-only or other.
+
+**Step 5e2, measured 2026-11-17**
+- `interface QuranSheetData` (`EntitySheet.tsx:88-99` at `ad81ec7`; no
+  comment directly above it, so the `Qurʾān` divider at `:86` stays with
+  `QuranSheet`) moved verbatim into the new `ui/reader/quranSheetData.ts`,
+  `export` added; a four-line header. Byte diff: identical but for the
+  `export`; `EntitySheet.tsx` is the old file minus lines 88-100 and the
+  import changes, nothing reordered. The new file imports
+  `QuranEnglish`/`QuranIndex`, `RelatedAyah`/`SurahInfoResult`/
+  `TafsirResult`/`TopicResult` and `QuranVerse`, filtered from the source's
+  lines and written `import type` (rule 4 (a)): the source's inline
+  `type` modifiers, filtered to types alone, would under
+  `verbatimModuleSyntax` leave a bare side-effect import of
+  `quran/quranIndex` and `qul/service`. `EntitySheet` drops those seven
+  names from its three lines (`loadQuranEnglish`/`loadQuranIndex` and the
+  `qul/service` functions stay) and adds `import type { QuranSheetData }`.
+  `quranSheetData.ts` imports nothing from `ui/reader`, so 5e3 and 5e4 can
+  both import it without a cycle. `EntitySheet.tsx` is 424 lines. No
+  comment made untrue.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), **every chunk identical after
+  masking** (`compare-bundles` against post-5e1, exit 0, `index.js`
+  included), CSS byte-identical (`cmp`); **L** 179 files, 134 edges, 0
+  directory and 0 file-level cycles, rules hold; **R** first and alone
+  55/55 (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.6 s, 1,904 nodes, 0 long tasks); **S** 30/30; **U** 254/254.
+- **Review of 5e2 (`bdd5a5c`): PASS; "ready for 5e3".** The interface
+  byte-identical but for `export`; every chunk identical after masking;
+  the `import type` lines confirmed right under `verbatimModuleSyntax`
+  (filtered inline `type` names would have left side-effect imports).
+
+**Step 5e3, measured 2026-11-17**
+- `CompileTab` (`EntitySheet.tsx:281-424` at `bdd5a5c`: the `compiled`
+  divider, which heads only it, its doc comment and the function) moved
+  verbatim into the new `ui/reader/CompileTab.tsx`, `export` added; a
+  four-line header. Byte diff: identical but for the `export`;
+  `EntitySheet.tsx` is the old file minus lines 280-424 and the import
+  changes, nothing reordered. It has no private helper. It imports
+  `useEffect`/`useState`, `useApp`, `secrets`, `useOnline`, `BidiText`, the
+  `qul/compile` line whole, `isCloudProvider`, `Entity`/`ProviderId`/
+  `QulCompilation`, `Button`/`Spinner` and `type QuranSheetData` from
+  `./quranSheetData` — nothing from `EntitySheet.tsx`, so no cycle.
+  `EntitySheet` drops `secrets`, `useOnline`, the `qul/compile` import,
+  `isCloudProvider`, `ProviderId` and `QulCompilation`, keeps the rest
+  (`QuranSheet` uses them), and imports `CompileTab`. `EntitySheet.tsx` is
+  270 lines.
+- **Comments.** `quran/quranIndex.ts:427` ("`data.verse?.english ||
+  data.bundledEnglish` in EntitySheet"), which plan Design §10 lists as
+  untrue from 5e3, is by reading still true: the expression is in both
+  sheets, but the sentence is about what "the sheet shows", which is
+  `QuranSheet`'s line (`EntitySheet.tsx:227`), still here;
+  `CompileTab.tsx`'s copy (`:80`) feeds the model, shows nothing. It
+  becomes untrue at 5e4, when `QuranSheet` moves; for 5j either way. No
+  other comment made untrue.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5e2: the module's place), CSS
+  byte-identical (`cmp`); **L** 180 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.6 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-quran-compiled` at
+  both sizes among them.
+- **Review of 5e3 (`aa423d9`): PASS; "ready for 5e4".** Byte-identical
+  but for `export`; the `compiled` divider heads only `CompileTab` and went
+  with it; no cycle. The correction to Design §10 confirmed:
+  `quran/quranIndex.ts:427` stays true through 5e3 (the line it describes,
+  what "the sheet shows", is `QuranSheet`'s) and becomes untrue at 5e4.
+
+**Step 5e4, measured 2026-11-17**
+- `QuranSheet` (`EntitySheet.tsx:73-270` at `aa423d9`: the `Qurʾān`
+  divider and the function), `TabId` (`:50`) and the verse-sheet design
+  comment (`:35-48`, the plan's `:51-64`) moved verbatim, in their order,
+  into the new `ui/reader/QuranSheet.tsx`; only `QuranSheet` is exported.
+  A five-line header. The split comment, adaptation (l): `:33` ("The sheet
+  that opens when a verse or ḥadīth is tapped.", the plan's `:49`) stays
+  above the dispatcher, a blank line between as before; the `//` line
+  joining the two halves (`:34`, the plan's `:50`), which belongs to
+  neither, is dropped at the seam. Byte diff: the design comment, `TabId`,
+  `:33` and the dispatcher (`:51-71`) identical; `QuranSheet`'s block
+  identical but for the `export`.
+- `QuranSheet.tsx` imports every line `EntitySheet` had but `Book` and
+  `HadithSheet` (filtered copies, in order), `CompileTab` and `type
+  QuranSheetData` among them, and nothing from `EntitySheet.tsx`, so no
+  cycle. `EntitySheet` keeps only `Book`/`Entity` and `HadithSheet` and
+  imports `QuranSheet`. **`EntitySheet.tsx` is 29 lines** — its imports,
+  `:49`'s line and the dispatch — against Design §4's "about 55": the
+  estimate counted the old import block, which went with the sheets.
+- **Made untrue here, for 5j (Q13):** `quran/quranIndex.ts:427`
+  ("`data.verse?.english || data.bundledEnglish` in EntitySheet"); the
+  line it describes is now `QuranSheet.tsx:208`.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5e3: the module's place), CSS
+  byte-identical (`cmp`); **L** 181 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-quran`,
+  `reader-quran-similar` and `reader-quran-compiled` at both sizes among
+  them.
+- **Review of 5e4 (`539de97`): PASS WITH NOTES; "ready for 5f1".** The
+  three moved pieces byte-identical (only `export` added); dropping the
+  bare `//` joiner at the split's seam accepted; `QuranSheet.tsx` imports
+  nothing from `EntitySheet.tsx`; `EntitySheet.tsx` is the dispatcher
+  Design §4 describes. One wording note, applied in 5f1's commit (comment
+  only): the header now says the sheet has "the Translation tab, one more
+  per installed QUL resource that has something for the āyah, and the
+  Compiled tab when Settings turns it on".
+
+**Step 5f1, measured 2026-11-17**
+- `TYPE_CLASS` (`BlockList.tsx:63-72` at `539de97`) and `TYPE_CHROME` with
+  its doc comment ("Keep in step with TYPE_CLASS", `:74-91`) moved
+  verbatim, in their order, into the new `ui/reader/blockLayout.ts`,
+  `export` added; `diff` identical but for the `export`. The margin-layout
+  comment (`:55-61`) stays: it describes `BlockRow`'s gutters.
+- The text-height estimate, adaptation (j): its doc comment (`:266-272`)
+  and the three statements of `estimateTextHeight`'s body (`:275-277`)
+  moved into `export function textHeightFor(block, columnWidth, fontSize,
+  lineHeight): number` — the three names the body closed over, all numbers
+  (the 0.43 em, `Math.max(8, …)`, `Math.max(1, …)`) as they were. Only the
+  indentation changed (comment 2 → 0 spaces, statements 6 → 2): with it
+  stripped, `diff` is identical. In `BlockList` the `useCallback` stays, its
+  first line, deps line `[columnWidth, fontSize, lineHeight],` and close
+  character for character today's, its body `(block: Block) =>
+  textHeightFor(block, columnWidth, fontSize, lineHeight)`. `estimateSize`'s
+  inline `useCallback` and `intrinsicHeight` are untouched; no memo or
+  callback added. `settleOn` is 5f2's.
+- Imports: `blockLayout.ts` imports `type { Block, BlockType }`;
+  `BlockList` drops `BlockType` and imports `TYPE_CHROME`, `TYPE_CLASS`
+  and `textHeightFor`. Outside the moved text, `BlockList.tsx` is the old
+  file but for those two import lines and the callback's body (`diff`).
+  It is 688 lines (728 before). `blockLayout.ts` has a seven-line
+  header saying the three are together because of trap 7.
+- **Made untrue here, for 5j (Q13, Design §10):** CLAUDE.md trap 7
+  ("`TYPE_CHROME` in `BlockList.tsx`") and its map; `.claude/agents/
+  torjuman-reader.md:19-23` (the estimates "+ `TYPE_CHROME[type]`" under
+  `BlockList.tsx`). Also line references that shift up here: FOUND_ISSUES
+  `BlockList.tsx` ~134 (`pageIndexOf`, now 105), `:285` (now 245),
+  `:314-334` and `:328` (`settleOn`, now 274-294 and 288), `:360-369` (now
+  320-329), `:559` (now 519); and FOUND_ISSUES 40's `attempts >= 8`
+  (`:323`, now 283; added at 5f1's review).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,249 B (+35 B, the new function and its call),
+  only `index.js` differs (`compare-bundles` against post-5e4; the first
+  difference is a minified name), CSS byte-identical (`cmp`), so moving the
+  class strings to a `.ts` file changed no Tailwind output; **L** 182
+  files, 134 edges, 0 directory and 0 file-level cycles, rules hold; **R**
+  first and alone 55/55 (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks /
+  175,800 px in 24.5 s, 1,904 nodes, 0 long tasks), and every one of its
+  `ok` lines, measured positions included (jump to ص 120 top 66 / 109,
+  contents entry top 66 / 109, restore 700 → 95), identical to 5e4's run;
+  **S** 30/30; **U** 254/254.
+- **Review of 5f1 (`2d72185`): PASS WITH NOTES; "ready for 5f2".** The
+  maps byte-identical but for `export`; the estimate's text identical but
+  for indentation; the `useCallback`'s deps character for character. Tailwind
+  v4 detects `.ts` sources on its own, so the classes in `blockLayout.ts`
+  are scanned (and CSS was byte-identical). Notes, applied in 5f2's commit:
+  the header's "before it has been" finished as "before it has been laid
+  out"; FOUND_ISSUES 40's `attempts >= 8` (`:323`) added to the 5j list
+  above.
+
+**Step 5f2, measured 2026-11-17**
+- `settleOn`'s doc comment (`BlockList.tsx:263-273` at `2d72185`) and the
+  body of its `useCallback` (`:276-293`) moved, adaptation (j), into
+  `export function settleOn(virtualizer, listRef, topInset, index, align):
+  void` at the end of `blockLayout.ts`. **No text substitution:** the three
+  names the body closed over became parameters with the same names, and
+  `index`/`align` were already the callback's. Only indentation changed
+  (comment 2 → 0, statements 6 → 2): with it removed, `diff` is identical,
+  the 8 attempts, the 4 px, the two `requestAnimationFrame`s and FOUND_ISSUES
+  40's centring test against `window.innerHeight / 2` included.
+- When each input is read is unchanged (Phase 4's correction 1): `listRef`
+  is passed as the ref object and `.current` is read inside the second
+  frame, as before; `virtualizer` is the same object the `useCallback`
+  closes over, its `scrollToIndex` called at each attempt; `topInset` is
+  the number the callback closed over (a prop, not a ref), as before;
+  `window.innerHeight` is still read inside the frame.
+- In `BlockList` the `useCallback` stays, `[topInset, virtualizer],` and its
+  first and last lines character for character, its body `(index: number,
+  align: 'start' | 'center') => settleOnBlock(virtualizer, listRef,
+  topInset, index, align)`. The module function is imported as `settleOn as
+  settleOnBlock`: Design §5 and Q8 name it `settleOn`, the same name as the
+  `useCallback` it is called from, so it needs a local name there (an
+  import alias; no symbol renamed). `useImperativeHandle` and its deps
+  `[blocks, settleOn]` untouched. Its parameter types are new, rule (i):
+  `ReturnType<typeof useWindowVirtualizer>` and `RefObject<HTMLDivElement |
+  null>`, from two type-only imports in `blockLayout.ts`. Outside the moved
+  text, `BlockList.tsx` is the old file but for the import line and the
+  callback (`diff`); 659 lines (688 before). `blockLayout.ts`'s header now
+  names `settleOn` and both steps.
+- **Made untrue here, for 5j:** the 5f1 line references to `settleOn` now
+  point into `blockLayout.ts` — FOUND_ISSUES 40's `:314-334` →
+  `blockLayout.ts:74-99`, `:328` → `blockLayout.ts:93`, `attempts >= 8`
+  (`:323`) → `blockLayout.ts:88`; and `BlockList.tsx` `:360-369` → 291-300,
+  `:559` → 490 (`:285` → 245 and `pageIndexOf` → 105 as at 5f1).
+  `.claude/agents/torjuman-reader.md`'s "`settleOn` retries `scrollToIndex`"
+  under `BlockList.tsx` (Design §10 lists 5f1 and 5h1 for that file).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,267 B (+18 B), only `index.js` differs
+  (`compare-bundles` against post-5f1; the first difference is a minified
+  name), CSS byte-identical (`cmp`); **L** 182 files (no new file), 134
+  edges, 0 directory and 0 file-level cycles, rules hold; **R** first and
+  alone 55/55, every `ok` line identical to 5f1's run (`diff`), and every
+  report line identical but the two perf timings: `readMarkDown` `{"from":
+  450, "next":500, "atMiddle":450}` twice (FOUND_ISSUES 40 and 39 intact),
+  `fingerDrag` unchanged; 240,000 px in 33.7 s (33.4 at 5f1), 1,905 nodes,
+  0 long tasks / 175,800 px in 24.4 s (24.5), 1,904 nodes, 0 long tasks;
+  **S** 30/30; **U** 254/254.
+- **Review of 5f2 (`24629fb`): PASS; "ready for 5f3".** Text identical but
+  for indentation, no substitution; `listRef.current` still read inside the
+  second frame, `window.innerHeight` likewise; deps `[topInset,
+  virtualizer]` unchanged; the `settleOn as settleOnBlock` import alias
+  confirmed as the smallest legal way round the name clash. The reviewer's
+  own R run gave 33.4 s, so 5f2's 33.7 s was noise.
+
+**Step 5f3, measured 2026-11-17**
+- `BlockRow` (`BlockList.tsx:382-516` at `24629fb`, with its doc comment),
+  `MarginTarget` (`:518-622`) and `CardMarkerDot` (`:624-659`), each with
+  its doc comment, moved verbatim, in their order, into the new
+  `ui/reader/BlockRow.tsx`; only `BlockRow` is exported (`export const
+  BlockRow = memo(…)`), the other two are its private parts, as Design §5
+  says. `cmp` of the block against the old lines: identical but for the
+  `export`. `memo` is still evaluated once, at module load. `BlockList`
+  renders `<BlockRow …/>` where it did, with the same props: no key,
+  wrapper or memo change. A five-line header.
+- Imports: `BlockRow.tsx` takes `memo`/`useRef`, `Block`/`EntityRange`/
+  `MarkRange`, `PageMeta`, `toArabicNumerals`, `isDivider`, `BlockText`,
+  `CardMarker` and `TYPE_CLASS` (filtered copies of the source's lines),
+  and nothing from `BlockList.tsx`, so no cycle. `BlockList` drops `memo`,
+  `toArabicNumerals`, `isDivider`, `BlockText` and `TYPE_CLASS`, keeps
+  `useRef` (its `listRef`) and the types it uses, and imports `BlockRow`.
+  Outside the moved lines, `BlockList.tsx` is the old file but for those
+  import lines (`diff`). **`BlockList.tsx` is 377 lines**, against Design
+  §5's "about 370".
+- The margin-layout comment (`BlockList.tsx:56-62`) stays where it was:
+  Design §5 keeps it and lists only the three components for 5f3.
+- **Made untrue here, for 5j (Q13):** that margin-layout comment now
+  describes `BlockRow.tsx`'s gutters ("nothing here narrows the Arabic
+  column") from `BlockList.tsx`; `BlockList.tsx:82`'s "see MarginTarget"
+  now points to another file (true, but the reader looks for it in
+  `BlockRow.tsx`); `.claude/agents/torjuman-reader.md:25` ("`BlockRow` is
+  memoized…", under `BlockList.tsx`); FOUND_ISSUES 38's `BlockList.tsx:559`
+  (490 after 5f2) is now `BlockRow.tsx:127`.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,267 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5f2: the module's place), CSS
+  byte-identical (`cmp`); **L** 183 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55. Against
+  5f2's run every report line is identical but the landscape timing
+  (`readMarkDown` twice and `fingerDrag` unchanged), and every `ok` line
+  but one: the portrait restore "before 700, after 700" where 5f2 had
+  "after 699". Both values pass and both occur on code this step does not
+  touch: of R's 15 runs in 5d1–5f3, the portrait restore read 699 in 12
+  and 700 in 3 (5d2, 5d6 and this run), so it is run-to-run noise. Perf
+  240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-page`,
+  `reader-page-cards` (the `CardMarkerDot`s) and `reader-margin-menu` at
+  both sizes among them.
+- **Review of 5f3 (`5561473`): PASS; "ready for 5g1".** The three
+  components byte-identical (only `BlockRow` exported); no key, wrapper or
+  memo change at the call site; the margin-layout comment kept in
+  `BlockList.tsx`, as the plan says; the 699/700 restore accepted as noise.
+
+**Step 5g1, measured 2026-11-17**
+- The word-lookup region (`ReaderScreen.tsx:200-254` at `5561473`, as
+  Design §6.1 lists it: the dictionary comment, the `dictionary`, `lookup`
+  and `gloss` states, `requestGloss` (`[storage]`), the `loadDictionary`
+  effect (`[storage]`) and `lookUpWord` (`[dictionary]`)) moved as one
+  contiguous block into `export function useWordLookup({ storage })` in the
+  new `ui/reader/useWordLookup.ts`. `cmp`: the 55 lines identical, at the
+  same indentation. Adaptations: (f) one parameter field, `storage`; (i)
+  its type `ReturnType<typeof useApp>['storage']`; (g) one `return {
+  dictionary, lookup, setLookup, gloss, setGloss, requestGloss, lookUpWord
+  }` — Design §6.1's seven, `setDictionary` staying the hook's own; (h) the
+  call, `const { dictionary, lookup, setLookup, gloss, setGloss,
+  requestGloss, lookUpWord } = useWordLookup({ storage });`, stands where
+  the region's first line was, between the margin-menu state and
+  `allCards`. Hook order and effect order are unchanged: the three
+  `useState`s, two `useCallback`s and the one effect are called in the
+  same sequence at the same point, and `loadDictionary(storage)` is still
+  the screen's first own effect after the domain hooks; the gloss's
+  `glossWord(storage, …)` still runs only on a request. No deps changed,
+  nothing returned is wrapped anew. FOUND_ISSUES 33 (`meaningAvailable`)
+  and 38 are untouched.
+- Imports: `useWordLookup.ts` takes `useCallback`/`useEffect`/`useState`,
+  `useApp` (type only, for the parameter's type), `secrets`, `Block`,
+  `GlossState`, `glossWord`/`GLOSS_PROVIDER_ID`, `ANTHROPIC_GLOSS_MODEL`
+  and the `dictionaryService` line whole, in the source's order, the
+  type-only ones as `import type` (`verbatimModuleSyntax`, as at 5e2).
+  `ReaderScreen` drops `GlossState`, `glossWord`, `ANTHROPIC_GLOSS_MODEL`
+  and the `dictionaryService` import, keeps `secrets` and
+  `GLOSS_PROVIDER_ID` (the rail's `meaningAvailable`), and imports
+  `useWordLookup`. A four-line header. `ReaderScreen.tsx` is 1,291 lines
+  (1,349).
+- **For 5j:** every FOUND_ISSUES reference into `ReaderScreen.tsx` past
+  `:254` now sits 58 lines higher (26's `:1102-1115`, 27's `:649-666`,
+  28's `:1025`, 30's `:389-400`, 33's `:1043` → 985, 34's and 37's
+  `:1089` (37's added at 5g1's review), 39's `:1240-1275`), and 31's
+  `:124` 5 lines higher; 5g2–5h4 move them again,
+  so 5j recomputes them from the final file.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,460 B (+193 B, the hook's function and returned
+  object), only `index.js` differs (`compare-bundles` against post-5f3),
+  CSS byte-identical (`cmp`); **L** 184 files, 134 edges, 0 directory and
+  0 file-level cycles, rules hold; **R** first and alone 55/55, every `ok`
+  line identical to 5f2's run (against 5f3's, only the portrait restore,
+  back to "after 699"), every report line identical but the timings:
+  240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-meaning`,
+  `reader-meaning-cached` and `reader-rail` at both sizes among them;
+  **P** PASS, identical to `phase5/translate.json` (6 groups, 23
+  scenarios, 18 requests). P sends no gloss request; the gloss is U's
+  `reader-meaning*`.
+- **Review of 5g1 (`c0ea5e3`): PASS WITH NOTES; "ready for 5g2".** The 55
+  lines identical; hook order and effect order confirmed, `loadDictionary`
+  still the screen's first own effect after the domain hooks; the seven
+  returned names exactly Design §6.1's. Note, applied above: FOUND_ISSUES
+  37's `ReaderScreen.tsx:1089` (the same line as 34's) added to the 5j list.
+
+**Step 5g2, measured 2026-11-17**
+- The reading-position region (`ReaderScreen.tsx:305-327` at `c0ea5e3`:
+  the restore effect `[loading, blocks.length, storage, bookId]` with its
+  comment, and the persist effect `[visibleBlock, storage, bookId]`, 900 ms,
+  with its comment — one contiguous block, directly after the
+  `entitiesByBlock` memo) and `restoredRef` (`:119`, between
+  `headerHeight` and `shareButtonRef`, used only by the restore) moved into
+  `export function useReadingPosition({ storage, bookId, loading, blocks,
+  visibleBlock, listRef })` in the new `ui/reader/useReadingPosition.ts`:
+  `restoredRef`'s line first, a blank line, then the region. `cmp`: both
+  identical, at the same indentation. Adaptations: (f) the six fields
+  Design §6.1 lists, same names; (i) their types, `ReturnType<typeof
+  useApp>['storage']`, `string`, `boolean`, `Block[]`, `Block | null` and
+  `RefObject<BlockListHandle | null>`; (g) nothing returned; (h) the call
+  `useReadingPosition({ storage, bookId, loading, blocks, visibleBlock,
+  listRef });` stands where the restore's comment was.
+- **Effect order, before and after:** … entities (`[storage, book,
+  blocks.length, readOnly]`), restore, persist, biography availability,
+  `selectionchange`, … — unchanged, the two effects called at the same
+  point in the same order. The only hook that moves is `restoredRef`'s
+  `useRef`, from among the screen's refs to the hook's start, as Design
+  §6.1 allows (no effect; hook order is fixed per build). The two storage
+  calls are unchanged in text, order and timing: `storage.getReadingPosition
+  (bookId)` once the blocks are in (and `listRef.current` still read inside
+  its `requestAnimationFrame`, not at call time), `storage.putReadingPosition`
+  900 ms after the visible block settles. FOUND_ISSUES 31 is preserved:
+  `restoredRef` lives as long as the mounted screen and is never reset when
+  `bookId` changes, as before.
+- Imports: `useReadingPosition.ts` takes `useEffect`/`useRef` (and `type
+  RefObject`, new for (i)), `type useApp`, `type Block` and `type
+  BlockListHandle`, filtered from the source's lines; `BlockList.tsx`
+  imports nothing back, so no cycle. `ReaderScreen` keeps every import
+  (`useRef` and `BlockListHandle` are still its own) and imports
+  `useReadingPosition`. A four-line header. `ReaderScreen.tsx` is 1,269
+  lines (1,291).
+- **For 5j:** FOUND_ISSUES 31's `ReaderScreen.tsx:124` (`restoredRef`) and
+  `:365` (the early return) are now `useReadingPosition.ts:26` and `:30`;
+  the screen's later references shift up a further 22.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,609 B (+149 B), only `index.js` differs
+  (`compare-bundles` against post-5g1; minified names), CSS byte-identical
+  (`cmp`); **L** 185 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5g1's run — "restored after a reload — before 700, after
+  700" / "after 699" and "restored 700, jumped to 95, 2.5 s later 95"
+  included — and every report line but the timings. The first run's
+  timings were high (33.9 s / 25.6 s); a second run, alone, gave 33.6 s /
+  24.5 s with every `ok` line again identical, so the first was noise
+  (the step adds no work to scrolling: the persist effect is the same
+  effect). Perf: 240,000 px in 33.6 s, 1,905 nodes, 0 long tasks / 175,800
+  px in 24.5 s, 1,904 nodes, 0 long tasks; **S** 30/30 (its "the reading
+  position follows the screen" checks among them); **U** 254/254; **P**
+  PASS, identical.
+- **Review of 5g2 (`63f03d7`): PASS WITH NOTES; "ready for 5g3".** Both
+  effects and `restoredRef` byte-identical; effect order and the two
+  storage calls' order and timing confirmed; FOUND_ISSUES 31 preserved.
+  The reviewer's own R run: 55/55 at 33.7 s / 25.1 s, judged noise. Note:
+  the new header (`useReadingPosition.ts:7`) said "throttled", but the save
+  is debounced (it lands 900 ms after the visible block stops changing);
+  fixed at 5g3, the header word only, the moved comment untouched.
+
+**Step 5g3, measured 2026-11-17**
+- 5g2's note: `useReadingPosition.ts:7` "saved, throttled," → "saved,
+  debounced,", nothing else changed (the moved "throttled so scrolling
+  does not thrash IndexedDB" comment stays verbatim).
+- The navigation region (`ReaderScreen.tsx:442-473` at `63f03d7`, the
+  plan's 520-553: `flash` `[]` with its 1,600 ms, `jumpToBlock` `[blocks,
+  flash]`, `jumpToPage` `[blocks]`, `focusCard` `[jumpToBlock]`, one
+  contiguous block) and `flashBlockId`'s `useState` (`:97`, the plan's
+  101) moved into `export function useReaderNavigation({ blocks, listRef,
+  setActiveCardId })` in the new `ui/reader/useReaderNavigation.ts`:
+  `flashBlockId`'s line first, a blank line, the region, then (g) `return
+  { flashBlockId, flash, jumpToBlock, jumpToPage, focusCard }`. `cmp`: both
+  identical, at the same indentation; every `useCallback`'s deps character
+  for character. (f) the three fields Design §6.1 lists; (i) `Block[]`,
+  `RefObject<BlockListHandle | null>`, `Dispatch<SetStateAction<string |
+  null>>`; (h) the call `const { flashBlockId, flash, jumpToBlock,
+  jumpToPage, focusCard } = useReaderNavigation({ blocks, listRef,
+  setActiveCardId });` stands where `flash` was. The `navigation` section
+  divider above it stays in the screen (it is the screen's section
+  heading, and the section is still there: the call); the plan's 520 is
+  that divider. `setFlashBlockId` stays the hook's own. `listRef.current`
+  is still read inside the jumps, at call time of each jump.
+- Hook order: only `flashBlockId`'s `useState` moves (from among the
+  screen's states to the hook's start), as Design §6.1 allows; the four
+  `useCallback`s are called at the same point in the same order; no effect
+  is involved. Callers unchanged: `handleMarkerClick`'s deps (with
+  `flash`), `BlockList`'s `flashBlockId`, `JumpToPage`'s and the contents'
+  `jumpToPage`, the search column's `jumpToBlock` and the panel's
+  `onFocusCard={focusCard}` are the same text.
+- Imports: `useReaderNavigation.ts` takes `useCallback`/`useState` (with
+  `type Dispatch`, `type RefObject`, `type SetStateAction`, new for (i)),
+  `type Block`/`Card` and `type BlockListHandle`; `ReaderScreen` keeps
+  every import (it still uses `useCallback`, `useState`, `Card`) and
+  imports `useReaderNavigation`. A four-line header. `ReaderScreen.tsx` is
+  1,239 lines (1,269); `useReaderNavigation.ts` 55.
+- **For 5j:** the screen's references past `:473` (the old end of the
+  region) shift up a further 30; those from `:60` to `:96` move down 1
+  (the added import); `:98` to `:441` do not move (the import's +1 and
+  `flashBlockId`'s removed line −1 cancel). Corrected at 5g4's review.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,823 B (+214 B), only `index.js` differs
+  (`compare-bundles` against post-5g2; minified names), CSS byte-identical
+  (`cmp`); **L** 186 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; against 5g2's second
+  run every `ok` line identical but the portrait restore (700 here, 699
+  there — the noise seen since 5d1), every jump, contents, search, marker
+  and card line with its measured position included; report lines
+  identical but the timings: 240,000 px in 33.4 s, 1,905 nodes, 0 long
+  tasks / 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30;
+  **U** 254/254; **P** PASS, identical (6 groups, 23 scenarios, 18
+  requests).
+- **Review of 5g3 (`24d1188`): PASS WITH NOTES; "ready for 5g4".** Region
+  and state byte-identical, deps character for character, callers
+  unchanged. Keeping the `navigation` divider in the screen judged right.
+  Notes: the 5j shift sentence was wrong (lines `:98`–`:441` do not move;
+  `:60`–`:96` move down 1), corrected above at 5g4; `flash`'s `setTimeout`
+  is never cleared, as before the move — a no-op after unmount in React 19,
+  so not a FOUND_ISSUES entry.
+
+**Step 5g4, measured 2026-11-17**
+- The panel-controls region (`ReaderScreen.tsx:517-556` at `24d1188`, the
+  plan's 627-666: the "Toggling the panel from the keyboard" doc comment,
+  the keydown effect `[settings.panelCollapsed, updateSettings]`, the
+  `divider` section heading, `dragging = useRef(false)` and the window
+  `pointermove`/`pointerup` effect `[updateSettings]`, one contiguous
+  block between `handleMarkerClick` and the header's layout effect) moved
+  into `export function usePanelControls({ settings, updateSettings })` in
+  the new `ui/reader/usePanelControls.ts`, then (g) `return { dragging }`.
+  The `divider` heading sits inside the region, so it moved with it. `cmp`:
+  the 40 lines identical, at the same indentation; both deps arrays
+  character for character. (f) Design §6.1's two fields, `settings` passed
+  whole (`settings.panelCollapsed` as written); (i) `ReturnType<typeof
+  useApp>['settings']` and `['updateSettings']`; (h) the call `const {
+  dragging } = usePanelControls({ settings, updateSettings });` stands
+  where the doc comment was. The row's I/O list is complete: `dragging`
+  (written by the divider's `onPointerDown` in the screen) is the only name
+  the screen still reads from the region.
+- Effect order: … `dblclick`, keydown, divider, then the header's layout
+  effect — unchanged, the two effects called at the same point in the same
+  order. Each effect's listeners are still created inside it and removed
+  in its own cleanup (`keydown` on `document`; `pointermove` and
+  `pointerup` on `window`), so their identities and pairing are as before.
+  FOUND_ISSUES 27 kept exactly: still no `pointercancel` listener.
+- Imports: `usePanelControls.ts` takes `useEffect`/`useRef`, `type
+  useApp` and `clampPanelWidth`; `ReaderScreen` keeps every import (it
+  still uses `useEffect`, `useRef` and `clampPanelWidth`, for the panel's
+  width) and imports `usePanelControls`. A four-line header.
+  `ReaderScreen.tsx` is 1,201 lines (1,239); `usePanelControls.ts` 59.
+- **For 5j:** the screen's references past `:556` shift up a further 38
+  (40 lines become 1, the import adds 1); `:61`–`:516` move down 1.
+  FOUND_ISSUES 27's `ReaderScreen.tsx:649-666` is now in
+  `usePanelControls.ts`; the entry itself still names the screen, to be
+  updated at 5j. (Wrapped at 5g5's review note.)
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,918 B (+95 B), only `index.js` differs
+  (`compare-bundles` against post-5g3; minified names), CSS byte-identical
+  (`cmp`); **L** 187 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; every `ok` line
+  identical to 5g3's run but the portrait restore (699 here, 700 there,
+  the known noise), "Ctrl+\\ hides the panel… stored panelCollapsed
+  true", "dragging the divider 120 px right… panel 432 → 315, stored 315",
+  the clamp ("panel 432, stored 432") and "text selection is off during
+  each drag" included; `fingerDrag` and `readMarkDown` reports unchanged.
+  The first run's portrait perf had one long task (61 ms, 11 ms blocking)
+  for the first time since Phase 4 (R.log had one of 55 ms on unchanged
+  code); a second run, alone, gave 0, with the same `ok` lines, so it is
+  noise — the step adds nothing to scrolling. Perf (second run): 240,000
+  px in 33.5 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P** PASS, identical.
+- **Review of 5g4 (`8810abb`): PASS WITH NOTES; "ready for 5g5".** The 40
+  lines byte-identical, both deps arrays character for character;
+  `dragging`'s `useRef` did not move relative to its neighbours (it was
+  inside the region); keeping the `divider` heading in the hook is
+  consistent with 5g3's choice, since here it sat inside the region; both
+  5j shift sentences checked right; the 61 ms long task accepted as noise.
+  Notes: FOUND_ISSUES 27's entry still names `ReaderScreen.tsx` for the
+  divider, on the 5j list above; one over-long line in the "For 5j" bullet,
+  wrapped at 5g5.
+
+**Step 5g5, measured 2026-11-17**
+- The header's height (`ReaderScreen.tsx:114-120` at `8810abb`, the plan's
+  117-123: the "sticky header's height" doc comment, `headerRef =
+  useRef<HTMLElement>(null)` and `[headerHeight, setHeaderHeight] =
+  useState(0)`, between `listRef` and `shareButtonRef`) and the screen's
+  only layout effect (`:520-528`, the plan's 668-676: `headerRef.current`,
+  a `ResizeObserver` on it, `observer.disconnect()` in the cleanup, deps
+  `[loading, book]`) moved into `export function useHeaderHeight({
+  loading, book })` in the new `ui/reader/useHeaderHeight.ts`: the state
+  first, a blank line, the effect, then (g) `return { headerRef,
+  headerHeight }`. `cmp`: both identical, at the same indentation; the deps
+  character for character. (f) Design §6.1's two fields; (i) `boolean` and
+  `Book | null`; (h) the call `const { headerRef, headerHeight } =
+  useHeaderHeight({ loading, book });` stands where the layout effect was,
+  between `usePanelControls` and `stickyColumn`, so the layout effect keeps
+  its place. The effect reads nothing else, and the screen uses no setter:
+  `setHeaderHeight` stays the hook's own. The I/O list is complete.
+- Hook order: only the `useRef` and `useState` move (from among the
+  screen's refs to the hook's start), as Design §6.1 allows. Readers of
+  `headerHeight`, all in the screen's same render as before:
+  `stickyColumn` (`top` and `height`; the search column, the divider,
+  the aside and the collapsed edge tab use it) and `BlockList`'s
+  `topInset={headerHeight}`; `ref={headerRef}` stays on the `<header>`.
+  `scrollMargin` is `BlockList`'s own measurement of the screen root, not
+  this value. No sheet or anchored panel reads it.
+- Imports: `useHeaderHeight.ts` takes `useLayoutEffect`/`useRef`/
+  `useState` and `type Book`; `ReaderScreen` drops `useLayoutEffect` (no
+  other use; `tsc` reports it unused otherwise) and imports
+  `useHeaderHeight`. A three-line header. `ReaderScreen.tsx` is 1,187
+  lines (1,201); `useHeaderHeight.ts` 28. 5g1–5g5 done: Design §6's
+  "about 750-850" is for after 5h4.
+- **For 5j:** the screen's references from `:62` to `:113` move down 1
+  (corrected at 5g5's review: old `:62`, blank, and `:63`, `export
+  function ReaderScreen`, move too); `:121` to `:519` up 6; past `:528` up
+  14.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,027 B (+109 B), only `index.js` differs
+  (`compare-bundles` against post-5g4; minified names), CSS byte-identical
+  (`cmp`); **L** 188 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; against 5g4's second
+  run every `ok` line identical but the portrait restore (700 here, 699
+  there, the known noise) — the header and sticky-column lines ("the
+  header stays at the top… headerBottom 51 / 93", "the card panel is a
+  column held under the header… aside 51–600", "the cards sheet stays at
+  the bottom"), and every jump landing (ص 120 top 66 / 109, contents 66 /
+  109, search 50 / 300, card 295) included; report lines identical but the
+  timings: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
+  PASS, identical.
+- **Review of 5g5 (`98f44f8`): PASS WITH NOTES; "ready for 5h1".** State
+  and layout effect byte-identical, deps character for character, the
+  layout effect at its place; every reader of `headerHeight` checked;
+  dropping the unused `useLayoutEffect` import is rule (a). Note: the "For
+  5j" shift started at `:64`; it starts at `:62` (old `:62` and `:63` move
+  down 1 too), corrected above at 5h1.
+
+**Step 5h1, measured 2026-11-17**
+- The `<header>` subtree (`ReaderScreen.tsx:602-664` at `98f44f8`, the
+  plan's 764-826) moved into `export function ReaderHeader(…)` in the new
+  `ui/reader/ReaderHeader.tsx`, returned as is (`return ( <header …> )`,
+  no wrapper, no `Fragment`, the same conditions inside, no `memo`, no
+  effect, no `useApp()`); `ref={headerRef}` stays on the `<header>`. With
+  it, whole and in their order, `ReadMarkNav` (`:1072-1113`, with its doc
+  comment) and `JumpToPage` (`:1142-1187`, with its doc comment), private
+  to the file — the header was their only user (`grep` over `src/` and
+  `scripts/`: only the header renders them; the scripts name
+  `ReadMarkNav` in comments). Byte diff: the subtree identical after
+  removing 2 spaces of indentation (it is one level shallower under
+  `return (`); both components identical (`cmp`). Outside those lines,
+  `ReaderScreen.tsx` is the old file but for two import lines and the
+  call (`diff`).
+- Adaptation (f): 17 props, each the screen's own name passed `x={x}`, in
+  the subtree's order of first use: `headerRef`, `readOnly`, `book`,
+  `activeTocTitle`, `currentMeta`, `pageMeta`, `jumpToPage`, `marks`,
+  `visibleBlock`, `listRef`, `setShowToc`, `setShowSearch`,
+  `shareButtonRef`, `setShowShare`, `sideBySide`, `updateSettings`,
+  `settings`. `headerRef` and `shareButtonRef` are props of those names,
+  not `ref`, like `BlockList`'s `handleRef`. Objects passed whole
+  (`marks.readPositions`, `settings.panelCollapsed` as written). The
+  subtree's inline arrows (`onJump={(order) => listRef.current?.
+  scrollToOrder(order, 'center')}`, `() => setShowToc(true)`, the Search,
+  Share and Show/Hide cards handlers) stay inline in the moved text, as
+  (f) says, each over a prop of its own name; `listRef.current` is still
+  read when ↑/↓ is tapped. (i) types: `ReturnType<typeof useHeaderHeight>
+  ['headerRef']`, `ReturnType<typeof useReaderNavigation>['jumpToPage']`,
+  `ReturnType<typeof useMarks>`, `ReturnType<typeof useApp>['settings']`
+  and `['updateSettings']`, `Dispatch<SetStateAction<boolean>>` for the
+  three setters, `RefObject<BlockListHandle | null>`,
+  `RefObject<HTMLSpanElement | null>`, `Book`, `Block | null`, `PageMeta |
+  undefined`, `string | undefined`, `Map<number, PageMeta>`, `boolean`.
+  (h) `<ReaderHeader … />` stands where the `<header>` was, between
+  `NoKeyBanner` and the importing notice.
+- Imports: `ReaderHeader.tsx` takes `useState` (and `type Dispatch`/
+  `RefObject`/`SetStateAction`), `type useApp`, `parseArabicNumber`/
+  `toArabicNumerals`, `type PageMeta`, `type Block`/`Book`, `type
+  useMarks`, `Button`/`LinkButton`, `type BlockListHandle`, `type
+  useReaderNavigation`, `type useHeaderHeight`; none imports it back, so
+  no cycle. `ReaderScreen` drops `parseArabicNumber` and `Button` (no other
+  use) and imports `ReaderHeader`. A six-line header. `ReaderScreen.tsx`
+  is 1,054 lines (1,187); `ReaderHeader.tsx` 211.
+- **For 5j:** the screen's references from `:63` to `:601` move down 1;
+  `:665` to `:1071` up 43; `:1115` to `:1140` (`blockElementFor`,
+  `NoKeyBanner`) up 86. FOUND_ISSUES 39's `ReadMarkNav`
+  (`ReaderScreen.tsx:1240-1275` at the plan's base) is now in
+  `ReaderHeader.tsx`; the entry itself still names the screen, to be
+  updated at 5j. **Untrue from 5h1, fixed at 5j (Q13, Design §10):**
+  `.claude/agents/torjuman-reader.md:14-16` ("`ReaderScreen.tsx` composes
+  …, the header is `sticky top-0 z-30`"): the header is now
+  `ReaderHeader.tsx`. (Both added at 5h1's review.)
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,495 B (+468 B: the props object and the part's
+  function), only `index.js` differs (`compare-bundles` against post-5g5;
+  minified names), CSS byte-identical (`cmp`); **L** 189 files, 134 edges,
+  0 directory and 0 file-level cycles, rules hold; **R** first and alone
+  55/55, every `ok` line identical to 5g5's run (`diff`, no difference at
+  all) — the header lines ("stays at the top… headerBottom 51 / 93"), the
+  ج/ص jumps (top 66 / 109), and the read-mark lines (counter "3", ↓ to
+  block 400, ↑ to 500 and 450, in both profiles) included — and every
+  report line but the portrait timing (`readMarkDown` unchanged): 240,000
+  px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.6 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-header`,
+  `reader-page` and `reader-page-cards` at both sizes among them; **P**
+  PASS, identical.
+- **Review of 5h1 (`0c52e6b`): PASS WITH NOTES; "ready for 5h2".** The
+  subtree identical but for its indentation, both components byte-
+  identical, all 17 props checked `x={x}` one by one with no swap; no
+  wrapper, `memo`, effect or `useApp()`. Notes, both added to the 5j list
+  above: (i) `.claude/agents/torjuman-reader.md:14-16` is untrue from 5h1
+  (it puts the `sticky top-0 z-30` header in `ReaderScreen`), fixed at 5j;
+  (ii) FOUND_ISSUES 39's entry still names `ReaderScreen.tsx:1240-1275`,
+  where `ReadMarkNav` was.
+
+**Step 5h2, measured 2026-11-17**
+- The four ḥadīth bars (`ReaderScreen.tsx:642-683` at `0c52e6b`, the
+  plan's 847-888: the sharḥ notice with its comment, the batch proposal
+  with its comment, the running batch, the sharḥ search in progress —
+  adjacent, blank lines only between them, nothing else) moved into
+  `export function CommentaryBars(…)` in the new
+  `ui/reader/CommentaryBars.tsx`, returned as one `Fragment` of the four
+  conditionals: `return ( <> … </> )`, no wrapper element, the conditions
+  inside, no `memo`, no effect, no `useApp()`. `cmp`: the 42 lines
+  identical, at the same indentation (six spaces, as under the screen's
+  root `div`). The named ḥadīth-only piece Design §8 asks for.
+- Adaptation (f), 5 props, each `x={x}`, in the order of first use:
+  `sharh`, `batchProposal`, `batch`, `activeProfile`, `setBatchProposal`.
+  Objects passed whole (`sharh.notice`, `sharh.setNotice`, `sharh.busy`,
+  `batch.progress`, `batch.run`, `batch.cancel`, `batch.dismiss`,
+  `activeProfile.model` as written). No two props are same-typed
+  callbacks: the only callback prop is `setBatchProposal`. The same-typed
+  pairs are inside the moved text, unchanged — `BatchProposal`'s
+  `onStart`/`onCancel` and `BatchRunning`'s `onStop={batch.cancel}` /
+  `onDismiss={batch.dismiss}`. (i) types: `ReturnType<typeof useSharh>`,
+  `ReturnType<typeof useBatchTranslate>`, `ReturnType<typeof
+  useApp>['activeProfile']`, and the screen's own state shape `{ range:
+  Block[]; estimate: BatchEstimate } | null` restated for `batchProposal`
+  and inside `Dispatch<SetStateAction<…>>` for its setter (the screen names
+  no type for it). (h) `<CommentaryBars … />` stands where the sharḥ
+  notice's comment was, between the translator notice and the columns.
+- Imports: `CommentaryBars.tsx` takes `type Dispatch`/`SetStateAction`,
+  `type useApp`, `type Block`, `BatchProposal`/`BatchRunning`, `type
+  BatchEstimate`, `type useSharh`, `type useBatchTranslate`; none imports
+  it back, so no cycle. `ReaderScreen` drops the `BatchTranslateBar`
+  import (no other use; it keeps `BatchEstimate` for its state) and
+  imports `CommentaryBars`. A four-line header. `ReaderScreen.tsx` is
+  1,019 lines (1,054); `CommentaryBars.tsx` 81.
+- **For 5j:** the screen's references from `:28` to `:63` move up 1 (the
+  dropped import); `:64` to `:641` do not move (the added import cancels
+  it); `:684` on move up 35.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,684 B (+189 B), only `index.js` differs
+  (`compare-bundles` against post-5h1; minified names), CSS byte-identical
+  (`cmp`); **L** 190 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h1's run but the portrait restore (699 here, 700 there,
+  the known noise), every report line identical but the portrait timing:
+  240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.7 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, with
+  `reader-batch-proposal` at both sizes the capture of these bars (no
+  capture shows the sharḥ notice or the sharḥ search bar; `reader-notice`
+  is the translator's notice, still in the screen); **P** PASS, identical,
+  its `batch`, `batch-again` and `no-key-batch` scenarios included.
+- **Review of 5h2 (`1a3e6a6`): PASS WITH NOTES; "ready for 5h3".** The 42
+  lines identical, the five props `x={x}`, the same-typed pairs inside the
+  moved text unchanged. The reconciliation question answered: the four
+  bars move from the root `div`'s children into a `Fragment` under a
+  component that mounts with the screen and never changes type, so nothing
+  remounts after the first render. The sharḥ notice and sharḥ search bars
+  have no capture: the documented gap of the plan's §1.1, not a 5a miss,
+  left to the owner's tablet check 8. Note (a): adaptation (i) was read to
+  allow restating an anonymous state shape (`batchProposal`'s) when no
+  hook's return type can express it. **For 5j, the plan's "Corrections
+  found in review"** (started here): that reading of (i) — widened at
+  5h3's review to: restating anonymous state shapes and the screen's
+  `useCallback`/`useMemo` signatures (locals with no exported type) when
+  no hook's return type can express them; with it, 5e3's
+  correction to Design §10 (`quran/quranIndex.ts:427` untrue from 5e4, not
+  5e3) and 5f2's `settleOn as settleOnBlock` import alias (the module
+  function and the `useCallback` share Q8's name). Added at 5i3: a
+  correction to Design §7's 5i3 rows — `withOfflineRequest` and
+  `withCloudRequest` are module functions in `useTranslator.ts`, not in
+  `translationSteps.ts`, since importing `SessionStats` there is a
+  file-level cycle (the plan's amendment to Q12); `withoutStream` is in
+  `translationSteps.ts` as planned.
+
+**Step 5h3, measured 2026-11-17**
+- The eight sheet conditionals (`ReaderScreen.tsx:795-989` at `1a3e6a6`,
+  the plan's 1035-1229: `SelectionRail`, `BiographySheet`,
+  `DictionarySheet`, `MarginMenu`, `EntitySheet`, `CardPopover`,
+  `ShareChapter`, `TocDrawer`, adjacent, blank lines only between them,
+  from just after the bottom sheet to the root `div`'s close) moved into
+  `export function ReaderSheets(…)` in the new
+  `ui/reader/ReaderSheets.tsx`, returned as one `Fragment`: `return ( <>
+  … </> )`, no wrapper, every condition inside, no `memo`, no effect, no
+  `useApp()`. With them, whole, `blockElementFor` (`:994-998`, with its
+  doc comment), a module function used only by the rail's three handlers
+  (`:806`, `:820`, `:829`). `cmp`: the 195 lines identical at the same
+  indentation, `blockElementFor` identical. Outside them `ReaderScreen.tsx`
+  is the old file but for eleven import lines and the call (`diff`).
+- Adaptation (f), 40 props, each `x={x}`, in the moved text's order of
+  first use: `selection`, `translator`, `dictionary`, `biographyAvailable`,
+  `withSelection`, `setBiography`, `runTranslate`, `explanations`,
+  `setActiveCardId`, `setGloss`, `lookUpWord`, `blocks`, `requestGloss`,
+  `marks`, `biography`, `lookup`, `gloss`, `setLookup`, `visibleBlock`,
+  `marginMenu`, `readOnly`, `addNoteToBlock`, `proposeBatch`,
+  `setMarginMenu`, `entitySheet`, `setEntitySheet`, `runTranslateBlock`,
+  `sharh`, `popover`, `citationFor`, `setPopover`, `showShare`,
+  `shareButtonRef`, `bookId`, `tocNodes`, `activeTocNodeId`,
+  `setShowShare`, `showToc`, `setShowToc`, `jumpToPage`. Objects passed
+  whole (`translator`, `marks`, `explanations`, `sharh`, `selection`).
+  (i) types from the hooks where one returns it (`ReturnType<typeof
+  useTranslator>`, `useMarks`, `useExplanations`, `useSharh`; the seven
+  `useWordLookup` fields; `useReaderNavigation`'s `jumpToPage`), the
+  screen's anonymous state shapes restated (as 5h2's review allowed), and
+  the screen's `useCallback`s' signatures restated (`withSelection`,
+  `runTranslate`, `runTranslateBlock`, `addNoteToBlock`, `proposeBatch`,
+  `citationFor`). (h) `<ReaderSheets … />` stands where `selection.active
+  && (` was, the last child of the root `div`.
+- Same-typed props, for the reviewer: `Dispatch<SetStateAction<boolean>>`
+  — `setShowShare` (only `ShareChapter`'s `onClose`) and `setShowToc`
+  (only `TocDrawer`'s `onClose` and `onSelect`); `boolean` — `showShare`
+  (`ShareChapter`'s condition), `showToc` (`TocDrawer`'s),
+  `biographyAvailable` (the rail's prop), `readOnly` (`MarginMenu`'s
+  condition); `Dispatch<SetStateAction<string | null>>` — only
+  `setActiveCardId` (the rail's `onExplain`); `(block: Block) =>
+  Promise<void>` — `addNoteToBlock` (`MarginMenu`'s `onAddNote`) and
+  `runTranslateBlock` (`EntitySheet`'s `onTranslateSurrounding`); the four
+  `{… anchor: HTMLElement} | null` setters differ by shape, so `tsc` would
+  catch a swap among them. Every `onClose` stays an inline arrow, so
+  `AnchoredPanel` re-registers its outside tap on the same renders as
+  before (FOUND_ISSUES 34, 37).
+- Sheets with state of their own: `SelectionRail`, `BiographySheet`,
+  `DictionarySheet`, `CardPopover`, `ShareChapter`, `TocDrawer` (each
+  `useState`), and the entity sheet through `QuranSheet`/`HadithSheet`;
+  `MarginMenu` has none. Each mounts and unmounts under its own
+  condition, as before; `ReaderSheets` renders whenever the book is
+  loaded, never changes type, so no sheet remounts. `shareButtonRef.current`
+  is still read in the same render pass.
+- Imports: `ReaderSheets.tsx` takes the eight sheet components, `secrets`,
+  `GLOSS_PROVIDER_ID`, `entityContext`/`entityText` and the types it names;
+  none imports it back, so no cycle. `ReaderScreen` drops the eight sheet
+  imports, `GLOSS_PROVIDER_ID`, and `entityContext`/`entityText` from the
+  `entityService` line, keeps `secrets` (its `hasKey`), and imports
+  `ReaderSheets`. A five-line header. `ReaderScreen.tsx` is 850 lines
+  (1,019), at the top of Design §6's "about 750-850" with 5h4 to come;
+  `ReaderSheets.tsx` 325.
+- **For 5j:** the screen's references among the imports move up 3 to 11;
+  `:64` to `:794` up 10; past `:989` up 163 (the root `div`'s close) and
+  169 (`NoKeyBanner`). FOUND_ISSUES 26's `:1102-1115`, 33's `:1043` and
+  34's and 37's `:1089`, `:1098`, `:1168`, `:1199` (the plan's base) are
+  now in `ReaderSheets.tsx`; 28's `:1025` (the bottom sheet's handle)
+  stays in the screen.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 792,831 B (+1,147 B: the 40-prop object and the
+  part's destructuring), within ±2 KB; only `index.js` differs
+  (`compare-bundles` against post-5h2; minified names), CSS byte-identical
+  (`cmp`); **L** 191 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h2's run but the portrait restore (700 here, 699 there,
+  the known noise) — the popover that follows its anchor, the double-tap
+  dictionary sheet and "no rail" after it, the marker popover and the
+  contents landings included — and every report line but the portrait
+  timing: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30 (it taps Translate on the
+  rail); **U** 254/254 — the sheet captures `reader-rail`,
+  `reader-biography`, `reader-meaning`, `reader-meaning-cached`,
+  `reader-margin-menu`, `reader-hadith`, `reader-hadith-diagnostics`,
+  `reader-quran`, `reader-quran-similar`, `reader-quran-compiled`,
+  `reader-popover` (600×960), `reader-share`, `reader-toc` and
+  `reader-batch-proposal` (opened from the margin menu) all match; **P**
+  PASS, identical, its `translate`, `block`, `no-key` and `batch`
+  scenarios (the rail's Translate, the entity sheet's surrounding passage,
+  the refusal, and Translate all…) included.
+- **Review of 5h3 (`dbfa2c4`): PASS WITH NOTES; "ready for 5h4".** The 195
+  lines and `blockElementFor` byte-identical; all 40 props checked
+  `name={name}`, the same 40 names in the same order at the call site, in
+  the destructuring and in the type keys, so no swap is possible; every
+  `onClose` still inline; no sheet remounts. Both extra items on the 5j
+  Corrections list (5e3's §10, 5f2's alias) belong there. Notes, applied
+  at 5h4: (c) the Corrections item on (i) widened to the screen's
+  `useCallback`/`useMemo` signatures (above); (d) `ReaderSheets.tsx`'s new
+  header said "`blockElementFor` is its own helper", true but odd, now
+  "with `blockElementFor`, the helper only the rail uses" (header only,
+  not moved text).
+
+**Step 5h4, measured 2026-11-17**
+- The `cardPanel` element's `<CardPanel …>` (`ReaderScreen.tsx:542-578` at
+  `dbfa2c4`, the plan's 712-750; defined after the early returns and
+  `activeTocTitle`, not inside a conditional, reading nothing computed
+  between it and its two uses) moved into `export function
+  ReaderCardPanel(…)` in the new `ui/reader/ReaderCardPanel.tsx`, returned
+  as is (`return ( <CardPanel …/> )`, no wrapper, no `memo`, no effect, no
+  `useApp()`). `cmp`: the 37 lines identical, at the same indentation.
+  `const cardPanel = ( <ReaderCardPanel … /> );` stays in the screen, so
+  its two render sites, the aside (`{cardPanel}`) and the bottom sheet,
+  are unchanged. The per-kind collapse and delete now sit in one named
+  place, the "card kinds" of Design §8.
+- Adaptation (f), 17 props, each `x={x}`, in the moved text's order of
+  first use: `allCards`, `blocks`, `pageMeta`, `translator`,
+  `activeCardId`, `readOnly`, `sharedScope`, `settings`, `settledRange`,
+  `sectionNodeId`, `setSharedScope`, `updateSettings`, `focusCard`,
+  `marks`, `explanations`, `sharh`, `editNote`. Objects passed whole
+  (`translator.streaming`, `.stats`, `.isStale`, `settings.panelScope`,
+  `marks.noteCards` as written). The element's inline arrows
+  (`onScopeChange`, `onToggleCollapse`, `onCollapseAll`, `onRetranslate`,
+  `onDelete`, `onEditNote`, `onAddGlossaryTerm`) stay inline in the moved
+  text. (i) types: `Card[]`, `Block[]`, `Map<number, PageMeta>`,
+  `ReturnType<typeof useTranslator>`, `string | null` (twice), `boolean`,
+  `PanelScope`, `ReturnType<typeof useApp>['settings']` and
+  `['updateSettings']`, `VisibleRange | null`,
+  `Dispatch<SetStateAction<PanelScope>>`, `ReturnType<typeof
+  useReaderNavigation>['focusCard']`, `ReturnType<typeof useMarks>`,
+  `useExplanations`, `useSharh`, and `editNote`'s restated `(card: Card)
+  => Promise<void>`.
+- Same-typed: `activeCardId` and `sectionNodeId` (`string | null`; the
+  first only `activeCardId={activeCardId}`, the second only
+  `sectionNodeId={sectionNodeId}`). No two callback props share a type;
+  the per-kind collapse and delete are not props but the moved text's own
+  `onToggleCollapse` and `onDelete` arrows, each dispatching on
+  `card.kind` to `marks`, `explanations`, `sharh` or `translator`, as
+  before.
+- Two render sites, no state or identity change: `cardPanel` was one
+  `CardPanel` element rendered in the aside (beside) or the bottom sheet
+  (sheet), never both at once; it is now one `ReaderCardPanel` element
+  rendered in the same two places. `CardPanel` holds state (its `filter`
+  `useState`, a `containerRef`); that state is per render site, as before:
+  each site is its own instance, a switch between beside and sheet
+  unmounts one and mounts the other, as it did. `ReaderCardPanel` never
+  changes type, so no `CardPanel` remounts otherwise.
+- The screen's header: `ReaderScreen.tsx` had none; a new comment after
+  the imports says what the screen owns, which parts and hooks it uses,
+  and why it stays at about 850 lines (Design §6.5, Q11): the shared state
+  and the code that writes it, the columns' JSX and the props; the data
+  loading left in because a hook holding the blocks would run before
+  `useTranslator` and reorder every open's storage requests; the selection
+  tracking left in because its doc comment sits above the wrong effect
+  (FOUND_ISSUES 30); a context rejected (Q10). 5h3's review note (d):
+  `ReaderSheets.tsx`'s header reworded.
+- Imports: `ReaderCardPanel.tsx` takes `CardPanel` (with `type
+  PanelScope`) and the types it names; none imports it back, so no cycle.
+  `ReaderScreen` keeps `PanelScope` as `import type { PanelScope } from
+  './CardPanel'` (a filtered `{ type PanelScope }` would leave a
+  side-effect import under `verbatimModuleSyntax`) and imports
+  `ReaderCardPanel`. A five-line header. `ReaderScreen.tsx` is 854 lines
+  (850 before: the import and the 20-line header comment add 22, the
+  element's 37 lines become 19), against Design §6's "about 750-850";
+  `ReaderCardPanel.tsx` 95. 5g1–5h4 done.
+- **For 5j:** the screen's references from `:54` to `:541` move down 22
+  (the new import and the header comment); past `:579` down 4 (the
+  element's 37 lines became 19).
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 793,235 B (+404 B), only `index.js` differs
+  (`compare-bundles` against post-5h3; minified names), CSS byte-identical
+  (`cmp`); **L** 192 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h3's run but the portrait restore (699 here, 700 there,
+  the known noise) — the card panel "held under the header… aside
+  51–600", Ctrl+\\ and Hide cards with the edge tab, the marker that
+  makes its card active "in the panel", the card tap to the middle, and
+  "the handle opens a sheet 55% of the screen tall" and closes it,
+  included — and every report line identical, the timings too: 240,000 px
+  in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-cards`,
+  `reader-retranslate` (both sizes), `reader-collapsed` (960×600) and
+  `reader-sheet-open` (600×960) among them; **P** PASS, identical, its
+  `retranslate`, `retranslate-with` and `retranslate-no-key` scenarios
+  included.
+- **Review of 5h4 (`eec59a5`): PASS WITH NOTES; "ready for 5i1".** Every
+  claim in the screen's new header comment checked true against the code
+  and the plan; the element's identity and its two render sites (the aside
+  and the bottom sheet) unchanged; `import type { PanelScope }` right
+  under `verbatimModuleSyntax`. Notes: (n1) the header comment is 20 lines
+  (`ReaderScreen.tsx:56-75`), not 21; the +22 and every shift were right,
+  and the entry above now says "20-line"; (n2) the header's "(Q10)" is
+  more exact as "(Design §6.3, Q10)", fixed at 5i1 in the header comment
+  (new text in the screen, not moved text; one token, kept on its line, so
+  no line moves); (n3) for the PR: the owner's Q11 answer was "about 800",
+  and 854 is at the top of the plan's "about 750-850". Not FOUND_ISSUES, a
+  naming note: `selection.ts:20` exports a different `blockElementFor(node)`
+  that shares the name of `ReaderSheets.tsx`'s private helper; it predates
+  5h3.
+
+**Step 5i1, measured 2026-11-17**
+- Two runs of `translate` (adaptation (k), Design §7) moved into the new
+  `ui/reader/translationSteps.ts`, module-level and pure: the passage
+  statements (`useTranslator.ts:215-223` at `eec59a5`, the plan's line
+  numbers: `selected`, `before`/`after`, the verse comment and `known`),
+  contiguous, no free name reassigned, nothing read between them but
+  `selected` by `known` inside the run; and the request literal handed to
+  `providerFor(useProviderId).translate` (`:275-290`), one expression, no
+  free name reassigned (`apiKey`, the one `let`, is not in it).
+- Signatures: `passageFor(blocks: Block[], entities: Entity[], anchor:
+  Pick<SelectionAnchor, 'startBlockId' | 'endBlockId'>)`, its return
+  inferred (`{ selected, before, after, known }`); `translationRequestFor({
+  anchor, before, after, selected, activeProfile, glossary, useModel,
+  known, digDeeper })` → `TranslationRequest`, one object parameter (as (f)
+  for a hook, so no two same-typed names can swap by position: `before`,
+  `after` and `selected` are all `Block[]`), its fields the literal's nine
+  free names in order of first use, typed `Pick<SelectionAnchor,
+  'sourceText'>`, `Block[]` ×3, `TranslationProfile`, `GlossaryEntry[]`,
+  `string`, `ReturnType<typeof passageFor>['known']`, `boolean`. The
+  anchor types are `Pick`s of what each body reads, because
+  `TranslateRequest` is in `useTranslator.ts` and importing it back would
+  make a file-level cycle. The declared return type keeps the literal
+  contextually typed, as the argument position did.
+- Word diff (`git diff --no-index --word-diff` of the removed lines
+  against the bodies, indentation aside): `passageFor`'s nine lines
+  identical, its comment included, then one added `return { selected,
+  before, after, known };`; the literal identical but `{+return+}` before
+  its `{` and `[-},-]{+};+}` at its end (the argument's comma becomes the
+  statement's semicolon).
+- Call sites (h): `const { selected, before, after, known } =
+  passageFor(blocks, entities, anchor);` where `selected` was, so every
+  later line reads the same names; `translationRequestFor({ … })` as the
+  first argument of the same `translate` call, still after `providerFor`'s
+  lookup, before `apiKey`. No statement with a side effect moved: no
+  `await`, setter, storage call, `newId`, `Date.now` or `beginActivity`.
+  Both `cacheKeyFor` calls (`translate`'s `:195-205`, `isStale`'s
+  `:140-158`) untouched, so no cache key changes (trap 5); `translate`'s
+  deps array untouched. `SessionStats` and `EMPTY_STATS` stay.
+- What stays in `translate`, in order (Design §7's list): the provider
+  choice and key check with its `setNotice`; `cacheKeyFor`; the cache read
+  and `upsert`; the `passageFor` call; the loading card literal (5i2's);
+  `upsert`, `setBusy`, `setNotice`, `beginActivity`; the offline branch
+  with its `setStats` updater (5i3's); the provider call with
+  `translationRequestFor`; `coverageOf`; the finished card with its
+  `await enrichSegments`; `putCard`, `upsert`, the cloud `setStats`
+  updater (5i3's); the `catch` with the failed card (5i2's); `finally`.
+- Imports: `translationSteps.ts` takes `import type` of `Block`, `Entity`,
+  `GlossaryEntry`, `TranslationProfile` (`types`) and `TranslationRequest`
+  (`translation/TranslationProvider`), `TRANSLITERATION_INSTRUCTION`
+  (`translation/prompt`), and the functions the moved text calls:
+  `knownReferencesIn` (`quran/entityService`) and `blocksInRange`,
+  `contextAround` with `type SelectionAnchor` (`./selection`, value
+  imports, so no side-effect-only import). It does not import
+  `useTranslator`. `useTranslator.ts` drops `knownReferencesIn`,
+  `TRANSLITERATION_INSTRUCTION` and the two selection functions, keeps
+  `SelectionAnchor` as `import type { SelectionAnchor } from
+  './selection'` (`verbatimModuleSyntax`), and imports `passageFor`,
+  `translationRequestFor`. A six-line header. `useTranslator.ts` is 453
+  lines (466); `translationSteps.ts` 68. 5h4's review notes: n1 the
+  "20-line" above; n2 the screen header's "(Design §6.3, Q10)", one token
+  on `ReaderScreen.tsx:74`, the line left long rather than rewrapped so no
+  screen line moves.
+- **For 5j and 5i2–5i3:** `useTranslator.ts`'s `:9-18` up 1; old `:19`
+  (the selection import) becomes `:18-19`; from `:20` nothing moves,
+  through `:214`; `:215-223` now the call at `:215` (the text at
+  `translationSteps.ts:19-27`); `:224-274` up 8; `:275-290` now the call
+  at `:267-277` (the literal at `translationSteps.ts:52-67`); past `:290`
+  up 13. FOUND_ISSUES: 26's `:195-205` and `:207-213` unchanged, its
+  `:215-223` and `:277-288` now `translationSteps.ts:19-27` and `:54-65`;
+  `:32`, `:62`, `:66-68`, `:88-94` unchanged; `:246` now `:238`; `:330`
+  now `:317`; `:343-350` now `:330-337`; `:378-394` now `:365-381`. The
+  plan's 5i2/5i3 ranges: the loading card `:217-239`, the updaters
+  `:255-262` and `:309-318`, the failed card `:322-336`, `withoutStream`'s
+  `:343-347`.
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,551 B (+316 B), only `index.js` differs
+  (`compare-bundles` against post-5h4; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h4's run, the portrait restore too (699 both), and every
+  report line identical: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks
+  / 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U**
+  254/254; **P** PASS, identical — every request and card, its
+  `translate`, `cache-hit`, `retranslate`, `external-lookup`, `error`,
+  `block`, `batch` and `transliteration` scenarios included; **Q** PASS,
+  identical to `docs/refactor/phase3/requests.json`.
+- **Review of 5i1 (`8be21cd`): PASS WITH NOTES; "ready for 5i2".** The
+  reviewer's own word diff matched the entry's; all three callees
+  (`blocksInRange`, `contextAround`, `knownReferencesIn`) pure; the
+  argument evaluation order unchanged; both `cacheKeyFor` calls untouched.
+  The object parameter and the `Pick` types allowed under (f), (i) and (k);
+  the 90-character `ReaderScreen.tsx:74` accepted (n4). Notes: (n1) the new
+  header said `translate` keeps "both cache keys in its own order", but
+  only one `cacheKeyFor` call is in `translate`, the other in `isStale`:
+  fixed in 5i2's header; (n2) its "Pure — no storage, no state, no clock"
+  becomes untrue at 5i2 (`loadingCard` carries `newId` and `Date.now`):
+  amended in 5i2, the step that makes it untrue (Q13); (n3) the "For 5j"
+  line's "`:9-19` up 1" corrected above to "`:9-18` up 1; old `:19` … from
+  `:20` nothing moves". For 5j's Corrections list (optional): (k)'s wording
+  could add "an object parameter when names share a type".
+
+**Step 5i2, measured 2026-11-17**
+- Two more runs of `translate` (adaptation (k), Design §7) moved into
+  `ui/reader/translationSteps.ts`: the loading card literal
+  (`useTranslator.ts:217-239` at `8be21cd`, the plan's 225-247), its
+  `newId('card')` and `Date.now()` inside it at the same places; and, in
+  the `catch`, the two statements that build the failed card (`:322-336`,
+  the plan's 335-349: `const error = …` and `const failed: TranslationCard
+  = { … }`), contiguous, `error` read only by the `failed` literal and by
+  nothing after it. The `await storage.putCard(failed)`, `upsert(failed)`
+  and `return failed` after them stay in `translate`, so the value and the
+  side effects separate without a reorder. No free name in either run is
+  reassigned (`card`, `caught`, the consts and the destructured
+  parameters).
+- Signatures: `loadingCard({ bookId, anchor, activeProfile, glossaryHash,
+  useProviderId, useModel, cacheKey, digDeeper }): TranslationCard`, one
+  object parameter (`bookId`, `glossaryHash`, `useModel` and `cacheKey`
+  are all `string`), the literal's eight free names in order of first use,
+  typed `string`, `Pick<SelectionAnchor, 'startBlockId' | 'startOffset' |
+  'endBlockId' | 'endOffset' | 'sourceText'>` (the five fields it reads,
+  `TranslateRequest['anchor']`'s shape, restated since `TranslateRequest`
+  cannot be imported back), `TranslationProfile`, `string`, `ProviderId`,
+  `string`, `string`, `boolean`; `failedCard(card: TranslationCard,
+  caught: unknown): TranslationCard`, positional as the plan names it (the
+  two types differ; `caught` is `unknown` as the `catch` binding is).
+- Word diff (`git diff --no-index --word-diff`, indentation aside): the
+  loading card's 23 lines identical, its comment included, but
+  `[-const card: TranslationCard =-]{+return+} {` on the first line — the
+  declaration stays at the call site, the literal moved; the failed card's
+  15 lines identical, then one added `{+return failed;+}`.
+- Call sites (h): `const card: TranslationCard = loadingCard({ bookId,
+  anchor, activeProfile, glossaryHash, useProviderId, useModel, cacheKey,
+  digDeeper });` at `:216`, the declaration and its type as written;
+  `const failed = failedCard(card, caught);` at `:308`, the first line of
+  the `catch`, so `putCard`, `upsert` and `return` read `failed` as
+  written. `TranslationError` leaves `useTranslator.ts`'s imports (it was
+  used only there); `newId` stays (`addGlossaryTerm`).
+- Evaluation order of `newId('card')` and `Date.now()`: before, the
+  literal was the initializer of `const card` straight after the
+  `passageFor` call, its properties evaluated in order — `newId` first,
+  then plain reads, then `Date.now()`, then plain reads — and then
+  `upsert(card)`. Now the argument object is built first from eight
+  `const`s and parameters (plain local reads, no getters, no calls), then
+  `loadingCard` runs the same literal in the same order and returns. So
+  between the `passageFor` call and `upsert(card)` the only effects are
+  still `newId` (its counter, `Date.now` and `Math.random`) and then
+  `Date.now()`, in that order, at the same moment relative to every other
+  statement in `translate`. `failedCard` constructs a `TranslationError`
+  when `caught` is not one, as before, before the `putCard`.
+- FOUND_ISSUES 41 and 42 preserved exactly: the failed card is still
+  `{ ...card, … }`, so it keeps the loading card's `cacheKey`, and is still
+  written with `putCard` in `translate` (41); `retranslate` and
+  `translate`'s key check are untouched (42). P's `error`,
+  `error-cached`, `batch-again` and `retranslate-no-key` scenarios record
+  both, identical below. No `await`, setter or storage call moved; both
+  `cacheKeyFor` calls, `translate`'s deps array, `SessionStats` and
+  `EMPTY_STATS` untouched, so no cache key changes (trap 5).
+- The header (5i1's review notes n1, n2, Q13 in the step that makes it
+  untrue): "Pure — no storage, no state, no clock" and "both cache keys"
+  replaced by: no storage, no React state, no `await`; the loading card's
+  `newId('card')` and `Date.now()` inside its literal, run when the card
+  is built; `translate` keeps its cache key (`isStale` keeps the other);
+  moved in steps 5i1 and 5i2. Nine lines.
+- Imports: `translationSteps.ts` adds `ProviderId`, `TranslationCard` to
+  its `import type` from `types` (now multi-line), `newId` (`lib/id`), and
+  `TranslationError` as a value beside `type TranslationRequest` from
+  `translation/TranslationProvider`. `useTranslator.ts` drops
+  `TranslationError` and imports `failedCard`, `loadingCard`. No cycle.
+  `useTranslator.ts` is 425 lines (453); `translationSteps.ts` 145 (68).
+- **For 5j and 5i3**, `useTranslator.ts` from `8be21cd`: `:9-216` up 1
+  (old `:8`, `TranslationError`'s import, gone); `:217-239` now the call at
+  `:216-225`; `:240-321` up 14; `:322-336` now the call at `:308`; past
+  `:336` up 28. 5i3's ranges: the updaters `:241-248` and `:295-304`,
+  `withoutStream`'s `:315-319`. `translationSteps.ts` moved by its longer
+  imports and header: `passageFor`'s body now `:30-38`, the request
+  literal `:63-78`, the loading card `:103-125`, the failed card
+  `:129-143`. FOUND_ISSUES against the plan's base: 26's `:195-205` now
+  `:194-204`, `:207-213` now `:206-212`, `:215-223` and `:277-288` now
+  `translationSteps.ts:30-38` and `:65-76`; 41's `:343-350` now
+  `translationSteps.ts:137-143` with its `putCard` at `:309`, its `:244`
+  now `translationSteps.ts:122`, its `:207-212` now `:206-211`; 42's
+  `:378-394` now `:337-353`, `:383-384` now `:342-343`, `:185-192` now
+  `:184-191`; 43's `:246` now `translationSteps.ts:124`; 43's `:330` now
+  `:303`. In the up-1 range, the references of FOUND_ISSUES.md:431, 454,
+  491 and 499 (29's `:62`, 31's `:66-68`, 35's `:88-94`, 36's `:32`) are
+  now `:61`, `:65-67`, `:87-93` and `:31`.
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,801 B (+250 B), only `index.js` differs
+  (`compare-bundles` against post-5i1; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5i1's run but the portrait restore (700 here, 699 there,
+  the known noise), and every report line but the landscape timing:
+  240,000 px in 33.3 s (33.4), 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
+  PASS, identical — P pins `Date.now` and `Math.random`, so the card ids
+  (`newId` embeds the clock, its counter and a random draw) and
+  `createdAt` values it records also show the calls happen in the same
+  order and number; its `error`, `error-cached`, `batch-again` and
+  `retranslate-no-key` scenarios included; **Q** PASS, identical to
+  `docs/refactor/phase3/requests.json`.
+- **Review of 5i2 (`a44f5bd`): PASS WITH NOTES; "ready for 5i3".** `error`
+  read only by the `failed` literal; `TranslationError`'s constructor only
+  assigns fields; the evaluation order of `newId('card')` and `Date.now()`
+  unchanged; FOUND_ISSUES 41 and 42 preserved; P re-run identical. Notes:
+  (n1) the "For 5j and 5i3" bullet said "`:32`, `:62`, `:66-68`, `:88-94`
+  unchanged", but they are in the up-1 range, so `:31`, `:61`, `:65-67`,
+  `:87-93` at `a44f5bd`, and they are FOUND_ISSUES.md:431, 454, 491 and
+  499's references, not 43's: corrected above; (n2) the header's "keeps
+  every side effect" reads as excepting `newId`'s counter, as intended;
+  left, or made explicit when the header is next touched.
+
+**Step 5i3, measured 2026-11-17**
+- The three updater bodies of `translate` moved (adaptation (k), Design
+  §7 as amended for Q12): the offline branch's `setStats` updater
+  (`useTranslator.ts:241-248` at `a44f5bd`, the plan's 263-270) and the
+  cloud branch's (`:295-304`, the plan's 322-331) as module functions
+  `withOfflineRequest` and `withCloudRequest` in `useTranslator.ts`,
+  straight after `EMPTY_STATS`, with a four-line comment saying why they
+  are there; the `finally`'s `setStreaming` updater (`:315-319`, the
+  plan's 356-360) as `withoutStream` in `translationSteps.ts`, after
+  `failedCard`. Each was one arrow's body; the arrow and its `setStats(…)`
+  or `setStreaming(…)` call stay in `translate`, a fresh arrow per call as
+  before, so the updater's identity is as irrelevant as it was. No free
+  name in them is reassigned (`previous` is the arrow's parameter;
+  `useProviderId`, `result` and `card` are `const`s).
+- The probe that led to the amendment: `import type { SessionStats } from
+  './useTranslator'` added to `translationSteps.ts` made `check-layers
+  --check` exit 1 with `file-level cycle: {ui/reader/translationSteps.ts,
+  ui/reader/useTranslator.ts}` (scratchpad `l-5i3-probe.txt`); the file
+  was restored before any other change. The owner chose to keep the stats
+  updaters beside `SessionStats` (the plan's amendment to Q12, and an item
+  on the 5j Corrections list above).
+- Signatures: `withOfflineRequest(previous: SessionStats): SessionStats`;
+  `withCloudRequest(previous: SessionStats, useProviderId: ProviderId,
+  result: TranslationResult): SessionStats`, positional as the plan names
+  them (the three types differ); `withoutStream(previous: Record<string,
+  string>, card: Pick<TranslationCard, 'id'>): Record<string, string>`.
+  Under (f) the last takes `card`, not the plan's `cardId`: the body reads
+  `card.id`, and a same-named parameter keeps it verbatim and keeps the
+  read of `.id` inside the updater, where it was. The return types are the
+  state types the setters' updaters had contextually.
+- Word diff (`git diff --no-index --word-diff`, indentation aside): the
+  offline updater's 8 lines `[-setStats((previous) => ({-]{+return {+}`,
+  6 identical lines, `[-}));-]{+};+}`; the cloud updater's 10 lines the
+  same pair around 8 identical lines; `withoutStream`'s 3 body lines
+  identical, `[-setStreaming((previous) => {-]` and `[-});-]` the call that
+  stays.
+- Call sites (h): `setStats((previous) => withOfflineRequest(previous));`
+  at `:280`, `setStats((previous) => withCloudRequest(previous,
+  useProviderId, result));` at `:327`, `setStreaming((previous) =>
+  withoutStream(previous, card));` at `:338`. React still receives one
+  updater function per call and calls it with the same `previous`; the
+  values each reads (`useProviderId`, `result`, `card.id`) are the same
+  `const`s, read when the updater runs, as before.
+- `translate` after 5i3 against Design §7's "What stays", item by item:
+  (1) the provider choice and key check with its `setNotice` (`:218-231`),
+  in place; (2) both `cacheKeyFor` calls, `translate`'s (`:233-243`) and
+  `isStale`'s (`:178-196`), untouched (trap 5); (3) the cache read and its
+  `upsert` (`:245-251`); then the `passageFor` and `loadingCard` calls
+  (`:253`, `:255-264`), 5i1's and 5i2's; (4) `upsert`, `setBusy`,
+  `setNotice`, `beginActivity` (`:268-273`); (5) the offline branch
+  (`:276-282`), `runOffline` not moved; (6) the provider call
+  (`:284-298`) with `translationRequestFor`; (7) `coverageOf` (`:303`);
+  (8) the finished card literal with its `await enrichSegments`
+  (`:305-322`), not moved; (9) the `putCard`s, here and in the offline
+  branch and the `catch`, with the `upsert`s and both `setStats` calls;
+  the `catch` with `failedCard` (`:330-334`); (10) `finally` (`:335-339`)
+  with `endActivity`, `setBusy(false)` and `setStreaming`. Every `await`,
+  setter, storage call and `beginActivity` is in `translate` in its old
+  order. `translate`'s deps array (`:341-353`) unchanged; `SessionStats`
+  and `EMPTY_STATS` stay, so RESTRUCTURE §2's "request counts in
+  `useTranslator.ts`" holds.
+- The header of `translationSteps.ts` (5i2's review note n2 made
+  explicit): it now lists the streaming text without the card's entry;
+  "The one exception is the loading card's `newId('card')` (a module
+  counter and a random draw) and `Date.now()`"; `translate` keeps "every
+  other side effect"; the stats updaters stay in `useTranslator.ts` since
+  importing `SessionStats` would make a file cycle; steps 5i1, 5i2 and 5i3
+  and the amendment to Q12 named. Fourteen lines.
+- Imports: `useTranslator.ts` adds `import type { TranslationResult }`
+  (`translation/TranslationProvider`) for `withCloudRequest`'s `result`
+  and `withoutStream` to its `translationSteps` import (now multi-line);
+  `translationSteps.ts` adds nothing (`TranslationCard` was imported). No
+  cycle. `useTranslator.ts` is 444 lines (466 at the plan base, 453 after
+  5i1, 425 after 5i2; the two module functions and their comment add 32);
+  `translate` is 147 lines (`:208-354`), 207 at the plan base;
+  `translationSteps.ts` 159 (145).
+- **For 5j**, `useTranslator.ts` from `a44f5bd`: `:8-17` down 1 (the new
+  type import); `:18` (the `translationSteps` import) now `:19-25`;
+  `:19-55` down 7; then the 32 new lines (`:63-94`); `:56-240` down 39;
+  `:241-248` now `:280`; `:249-294` down 32; `:295-304` now `:327`;
+  `:305-314` down 23; `:315-319` now `:338`; past `:319` down 19.
+  `translationSteps.ts` from `a44f5bd`: the header five lines longer, so
+  every line after it down 5: `passageFor`'s body `:35-43`, the request
+  literal `:68-83`, the loading card `:108-130`, the failed card
+  `:134-148`, `withoutStream` `:152-159`. FOUND_ISSUES against the plan's
+  base: 26's `:195-205` now `:233-243`, `:207-213` now `:245-251`,
+  `:215-223` and `:277-288` now `translationSteps.ts:35-43` and `:70-81`;
+  29's `:62` now `:100`, its `:252` and `:355` (`setBusy`) now `:269` and
+  `:337`; 31's `:66-68` now `:104-106`; 35's `:88-94` now `:126-132`; 36's
+  `:32` now `:38`, its `:173` now `:211`, its `:246` and `:289` now
+  `translationSteps.ts:129` and `:82`; 41's `:343-350` now
+  `translationSteps.ts:142-148` with its `putCard` at `:332`, its `:244`
+  now `translationSteps.ts:127`, its `:207-212` now `:245-250`; 42's
+  `:378-394` now `:356-372`, `:383-384` now `:361-362`, `:185-192` now
+  `:223-230`; 43's `:246` now `translationSteps.ts:129`, its `:330` now
+  `:91` (in `withCloudRequest`). P's header
+  (`scripts/verify-translate.mjs:99-105`) names the plan base's `:263-270`,
+  `:356-360`, `:330` and `:322-331`: now `withOfflineRequest`
+  (`useTranslator.ts:67-76`), `withoutStream` (`translationSteps.ts:152-159`),
+  `:91` and `withCloudRequest` (`:78-93`).
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,868 B (+67 B), only `index.js` differs
+  (`compare-bundles` against post-5i2; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5i2's run, the portrait restore too (700 both), and every
+  report line but the timings (33.4 s and 24.5 s here, 33.3 s and 24.4 s
+  there): 240,000 px, 1,905 nodes, 0 long tasks / 175,800 px, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P** PASS, identical
+  — the session lines (the cloud updater's request counts and cost)
+  included; **Q** PASS, identical to
+  `docs/refactor/phase3/requests.json`. P's header
+  (`scripts/verify-translate.mjs:97-107`) names what no scenario can show,
+  so it rests on the word diff above and the reviewer's reading: the
+  offline updater (both offline scenarios fail before it), the streaming
+  entry's removal (a canned response arrives at once), `cacheWriteTokens`
+  (read nowhere in `src/ui`) and the cost sum's accumulation across
+  translations.
+- **Review of 5i3 (`6ed8c0d`): PASS WITH NOTES; "ready for 5j", nothing
+  that must be fixed.** The three updater bodies identical to the removed
+  arrows' bodies by word diff; the `setStats(…)` and `setStreaming(…)` calls,
+  every `await`, setter and storage call still in `translate` in their old
+  order; keeping the stats updaters beside `SessionStats` matches the
+  owner's amendment to Q12. Notes: P cannot reach the offline updater, the
+  streaming entry's removal, `cacheWriteTokens` or the cost sum's
+  accumulation across translations, and the reviewer accepted the word-diff
+  proof for those four; P's header line numbers
+  (`scripts/verify-translate.mjs:97-107`) still named the plan base's lines
+  in `useTranslator.ts`, fixed at 5j.
+
+**Step 5j, docs and comments, 2026-11-17** (comments and docs only; no
+statement in `src/` or `scripts/` changed: every `+`/`-` line of `git diff
+-U0 -- src scripts` is a comment line)
+- Design §10's rows: `ui/kit/SettingsSection.tsx`'s header now says the old
+  local Section is `ui/settings/Section.tsx` and the seven sections it serves
+  are files of their own; `scripts/verify-storage-harness.ts:901` names
+  `BackupSection`; `quran/quranIndex.ts:427` says "in QuranSheet" (the line
+  it describes is `QuranSheet.tsx:208`); `.claude/agents/torjuman-reader.md`'s
+  "How the reader works" names the screen's hooks and parts, puts the header
+  in `ReaderHeader.tsx`, and `TYPE_CHROME` and `settleOn` in
+  `blockLayout.ts`, `BlockRow` in `BlockRow.tsx`; its "28 checks" for R is
+  55. CLAUDE.md's trap 7 and map are the main session's (as in 4n).
+- The 5j list above: `BlockList.tsx`'s margin-layout comment now says the
+  gutters are the list's container padding and `BlockRow.tsx` draws in them
+  (one line longer, so `BlockList.tsx` is 378 lines), and its "see
+  MarginTarget" names `BlockRow.tsx`; P's header names `withOfflineRequest`
+  (`useTranslator.ts:67-76`), `withoutStream` (`translationSteps.ts:152-159`),
+  `cacheWriteTokens` (`useTranslator.ts:91`) and `withCloudRequest`
+  (`useTranslator.ts:78-93`), with the plan base's lines kept as history.
+- FOUND_ISSUES: every reference of 26–43 into a file Phase 5 moved or
+  shifted recomputed by content from the final files (each quoted line found
+  with `grep` and checked with `sed -n`, not by chaining the shift sentences
+  above), and 10's `pageIndexOf` (~103); 32's is `BackupSection.tsx:26-39`,
+  40's `attempts >= 8` `blockLayout.ts:88`. A note at the top of the file
+  says so. The entries' text is otherwise unchanged.
+- RESTRUCTURE: the status, §6's row (complete, what was done, the checks
+  run), and §5's sentence on where the baselines are (D, U, Q, P compare
+  with their record files); §5's R row (55/55) and P row were written in 5b
+  and 5c. The plan: "Corrections found in review", eight items.
+- Left, by the plan or because still true: `ui/reader/useAnimatedList.ts:12`
+  (Design §10: the debounce's call is in the screen); `torjuman-reviewer.md:43`
+  (names no file); each moved file's verbatim moved comments; the header of
+  `scripts/verify-translate.mjs:8-10` (what Phase 5 moves, said when P was
+  written; still true of the steps that left `useTranslator.ts`).
+- **T** exit 0. **L** (`check-layers --check`) exit 0: 193 files, 134
+  edges, 0 directory and 0 file-level cycles, all eleven rules hold. The end
+  checks (T B L S R U P Q D, the SSR build of `verify-parsers.ts`, then X on
+  the whole phase) are run by the main session on the commit.
+- **End checks, run on `6284661` with CLAUDE.md's trap 7 and map applied**
+  (the tree as committed): **T** exit 0. **B** exit 0; main chunk 793,868 B,
+  and `compare-bundles` against post-5i3 shows every JS file identical (the
+  step changed comments only); CSS byte-identical. **L** 193 files, 134
+  edges, `--check` holds. **R** first and alone, 55/55; every ok line
+  identical to 5i3's but the portrait restore (699 here, 700 there), the
+  known noise; 240,000 px in 33.4 s and 175,800 px in 24.4 s, 0 long tasks.
+  **S** 30/30. **U** 254/254. **P** identical to
+  `docs/refactor/phase5/translate.json`. **Q** identical to
+  `docs/refactor/phase3/requests.json`. **D** identical to
+  `docs/refactor/phase4/storage.json`. The **SSR build** of
+  `scripts/verify-parsers.ts` resolves (exit 0); **V is owed** on the owner's
+  PC.
+
+## Phase 5 result
+
+| | Plan base (`9afb2c7`, Phase 4 end) | Phase 5 end |
+| --- | --- | --- |
+| `ReaderScreen.tsx` | 1,349 lines: state, data loading, selection, the position, navigation, panel and header-height logic, the header, the ḥadīth bars, the columns, the card panel, eight sheets, `ReadMarkNav`, `JumpToPage` | 854 lines: the shared state and the code that writes it, the data loading and selection tracking, the columns' JSX and the props, with the reason for its size at its top (Design §6.5, Q11) |
+| `EntitySheet.tsx` | 756 lines: the dispatcher, the verse sheet, the compile tab, the ḥadīth sheet | 29 lines: the dispatcher |
+| `BlockList.tsx` | 728 lines: the virtualizer, the estimates and their tables, `settleOn`, the row and its margin parts | 378 lines: the virtualizer, its callbacks and the list |
+| `SettingsScreen.tsx` | 608 lines: the list and seven inline sections with their `Section` | 62 lines: its imports and the list |
+| `useTranslator.ts` | 466 lines; `translate` 207 | 444 lines; `translate` 147, its pure steps named (`SessionStats`, `EMPTY_STATS` and the two stats updaters stay) |
+| new files in `ui/reader/` | — | `HadithSheet.tsx` 335, `ReaderSheets.tsx` 326, `BlockRow.tsx` 296, `QuranSheet.tsx` 251, `ReaderHeader.tsx` 211, `CompileTab.tsx` 168, `translationSteps.ts` 159, `blockLayout.ts` 99, `ReaderCardPanel.tsx` 95, `CommentaryBars.tsx` 81, `useWordLookup.ts` 77, `usePanelControls.ts` 59, `useReaderNavigation.ts` 55, `useReadingPosition.ts` 51, `useHeaderHeight.ts` 28, `quranSheetData.ts` 26 lines |
+| new files in `ui/settings/` | — | `KeysSection.tsx` 163, `BackupSection.tsx` 101, `TranslationSection.tsx` 95, `QuranSection.tsx` 88, `ReadingSection.tsx` 67, `DisplaySection.tsx` 48, `CatalogSection.tsx` 25, `Section.tsx` 25 lines |
+| new check | — | **P** (`npm run verify:translate`): 6 groups, 23 scenarios, 18 requests, identical at every step from 5g1 |
+| check R | 28/28 | 55/55 (27 new at 5b); landscape 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / portrait 175,800 px in 24.5 s, 1,904 nodes, 0 long tasks at 5i3 (33.3 s / 24.4 s at Phase 4's end) |
+| check U | 180 files | 254 files (70 added at 5a, 4 more at its fix), identical at every step after |
+| check S | 30/30 | 30/30 at every step |
+| checks D, Q | identical | D identical at 5d8; Q identical at 5c and 5i1–5i3 |
+| main JS chunk | 790,214 B | 793,868 B (+3,654: the parts' props objects and the new functions), CSS byte-identical at every step |
+| layers | 134 directory edges, no cycle | 134 directory edges, no directory or file-level cycle, all eleven rules |
+
+Every step was reviewed before the next began. The whole-phase review X
+(`9afb2c7..bc3aa1f`) is PASS WITH NOTES, no must-fix; its three docs notes
+are fixed in `be69914` (the plan's corrections item 9, item 8's size, P's
+header count).
+**Owed before merge:**
+- **V**, `npm run verify` on the owner's PC. Phase 5 changes one module it
+  imports, a comment in `quran/quranIndex.ts` (5j); the count should be
+  Phase 4's.
+- **M** on the staged build (`npm run stage`) on the tablet, by touch, in
+  Chrome, the plan's fourteen items in landscape (960×600) and portrait
+  (600×960). Two things the checks do not show rest on it: the sharḥ notice
+  and sharḥ search bars, which no U capture shows (item 8), and the paths P
+  cannot reach — the offline stats updater and the on-device model, the
+  streaming entry's removal, `cacheWriteTokens`, and the cost summed across
+  several translations in one session (item 5 with a real key; the
+  on-device model is on the plan's list of what only the tablet shows).
+  Also the finger on the divider (item 3, FOUND_ISSUES 27), the native
+  handles, the real fonts, the real APIs and the shared read-only view
+  (item 12, if the owner has a published link).
+
+**Open, and not this phase's to fix:** FOUND_ISSUES 26–43, found during the
+phase and left as found (structure only), their references now pointing at
+the final files. The ones that matter most on the tablet: 26 ("Translate
+this entry" stored under the visible block's key, a wrong translation
+possible), 27 (the divider by finger), 39 (the read-mark ↓), 41 (a failed
+card served from the cache) and 42 (Retranslate deletes the card before the
+key check). Each needs its own change, if the owner wants one.
 
 ## Open
 

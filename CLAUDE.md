@@ -29,6 +29,7 @@ its progress log.
 | `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
 | `npm run verify:requests` | every request the provider call sites send, retries and mapped errors, with fake keys and canned responses, against `docs/refactor/phase3/requests.json` (~1 s) | anywhere |
 | `npm run verify:storage` | Playwright: the IndexedDB schema after a fresh install and every upgrade, and the rows after every storage method, backup and transfer path, against `docs/refactor/phase4/storage.json` (~20 s) | anywhere |
+| `npm run verify:translate` | Playwright: the translate pipeline through the real reader (selection → Translate, cache hit, retranslate, stale card, errors, batch, no key, Claude with cost and web search, on device) with canned Gemini and Anthropic responses and fake keys, against `docs/refactor/phase5/translate.json` (~70 s) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -139,6 +140,16 @@ src/
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
   ui/                  screens; reader/ and settings/ hold most of the UI
+    reader/            ReaderScreen (the shared state and the columns) with
+                       its hooks (useWordLookup, useReadingPosition,
+                       useReaderNavigation, usePanelControls,
+                       useHeaderHeight) and parts (ReaderHeader,
+                       CommentaryBars, ReaderSheets, ReaderCardPanel);
+                       BlockList with BlockRow and blockLayout (TYPE_CHROME,
+                       settleOn); EntitySheet dispatching to QuranSheet
+                       (with CompileTab) and HadithSheet; useTranslator with
+                       translationSteps
+    settings/          SettingsScreen (the list), one file per section
     kit/               shared pieces: Button, Field, TopBar, Spinner, …,
                        ProgressBar, SettingsSection — import the directory
                        (`../kit`, or `./kit` from top-level `ui`)
@@ -212,10 +223,11 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    `scrollMargin` measured from the screen root (observing `body` never fires:
    `html, body { height: 100% }`), a sticky header, a sticky card-panel
    column, overscan 200, `content-visibility: auto` on block text.
-   `TYPE_CHROME` in `BlockList.tsx` must match the CSS margins of each block
-   type or every jump lands off target. Selection endpoints are pinned
-   (`selectionPins.ts`) and `readSelection` takes text from stored blocks, not
-   the DOM. Run both Playwright checks after any reader change.
+   `TYPE_CHROME` in `ui/reader/blockLayout.ts` must match the CSS margins of
+   each block type (the classes beside it in `TYPE_CLASS`) or every jump lands
+   off target. Selection endpoints are pinned (`selectionPins.ts`) and
+   `readSelection` takes text from stored blocks, not the DOM. Run both
+   Playwright checks after any reader change.
 8. **WebView browsers (DuckDuckGo on Android).** `blob:` downloads come out
    0 B, a `data:` link the size of a library crashes the tab, and the Web
    Share API refuses gzip files. `lib/saveFile.ts` (`needsDataUrl`) picks

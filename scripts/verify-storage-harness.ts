@@ -898,7 +898,7 @@ const phases: Record<string, Phase> = {
     const s = await opened(record);
     await seedRaw(ALL_STORES);
     const bundle = await record.step('exportWork', () => s.exportWork());
-    // The bytes SettingsScreen saves: JSON.stringify(bundle), nothing else.
+    // The bytes BackupSection saves: JSON.stringify(bundle), nothing else.
     record.extra.file = JSON.stringify(bundle);
     return record.result();
   },

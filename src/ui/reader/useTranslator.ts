@@ -5,10 +5,9 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
-import { knownReferencesIn } from '../../quran/entityService';
-import { TranslationError } from '../../translation/TranslationProvider';
+import type { TranslationResult } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
-import { cacheKeyFor, glossaryHashOf, TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
+import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
 import {
@@ -16,7 +15,14 @@ import {
   segmentSelection,
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
-import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
+import type { SelectionAnchor } from './selection';
+import {
+  failedCard,
+  loadingCard,
+  passageFor,
+  translationRequestFor,
+  withoutStream,
+} from './translationSteps';
 
 // Orchestrates one translation: pick the provider the profile pins → cache
 // check → provider call → scripture retrieval → persist.
@@ -53,6 +59,38 @@ const EMPTY_STATS: SessionStats = {
   cacheReadTokens: 0,
   cacheWriteTokens: 0,
 };
+
+// The session-stats updaters of `translate`'s offline and cloud branches,
+// moved verbatim from it in restructure Phase 5 step 5i3. They are here, not
+// in translationSteps.ts, because `SessionStats` is declared here and
+// importing it there would make a file cycle (the plan's amendment to Q12).
+function withOfflineRequest(previous: SessionStats): SessionStats {
+  return {
+    ...previous,
+    requests: previous.requests + 1,
+    requestsByProvider: {
+      ...previous.requestsByProvider,
+      offline: previous.requestsByProvider.offline + 1,
+    },
+  };
+}
+
+function withCloudRequest(
+  previous: SessionStats,
+  useProviderId: ProviderId,
+  result: TranslationResult,
+): SessionStats {
+  return {
+    requests: previous.requests + 1,
+    requestsByProvider: {
+      ...previous.requestsByProvider,
+      [useProviderId]: previous.requestsByProvider[useProviderId] + 1,
+    },
+    costUsd: previous.costUsd + (result.costUsd ?? 0),
+    cacheReadTokens: previous.cacheReadTokens + result.usage.cacheReadTokens,
+    cacheWriteTokens: previous.cacheWriteTokens + result.usage.cacheWriteTokens,
+  };
+}
 
 export function useTranslator(bookId: string, blocks: Block[], entities: Entity[] = []) {
   const { storage, http, activeProfile, glossary, settings, refreshGlossary } = useApp();
@@ -212,39 +250,18 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         }
       }
 
-      const selected = blocksInRange(blocks, anchor.startBlockId, anchor.endBlockId);
-      const { before, after } = contextAround(blocks, anchor.startBlockId, anchor.endBlockId);
+      const { selected, before, after, known } = passageFor(blocks, entities, anchor);
 
-      // Verses in this passage were resolved locally at import, against the
-      // bundled muṣḥaf. No model call is needed to identify them.
-      const known = knownReferencesIn(
-        entities,
-        new Set(selected.map((block) => block.id)),
-      );
-
-      const card: TranslationCard = {
-        id: newId('card'),
-        kind: 'translation',
+      const card: TranslationCard = loadingCard({
         bookId,
-        startBlockId: anchor.startBlockId,
-        startOffset: anchor.startOffset,
-        endBlockId: anchor.endBlockId,
-        endOffset: anchor.endOffset,
-        sourceText: anchor.sourceText,
-        segments: [],
-        profileId: activeProfile.id,
-        promptVersion: activeProfile.version,
+        anchor,
+        activeProfile,
         glossaryHash,
-        providerId: useProviderId,
-        model: useModel,
-        createdAt: Date.now(),
-        // New cards open expanded — the user just asked for this translation,
-        // so hiding it would be wrong.
-        collapsed: false,
+        useProviderId,
+        useModel,
         cacheKey,
-        status: 'loading',
-        usedExternalLookup: digDeeper || activeProfile.allowExternalLookup,
-      };
+        digDeeper,
+      });
 
       // Held in memory only while in flight — a card left mid-request by a
       // closed tab should not come back as a permanently spinning row.
@@ -260,34 +277,22 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           const finished = await runOffline(card, useModel);
           await storage.putCard(finished);
           upsert(finished);
-          setStats((previous) => ({
-            ...previous,
-            requests: previous.requests + 1,
-            requestsByProvider: {
-              ...previous.requestsByProvider,
-              offline: previous.requestsByProvider.offline + 1,
-            },
-          }));
+          setStats((previous) => withOfflineRequest(previous));
           return finished;
         }
 
         const result = await providerFor(useProviderId).translate(
-          {
-            targetText: anchor.sourceText,
-            contextBefore: before.map((block) => block.text).join('\n\n'),
-            contextAfter: after.map((block) => block.text).join('\n\n'),
-            blockTypes: selected.map((block) => block.type),
-            systemPrompt: activeProfile.useTransliteration
-              ? `${activeProfile.systemPrompt}\n\n${TRANSLITERATION_INSTRUCTION}`
-              : activeProfile.systemPrompt,
+          translationRequestFor({
+            anchor,
+            before,
+            after,
+            selected,
+            activeProfile,
             glossary,
-            model: useModel,
-            hadithNumbers: selected
-              .map((block) => block.hadithNumber)
-              .filter((value): value is string => Boolean(value)),
-            knownQuranRefs: known.quran,
-            allowExternalLookup: digDeeper || activeProfile.allowExternalLookup,
-          },
+            useModel,
+            known,
+            digDeeper,
+          }),
           apiKey,
           (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
         );
@@ -319,45 +324,18 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         await storage.putCard(finished);
         upsert(finished);
 
-        setStats((previous) => ({
-          requests: previous.requests + 1,
-          requestsByProvider: {
-            ...previous.requestsByProvider,
-            [useProviderId]: previous.requestsByProvider[useProviderId] + 1,
-          },
-          costUsd: previous.costUsd + (result.costUsd ?? 0),
-          cacheReadTokens: previous.cacheReadTokens + result.usage.cacheReadTokens,
-          cacheWriteTokens: previous.cacheWriteTokens + result.usage.cacheWriteTokens,
-        }));
+        setStats((previous) => withCloudRequest(previous, useProviderId, result));
 
         return finished;
       } catch (caught) {
-        const error =
-          caught instanceof TranslationError
-            ? caught
-            : new TranslationError(
-                'api',
-                caught instanceof Error ? caught.message : String(caught),
-              );
-
-        const failed: TranslationCard = {
-          ...card,
-          status: 'error',
-          error: error.message,
-          errorKind: error.kind,
-          rawResponse: error.raw ?? undefined,
-        };
+        const failed = failedCard(card, caught);
         await storage.putCard(failed);
         upsert(failed);
         return failed;
       } finally {
         endActivity();
         setBusy(false);
-        setStreaming((previous) => {
-          const next = { ...previous };
-          delete next[card.id];
-          return next;
-        });
+        setStreaming((previous) => withoutStream(previous, card));
       }
     },
     [

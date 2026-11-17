@@ -1,45 +1,30 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../services/secrets';
 import { hrefFor } from '../../app/router';
-import { parseArabicNumber, toArabicNumerals } from '../../lib/arabic';
+import { toArabicNumerals } from '../../lib/arabic';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';
 import type { Block, Book, Card, Entity, TocNode, TranslationCard } from '../../types';
 import { useMarks } from './useMarks';
 import { useExplanations } from './useExplanations';
-import { MarginMenu } from './MarginMenu';
-import { DictionarySheet, type GlossState } from './DictionarySheet';
-import { BiographySheet } from './BiographySheet';
 import { ensureBiographyIndexes } from '../../biography/service';
 import { ensureNarratorSources } from '../../biography/narratorService';
-import { glossWord, GLOSS_PROVIDER_ID } from '../../translation/gloss';
-import { ANTHROPIC_GLOSS_MODEL } from '../../translation/models';
-import {
-  loadDictionary,
-  type Dictionary,
-  type LookupResult,
-} from '../../dictionary/dictionaryService';
 import { isSingleWord } from '../../dictionary/roots';
 import {
   ensureEntities,
-  entityContext,
-  entityText,
   markableByBlock,
 } from '../../quran/entityService';
-import { EntitySheet } from './EntitySheet';
 import { useSharh } from './useSharh';
 import { useBatchTranslate } from './useBatchTranslate';
-import { BatchProposal, BatchRunning } from './BatchTranslateBar';
 import {
   commentaryRange,
   estimateBatch,
   type BatchEstimate,
 } from '../../translation/hadithRange';
-import { Button, LinkButton, Spinner } from '../kit';
+import { LinkButton, Spinner } from '../kit';
 import { BlockList, type BlockListHandle } from './BlockList';
-import { CardPanel, type PanelScope } from './CardPanel';
-import { CardPopover } from './CardPopover';
+import type { PanelScope } from './CardPanel';
 import {
   buildMarkers,
   coveredBlockIds,
@@ -48,10 +33,7 @@ import {
   type VisibleRange,
 } from './cardLayout';
 import { SearchPanel, type SearchResult } from './SearchPanel';
-import { ShareChapter } from './ShareChapter';
-import { TocDrawer } from './TocDrawer';
 import { peekSelection, readSelection, type SelectionAnchor } from './selection';
-import { SelectionRail } from './SelectionRail';
 import { useDebounced } from './useAnimatedList';
 import { useTranslator } from './useTranslator';
 import {
@@ -61,6 +43,36 @@ import {
   useViewportWidth,
   RAIL_WIDTH,
 } from '../useLayoutMode';
+import { useWordLookup } from './useWordLookup';
+import { useReadingPosition } from './useReadingPosition';
+import { useReaderNavigation } from './useReaderNavigation';
+import { usePanelControls } from './usePanelControls';
+import { useHeaderHeight } from './useHeaderHeight';
+import { ReaderHeader } from './ReaderHeader';
+import { CommentaryBars } from './CommentaryBars';
+import { ReaderSheets } from './ReaderSheets';
+import { ReaderCardPanel } from './ReaderCardPanel';
+
+// The reader. It owns the state its parts share — the book and its blocks,
+// the selection, the visible block and range, the open sheet and popover,
+// the active card — and the five domain hooks over it (translator, marks,
+// explanations, sharḥ, batch), and it lays out the columns: the rail spacer,
+// the block list, the search column, the divider and the card panel, or the
+// bottom sheet. Its parts (ReaderHeader, CommentaryBars, ReaderSheets,
+// ReaderCardPanel) and hooks (useWordLookup, useReadingPosition,
+// useReaderNavigation, usePanelControls, useHeaderHeight) take what they use
+// as props and parameters of the same names.
+//
+// It stays at about 850 lines on purpose (restructure Phase 5, Design §6.5
+// and Q11 of docs/refactor/plans/phase5-big-ui-files.md). What is left is the
+// state those parts share and the code that writes it, the columns' JSX, and
+// the props handed to the parts. Two candidates were left here: the data
+// loading, because a hook holding the blocks would be called before
+// useTranslator and every open would send its storage requests in a different
+// order; and the selection tracking, whose doc comment sits above the wrong
+// effect (FOUND_ISSUES 30). Splitting further means a context, which was
+// rejected (Design §6.3, Q10): its value is new on every render, so every consumer would
+// re-render anyway, and its reads are harder to check than a props list.
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -98,7 +110,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
-  const [flashBlockId, setFlashBlockId] = useState<string | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
   // the reader scrolls and closes only when that text leaves the viewport.
@@ -114,14 +125,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   const listRef = useRef<BlockListHandle>(null);
 
-  /**
-   * The sticky header's height. The page scrolls (see BlockList), so the
-   * header stays put over the top of it: jumps land below it, and the side
-   * columns start under it and fill the rest of the screen.
-   */
-  const headerRef = useRef<HTMLElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const restoredRef = useRef(false);
   const shareButtonRef = useRef<HTMLSpanElement>(null);
   const [showShare, setShowShare] = useState(false);
   /**
@@ -197,61 +200,8 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     anchor: HTMLElement;
   } | null>(null);
 
-  // The dictionary is loaded once per session and held in memory, so a lookup
-  // mid-reading is instant and needs neither network nor a model.
-  const [dictionary, setDictionary] = useState<Dictionary | null>(null);
-  const [lookup, setLookup] = useState<{
-    result: LookupResult;
-    anchor: HTMLElement;
-  } | null>(null);
-  const [gloss, setGloss] = useState<GlossState | null>(null);
-
-  /** English gloss for a word, in the sense it carries in its sentence. */
-  const requestGloss = useCallback(
-    async (word: string, sentence: string, blockType: Block['type'], anchorElement: HTMLElement) => {
-      setLookup((current) =>
-        current ?? {
-          result: { surface: word, hits: [], viaFullText: false },
-          anchor: anchorElement,
-        },
-      );
-      setGloss({ status: 'loading' });
-      try {
-        const found = await glossWord(storage, {
-          apiKey: secrets.getProviderKey(GLOSS_PROVIDER_ID),
-          model: ANTHROPIC_GLOSS_MODEL,
-          word,
-          sentence,
-          blockType,
-        });
-        setGloss({ status: 'ready', gloss: found });
-      } catch (error) {
-        setGloss({
-          status: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    },
-    [storage],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadDictionary(storage).then((loaded) => {
-      if (!cancelled) setDictionary(loaded);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [storage]);
-
-  const lookUpWord = useCallback(
-    (word: string, anchorElement: HTMLElement) => {
-      if (!dictionary) return;
-      setLookup({ result: dictionary.lookup(word), anchor: anchorElement });
-    },
-    [dictionary],
-  );
+  const { dictionary, lookup, setLookup, gloss, setGloss, requestGloss, lookUpWord } =
+    useWordLookup({ storage });
 
   /** Every card kind shares the panel, and the anchor fields order them. */
   const allCards = useMemo<Card[]>(
@@ -360,29 +310,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     [entities, blocks],
   );
 
-  // Restore the saved reading position once the blocks are in.
-  useEffect(() => {
-    if (loading || blocks.length === 0 || restoredRef.current) return;
-    restoredRef.current = true;
-    void storage.getReadingPosition(bookId).then((position) => {
-      if (position) {
-        requestAnimationFrame(() => listRef.current?.scrollToOrder(position.blockOrder));
-      }
-    });
-  }, [loading, blocks.length, storage, bookId]);
-
-  // Persist it as he reads, throttled so scrolling does not thrash IndexedDB.
-  useEffect(() => {
-    if (!visibleBlock) return;
-    const timer = setTimeout(() => {
-      void storage.putReadingPosition({
-        bookId,
-        blockOrder: visibleBlock.order,
-        updatedAt: Date.now(),
-      });
-    }, 900);
-    return () => clearTimeout(timer);
-  }, [visibleBlock, storage, bookId]);
+  useReadingPosition({ storage, bookId, loading, blocks, visibleBlock, listRef });
 
   // ------------------------------------------------------------- selection
 
@@ -519,38 +447,8 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // ------------------------------------------------------------ navigation
 
-  const flash = useCallback((blockId: string) => {
-    setFlashBlockId(blockId);
-    setTimeout(() => setFlashBlockId((current) => (current === blockId ? null : current)), 1600);
-  }, []);
-
-  const jumpToBlock = useCallback(
-    (blockId: string) => {
-      const index = blocks.findIndex((block) => block.id === blockId);
-      if (index === -1) return;
-      listRef.current?.scrollToIndex(index, 'center');
-      flash(blockId);
-    },
-    [blocks, flash],
-  );
-
-  const jumpToPage = useCallback(
-    (pageIndex: number) => {
-      const index = blocks.findIndex(
-        (block) => Number(block.pageId.split(':p')[1]) === pageIndex,
-      );
-      if (index >= 0) listRef.current?.scrollToIndex(index, 'start');
-    },
-    [blocks],
-  );
-
-  const focusCard = useCallback(
-    (card: Card) => {
-      setActiveCardId(card.id);
-      jumpToBlock(card.startBlockId);
-    },
-    [jumpToBlock],
-  );
+  const { flashBlockId, flash, jumpToBlock, jumpToPage, focusCard } =
+    useReaderNavigation({ blocks, listRef, setActiveCardId });
 
   // Text→panel sync now runs through the margin marker rather than a tap on
   // the paragraph itself. Tapping the text is how you place a cursor before
@@ -624,56 +522,9 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  /**
-   * Toggling the panel from the keyboard.
-   *
-   * Ctrl/Cmd + \ is the editor convention for a side panel, and on a desktop
-   * browser this is the reading app's only full-width gesture — there is no
-   * equivalent of the phone's sheet handle.
-   */
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '\\' || !(event.ctrlKey || event.metaKey)) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, [contenteditable]')) return;
-      event.preventDefault();
-      void updateSettings({ panelCollapsed: !settings.panelCollapsed });
-    };
+  const { dragging } = usePanelControls({ settings, updateSettings });
 
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [settings.panelCollapsed, updateSettings]);
-
-  // --------------------------------------------------------------- divider
-
-  const dragging = useRef(false);
-  useEffect(() => {
-    const move = (event: PointerEvent) => {
-      if (!dragging.current) return;
-      const width = clampPanelWidth(window.innerWidth - event.clientX, window.innerWidth);
-      void updateSettings({ panelWidth: width });
-    };
-    const stop = () => {
-      dragging.current = false;
-      document.body.style.userSelect = '';
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', stop);
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', stop);
-    };
-  }, [updateSettings]);
-
-  useLayoutEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-    const update = () => setHeaderHeight(header.offsetHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, [loading, book]);
+  const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
   /**
    * A side column that stays on screen while the page scrolls: it starts under
@@ -710,42 +561,24 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const activeTocTitle = tocNodes.find((node) => node.id === activeTocNodeId)?.title;
 
   const cardPanel = (
-    <CardPanel
-      cards={allCards}
+    <ReaderCardPanel
+      allCards={allCards}
       blocks={blocks}
       pageMeta={pageMeta}
-      streaming={translator.streaming}
+      translator={translator}
       activeCardId={activeCardId}
-      stats={translator.stats}
-      scope={readOnly ? sharedScope : settings.panelScope}
-      visibleRange={settledRange}
+      readOnly={readOnly}
+      sharedScope={sharedScope}
+      settings={settings}
+      settledRange={settledRange}
       sectionNodeId={sectionNodeId}
-      isStale={translator.isStale}
-      onScopeChange={(scope: PanelScope) =>
-        readOnly ? setSharedScope(scope) : void updateSettings({ panelScope: scope })
-      }
-      onFocusCard={focusCard}
-      onToggleCollapse={(card) => {
-        if (card.kind === 'note') void marks.setCollapsed(card.markId, !card.collapsed);
-        else if (card.kind === 'explanation') void explanations.setCollapsed(card, !card.collapsed);
-        else if (card.kind === 'sharh') void sharh.setCollapsed(card, !card.collapsed);
-        else void translator.setCollapsed(card, !card.collapsed);
-      }}
-      onCollapseAll={(collapsed) => {
-        void translator.setAllCollapsed(collapsed);
-        for (const card of marks.noteCards) void marks.setCollapsed(card.markId, collapsed);
-        for (const card of explanations.cards) void explanations.setCollapsed(card, collapsed);
-        for (const card of sharh.cards) void sharh.setCollapsed(card, collapsed);
-      }}
-      onRetranslate={(card, options) => void translator.retranslate(card, options)}
-      onDelete={(card) => {
-        if (card.kind === 'note') void marks.removeMark(card.markId);
-        else if (card.kind === 'explanation') void explanations.remove(card);
-        else if (card.kind === 'sharh') void sharh.remove(card);
-        else void translator.remove(card);
-      }}
-      onEditNote={(card) => void editNote(card)}
-      onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
+      setSharedScope={setSharedScope}
+      updateSettings={updateSettings}
+      focusCard={focusCard}
+      marks={marks}
+      explanations={explanations}
+      sharh={sharh}
+      editNote={editNote}
     />
   );
 
@@ -761,69 +594,25 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
       {/* Amendment 18: "No API key required or requested." A visitor was sent a
           chapter to read, not invited to set up a translation provider. */}
       {!hasKey && !readOnly && <NoKeyBanner />}
-      <header
-        ref={headerRef}
-        className="sticky top-0 z-30 flex shrink-0 flex-wrap items-center gap-2 border-b border-rule bg-white/85 px-3 py-2 backdrop-blur"
-      >
-        {/* A shared link is a chapter, not a door into the app.
-            Someone sent this to read; the library behind it is not theirs and
-            holds nothing for them. With the banner's exit gone too, a shared
-            view now has no route out at all, which is the intent: the page
-            shows what was shared and stops there. Note this hides the
-            affordance, not the route — the app is client-side, so anyone who
-            edits the URL still lands on their own (empty) library. */}
-        {!readOnly && (
-          <LinkButton to={{ name: 'library' }} variant="ghost">
-            ← Library
-          </LinkButton>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <p className="arabic truncate text-sm font-semibold" dir="rtl">
-            {book.title}
-          </p>
-          {activeTocTitle && (
-            <p className="arabic truncate text-[11px] text-muted" dir="rtl">
-              {activeTocTitle}
-            </p>
-          )}
-        </div>
-
-        {currentMeta && (
-          <span className="arabic shrink-0 rounded bg-parchment px-2 py-1 text-xs text-muted" dir="rtl">
-            {currentMeta.volume !== null && `ج${toArabicNumerals(currentMeta.volume)} `}
-            {currentMeta.printPage !== null && `ص${toArabicNumerals(currentMeta.printPage)}`}
-          </span>
-        )}
-
-        <JumpToPage pageMeta={pageMeta} onJump={jumpToPage} />
-
-        {marks.readPositions.length > 0 && (
-          <ReadMarkNav
-            positions={marks.readPositions}
-            currentOrder={visibleBlock?.order ?? 0}
-            onJump={(order) => listRef.current?.scrollToOrder(order, 'center')}
-          />
-        )}
-
-        <Button onClick={() => setShowToc(true)}>Contents</Button>
-        <Button onClick={() => setShowSearch((value) => !value)}>Search</Button>
-        {/* Publishing is the author's act and is never offered inside somebody
-            else's shared view — a visitor cannot re-share what they were sent. */}
-        {!readOnly && (
-          <span ref={shareButtonRef}>
-            <Button onClick={() => setShowShare(true)}>Share</Button>
-          </span>
-        )}
-        {sideBySide && (
-          <Button
-            onClick={() => void updateSettings({ panelCollapsed: !settings.panelCollapsed })}
-            title="Ctrl/⌘ + \"
-          >
-            {settings.panelCollapsed ? 'Show cards' : 'Hide cards'}
-          </Button>
-        )}
-      </header>
+      <ReaderHeader
+        headerRef={headerRef}
+        readOnly={readOnly}
+        book={book}
+        activeTocTitle={activeTocTitle}
+        currentMeta={currentMeta}
+        pageMeta={pageMeta}
+        jumpToPage={jumpToPage}
+        marks={marks}
+        visibleBlock={visibleBlock}
+        listRef={listRef}
+        setShowToc={setShowToc}
+        setShowSearch={setShowSearch}
+        shareButtonRef={shareButtonRef}
+        setShowShare={setShowShare}
+        sideBySide={sideBySide}
+        updateSettings={updateSettings}
+        settings={settings}
+      />
 
       {book.importStatus !== 'complete' && (
         <p className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-900">
@@ -844,48 +633,13 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         </p>
       )}
 
-      {/* A sharḥ lookup that found nothing says so here rather than producing an
-          empty card. Not every ḥadīth in one collection is commented on in
-          another, so this is a normal answer and reads as one. */}
-      {sharh.notice && (
-        <p className="flex shrink-0 items-center gap-2 border-b border-rule bg-parchment px-3 py-1.5 text-[11px] text-muted">
-          {sharh.notice}
-          <button
-            onClick={() => sharh.setNotice(null)}
-            className="ml-auto rounded px-1.5 hover:bg-rule"
-          >
-            Dismiss
-          </button>
-        </p>
-      )}
-
-      {/* Costed, not started. Nothing is spent until the second tap. */}
-      {batchProposal && !batch.progress?.running && (
-        <BatchProposal
-          estimate={batchProposal.estimate}
-          model={activeProfile.model}
-          onStart={() => {
-            const range = batchProposal.range;
-            setBatchProposal(null);
-            void batch.run(range);
-          }}
-          onCancel={() => setBatchProposal(null)}
-        />
-      )}
-
-      {batch.progress && (
-        <BatchRunning
-          progress={batch.progress}
-          onStop={batch.cancel}
-          onDismiss={batch.dismiss}
-        />
-      )}
-
-      {sharh.busy && (
-        <p className="shrink-0 border-b border-rule bg-parchment px-3 py-1.5 text-[11px] text-muted">
-          Searching the commentary for this ḥadīth…
-        </p>
-      )}
+      <CommentaryBars
+        sharh={sharh}
+        batchProposal={batchProposal}
+        batch={batch}
+        activeProfile={activeProfile}
+        setBatchProposal={setBatchProposal}
+      />
 
       <div className="flex flex-1">
         {/* The rail's width, reserved rather than floated over.
@@ -1032,252 +786,50 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         </div>
       )}
 
-      {selection.active && (
-        <SelectionRail
-          singleWord={selection.singleWord}
-          shortSelection={selection.shortSelection}
-          centerY={selection.centerY}
-          busy={translator.busy}
-          dictionaryAvailable={dictionary !== null}
-          biographyAvailable={biographyAvailable}
-          meaningAvailable={navigator.onLine || secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}
-          onBiography={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              if (element) setBiography({ selection: anchor.sourceText, anchor: element });
-            })
-          }
-          onTranslate={() => withSelection((anchor) => void runTranslate(anchor))}
-          onExplain={() =>
-            withSelection((anchor) => {
-              void explanations.explain(anchor, translator.cards).then((card) => {
-                if (card) setActiveCardId(card.id);
-              });
-            })
-          }
-          onDictionary={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              if (element) {
-                setGloss(null);
-                lookUpWord(anchor.sourceText, element);
-              }
-            })
-          }
-          onMeaning={() =>
-            withSelection((anchor) => {
-              const element = blockElementFor(anchor.startBlockId);
-              const block = blocks.find((entry) => entry.id === anchor.startBlockId);
-              if (element && block) {
-                // Both results share one sheet, so the dictionary entry is
-                // fetched alongside — asking for one never blocks the other.
-                if (dictionary) lookUpWord(anchor.sourceText, element);
-                void requestGloss(anchor.sourceText, block.text, block.type, element);
-              }
-            })
-          }
-          onMarkRead={() => withSelection((anchor) => void marks.markSelection(anchor, 'read'))}
-          onMarkSkip={() => withSelection((anchor) => void marks.markSelection(anchor, 'skip'))}
-          onClearMarks={() => withSelection((anchor) => void marks.clearMarksIn(anchor))}
-        />
-      )}
-
-      {biography && (
-        <BiographySheet
-          selection={biography.selection}
-          anchor={biography.anchor}
-          onClose={() => setBiography(null)}
-        />
-      )}
-
-      {lookup && (
-        <DictionarySheet
-          result={lookup.result}
-          gloss={gloss}
-          anchor={lookup.anchor}
-          onClose={() => {
-            setLookup(null);
-            setGloss(null);
-          }}
-          onTranslateEntry={(text) => {
-            setLookup(null);
-            const block = blocks.find((entry) => entry.id === visibleBlock?.id) ?? blocks[0];
-            if (!block) return;
-            void translator.translate({
-              anchor: {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-                sourceText: text,
-              },
-            });
-          }}
-        />
-      )}
-
-      {marginMenu && !readOnly && (
-        <MarginMenu
-          block={marginMenu.block}
-          anchor={marginMenu.anchor}
-          current={marks.marks.find(
-            (mark) => mark.scope === 'block' && mark.startBlockId === marginMenu.block.id,
-          )}
-          onSkip={(block) =>
-            void marks.setMark(
-              {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-              },
-              'skip',
-              'block',
-            )
-          }
-          onRead={(block) =>
-            void marks.setMark(
-              {
-                startBlockId: block.id,
-                startOffset: 0,
-                endBlockId: block.id,
-                endOffset: block.text.length,
-              },
-              'read',
-              'block',
-            )
-          }
-          onClear={(block) => void marks.clearBlock(block)}
-          onAddNote={(block) => void addNoteToBlock(block)}
-          onTranslateAll={(block) => proposeBatch(block.id)}
-          onClose={() => setMarginMenu(null)}
-        />
-      )}
-
-      {entitySheet && (
-        <EntitySheet
-          entity={entitySheet.entity}
-          anchor={entitySheet.anchor}
-          // dorar.net looks a ḥadīth up by its text, not by a number, so the
-          // sheet needs the Arabic the entity actually covers.
-          sourceText={entityText(entitySheet.entity, blocks)}
-          // …and the passage around it, because «وعن أبي هريرة رضي الله عنه
-          // قال» sits before the matn. The narrator is what decides which of
-          // dorar's records belong to this narration.
-          contextText={entityContext(entitySheet.entity, blocks)}
-          onClose={() => setEntitySheet(null)}
-          onTranslateSurrounding={() => {
-            const block = blocks.find(
-              (entry) => entry.id === entitySheet.entity.startBlockId,
-            );
-            if (!block) return;
-            void runTranslateBlock(block);
-          }}
-          // The matn as this book prints it is the search key. Not the
-          // reference: the commentary numbers its ḥadīth on its own collection's
-          // scheme, and no arithmetic connects the two.
-          onSharh={(work) => {
-            void sharh.lookup(
-              entitySheet.entity,
-              work,
-              entityText(entitySheet.entity, blocks),
-            );
-          }}
-          // The entity is anchored on the matn block, which is exactly where a
-          // commentary range starts.
-          onTranslateAll={() => proposeBatch(entitySheet.entity.startBlockId)}
-        />
-      )}
-
-      {popover && (
-        <CardPopover
-          marker={popover.marker}
-          anchor={popover.anchor}
-          cards={translator.cards}
-          citationFor={citationFor}
-          isStale={translator.isStale}
-          onClose={() => setPopover(null)}
-          onToggleCollapse={(card) => void translator.setCollapsed(card, !card.collapsed)}
-          onRetranslate={(card, options) => void translator.retranslate(card, options)}
-          onDelete={(card) => void translator.remove(card)}
-          onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
-        />
-      )}
-
-      {showShare && shareButtonRef.current && (
-        <ShareChapter
-          bookId={bookId}
-          blocks={blocks}
-          tocNodes={tocNodes}
-          // The chapter on screen, which is what "share this chapter" means.
-          tocNodeId={activeTocNodeId}
-          anchor={shareButtonRef.current}
-          onClose={() => setShowShare(false)}
-        />
-      )}
-
-      {showToc && (
-        <TocDrawer
-          nodes={tocNodes}
-          activeNodeId={activeTocNodeId}
-          onClose={() => setShowToc(false)}
-          onSelect={(node) => {
-            setShowToc(false);
-            jumpToPage(node.pageIndex);
-          }}
-        />
-      )}
+      <ReaderSheets
+        selection={selection}
+        translator={translator}
+        dictionary={dictionary}
+        biographyAvailable={biographyAvailable}
+        withSelection={withSelection}
+        setBiography={setBiography}
+        runTranslate={runTranslate}
+        explanations={explanations}
+        setActiveCardId={setActiveCardId}
+        setGloss={setGloss}
+        lookUpWord={lookUpWord}
+        blocks={blocks}
+        requestGloss={requestGloss}
+        marks={marks}
+        biography={biography}
+        lookup={lookup}
+        gloss={gloss}
+        setLookup={setLookup}
+        visibleBlock={visibleBlock}
+        marginMenu={marginMenu}
+        readOnly={readOnly}
+        addNoteToBlock={addNoteToBlock}
+        proposeBatch={proposeBatch}
+        setMarginMenu={setMarginMenu}
+        entitySheet={entitySheet}
+        setEntitySheet={setEntitySheet}
+        runTranslateBlock={runTranslateBlock}
+        sharh={sharh}
+        popover={popover}
+        citationFor={citationFor}
+        setPopover={setPopover}
+        showShare={showShare}
+        shareButtonRef={shareButtonRef}
+        bookId={bookId}
+        tocNodes={tocNodes}
+        activeTocNodeId={activeTocNodeId}
+        setShowShare={setShowShare}
+        showToc={showToc}
+        setShowToc={setShowToc}
+        jumpToPage={jumpToPage}
+      />
     </div>
   );
-}
-
-/**
- * Jump between passages marked to be read out, for running a session.
- *
- * Navigation only: it moves the scroll position and changes nothing about what
- * is displayed. Nothing is ever hidden or filtered.
- */
-function ReadMarkNav({
-  positions,
-  currentOrder,
-  onJump,
-}: {
-  positions: number[];
-  currentOrder: number;
-  onJump: (order: number) => void;
-}) {
-  const previous = [...positions].reverse().find((order) => order < currentOrder);
-  const next = positions.find((order) => order > currentOrder);
-
-  return (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-rule">
-      <button
-        onClick={() => previous !== undefined && onJump(previous)}
-        disabled={previous === undefined}
-        className="px-2 py-1 text-xs text-muted hover:bg-rule disabled:opacity-30"
-        title="Previous passage marked to read"
-      >
-        ↑
-      </button>
-      <span className="text-[10px] text-muted" title="Passages marked to read">
-        {positions.length}
-      </span>
-      <button
-        onClick={() => next !== undefined && onJump(next)}
-        disabled={next === undefined}
-        className="px-2 py-1 text-xs text-muted hover:bg-rule disabled:opacity-30"
-        title="Next passage marked to read"
-      >
-        ↓
-      </button>
-    </div>
-  );
-}
-
-/** The mounted element for a block, for anchoring a sheet to it. */
-function blockElementFor(blockId: string): HTMLElement | null {
-  const element = document.querySelector(`[data-block-id="${blockId}"]`);
-  return element instanceof HTMLElement ? element : null;
 }
 
 /** Unobtrusive, persistent, and dismissable only by actually adding a key. */
@@ -1297,53 +849,6 @@ function NoKeyBanner() {
       >
         Add a key
       </a>
-    </div>
-  );
-}
-
-/** Jump by printed volume/page (ج / ص), the numbers he will have in the book. */
-function JumpToPage({
-  pageMeta,
-  onJump,
-}: {
-  pageMeta: Map<number, PageMeta>;
-  onJump: (pageIndex: number) => void;
-}) {
-  const [volume, setVolume] = useState('');
-  const [page, setPage] = useState('');
-
-  const go = () => {
-    const targetPage = parseArabicNumber(page);
-    if (targetPage === null) return;
-    const targetVolume = parseArabicNumber(volume);
-
-    for (const meta of pageMeta.values()) {
-      if (meta.printPage !== targetPage) continue;
-      if (targetVolume !== null && meta.volume !== targetVolume) continue;
-      onJump(meta.pageIndex);
-      return;
-    }
-  };
-
-  return (
-    <div className="flex shrink-0 items-center gap-1 text-xs">
-      <span className="arabic text-muted">ج</span>
-      <input
-        value={volume}
-        onChange={(event) => setVolume(event.target.value)}
-        onKeyDown={(event) => event.key === 'Enter' && go()}
-        className="w-10 rounded border border-rule px-1 py-1 text-center"
-        aria-label="Volume"
-      />
-      <span className="arabic text-muted">ص</span>
-      <input
-        value={page}
-        onChange={(event) => setPage(event.target.value)}
-        onKeyDown={(event) => event.key === 'Enter' && go()}
-        className="w-14 rounded border border-rule px-1 py-1 text-center"
-        aria-label="Printed page"
-      />
-      <Button onClick={go}>Go</Button>
     </div>
   );
 }

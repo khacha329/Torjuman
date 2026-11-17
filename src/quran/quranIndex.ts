@@ -424,7 +424,7 @@ export class QuranIndex {
  *
  * So this is the floor, not the ceiling: whenever there is a network, the sheet
  * shows whichever translation Settings points at — `data.verse?.english ||
- * data.bundledEnglish` in EntitySheet — and this only fills the gap. A reader
+ * data.bundledEnglish` in QuranSheet — and this only fills the gap. A reader
  * who wants Khattab selects it there, on their own device, and it is fetched
  * rather than redistributed.
  * ---------------------------------------------------------------------------

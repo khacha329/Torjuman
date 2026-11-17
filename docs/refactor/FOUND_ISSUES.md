@@ -4,6 +4,14 @@ Bugs, inaccuracies and oddities found while restructuring. **Left as they
 are** — a refactor step changes structure only. Each is fixed, if the owner
 wants it fixed, in its own change, and the entry then says where.
 
+Line references in entries 26–43 were written against Phase 5's plan base
+(`9afb2c7`). Phase 5 moved most of the code they point at into new files, so
+at its last step (5j) each reference was recomputed by content from the final
+files and pointed at the file and lines where that code now is; the text of
+each entry is otherwise as it was written. The old line numbers are in the
+plan's Design §9 and in git history. References into files Phase 5 did not
+touch are unchanged.
+
 ## 1. The deploy workflow's source-tree check omits `biography` and `share` (2026-11-15, measured)
 
 `.github/workflows/deploy.yml`, step "Check the source tree arrived intact",
@@ -161,7 +169,7 @@ Found while planning Phase 2, real duplicates but deferred:
 - `parseHtml` — `shamela/parsePage.ts` (~58) and `shamela/parseBook.ts` (~54),
   identical; in the parsers `npm run verify` covers most heavily, so moved
   only with V in hand.
-- `pageIndexOf` — `ui/reader/BlockList.tsx` (~134) and
+- `pageIndexOf` — `ui/reader/BlockList.tsx` (~134; ~103 after Phase 5) and
   `share/buildBundle.ts` (~84), identical; it parses block ids and belongs
   with `blockIdFor` in `ingest/importer.ts`, a larger question.
 - `toLine` — `library/transfer.ts` (~85) and `library/deviceTransfer.ts`
@@ -380,3 +388,256 @@ cards (`IdbStorageAdapter.ts:1054`); sharḥ cards are restored but not counted.
 Check D's `work-backup` → `import-fresh`: `restoredCards` 3 for two translation
 cards and one explanation, with the one sharḥ card restored beside them.
 Cosmetic.
+
+## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
+
+Found by the Phase 5 survey. The dictionary sheet's "Translate this entry"
+(`ui/reader/DictionarySheet.tsx:79`) hands the entry's text (`:42`) to
+`onTranslateEntry` (`ui/reader/ReaderSheets.tsx:190-203`), which anchors it
+on the whole visible block: `startBlockId`/`endBlockId` the visible block,
+offsets `0` and `block.text.length`, `sourceText` the entry. The cache key is
+built from the anchor's ids and offsets, not its text
+(`ui/reader/useTranslator.ts:233-243`), and is looked up before anything else
+(`:245-251`). So translating that whole block later returns the dictionary
+entry's card, and if the block was translated whole before, "Translate this
+entry" returns the block's card instead of the entry's English. Either card
+also sits on the visible block in the panel and the margin. And the request
+itself is built from the anchor, not the text: with the entry's text as
+`targetText` it sends the visible block's surrounding context, its
+`blockTypes`, its `hadithNumbers` and the verses known in it
+(`knownQuranRefs`) (`ui/reader/translationSteps.ts:35-43`, `:70-81`), so the
+model is told the entry is that block. **Could put a wrong
+translation in front of a lesson; left unfixed (structure-only phase).** Not
+pinned by any check, so a fix needs no re-baseline. Phase 5 plan, Design §9 A.
+
+## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading)
+
+`ui/reader/usePanelControls.ts:39-56`: the divider sets `dragging` on
+`pointerdown` (`ui/reader/ReaderScreen.tsx:726-729`) and the window listens for `pointermove` and
+`pointerup` only. A finger drag that the browser takes over for panning ends
+in `pointercancel` instead, which leaves `dragging` true and `body`
+`user-select: none` until some later `pointerup` — after which the next
+unrelated finger movement resizes the panel. The divider (`ReaderScreen.tsx:725-734`) has no
+`touch-action`, so on a touch screen the browser is free to take the drag. And
+every `pointermove` while dragging writes the whole settings row
+(`updateSettings`, `app/AppContext.tsx:221-227`). Whether a finger drag resizes
+the panel on the tablet at all is not known: check R's touch report (Phase 5
+step 5b) shows what Chromium's emulation does, and the tablet run (M) is the
+answer. **May make a feature unusable on the tablet.** Phase 5 plan, Design §9 B.
+
+## 28. The sheet handle counts translations only (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:779`: the portrait sheet's handle says
+`▲ Cards (${translator.cards.length})`, while the collapsed edge tab in
+landscape counts every card kind (`allCards.length`, `:763`), and the sheet,
+once open, lists notes, explanations and sharḥ cards too. A reader with only
+notes sees "Cards (0)" over a sheet that is not empty. Cosmetic. Phase 5 plan,
+Design §9 C.
+
+## 29. `busy` is one flag for every translation (2026-11-16, by reading)
+
+`ui/reader/useTranslator.ts:100` holds one `busy`; each translation sets it
+(`:269`) and clears it in its `finally` (`:337`). When two run at once — a
+manual Translate during a batch, or a retranslate during either — the first to
+finish clears it, and the rail's Translate and Explain
+(`ui/reader/SelectionRail.tsx:128-139`, `disabled={busy}`) come back while the
+other is still running. Minor. Phase 5 plan, Design §9 D.
+
+## 30. A detached doc comment in the reader (2026-11-16, by reading)
+
+`ui/reader/ReaderScreen.tsx:317-328` ("Track whether a selection exists…
+`selectionchange` on `document`, not `pointerup`…") describes the
+`selectionchange` effect at `:349-362`, but sits above the
+biography-availability effect (`:332-347`), whose own comment follows it
+(`:329-331`). Docs only. Phase 5 plan, Design §9 E.
+
+## 31. The reader is not keyed by book (2026-11-16, by reading)
+
+`App.tsx:94` renders `<ReaderScreen bookId={route.bookId} />` and
+`ui/share/ShareScreen.tsx:146` `<ReaderScreen bookId={…} />`, neither with a
+`key`. A hash change straight from one book to another reuses the mounted
+screen: `restoredRef` (`ui/reader/useReadingPosition.ts:26`) is still true, so the
+restore effect returns early (`:30`) and the second book opens at the top, not
+at its saved position; and `useTranslator`'s `listCards` effect
+(`ui/reader/useTranslator.ts:104-106`) has no cancellation, so a slow first list
+can land after the second. Only reachable by editing the URL (the Library is
+always between two books). Phase 5 plan, Design §9 F.
+
+## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
+
+`ui/settings/BackupSection.tsx:26-39`: `exportWork` sets "Preparing…" and
+then awaits `storage.exportWork()` and `saveFile` with no `try`, so a failure
+(a quota error, a refused download) leaves the message in place with nothing
+said. Its success message counts translation cards, explanations, marks and
+glossary entries, but not sharḥ cards or word glosses, which the backup does
+carry (`WorkBundle`, `platform/storage/StorageAdapter.ts:48-60`) — like the
+restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
+
+## 33. When Meaning is offered (2026-11-16, by reading)
+
+`ui/reader/ReaderSheets.tsx:131`: the rail gets `meaningAvailable={navigator.onLine ||
+secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}`. Offline with a key, Meaning
+is offered and fails unless the word is cached; offline without a key it is
+disabled, though a cached gloss would work with neither:
+`translation/gloss.ts:97-100` returns the cache before checking the network
+(`:102-106`) or the key (`:108-110`). May be intended; unstated. Phase 5 plan, Design §9 H.
+
+## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading)
+
+The reader passes inline `onClose` arrows to its sheets
+(`ui/reader/ReaderSheets.tsx:177`, `:186`, `:256`, `:287`), new on every
+render. `AnchoredPanel`'s effect depends on `onClose`
+(`ui/reader/AnchoredPanel.tsx:131`), so each render removes its document
+`pointerdown` listener and adds it back a tick later (`setTimeout(…, 0)`,
+`:122`). The screen renders on each change of the top block while scrolling, so
+with a sheet open a tap landing in that tick is not seen as an outside tap.
+Minor. Phase 5 keeps it exactly (its plan, Design §6.4). Phase 5 plan, Design
+§9 I.
+
+## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
+
+`ui/reader/useTranslator.ts:126-132`: before each on-device translation, the
+loop awaits `storage.getHadith` for every ḥadīth entity in the book, one read
+after another, whatever the selection covers. On a large collection that is
+thousands of sequential reads per translation. Performance. Phase 5 plan,
+Design §9 J.
+
+## 36. `digDeeper` is unreachable (2026-11-16, by reading)
+
+`TranslateRequest.digDeeper` (`ui/reader/useTranslator.ts:38`), its default
+(`:211`), its two uses (`ui/reader/translationSteps.ts:129`, `:82`) and
+`retranslate`'s option (`useTranslator.ts:359-365`) have no caller left in `src/`: the card's "Dig deeper" button was
+replaced by Explain (`ui/reader/TranslationCardView.tsx:229-232`). A dead
+option, kept by Phase 5. Phase 5 plan, Design §9 K.
+
+## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured)
+
+Found while baselining Phase 5 step 5a's U captures. `AnchoredPanel`
+(`ui/reader/AnchoredPanel.tsx:59-95`) places a popover in `reposition`, a
+`useCallback` on `[anchor, asSheet, onClose]` run by a layout effect, and
+again on a window scroll or resize — never when its own content changes. It
+measures the panel's height at that moment (`panelRef.current?.offsetHeight`,
+280 only if the panel is not mounted — in the layout effect it is, so the height used is that of its short loading state) to choose above or below the anchor. A sheet whose
+lookups fill in after it mounts (the ḥadīth sheet: dorar, sunnah.com, the
+commentaries) keeps the place chosen for its short loading state. In check U's
+landscape `reader-hadith` the popover came out at `top: 12px` on most runs and
+at `top: 275.844px` on one: about 486 px tall, it ran off the bottom of the
+600 px screen, with "Show dorar diagnostics" out of reach until the reader
+scrolled. Whether it is re-placed after its content arrives depends on the
+reader rendering again: every sheet's `onClose` is an inline arrow
+(`ui/reader/ReaderSheets.tsx:177`, `:186`, `:256`, `:287`), so a reader
+render makes a new `reposition` and re-runs the layout effect (the mechanism of
+FOUND_ISSUES 34). It is right today only by that accident; a Phase 5 part that
+rendered less often than the screen would change when — or whether — the
+popover is re-placed. Check U now captures every sheet after a resize event so
+its pixels do not depend on the race. On the tablet in landscape a ḥadīth sheet
+can open partly off screen. Left unfixed (structure-only phase).
+
+## 38. The Qurʾān sheet's verse uses the device's font, not the bundled one (2026-11-16, measured in the container)
+
+`ArabicVerse` (`ui/reader/QuranTabs.tsx:23-34`) sets the class `arabic`,
+which gives leading and font features but no font family
+(`src/index.css:106-112`), so the verse inherits the body's
+`ui-sans-serif, system-ui, …` stack. The reader's blocks
+(`BlockRow.tsx:127`) and the dictionary sheet (`DictionarySheet.tsx:181`)
+set the bundled reader font inline, and `index.css:3-5` says the fonts are
+bundled so the app does not depend on the device. In this container the
+verse's Uthmani marks (ٱ and the small high signs) draw as empty boxes in
+check U's Qurʾān sheet captures; whether the tablet's system Arabic font
+covers them is unconfirmed. Found by Phase 5 step 5a's captures; left
+unfixed (structure-only phase). Check U's Qurʾān PNGs depend on the
+container's fonts, which is stable here.
+
+## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
+
+Found while building check R's read-mark scenario (Phase 5 step 5b).
+`ReadMarkNav` (`ui/reader/ReaderHeader.tsx:129-164`) picks "next" as the
+first read mark after `currentOrder` (`:139`), which is the order of the
+block at the **top** of the screen (`visibleBlock`, `:97`; `topIndex` in
+`ui/reader/BlockList.tsx:289-298`). Its jump **centres** the mark
+(`scrollToOrder(order, 'center')`, `:98`). A centred mark is below the top
+block unless it is tall enough to reach behind the header, so the next ↓
+finds the same mark and the page does not move. Measured in R, both
+profiles: with read marks on blocks 400, 450 and 500, ↑ from block 450
+centred and then ↓ leaves block 450 at the middle of the screen instead of
+bringing 500 (R prints this as a report line every run, judged by nothing).
+↑ is not affected: "previous" is before the top block, so a centred mark is
+skipped correctly. By the same reading, ↓ from the top of the book reaches the
+first mark and a second ↓ stays on it, so in a session ↓ never gets past the
+first mark below the top of the screen. **May make the session navigation
+look broken on the tablet.** Left unfixed (structure-only phase); R's judged
+checks (↓ once from the top, ↑ twice from past the marks) do not depend on
+it, so a fix changes only the report line.
+
+## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured)
+
+Found while building check R's 5b scenarios. The virtualizer has
+`scrollPaddingStart: topInset` (`ui/reader/BlockList.tsx:243`); for
+`align: 'center'` TanStack Virtual subtracts the padding and then centres in
+the whole viewport (`getOffsetForIndex`/`getOffsetForAlignment` in
+`@tanstack/virtual-core`), so the item's middle lands at
+`innerHeight / 2 + topInset`. `settleOn` (`ui/reader/blockLayout.ts:74-99`) tests a
+centred landing against `innerHeight / 2` (`:93`), finds it `topInset` off
+(51 px in landscape, 93 px in portrait — the header's height), more than its
+4 px, and calls `scrollToIndex` again, which lands in the same place, until
+`attempts >= 8` (`:88`). Measured in R: a card tap brings block 1000 to
+295–405 px on a 600 px screen (middle 350 = 300 + 51 − 1), and every read-mark
+jump is 51 or 93 px below the screen's middle. So every centred jump (a search
+result, a card tap, the read-mark ↑ ↓) runs all eight passes over sixteen
+frames, and its target sits half a header below the middle of the visible
+area (about 25 px in landscape, 46 px in portrait). Cosmetic and a little
+wasted work; left unfixed (structure-only phase). R's search and card checks
+use a tolerance and its read-mark checks judge which block is at the middle
+of the visible area, so a fix needs no re-baseline.
+
+## 41. A failed card is served from the translation cache (2026-11-17, measured)
+
+Found while building check P (Phase 5 step 5c). A failed translation is
+stored like a finished one: the failed card (`ui/reader/translationSteps.ts:142-148`)
+keeps the `cacheKey` the loading card was given (`:127`) and is written with
+`putCard` (`ui/reader/useTranslator.ts:332`). The cache read before every
+translation (`useTranslator.ts:245-250`) returns any
+card under that key without looking at its `status`, and
+`getCardByCacheKey` (`platform/storage/idbWork.ts:64-69`) does not filter
+either. So selecting the same passage again and tapping Translate returns the
+failure, with no request; Translate all… does the same for each block of its
+range (`ui/reader/useBatchTranslate.ts:85-98`), counting the cached failure
+as "did not complete" — the proposal bar's "Blocks already translated are
+served from the cache" holds for failures too. A transient failure (`network`,
+`rate-limit`, a 500) therefore sticks until the card's own Retry or
+Retranslate, which pass `force`. Measured in P: `error-cached` (the HTTP 400
+block selected again: no request, the same failed card) and `batch-again`
+(the batch re-run: no request, "Finished — 2 of 3 blocks translated, 1 did not
+complete."). **A tablet user who retries by translating the passage again sees
+the same error indefinitely.** Left unfixed (structure-only phase); a fix
+changes those two scenarios of P.
+
+## 42. Retranslate deletes the card before the key check refuses (2026-11-17, measured)
+
+Found while building check P. `retranslate` (`ui/reader/useTranslator.ts:356-372`)
+deletes the card from storage and from the list first (`:361-362`) and then
+calls `translate`, whose key check returns `null` with a notice when the
+chosen provider has no key (`:223-230`). So "Retranslate ▾ → a provider
+whose key is not set" removes the card and translates nothing. For a Claude
+card that throws away a paid response, against README.md:501 ("A paid
+response is never discarded"). Measured in P, `retranslate-no-key`: the verse
+block's Gemini card, Retranslate ▾ → a Claude model with no Claude key — the
+cards store goes from 7 rows to 6 and the notice "No Claude API key is set.
+Add one in Settings before translating." shows. Left unfixed; a fix changes
+that scenario of P.
+
+## 43. A Gemini card says "web search" though Gemini searches nothing (2026-11-17, by reading, recorded by P)
+
+Found in the `torjuman-llm` agent's read of check P. The card's
+`usedExternalLookup` is set from the profile (`digDeeper ||
+activeProfile.allowExternalLookup`, `ui/reader/translationSteps.ts:129`)
+whatever the provider, and the card's header shows "· web search" whenever it
+is true (`ui/reader/TranslationCardView.tsx:313-315`). Only
+`AnthropicProvider` reads `request.allowExternalLookup` (it runs a research
+pass with the web-search tool, `translation/providers/AnthropicProvider.ts:86`);
+`GeminiProvider` never does, so a Gemini card from a profile with external
+lookup allowed claims a search that did not happen. P's `external-lookup`
+scenario records exactly that (the request is the plain one, the card says
+web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
+(`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
+cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
