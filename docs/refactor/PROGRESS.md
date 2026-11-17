@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phases 0–4 complete (PRs khacha329/Torjuman#8, #9, #10, #11, and Phase 4's on `claude/restructure-phase-4`), awaiting the owner's `npm run verify`, the tablet checks and merge
+## Current state: Phases 0–5 complete (PRs khacha329/Torjuman#8, #9, #10, #11, Phase 4's on `claude/restructure-phase-4` and Phase 5's on `claude/restructure-phase-5`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -2308,7 +2308,7 @@ and position, though the dialog says they are kept; and a replacement that
 fails part way leaves no copy of the book. Check D's `book-transfer` pins
 today's behaviour. It needs its own change, if the owner wants one.
 
-## Phase 5: big UI files (in progress, branch `claude/restructure-phase-5`)
+## Phase 5: big UI files (complete, branch `claude/restructure-phase-5`)
 
 Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 **approved 2026-11-16, all seventeen answers as recommended** (`79171e4`).
@@ -2347,7 +2347,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
 | 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
 | 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
-| 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review pending | this commit |
+| 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review PASS WITH NOTES | `6ed8c0d` |
+| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T L pass (the end checks are below); review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -4180,6 +4181,100 @@ holds)
   entry's removal (a canned response arrives at once), `cacheWriteTokens`
   (read nowhere in `src/ui`) and the cost sum's accumulation across
   translations.
+- **Review of 5i3 (`6ed8c0d`): PASS WITH NOTES; "ready for 5j", nothing
+  that must be fixed.** The three updater bodies identical to the removed
+  arrows' bodies by word diff; the `setStats(…)` and `setStreaming(…)` calls,
+  every `await`, setter and storage call still in `translate` in their old
+  order; keeping the stats updaters beside `SessionStats` matches the
+  owner's amendment to Q12. Notes: P cannot reach the offline updater, the
+  streaming entry's removal, `cacheWriteTokens` or the cost sum's
+  accumulation across translations, and the reviewer accepted the word-diff
+  proof for those four; P's header line numbers
+  (`scripts/verify-translate.mjs:97-107`) still named the plan base's lines
+  in `useTranslator.ts`, fixed at 5j.
+
+**Step 5j, docs and comments, 2026-11-17** (comments and docs only; no
+statement in `src/` or `scripts/` changed: every `+`/`-` line of `git diff
+-U0 -- src scripts` is a comment line)
+- Design §10's rows: `ui/kit/SettingsSection.tsx`'s header now says the old
+  local Section is `ui/settings/Section.tsx` and the seven sections it serves
+  are files of their own; `scripts/verify-storage-harness.ts:901` names
+  `BackupSection`; `quran/quranIndex.ts:427` says "in QuranSheet" (the line
+  it describes is `QuranSheet.tsx:208`); `.claude/agents/torjuman-reader.md`'s
+  "How the reader works" names the screen's hooks and parts, puts the header
+  in `ReaderHeader.tsx`, and `TYPE_CHROME` and `settleOn` in
+  `blockLayout.ts`, `BlockRow` in `BlockRow.tsx`; its "28 checks" for R is
+  55. CLAUDE.md's trap 7 and map are the main session's (as in 4n).
+- The 5j list above: `BlockList.tsx`'s margin-layout comment now says the
+  gutters are the list's container padding and `BlockRow.tsx` draws in them
+  (one line longer, so `BlockList.tsx` is 378 lines), and its "see
+  MarginTarget" names `BlockRow.tsx`; P's header names `withOfflineRequest`
+  (`useTranslator.ts:67-76`), `withoutStream` (`translationSteps.ts:152-159`),
+  `cacheWriteTokens` (`useTranslator.ts:91`) and `withCloudRequest`
+  (`useTranslator.ts:78-93`), with the plan base's lines kept as history.
+- FOUND_ISSUES: every reference of 26–43 into a file Phase 5 moved or
+  shifted recomputed by content from the final files (each quoted line found
+  with `grep` and checked with `sed -n`, not by chaining the shift sentences
+  above), and 10's `pageIndexOf` (~103); 32's is `BackupSection.tsx:26-39`,
+  40's `attempts >= 8` `blockLayout.ts:88`. A note at the top of the file
+  says so. The entries' text is otherwise unchanged.
+- RESTRUCTURE: the status, §6's row (complete, what was done, the checks
+  run), and §5's sentence on where the baselines are (D, U, Q, P compare
+  with their record files); §5's R row (55/55) and P row were written in 5b
+  and 5c. The plan: "Corrections found in review", eight items.
+- Left, by the plan or because still true: `ui/reader/useAnimatedList.ts:12`
+  (Design §10: the debounce's call is in the screen); `torjuman-reviewer.md:43`
+  (names no file); each moved file's verbatim moved comments; the header of
+  `scripts/verify-translate.mjs:8-10` (what Phase 5 moves, said when P was
+  written; still true of the steps that left `useTranslator.ts`).
+- **T** exit 0. **L** (`check-layers --check`) exit 0: 193 files, 134
+  edges, 0 directory and 0 file-level cycles, all eleven rules hold. The end
+  checks (T B L S R U P Q D, the SSR build of `verify-parsers.ts`, then X on
+  the whole phase) are run by the main session on the commit.
+
+## Phase 5 result
+
+| | Plan base (`9afb2c7`, Phase 4 end) | Phase 5 end |
+| --- | --- | --- |
+| `ReaderScreen.tsx` | 1,349 lines: state, data loading, selection, the position, navigation, panel and header-height logic, the header, the ḥadīth bars, the columns, the card panel, eight sheets, `ReadMarkNav`, `JumpToPage` | 854 lines: the shared state and the code that writes it, the data loading and selection tracking, the columns' JSX and the props, with the reason for its size at its top (Design §6.5, Q11) |
+| `EntitySheet.tsx` | 756 lines: the dispatcher, the verse sheet, the compile tab, the ḥadīth sheet | 29 lines: the dispatcher |
+| `BlockList.tsx` | 728 lines: the virtualizer, the estimates and their tables, `settleOn`, the row and its margin parts | 378 lines: the virtualizer, its callbacks and the list |
+| `SettingsScreen.tsx` | 608 lines: the list and seven inline sections with their `Section` | 62 lines: its imports and the list |
+| `useTranslator.ts` | 466 lines; `translate` 207 | 444 lines; `translate` 147, its pure steps named (`SessionStats`, `EMPTY_STATS` and the two stats updaters stay) |
+| new files in `ui/reader/` | — | `HadithSheet.tsx` 335, `ReaderSheets.tsx` 326, `BlockRow.tsx` 296, `QuranSheet.tsx` 251, `ReaderHeader.tsx` 211, `CompileTab.tsx` 168, `translationSteps.ts` 159, `blockLayout.ts` 99, `ReaderCardPanel.tsx` 95, `CommentaryBars.tsx` 81, `useWordLookup.ts` 77, `usePanelControls.ts` 59, `useReaderNavigation.ts` 55, `useReadingPosition.ts` 51, `useHeaderHeight.ts` 28, `quranSheetData.ts` 26 lines |
+| new files in `ui/settings/` | — | `KeysSection.tsx` 163, `BackupSection.tsx` 101, `TranslationSection.tsx` 95, `QuranSection.tsx` 88, `ReadingSection.tsx` 67, `DisplaySection.tsx` 48, `CatalogSection.tsx` 25, `Section.tsx` 25 lines |
+| new check | — | **P** (`npm run verify:translate`): 6 groups, 23 scenarios, 18 requests, identical at every step from 5g1 |
+| check R | 28/28 | 55/55 (27 new at 5b); landscape 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / portrait 175,800 px in 24.5 s, 1,904 nodes, 0 long tasks at 5i3 (33.3 s / 24.4 s at Phase 4's end) |
+| check U | 180 files | 254 files (70 added at 5a, 4 more at its fix), identical at every step after |
+| check S | 30/30 | 30/30 at every step |
+| checks D, Q | identical | D identical at 5d8; Q identical at 5c and 5i1–5i3 |
+| main JS chunk | 790,214 B | 793,868 B (+3,654: the parts' props objects and the new functions), CSS byte-identical at every step |
+| layers | 134 directory edges, no cycle | 134 directory edges, no directory or file-level cycle, all eleven rules |
+
+Every step was reviewed before the next began; 5j's review is pending.
+**Owed before merge:**
+- **V**, `npm run verify` on the owner's PC. Phase 5 changes one module it
+  imports, a comment in `quran/quranIndex.ts` (5j); the count should be
+  Phase 4's.
+- **M** on the staged build (`npm run stage`) on the tablet, by touch, in
+  Chrome, the plan's fourteen items in landscape (960×600) and portrait
+  (600×960). Two things the checks do not show rest on it: the sharḥ notice
+  and sharḥ search bars, which no U capture shows (item 8), and the paths P
+  cannot reach — the offline stats updater and the on-device model, the
+  streaming entry's removal, `cacheWriteTokens`, and the cost summed across
+  several translations in one session (item 5 with a real key; the
+  on-device model is on the plan's list of what only the tablet shows).
+  Also the finger on the divider (item 3, FOUND_ISSUES 27), the native
+  handles, the real fonts, the real APIs and the shared read-only view
+  (item 12, if the owner has a published link).
+
+**Open, and not this phase's to fix:** FOUND_ISSUES 26–43, found during the
+phase and left as found (structure only), their references now pointing at
+the final files. The ones that matter most on the tablet: 26 ("Translate
+this entry" stored under the visible block's key, a wrong translation
+possible), 27 (the divider by finger), 39 (the read-mark ↓), 41 (a failed
+card served from the cache) and 42 (Retranslate deletes the card before the
+key check). Each needs its own change, if the owner wants one.
 
 ## Open
 

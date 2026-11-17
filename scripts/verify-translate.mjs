@@ -95,16 +95,19 @@
 // Error, the one route found to `translate`'s non-TranslationError mapping);
 // `addGlossaryTerm` (a window.prompt); the portrait sheet (S and R cover how
 // the reader opens it after a translation). And three of the steps Phase 5
-// step 5i3 moves, which no scenario can show, so 5i3's reviewer checks them
-// by reading: the offline branch's stats updater (useTranslator.ts:263-270 —
-// both offline scenarios fail before it, and translateProse always loads the
-// model); the streaming entry's removal in `finally` (:356-360 — the
-// streaming text renders only while a card is loading, and a fulfilled
-// response arrives at once); SessionStats.cacheWriteTokens (:330 —
+// step 5i3 moved, which no scenario can show, so 5i3's reviewer checked them
+// by reading: the offline branch's stats updater (`withOfflineRequest`,
+// useTranslator.ts:67-76 — both offline scenarios fail before it, and
+// translateProse always loads the model); the streaming entry's removal in
+// `finally` (`withoutStream`, translationSteps.ts:152-159 — the streaming
+// text renders only while a card is loading, and a fulfilled response
+// arrives at once); SessionStats.cacheWriteTokens (useTranslator.ts:91 —
 // summed, and read nowhere in src/ui); and the cost sum's accumulation in
-// the cloud stats updater (`previous.costUsd +`, :322-331 — every Claude
-// session line comes from one translation after a fresh load, so a sum that
-// dropped the previous total would show the same figure).
+// the cloud stats updater (`previous.costUsd +`, `withCloudRequest`,
+// useTranslator.ts:78-93 — every Claude session line comes from one
+// translation after a fresh load, so a sum that dropped the previous total
+// would show the same figure). These were lines 263-270, 356-360, 330 and
+// 322-331 of useTranslator.ts when this check was written (Phase 5 step 5c).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';

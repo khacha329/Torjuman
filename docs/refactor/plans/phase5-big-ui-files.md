@@ -1093,3 +1093,78 @@ The owner chose to keep the two stats updaters as module-level functions in
 §2's "request counts in `useTranslator.ts`" stays true; `withoutStream` goes
 to `translationSteps.ts` as planned. The bodies still move verbatim and the
 `setStats(…)` and `setStreaming(…)` calls stay in `translate`.
+
+## Corrections found in review
+
+Where the plan above turned out wrong or short, as the step reviews found it.
+The text above is left as approved; each step's PROGRESS entry has the detail.
+
+1. **When `quran/quranIndex.ts:427` became untrue (5e3, not 5e4).** Design
+   §10 and "Per step" 5e date its "in EntitySheet" to 5e3. Through 5e3 it
+   stayed true: `CompileTab` took a copy of `data.verse?.english ||
+   data.bundledEnglish` that feeds the model and shows nothing, and the
+   sentence is about what the sheet shows, which was `QuranSheet`'s line,
+   still in `EntitySheet.tsx`. It became untrue at 5e4, when `QuranSheet`
+   moved, and was fixed at 5j (now "in QuranSheet").
+2. **`settleOn as settleOnBlock` (5f2).** Design §5 and Q8 name the module
+   function `settleOn`, the name of the `useCallback` that calls it, and
+   adaptation (j) allows only "(j)'s module function names" as new names.
+   Both cannot be `settleOn` in `BlockList.tsx`, so it imports the function
+   as `settleOn as settleOnBlock`: an import alias, no symbol renamed, the
+   smallest legal way round the clash (5f2 review).
+3. **How adaptation (i) was read (5h2, widened at 5h3).** (i) says prop and
+   parameter types use `ReturnType<typeof …>` "rather than restating
+   shapes". Some names have no hook whose return type expresses them: the
+   screen's anonymous state shapes (`batchProposal`'s `{ range: Block[];
+   estimate: BatchEstimate } | null`, the sheets' `{ …; anchor: HTMLElement
+   } | null`) and its own `useCallback`/`useMemo` locals (`withSelection`,
+   `runTranslate`, `runTranslateBlock`, `addNoteToBlock`, `proposeBatch`,
+   `citationFor`, `editNote`), which have no exported type. Those were
+   restated, types only; every name a hook returns uses that hook's
+   `ReturnType`. Where importing a type back would make a file cycle
+   (`TranslateRequest`, in `useTranslator.ts`, which imports
+   `translationSteps.ts`), a `Pick` of the fields the moved text reads was
+   used instead (5i1, 5i2).
+4. **Adaptation (k)'s parameters (5i1, 5i2).** (k) says a moved run's free
+   names become "its parameters". Where several share a type (`before`,
+   `after` and `selected` are all `Block[]`; `bookId`, `glossaryHash`,
+   `useModel` and `cacheKey` all `string`), `translationRequestFor` and
+   `loadingCard` take one object parameter with fields of the same names,
+   as (f) does for a hook, so no two can swap by position. The functions
+   whose parameter types all differ (`passageFor`, `failedCard`,
+   `withOfflineRequest`, `withCloudRequest`, `withoutStream`) are
+   positional, as the plan names them. `withoutStream` takes `card`, not the
+   plan's `cardId`, so its body keeps `card.id` verbatim and reads it inside
+   the updater, where it was (5i3).
+5. **Design §7's 5i3 rows (the owner's amendment to Q12).** The two stats
+   updaters, `withOfflineRequest` and `withCloudRequest`, are module
+   functions in `useTranslator.ts` beside `SessionStats` and `EMPTY_STATS`,
+   not in `translationSteps.ts`: their parameter is a `SessionStats`, and
+   importing it into `translationSteps.ts` is a file-level cycle that
+   `check-layers --check` rejects. `withoutStream` is in
+   `translationSteps.ts` as planned. (k)'s "into a function in
+   `translationSteps.ts`" is read accordingly for those two.
+6. **Design §10's list was short.** Besides its rows, these became untrue
+   during the phase and were fixed at 5j: FOUND_ISSUES 26–43's line
+   references, most of which now point into the new files (recomputed by
+   content at 5j, with a note at the top of FOUND_ISSUES), and FOUND_ISSUES
+   10's `pageIndexOf` line; the reader agent's "How the reader works" from
+   5f2 (`settleOn`) and 5f3 (`BlockRow`) as well as 5f1 and 5h1, and its
+   "28 checks" for R from 5b; `BlockList.tsx`'s margin-layout comment and
+   its "see MarginTarget" from 5f3 (both now name `BlockRow.tsx`); and P's
+   header (`scripts/verify-translate.mjs`), whose line numbers into
+   `useTranslator.ts` moved from 5i1 on and now name the functions and
+   their lines. RESTRUCTURE §5's R and P rows were brought up to date in
+   5b and 5c, the steps that built the checks, not at 5j.
+7. **Q16's reads of 5a and 5b.** Q16 asked for a `torjuman-reader` reading
+   of 5a's and 5b's additions before their baselines. Those additions were
+   built by the `torjuman-reader` agent itself, which cannot start another
+   agent, so the independent read was the `torjuman-reviewer`'s, after each
+   baseline was committed (`23bc734`, `ad16fdc`). A departure from Q16,
+   reported to the owner at the time. The `torjuman-llm` read of P (5c)
+   happened before its baseline, as planned.
+8. **Sizes against the estimates.** `EntitySheet.tsx` is 29 lines, not
+   Design §4's "about 55" (the estimate counted the old import block, which
+   went with the sheets); `SettingsScreen.tsx` 62 (about 70); `BlockList.tsx`
+   377 (about 370); `ReaderScreen.tsx` 854, at the top of Design §6's "about
+   750-850" and over the owner's "about 800" (Q11), its reason at its top.

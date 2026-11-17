@@ -140,6 +140,16 @@ src/
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
   ui/                  screens; reader/ and settings/ hold most of the UI
+    reader/            ReaderScreen (the shared state and the columns) with
+                       its hooks (useWordLookup, useReadingPosition,
+                       useReaderNavigation, usePanelControls,
+                       useHeaderHeight) and parts (ReaderHeader,
+                       CommentaryBars, ReaderSheets, ReaderCardPanel);
+                       BlockList with BlockRow and blockLayout (TYPE_CHROME,
+                       settleOn); EntitySheet dispatching to QuranSheet
+                       (with CompileTab) and HadithSheet; useTranslator with
+                       translationSteps
+    settings/          SettingsScreen (the list), one file per section
     kit/               shared pieces: Button, Field, TopBar, Spinner, …,
                        ProgressBar, SettingsSection — import the directory
                        (`../kit`, or `./kit` from top-level `ui`)
@@ -213,10 +223,11 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    `scrollMargin` measured from the screen root (observing `body` never fires:
    `html, body { height: 100% }`), a sticky header, a sticky card-panel
    column, overscan 200, `content-visibility: auto` on block text.
-   `TYPE_CHROME` in `BlockList.tsx` must match the CSS margins of each block
-   type or every jump lands off target. Selection endpoints are pinned
-   (`selectionPins.ts`) and `readSelection` takes text from stored blocks, not
-   the DOM. Run both Playwright checks after any reader change.
+   `TYPE_CHROME` in `ui/reader/blockLayout.ts` must match the CSS margins of
+   each block type (the classes beside it in `TYPE_CLASS`) or every jump lands
+   off target. Selection endpoints are pinned (`selectionPins.ts`) and
+   `readSelection` takes text from stored blocks, not the DOM. Run both
+   Playwright checks after any reader change.
 8. **WebView browsers (DuckDuckGo on Android).** `blob:` downloads come out
    0 B, a `data:` link the size of a library crashes the tab, and the Web
    Share API refuses gzip files. `lib/saveFile.ts` (`needsDataUrl`) picks

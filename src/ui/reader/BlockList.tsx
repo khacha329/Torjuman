@@ -51,8 +51,9 @@ import { BlockRow } from './BlockRow';
  */
 export const OVERSCAN = 200;
 //
-// Margin layout. Both gutters live in the container's padding via absolute
-// positioning, never in the flow, so nothing here narrows the Arabic column:
+// Margin layout. Both gutters live in the container's padding (below), and
+// BlockRow.tsx draws in them by absolute positioning, never in the flow, so
+// nothing in a row narrows the Arabic column:
 //
 //   right margin (the START side in RTL) — the card marker
 //   left margin                          — the ج/ص citation
@@ -79,7 +80,7 @@ interface BlockListProps {
   /** Each block's share of the reading marks. */
   marksByBlock: Map<string, MarkRange[]>;
   /** Margin tap: toggle skip on this block. */
-  /** Both absent in a shared view — see MarginTarget. */
+  /** Both absent in a shared view — see MarginTarget, in BlockRow.tsx. */
   onMarginTap?: (block: Block) => void;
   /** Margin long-press: open the Skip / Read / Clear / Note menu. */
   onMarginHold?: (block: Block, anchor: HTMLElement) => void;

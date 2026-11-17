@@ -1,10 +1,10 @@
 # Restructuring Ḥāshiya
 
 Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9, Phase 2 in PR
-#10, Phase 3 on `claude/restructure-phase-3` and Phase 4 on
-`claude/restructure-phase-4`, all complete and awaiting the owner's `npm run
-verify`, the tablet checks after Phases 2, 3 and 4, and merge. Base commit
-`56a412c` (`main`, v0.6.14).
+#10, Phase 3 in PR #11, Phase 4 on `claude/restructure-phase-4` and Phase 5
+on `claude/restructure-phase-5`, all complete and awaiting the owner's `npm
+run verify`, the tablet checks after Phases 2, 3, 4 and 5, and merge. Base
+commit `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
 
@@ -215,7 +215,8 @@ walks into:
 | **M** | the staged build on the tablet: open a book, select across screens, translate, open a verse sheet, Settings, a transfer | the owner says it works | **tablet** |
 | **X** | `torjuman-reviewer` on the commit | PASS or PASS WITH NOTES | here |
 
-Baselines for T, B, L, S, R are in `PROGRESS.md`; V's baseline count is
+Baselines for T, B, L, S, R are in `PROGRESS.md`; D, U, Q and P compare
+with their own record files, named in their rows; V's baseline count is
 waiting on the owner.
 
 ## 6. Phases
@@ -231,7 +232,7 @@ mechanical, high-payoff work first; the owner's data last but one.
 | **2** | **Complete.** **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the settings sections on the shared shell (21 sections, 15 shells) | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
 | **3** | **Complete.** **Provider seams**: one Anthropic client used by all four call sites, with two error mappings (short and full, not merged: Q4); one Gemini model POST; provider descriptors in the registry (placeholder, models offered and known, default) that Settings' key and model fields, Onboarding's key field and the card's model label now read; compile picks a compiler from a `Record<CloudProviderId, …>` table (Q5); Explain and gloss export the provider they run on, so the reader does not name it (Q10). What still names a provider on purpose — compile's table, Explain and gloss (Claude-only), Onboarding's copy and toggle, the session totals, the seeded profile, Offline's "back to Gemini" (Q6), `secrets` (Q8) — is §2 above, the plan's Design §5 and FOUND_ISSUES 4 | medium: cache keys and requests must be byte-identical | T B L Q U S R X; V (cache keys, `maxTokensFor`, prices); M with real keys |
 | **4** | **Complete.** **Storage**: check D first (4a); `IdbStorageAdapter`'s code moved into `idb*.ts` files by store group, the class keeping one-line delegates (4b–4i); one `STORES` table that both upgrade branches read (4j, 4k); `BOOK_STORES` from its `perBook` flag (4l); the work backup on one ordered `WORK_STORES` list (4m). Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md) | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
-| **5** | **Big UI files**: `ReaderScreen` into hooks (position, navigation, panel divider, gloss) and parts (header, sheets host); `EntitySheet` into `QuranSheet`, `CompileTab`, `HadithSheet`; `SettingsScreen` inline sections into files; `BlockList` estimates and `settleOn` into a module; `useTranslator` steps into named functions | medium: the reader is the app | S R on every step; T B L X; screenshots; M |
+| **5** | **Complete.** **Big UI files**: checks U (the reader's states), R (the reader's controls; 55 checks) and P (the translate pipeline through the reader) built and baselined on the old code first (5a–5c); Settings' seven inline sections and their `Section` into files in `ui/settings/` (5d1–5d8); `EntitySheet` into `HadithSheet`, `quranSheetData`, `CompileTab` and `QuranSheet` (5e1–5e4); `BlockList`'s estimates and `settleOn` into `blockLayout.ts` and its row into `BlockRow.tsx` (5f1–5f3); `ReaderScreen` into five hooks (5g1–5g5) and four parts — `ReaderHeader`, `CommentaryBars`, `ReaderSheets`, `ReaderCardPanel` — with the reason for its remaining 854 lines at its top (5h1–5h4); `useTranslator`'s pure steps into `translationSteps.ts` and its stats updaters into module functions beside `SessionStats` (5i1–5i3, the amendment to Q12). The ḥadīth-only UI sits behind `HadithSheet`, `CommentaryBars`, `ReaderCardPanel` and `SunnahKeyField`, for Phase 5b to switch by genre. Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md) | medium: the reader is the app | R S U on every step, P from 5g1, Q in 5i1–5i3, D in 5d8; T B L X; V; M |
 | **6** | **Docs**: `docs/EXTENDING.md` (how to add a provider, a source, a store, a route, a setting, a sheet tab), README map and links, CLAUDE.md map updated | none | X |
 
 ### Coming after the restructure: book kinds
