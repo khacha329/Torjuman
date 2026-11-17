@@ -2337,7 +2337,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review PASS | `24629fb` |
 | 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review PASS | `5561473` |
 | 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review PASS WITH NOTES | `c0ea5e3` |
-| 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review pending | this commit |
+| 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review PASS WITH NOTES | `63f03d7` |
+| 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3312,6 +3313,63 @@ holds)
   px in 24.5 s, 1,904 nodes, 0 long tasks; **S** 30/30 (its "the reading
   position follows the screen" checks among them); **U** 254/254; **P**
   PASS, identical.
+- **Review of 5g2 (`63f03d7`): PASS WITH NOTES; "ready for 5g3".** Both
+  effects and `restoredRef` byte-identical; effect order and the two
+  storage calls' order and timing confirmed; FOUND_ISSUES 31 preserved.
+  The reviewer's own R run: 55/55 at 33.7 s / 25.1 s, judged noise. Note:
+  the new header (`useReadingPosition.ts:7`) said "throttled", but the save
+  is debounced (it lands 900 ms after the visible block stops changing);
+  fixed at 5g3, the header word only, the moved comment untouched.
+
+**Step 5g3, measured 2026-11-17**
+- 5g2's note: `useReadingPosition.ts:7` "saved, throttled," → "saved,
+  debounced,", nothing else changed (the moved "throttled so scrolling
+  does not thrash IndexedDB" comment stays verbatim).
+- The navigation region (`ReaderScreen.tsx:442-473` at `63f03d7`, the
+  plan's 520-553: `flash` `[]` with its 1,600 ms, `jumpToBlock` `[blocks,
+  flash]`, `jumpToPage` `[blocks]`, `focusCard` `[jumpToBlock]`, one
+  contiguous block) and `flashBlockId`'s `useState` (`:97`, the plan's
+  101) moved into `export function useReaderNavigation({ blocks, listRef,
+  setActiveCardId })` in the new `ui/reader/useReaderNavigation.ts`:
+  `flashBlockId`'s line first, a blank line, the region, then (g) `return
+  { flashBlockId, flash, jumpToBlock, jumpToPage, focusCard }`. `cmp`: both
+  identical, at the same indentation; every `useCallback`'s deps character
+  for character. (f) the three fields Design §6.1 lists; (i) `Block[]`,
+  `RefObject<BlockListHandle | null>`, `Dispatch<SetStateAction<string |
+  null>>`; (h) the call `const { flashBlockId, flash, jumpToBlock,
+  jumpToPage, focusCard } = useReaderNavigation({ blocks, listRef,
+  setActiveCardId });` stands where `flash` was. The `navigation` section
+  divider above it stays in the screen (it is the screen's section
+  heading, and the section is still there: the call); the plan's 520 is
+  that divider. `setFlashBlockId` stays the hook's own. `listRef.current`
+  is still read inside the jumps, at call time of each jump.
+- Hook order: only `flashBlockId`'s `useState` moves (from among the
+  screen's states to the hook's start), as Design §6.1 allows; the four
+  `useCallback`s are called at the same point in the same order; no effect
+  is involved. Callers unchanged: `handleMarkerClick`'s deps (with
+  `flash`), `BlockList`'s `flashBlockId`, `JumpToPage`'s and the contents'
+  `jumpToPage`, the search column's `jumpToBlock` and the panel's
+  `onFocusCard={focusCard}` are the same text.
+- Imports: `useReaderNavigation.ts` takes `useCallback`/`useState` (with
+  `type Dispatch`, `type RefObject`, `type SetStateAction`, new for (i)),
+  `type Block`/`Card` and `type BlockListHandle`; `ReaderScreen` keeps
+  every import (it still uses `useCallback`, `useState`, `Card`) and
+  imports `useReaderNavigation`. A four-line header. `ReaderScreen.tsx` is
+  1,239 lines (1,269); `useReaderNavigation.ts` 55.
+- **For 5j:** the screen's references past `:442` shift up a further 30,
+  those between `:97` and `:442` by 1.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,823 B (+214 B), only `index.js` differs
+  (`compare-bundles` against post-5g2; minified names), CSS byte-identical
+  (`cmp`); **L** 186 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; against 5g2's second
+  run every `ok` line identical but the portrait restore (700 here, 699
+  there — the noise seen since 5d1), every jump, contents, search, marker
+  and card line with its measured position included; report lines
+  identical but the timings: 240,000 px in 33.4 s, 1,905 nodes, 0 long
+  tasks / 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30;
+  **U** 254/254; **P** PASS, identical (6 groups, 23 scenarios, 18
+  requests).
 
 ## Open
 

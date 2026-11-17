@@ -4,7 +4,7 @@ import type { Block } from '../../types';
 import type { BlockListHandle } from './BlockList';
 
 // The reader's saved reading position: restored once the blocks are in, and
-// saved, throttled, as the visible block changes. `restoredRef` is its own.
+// saved, debounced, as the visible block changes. `restoredRef` is its own.
 // Moved verbatim from ReaderScreen.tsx in restructure Phase 5 step 5g2
 // (docs/refactor/plans/phase5-big-ui-files.md).
 

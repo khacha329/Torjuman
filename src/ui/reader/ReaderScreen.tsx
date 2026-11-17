@@ -57,6 +57,7 @@ import {
 } from '../useLayoutMode';
 import { useWordLookup } from './useWordLookup';
 import { useReadingPosition } from './useReadingPosition';
+import { useReaderNavigation } from './useReaderNavigation';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -94,7 +95,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
-  const [flashBlockId, setFlashBlockId] = useState<string | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
   // the reader scrolls and closes only when that text leaves the viewport.
@@ -439,38 +439,8 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // ------------------------------------------------------------ navigation
 
-  const flash = useCallback((blockId: string) => {
-    setFlashBlockId(blockId);
-    setTimeout(() => setFlashBlockId((current) => (current === blockId ? null : current)), 1600);
-  }, []);
-
-  const jumpToBlock = useCallback(
-    (blockId: string) => {
-      const index = blocks.findIndex((block) => block.id === blockId);
-      if (index === -1) return;
-      listRef.current?.scrollToIndex(index, 'center');
-      flash(blockId);
-    },
-    [blocks, flash],
-  );
-
-  const jumpToPage = useCallback(
-    (pageIndex: number) => {
-      const index = blocks.findIndex(
-        (block) => Number(block.pageId.split(':p')[1]) === pageIndex,
-      );
-      if (index >= 0) listRef.current?.scrollToIndex(index, 'start');
-    },
-    [blocks],
-  );
-
-  const focusCard = useCallback(
-    (card: Card) => {
-      setActiveCardId(card.id);
-      jumpToBlock(card.startBlockId);
-    },
-    [jumpToBlock],
-  );
+  const { flashBlockId, flash, jumpToBlock, jumpToPage, focusCard } =
+    useReaderNavigation({ blocks, listRef, setActiveCardId });
 
   // Text→panel sync now runs through the margin marker rather than a tap on
   // the paragraph itself. Tapping the text is how you place a cursor before
