@@ -238,6 +238,17 @@ export async function explainPhrase(options: {
       });
 
       let turnText = '';
+      // Text blocks are joined with a newline, as textOf joins them in the
+      // notes; progress ran them together until FOUND_ISSUES 15.3.
+      stream.on('streamEvent', (event) => {
+        if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'text' &&
+          turnText !== ''
+        ) {
+          turnText += '\n';
+        }
+      });
       stream.on('text', (delta) => {
         turnText += delta;
         options.onProgress?.(joinNotes(notes, turnText));

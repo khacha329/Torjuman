@@ -25,6 +25,7 @@ import {
   textOf,
   toTranslationError,
   WEB_SEARCH_TOOL,
+  withRaw,
 } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
@@ -143,6 +144,18 @@ export class AnthropicProvider implements TranslationProvider {
       });
 
       let turnText = '';
+      // A reply with search results holds several text blocks. The notes join
+      // them with a newline (textOf); live progress ran them together
+      // ("…first.Passage …") until FOUND_ISSUES 15.3.
+      stream.on('streamEvent', (event) => {
+        if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'text' &&
+          turnText !== ''
+        ) {
+          turnText += '\n';
+        }
+      });
       stream.on('text', (delta) => {
         turnText += delta;
         onChunk?.(`Researching…\n\n${joinNotes(notes, turnText)}`);
@@ -152,7 +165,10 @@ export class AnthropicProvider implements TranslationProvider {
       try {
         message = await stream.finalMessage();
       } catch (error) {
-        throw toTranslationError(error);
+        // An error after the reply has started (an overload mid-stream) keeps
+        // what was written so far as raw: the tokens are billed all the same,
+        // and a paid response is never discarded (FOUND_ISSUES 15.2).
+        throw withRaw(toTranslationError(error), joinNotes(notes, turnText));
       }
 
       addUsage(usage, message.usage);
@@ -221,7 +237,9 @@ export class AnthropicProvider implements TranslationProvider {
       try {
         message = await stream.finalMessage();
       } catch (error) {
-        throw toTranslationError(error);
+        // As in the research pass (FOUND_ISSUES 15.2): the research notes and
+        // the tool arguments streamed so far are kept as raw.
+        throw withRaw(toTranslationError(error), joinNotes(research ?? '', partial));
       }
 
       addUsage(usage, message.usage);

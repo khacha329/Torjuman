@@ -19,3 +19,15 @@ export function retryAfterSeconds(header: string | null | undefined): number | n
   if (Number.isNaN(at)) return null;
   return Math.max(0, Math.ceil((at - Date.now()) / 1000));
 }
+
+/**
+ * Seconds to wait, from Anthropic's `retry-after-ms` header, or null. The SDK
+ * reads this one before `retry-after`; the app read only the latter, so with
+ * `retry-after-ms` alone the wait the SDK knew was reported as null
+ * (FOUND_ISSUES 15.4).
+ */
+export function retryAfterMsSeconds(header: string | null | undefined): number | null {
+  if (header === null || header === undefined || header.trim() === '') return null;
+  const ms = Number(header);
+  return Number.isFinite(ms) ? Math.max(0, ms / 1000) : null;
+}

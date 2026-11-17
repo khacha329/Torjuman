@@ -222,8 +222,9 @@ async function compileWithGemini(
       cachedContentTokenCount?: number;
     };
   };
+  let body: string;
   try {
-    payload = (await response.json()) as typeof payload;
+    body = await response.text();
   } catch (caught) {
     // A connection that drops while the body is read rejects with a
     // TypeError, which escaped unmapped (FOUND_ISSUES 14.1).
@@ -234,6 +235,18 @@ async function compileWithGemini(
       );
     }
     throw caught;
+  }
+  try {
+    payload = JSON.parse(body) as typeof payload;
+  } catch {
+    // A 200 that is not JSON — an empty body, or a captive portal's HTML page —
+    // escaped as a raw SyntaxError (FOUND_ISSUES 15.1). The body is kept as
+    // raw, so what arrived can be seen.
+    throw new TranslationError(
+      'api',
+      'Gemini returned a reply that is not JSON. A network login page can cause this; check the connection.',
+      { raw: body || null },
+    );
   }
 
   const text = (payload.candidates ?? [])

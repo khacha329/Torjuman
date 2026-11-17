@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TranslationUsage } from '../types';
 import { TranslationError } from './TranslationProvider';
-import { retryAfterSeconds } from './retryAfter';
+import { retryAfterMsSeconds, retryAfterSeconds } from './retryAfter';
 
 // What every Claude call in the app shares, so the SDK is used the same way
 // everywhere: the client, the web-search tool, the text of a reply, the
@@ -49,6 +49,19 @@ export function textOf(message: Anthropic.Message): string {
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
     .join('\n');
+}
+
+/**
+ * The same error carrying `raw`, unless it already has some or there is none
+ * to add. Used where a stream fails after the reply began, so the partial
+ * reply reaches the failed card's raw text (FOUND_ISSUES 15.2).
+ */
+export function withRaw(error: TranslationError, raw: string): TranslationError {
+  if (error.raw || raw === '') return error;
+  return new TranslationError(error.kind, error.message, {
+    retryAfterSeconds: error.retryAfterSeconds,
+    raw,
+  });
 }
 
 /**
@@ -108,7 +121,13 @@ export function toTranslationError(error: unknown): TranslationError {
     return new TranslationError(
       'rate-limit',
       'Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.',
-      { retryAfterSeconds: retryAfterSeconds(error.headers?.get?.('retry-after')) },
+      {
+        // retry-after-ms first, as the SDK reads them: with only it the wait
+        // the SDK knew was reported as null (FOUND_ISSUES 15.4).
+        retryAfterSeconds:
+          retryAfterMsSeconds(error.headers?.get?.('retry-after-ms')) ??
+          retryAfterSeconds(error.headers?.get?.('retry-after')),
+      },
     );
   }
   if (error instanceof Anthropic.APIConnectionError) {
