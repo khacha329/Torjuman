@@ -2471,12 +2471,18 @@ holds)
   performance as the baseline), so the cause was not caught. The 5a
   re-review's candidate: the seed's IndexedDB transactions had `oncomplete`
   and `onerror` but no `onabort`, so an aborted write would wait forever.
-- By the owner's choice, `scripts/verify-reader-scroll.mjs` now gives every
-  wait that had no limit one (`within(ms, label, …)`: the seed, the
+- By the owner's choice, `scripts/verify-reader-scroll.mjs` now gives the
+  setup and teardown waits limits of their own (`within(ms, label, …)`: the
+  seed, the
   onboarding write, opening and closing each context, closing the browser
   and the preview server), adds `onabort` to the seed's transactions and
-  `onblocked` to its open, and runs a ten-minute watchdog that prints the
-  step it was in and exits 2. No assertion changed.
+  `onblocked` to its open, and runs a ten-minute watchdog that bounds every
+  other wait (the checks' own `evaluate` calls, `newPage`,
+  `addInitScript`), printing the step it was in and exiting 2. No assertion
+  changed. Review of `2b2f9da`: PASS WITH NOTES — no failure can become a
+  pass, `onblocked` cannot fire on a version-less open, the limits are
+  generous; this wording corrected, and §1.5 and Q2 now point at the
+  amendment.
 - **Proven:** a normal run PASS 28/28 (240,000 px in 33.4 s, 1,905 nodes, 0
   long tasks; 175,800 px in 24.4 s, 1,904 nodes); a seed made never to
   finish fails after 61 s with "timed out after 60000 ms: seeding the book"

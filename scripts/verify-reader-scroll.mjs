@@ -37,9 +37,11 @@ const VERSE =
 // changed, and five traced runs afterwards did not reproduce it. A hang
 // gives no clue where it was, and once Phase 5 adds scenarios a hang caused
 // by a real regression would look the same. So, by the owner's decision
-// (Phase 5 plan, Owner's answers, the amendment to Q2), every wait that had
-// no limit now has one, the seed's IndexedDB writes also fail on an abort
-// or a blocked open, and a watchdog names the step it was in. No assertion
+// (Phase 5 plan, Owner's answers, the amendment to Q2), the waits around
+// setup and teardown get limits of their own (the seed, the onboarding
+// write, opening and closing contexts, closing the browser and the preview
+// server), the seed's IndexedDB writes also fail on an abort or a blocked
+// open, and a watchdog bounds every other wait, naming the step it was in. No assertion
 // changed: a stall is reported as a failure of its own, not as a pass.
 let currentStep = 'starting';
 const step = (label) => { currentStep = label; };

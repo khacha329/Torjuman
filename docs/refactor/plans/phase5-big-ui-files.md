@@ -969,7 +969,7 @@ proof), then X on the whole phase.
    scenarios into S (S is anchors-only assertions, so it would need a record
    file of its own anyway); or no P and drop Q12's steps.
 2. **Q2. R runs first and alone, under `timeout 1200`**, a hang re-run once,
-   two hangs stop the step? Recommended: yes, and leave R's script as is.
+   two hangs stop the step? Recommended: yes, and leave R's script as is (see the amendment to Q2 at the end: the owner later chose a small fix).
    Alternative: give R's `page.evaluate` calls a timeout in 5b, which would
    turn a hang into a failure — a change to R written on the old code.
 3. **Q3. Adaptations (f)–(l)** (Design §2): same-name props and parameters
@@ -1073,9 +1073,10 @@ reading P before 5c's (Q16); the book-kinds seam as in Design §8 (Q17).
 time on an unchanged bundle (Phase 4 step 4n, after its last portrait step;
 Phase 5 step 5a, between the landscape report and the portrait start) and
 five traced runs did not reproduce it, the owner chose "a small fix to the
-script" over leaving R as is: every wait in `scripts/verify-reader-scroll.mjs`
-that had no limit gets one, the seed's IndexedDB writes also fail on an
-abort or a blocked open, and a watchdog names the step a stall is in. No
+script" over leaving R as is: the setup and teardown waits in
+`scripts/verify-reader-scroll.mjs` get limits of their own, the seed's
+IndexedDB writes also fail on an abort or a blocked open, and a watchdog
+bounds every other wait and names the step a stall is in. No
 assertion changes, and a stall is a failure, never a pass. R still runs
 first and alone under `timeout 1200`.
 
