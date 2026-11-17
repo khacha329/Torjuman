@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phases 0–3 complete (PRs khacha329/Torjuman#8, #9, #10, and Phase 3's on `claude/restructure-phase-3`), awaiting the owner's `npm run verify`, the tablet checks and merge
+## Current state: Phases 0–4 complete (PRs khacha329/Torjuman#8, #9, #10, #11, and Phase 4's on `claude/restructure-phase-4`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -1457,13 +1457,862 @@ provider; Dig deeper once; Explain once; a word's Meaning (gloss); Compile one
 āyah on each provider; switch a profile between providers and see the model
 list and default follow.
 
+## Phase 4: storage (complete, branch `claude/restructure-phase-4`)
+
+Plan: [`plans/phase4-storage.md`](plans/phase4-storage.md); **approved
+2026-11-16, all thirteen answers as recommended** (`109d400`).
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 4a. Check D (`scripts/verify-storage.mjs`, `verify-storage-harness.ts`, `npm run verify:storage`), baselined on the old code; FOUND_ISSUES 16–25 | D proven; review PASS WITH NOTES | `8579140` |
+| review notes: 4a — D's coverage gaps closed on the old code (every method before `init`, puts over existing keys, the bundle's page errors, the share adapter's reads) | D re-baselined and re-proven; review FAIL (a lost cache-key hit) | `8a9cb4b` |
+| 4a fix — the card cache-key hit restored | D re-baselined (run1 == run2) and breakage 9 proven; review PASS, "ready for 4b" | `c1d2cfb` |
+| 4b. `DB_NAME`, `DB_VERSION` with its history, `BOOK_STORES`/`BookStore`, `Schema` → `idbSchema.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `056290a` |
+| 4c. the `upgrade` callback body → `upgradeDatabase` in `idbSchema.ts` | T B L D Q U pass; V owed; review PASS WITH NOTES | `a4ba6af` |
+| 4d. `PURGE_BATCH`, `purgeIndex` → `idbPurge.ts`; the adapter's header made true | T B L D Q pass; V owed; review FAIL (the header's parenthesis, an export) | `d716952` |
+| 4d fix — the adapter's header true at this point; `PURGE_BATCH` not exported | T B L D pass; review PASS, "ready for 4e" | `db6b10e` |
+| 4e. raw store I/O → `idbTransfer.ts` (with a departure: the moved functions take a handle *fetcher*) | T B L D Q pass, and a negative test of the departure; V owed; review PASS WITH NOTES | `6b7ce2a` |
+| 4f. the user's-work group → `idbWork.ts` | T B L D Q S R pass; V owed; review PASS WITH NOTES | `284b7ef` |
+| 4g. the reference group → `idbReference.ts` | T B L D Q pass; V owed; review PASS | `ab1c19b` |
+| 4h. the book-content group → `idbLibrary.ts` | T B L D Q S R pass; V owed; review PASS | `b04c7f8` |
+| 4i. the work backup → `idbBackup.ts` | T B L D Q pass; V owed; review PASS WITH NOTES | `1b5089a` |
+| 4j. the `STORES` table in `idbSchema.ts`; the fresh-install branch creates from it | T B L D Q U pass, and two negative tests; V owed; review PASS WITH NOTES | `11ee82e` |
+| 4j follow-up — D covers a v10 without qulCompilations (`harness/odd-v10-without-qulCompilations`); the 4j review's comment notes | T D Q pass, run1 == run2, the new scenario proven; build identical to 4j after masking; review PASS WITH NOTES | `afffa50` |
+| 4k. the existing-DB branch reads `STORES` (one snapshot of the names; the trio's shared guard as `createdWith`) | T B L D Q U pass, and five negative tests; V owed; review PASS WITH NOTES | `87b3b26` |
+| 4l. `BOOK_STORES` from the table's `perBook` flag (same ten names, same order); the 4k review's comment fixes | T B L D Q pass, and three negative tests; V owed; review PASS WITH NOTES | `b60633e` |
+| 4l follow-up — D asserts `BOOK_STORES`' order against its own hand list (negative test 3 now caught) | T D pass; the record unchanged; review PASS WITH NOTES | `7bffce0` |
+| 4m. `WORK_STORES` drives `exportWork`/`importWork` (Q7); the 4l review's must-fix; D's order check no longer keyed on a scenario name | T B L D Q pass, the SSR build, and five negative tests; V owed; review PASS | `b69abd4` |
+| 4n. docs and comments made true; D's keyed assertions guarded; the plan's corrections; end of phase | T B L D Q U S R pass, the SSR build; V and M owed; review pending | this commit |
+
+**Step 4a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
+holds)
+- Built by the `torjuman-storage` agent from plan Design §1. Playwright in the
+  container's Chromium (153.0.8010.12, from `playwright` 1.63.0), no new
+  dependency (Q1). Two halves on one `vite preview` origin: the shipped
+  bundle for the schema, and a Vite library-mode build of the real
+  `IdbStorageAdapter`, `library/transfer`, `library/deviceTransfer` and
+  `share/ShareStorageAdapter` for everything else. Every phase in a fresh
+  context; en-US, UTC, service workers blocked, `page.clock` fixed,
+  `Math.random` seeded; requests off the origin aborted.
+- **40 scenarios, 49 phases** (50 after the review notes below): bundle 7 (fresh, upgrade from v1base, v7, v8,
+  v9, v10, reopen v11); harness 33 — the same seven with a row in every store
+  the old version had (schema and rows in one scenario), the two impossible
+  QUL databases, `before-init`, 18 method families (the interface's sections
+  plus the six raw whole-tablet calls), per-book delete (4,097 blocks in one
+  book), work backup (4 phases), per-book transfer (4), whole-tablet transfer
+  (4: export with and without keys, two restores, six refusals), share
+  adapter. Record `docs/refactor/phase4/storage.json`, **340,129 B** (360,229 B
+  after the review notes, 361,971 B after the cache-key fix).
+  **Run time**: about 11 s for the check, 17.6 s for `npm run
+  verify:storage` with its build.
+- **Masked: nothing.** Pinned: `Date.now` (page.clock), `Math.random`, locale,
+  time zone. Ids `newId` makes on arrival (entities, the dictionary root
+  index) come out the same every run.
+- Asserted on every run, `--write` included: the three fake keys
+  (`sk-ant-d-check-…`, `AIza-d-check-…`, `sunnah-d-check-…`) in no work backup,
+  no per-book file, no whole-tablet file without keys, and all three in the
+  one with them; both restores equal the source row for row; every refusal
+  and the share adapter's ignored writes left the database (and
+  localStorage) untouched.
+- **Proof.** Run 1, then run 2 with `--write`: byte-identical (`cmp`); runs
+  with `TZ=Pacific/Kiritimati` and a German locale, and with
+  `TZ=America/St_Johns`: PASS. Those runs change only the **Node** process
+  (the script's own formatting and hashing); every browser context pins
+  `timezoneId` UTC and locale en-US whatever the machine says, so they show
+  that the Node side is deterministic, not that the page code is independent
+  of time zone or locale — the page side is pinned, not varied. The five breakages, each a temporary edit
+  restored from a backup copy (`cmp` equal, `git diff --quiet -- src` after
+  each), each exit 1:
+  1. `cards`' `byCacheKey` index dropped from the fresh branch → 25 of 40
+     differ: `bundle/fresh`, `harness/fresh` and every harness scenario that
+     installs fresh (18 families, `delete-book`, `work-backup`,
+     `book-transfer`, `device-transfer`, `share-adapter`); no upgrade
+     scenario;
+  2. the `sharhCards` guard removed → 6: `bundle/` and `harness/`
+     `upgrade-v1base`, `-v7`, `-v8` (v9 and v10 already have it);
+  3. `marks` removed from `BOOK_STORES` → 2: `delete-book`, `book-transfer`;
+  4. `hadiths` dropped from `exportWork` → 1: `work-backup`;
+  5. the `schemaVersion` comparison in `parseHeader` removed → the assertion
+     "rows and localStorage untouched after restoreDevice, schemaVersion 10"
+     and 1 scenario, `device-transfer`.
+  Final run after restoring: PASS.
+- **Where the plan's design was not followed as written**: the upgrade-rows
+  group is merged into the harness schema scenarios (one phase records both);
+  the impossible database without `qulResources` makes `init` reject with an
+  AbortError, the ConstraintError reaching the page as an uncaught exception
+  (recorded as `uncaughtInPage`); a schema other than a fresh install's is
+  written `"stores": "as today"` when it equals TODAY built with raw
+  IndexedDB (compared in full either way — the first version abbreviated
+  against `harness/fresh`, which made a fresh-branch breakage show in every
+  upgrade scenario); the work backup file is its length and SHA-256, its
+  content being the `exportWork` value beside it; a third fake key
+  (Sunnah's) is planted. Added beyond the plan: the raw-store-I/O family,
+  two refusals (a work backup given as a tablet file; `restoreDevice`'s own
+  header check), a failed replacement in the per-book conflict phase.
+- **Found**: FOUND_ISSUES 16–23 are the plan's A–H; **24 is new and is a data
+  loss**: replacing a book from a Library transfer file deletes its marks,
+  cards, explanations, sharḥ cards and position, though the confirm dialog
+  says they are kept; a failed replacement leaves no copy of the book. 25 is
+  new and cosmetic (a restore's card count omits sharḥ cards).
+- T exit 0; B main chunk 788,264 B (unchanged); L 162 files, 134 edges, 11
+  rules hold; Q PASS.
+
+- **Review of 4a: PASS WITH NOTES.** Coverage gaps to close on the old code
+  before any move, and readability notes. Closed here, still with no `src/`
+  change (`git diff --quiet -- src`):
+  - **`before-init` calls every one of the 84 interface methods** (95 calls:
+    11 methods are called twice — 10 with an early return, empty and
+    non-empty, and `listBiographyEntries` with and without a filter), in the
+    interface's order, and fails the harness if the list and the class's
+    own prototype disagree (less `init` and the private helpers `handle`,
+    `purgeIndex`, `loadSearchIndex`, `untyped`). Today 83 reject, 1 throws
+    synchronously (`listStoreNames`), and 11 resolve without reading the
+    handle (the empty-list early returns, the empty searches, a naming under
+    three letters, the `schemaVersion` getter). This is what R5 relies on to
+    catch a delegate that reads `this.handle` synchronously after the fifth
+    adaptation (4f–4h).
+  - **Puts over existing keys**, where a `put`→`add` change would show:
+    `putCard` and `putMarks` over existing ids (`family/cards`,
+    `family/marks`), `putStoreRows` over existing rows before any clear
+    (`family/raw-store-io`), and a new `work-backup` phase
+    `import-over-existing` — an older copy of every backed-up row under the
+    same keys, plus a row only the receiving tablet has, which survives.
+  - The bundle half records each scenario's uncaught page errors and console
+    errors, sorted (none today in any of the seven).
+  - The share scenario reads through `ShareStorageAdapter`: 18 reads that
+    reach the visitor's own database (the verse and compilation just written
+    through among them) and 6 the bundle answers (a book, blocks, the
+    always-missing card lookup, position, page).
+  - Gap (c), write order and transaction boundaries, stays a reviewer check
+    (the word diff of moved bodies); the script's header now says so.
+  - Readability: the header's paragraph on the two odd databases re-wrapped;
+    `rowsRecord`'s comment made true. A step list was also being shortened
+    like a row list once it passed 50 entries (`before-init` and
+    `share-adapter` would have been recorded as count and hash); steps are
+    now always listed in full and only values inside them are shortened.
+  - **A comment that becomes untrue at 4d**: the harness's header calls
+    `IdbStorageAdapter` "the only IndexedDB code". Left as is; it is
+    corrected with the adapter's own header in 4d (Q8).
+- **Re-measured**: 40 scenarios, **50 phases** (the new backup phase),
+  record **360,229 B**; about 12 s for the check. Run 1, then run 2 with
+  `--write`: byte-identical (`cmp`); `TZ=Pacific/Kiritimati` with a German
+  locale: PASS (Node side only, as above). Breakages re-proven, each restored
+  from a backup (`cmp` equal, `git diff --quiet -- src`), each exit 1:
+  1. `byCacheKey` dropped from the fresh branch → the same 25 scenarios;
+  3. `marks` out of `BOOK_STORES` → `delete-book`, `book-transfer`;
+  5. the `schemaVersion` check removed → the refusal assertion and
+     `device-transfer`;
+  and three that only the new coverage catches, each changing one scenario:
+  6. `getBook` no longer `async` (it then throws synchronously before
+     `init`) → `family/before-init`: `rejected` becomes `threw`;
+  7. `put` → `add` in `putStoreRows` → `family/raw-store-io` (the write over
+     existing keys rejects; a restore after a clear never showed it);
+  8. `put` → `add` in `importWork` → `work-backup` (`import-over-existing`:
+     `ConstraintError: Key already exists in the object store.`).
+  Final run PASS. T exit 0; B 788,264 B; L 162 files, 134 edges, rules hold;
+  Q PASS.
+
+- **Review of `8a9cb4b`: FAIL, one coverage regression, fixed here.** The new
+  overwrite step in `family/cards` ran before the only `getCardByCacheKey`
+  that hit, so both lookups of `cache-a2` missed and no hit through the
+  `byCacheKey` index was left anywhere in the record: a moved lookup that
+  always returned `undefined` would have passed. Now a hit on `cache-a2`
+  before the overwrite, then a miss on it and a hit on `cache-a2-new` after.
+  Also the "95 calls" wording above corrected (10 early returns and
+  `listBiographyEntries` are the 11 called twice). Everything else in the
+  review checked out: the prototype assertion bites both ways; the step-list
+  fix hid nothing (all 37 old `before-init` outcomes identical); the
+  overwrites really overwrite.
+- **Re-measured**: record **361,971 B**; only `family/cards` differed before
+  the rewrite; run 1, then run 2 with `--write`: byte-identical (`cmp`).
+  Breakage 9, `getCardByCacheKey` returning `undefined` → FAIL, 2 of 40
+  scenarios differ (`family/cards`, and `family/before-init`, where the
+  rejection becomes a resolve); restored from a copy (`cmp` equal, `git diff
+  --quiet -- src`), then PASS.
+- **Review of `c1d2cfb`: PASS; "ready for 4b".** The record's diff is the two
+  `family/cards` hunks only; the new hit returns the replaced row's values.
+
+**Step 4b, measured 2026-11-16**
+- `IdbStorageAdapter.ts:41-59` (`DB_NAME`, the schema history, `DB_VERSION =
+  11`) and `:71-169` (`BOOK_STORES` with both comments, `BookStore`, `Schema`)
+  moved verbatim into the new `platform/storage/idbSchema.ts`, `export` added
+  to the five names; it imports `idb`'s `DBSchema` and the 24 types (the
+  adapter's type import copied). A five-line header says what the file is.
+  The adapter imports the five names and drops `DBSchema` from its `idb`
+  import; `SETTINGS_KEY`, `PURGE_BATCH` and `SearchEntry` stay until their
+  groups move. `DB_VERSION = 11` moved as is.
+- **T** exit 0. **B** exit 0; main chunk 788,264 → 788,264 B (0; the
+  declarations' order in the bundle changes only); only `index.js` differs;
+  CSS byte-identical. **L**: 163 files, 134 edges, rules hold. **D** PASS,
+  identical. **Q** PASS. **V owed** (nothing it builds changed).
+
+- **Review of 4b: PASS WITH NOTES; "ready for 4c".** Verbatim apart from the
+  five `export`s, the imports and the header; the bundle differs only in
+  the order of pure constant initialisers. Applied: the header was five
+  lines, not four (above); `idbSchema.ts`'s header said the upgrade branches
+  were in `IdbStorageAdapter.init`, which 4c makes untrue — reworded there.
+
+**Step 4c, measured 2026-11-16**
+- The `upgrade(db, oldVersion) { … }` body (`IdbStorageAdapter.ts:86-216`
+  at `056290a`) moved into `export function upgradeDatabase(db:
+  IDBPDatabase<Schema>, oldVersion: number): void` at the end of
+  `idbSchema.ts`, re-indented from eight spaces to two and otherwise
+  verbatim (a whitespace-stripped diff is empty), `return;` included. `init`
+  passes `{ upgrade: upgradeDatabase }`. The body used nothing from the
+  adapter's scope (no `this`, no adapter constant). `idbSchema.ts` imports
+  `IDBPDatabase` beside `DBSchema`; its header now says the upgrade callback
+  is there, and the function has a three-line doc comment.
+- **T** exit 0. **B** exit 0; main chunk 788,264 → 788,284 B (+20, a named
+  function); only `index.js`; CSS byte-identical. **L**: rules hold. **D**
+  PASS, identical — every schema scenario, fresh and upgraded. **U** 180/180
+  (a fresh install through the bundle). **Q** PASS. **V owed**.
+
+- **Review of 4c: PASS WITH NOTES; "ready for 4d".** idb calls `upgrade` as
+  a plain function (`this` was already undefined), so naming it changes
+  nothing; the body is verbatim. Note: the adapter's "ONLY file that talks to
+  IndexedDB" was already untrue at 4c, not first at 4d as the plan's §5 and
+  Q8 said — `upgradeDatabase` creates and deletes stores. So were the D
+  harness's header (fixed in 4d with the adapter's) and CLAUDE.md's Never
+  line and trap 6 ("both upgrade branches in `IdbStorageAdapter.init`"),
+  which 4n fixes; they misled no one in the meantime, since `init` names
+  `upgradeDatabase`.
+
+**Step 4d, measured 2026-11-16**
+- `PURGE_BATCH` with its comment and `purgeIndex` with its comment moved
+  verbatim into the new `platform/storage/idbPurge.ts`: the method became
+  `export async function purgeIndex(handle: IDBPDatabase<Schema>, store,
+  index, key)`, de-indented one level, and its one `this.handle` became
+  `handle` (the fifth adaptation, Q3). The six
+  calls in the class became `purgeIndex(this.handle, …)`. Its comment
+  "every call below" is kept verbatim though the calls are now in the
+  adapter. The adapter drops its now-unused `BookStore` import. The
+  adapter's header now says this file and the `idb*.ts` files beside it are
+  the only IndexedDB code (Q8), and so does the D harness's header line.
+- **T** exit 0. **B** exit 0; main chunk 788,284 → 788,277 B (−7); only
+  `index.js`; CSS byte-identical. **L**: rules hold. **D** PASS, identical —
+  the per-book delete over 4,097 rows, `deleteQulResource`,
+  `deleteNarratorShard` and the clears among it. **Q** PASS. **V owed**.
+
+- **Review of 4d: FAIL, two comment-level points, fixed in the next commit.**
+  The code is clean: all six callers are `async`, so reading `this.handle`
+  at the call site still turns a throw before `init` into a rejection (one
+  microtask sooner), and D's `before-init` shows the same `rejected` for
+  every purge caller. But the adapter's new header said the class "hands
+  each [method] to its group", which only 4i makes true — now "is moving
+  this class's code into them, store group by store group". And
+  `PURGE_BATCH` had gained an `export` no file uses — outside rule 4 (b);
+  removed (the line above says so). For 4n's list of comments to make true:
+  `purgeIndex`'s "every call below passes a valid pair" (its callers are in
+  the adapter, and later the group files); and the harness's `PRIVATE` set
+  still names `purgeIndex`, now inert.
+- **Review of `db6b10e`: PASS; "ready for 4e".**
+
+**Step 4e, measured 2026-11-16**
+- **A departure from Design §3, found here, applied from 4e on.** The plan
+  has each moved method take the handle (`this.handle` → `handle`) and its
+  class delegate pass `this.handle`. But some methods return before they
+  touch the database: `putStoreRows` with no rows (and, in later groups,
+  the empty `putMarks`, `putBlocks`, `deleteMarks`, the empty searches …)
+  resolve even before `init`, and check D's `before-init` records exactly
+  that. A delegate that reads `this.handle` to pass it would make them
+  reject. So each moved function takes `handle: () => IDBPDatabase<Schema>`
+  and calls it where the body read `this.handle` — still one token per
+  site, `this.handle` → `handle()` — and the class passes one fetcher, a
+  `private readonly lazyHandle = () => this.handle` field (an instance
+  field, not on the prototype, so the harness's method list is unaffected).
+  `purgeIndex` (4d) keeps its handle parameter: its callers have already
+  read the handle. **Proven:** a delegate made eager (`const db =
+  this.handle; return putStoreRows(() => db, …)`) → D FAIL, 1 of 40
+  (`family/before-init`); restored from a copy, PASS.
+- The device-transfer section's comment and its six members (`listStoreNames`,
+  the private `untyped`, `countStoreRows`, `readStoreRows`, `putStoreRows`,
+  `clearAllStores`) moved verbatim into the new
+  `platform/storage/idbTransfer.ts`, de-indented, each a function whose first
+  parameter is the fetcher; `this.handle` → `handle()`, `this.untyped(` →
+  `untyped(handle, `, `this.searchIndex` → a `searchIndex` parameter typed
+  `Map<string, unknown>` (these only clear it; `SearchEntry` moves with its
+  group in 4h). `untyped` is not exported (only this file uses it). The
+  `schemaVersion` getter and the section divider stay in the class; the class
+  gains five one-line delegates, `listStoreNames` still synchronous (so it
+  still throws, not rejects, before `init`).
+- **T** exit 0. **B** exit 0; main chunk 788,277 → 788,528 B (+251: five
+  delegates, the field); only `index.js`; CSS byte-identical. **L**: rules
+  hold. **D** PASS, identical — every whole-tablet scenario and
+  `family/raw-store-io`, `family/before-init`. **Q** PASS. **V owed**.
+
+- **Review of 4e: PASS WITH NOTES; "ready for 4f".** The departure is
+  necessary (ten methods resolve before `init`, listed in D's record),
+  minimal (one form for every group; a context object would need `handle`
+  public), still one token per site, and within the owner's Q3 wording; to
+  be stated in the PR. Applied: the plan gains an amendment note under
+  Design §3 so later reviews check the true form; "five members" above was
+  six; `countStoreRows`'s signature in `idbTransfer.ts` wrapped like its
+  neighbours. For 4n: the harness's `PRIVATE` set now also names the inert
+  `untyped`.
+
+**Step 4f, measured 2026-11-16**
+- Thirty methods moved verbatim into the new `platform/storage/idbWork.ts`,
+  in the class's order, de-indented, each a function whose first parameter
+  is the fetcher (the 4e form): marks (`putMarks`, `listMarks`,
+  `deleteMarks`), cards (`putCard`, `listCards`, `getCardByCacheKey`,
+  `deleteCard`), profiles (`putProfile`, `listProfiles`, `getProfile`,
+  `deleteProfile`), glossary (`putGlossaryEntry`, `listGlossary`,
+  `deleteGlossaryEntry`), position (`putReadingPosition`,
+  `getReadingPosition`), settings (`putSettings`, `getSettings`), explanation
+  cards (`putExplanationCard`, `listExplanationCards`,
+  `deleteExplanationCard`), sharḥ cards (`putSharhCard`, `listSharhCards`,
+  `deleteSharhCard`), share records (`putShareRecord`, `listShareRecords`,
+  `deleteShareRecord`, with its doc comment) and word glosses
+  (`putWordGloss`, `getWordGloss`, `listWordGlosses`). `SETTINGS_KEY` moved
+  with settings, not exported. Every body has exactly one substitution site,
+  `this.handle` → `handle()` (30 sites); none reads `this.searchIndex`, calls
+  `purgeIndex` or another method. A whitespace-insensitive token diff of each
+  function against `c1efead` shows only `export function`, the fetcher
+  parameter (and the trailing comma of a wrapped signature) and that one
+  token. The section dividers stay in the class over the thirty one-line
+  delegates; no adapter import became unused (the delegates' signatures
+  still name every type). `exportWork`/`importWork` still call
+  `this.getSettings()`/`this.putSettings(`, now delegates.
+- **T** exit 0. **B** exit 0; main chunk 788,528 → 789,828 B (+1,300: thirty
+  delegates); only `index.js` differs; CSS byte-identical. **L**: rules hold.
+  **D** PASS, identical (40 scenarios). **Q** PASS. **S** 30/30. **R** 28/28;
+  landscape 240,000 px 33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px
+  24.6 s 1,904 nodes 0 long tasks. **V owed**.
+- **Review of `284b7ef`: PASS WITH NOTES; "ready for 4g".** Nothing to fix.
+  For 4n: with `deleteShareRecord`'s doc comment moved to `idbWork.ts`, the
+  interface (`StorageAdapter.ts:232`) no longer shows that it "does not, and
+  cannot, unpublish anything"; consider a one-line pointer there.
+
+**Step 4g, measured 2026-11-16**
+- Nineteen methods moved verbatim into the new
+  `platform/storage/idbReference.ts`, in the class's order (so the biography
+  methods stay between `putQulResource` and `listQulResources`, where they
+  were), de-indented, in the 4e fetcher form: retrieval cache
+  (`putQuranVerse`, `getQuranVerse`, `putHadith`, `getHadith`), QUL
+  (`putQulResource`, `listQulResources`, `deleteQulResource` with its
+  comment, `putQulEntries`, `getQulEntry`, `getQulEntries`,
+  `putQulCompilation`, `getQulCompilation`), biography
+  (`putBiographyEntries`, `listBiographyEntries`, `clearBiographyEntries`)
+  and narrator profiles (`putNarratorProfiles`, `findNarratorProfiles`,
+  `listNarratorShards` with its comment, `deleteNarratorShard`).
+- 21 substitution sites, all `this.handle` → `handle()`: one per method,
+  two in `listBiographyEntries` and two in `deleteQulResource`. Three of them
+  are the `purgeIndex(this.handle, ` calls of 4d (`clearBiographyEntries`,
+  `deleteQulResource`, `deleteNarratorShard`), now `purgeIndex(handle(), `;
+  `idbReference.ts` imports `purgeIndex` from `./idbPurge`. No method calls
+  another or reads `this.searchIndex`. A token diff of each function against
+  `284b7ef` shows only `export function`, the fetcher parameter (and the
+  trailing comma of a wrapped signature) and those sites.
+- `deleteBook` (book content, 4h) still calls `this.deleteNarratorShard(`,
+  now a delegate. The adapter keeps its `purgeIndex` import (`deleteBook`,
+  `clearEntities`, `clearDictionaryEntries`); no adapter import became
+  unused. The class gains nineteen one-line delegates; dividers stay.
+- **T** exit 0. **B** exit 0; main chunk 789,828 → 790,648 B (+820: nineteen
+  delegates); only `index.js` differs; CSS byte-identical. **L**: rules hold.
+  **D** PASS, identical (40 scenarios; `family/before-init` still records
+  `putNarratorProfiles([])` and `findNarratorProfiles (two letters)`
+  resolving). **Q** PASS. S and R not run (not required for 4g). **V owed**.
+- **Review of `ab1c19b`: PASS; "ready for 4h".** Nothing to fix.
+
+**Step 4h, measured 2026-11-16**
+- `SearchEntry` with its comments and 28 methods moved verbatim into the new
+  `platform/storage/idbLibrary.ts`, in the class's order, de-indented, in the
+  4e fetcher form: books (`putBook`, `getBook`, `listBooks`, `deleteBook`),
+  toc (`putTocNodes`, `listTocNodes`), pages (`putPage`, `getPage`,
+  `listFetchedPageIndices`, `listPageMeta`, `countPages`), blocks and search
+  (`putBlocks`, `deleteBlocksForPage`, `listBlocksForPage`, `listBlocks`,
+  `getBlock`, `countBlocks`, the private `loadSearchIndex`,
+  `searchBlocksLoose`, `searchBlocks`), entities (`putEntities`,
+  `listEntities`, `clearEntities`), dictionary (`putDictionaryEntries`,
+  `listDictionaryEntries`, `clearDictionaryEntries`) and crawl state
+  (`putCrawlState`, `getCrawlState`). Three doc comments moved with their
+  methods (`listFetchedPageIndices`, `listPageMeta`, `searchBlocksLoose`).
+  `SearchEntry` is exported (the class's `searchIndex` field is typed with
+  it); `loadSearchIndex` is a non-exported function (only this file calls
+  it) and leaves no delegate, like 4e's `untyped`. The `searchIndex` field
+  and its comment stay in the class.
+- 37 substitution sites: `this.handle` → `handle()` 27 (two in `deleteBook`,
+  three of them the 4d `purgeIndex(this.handle, ` calls in `deleteBook`,
+  `clearEntities`, `clearDictionaryEntries`); `this.searchIndex` →
+  `searchIndex` 5 (`deleteBook`, `putBlocks`, `deleteBlocksForPage`, two in
+  `loadSearchIndex`), a `searchIndex: Map<string, SearchEntry[]>` parameter
+  second after the fetcher in those four and both searches;
+  `this.loadSearchIndex(` → `loadSearchIndex(handle, searchIndex, ` 2;
+  `this.getBlock(` → `getBlock(handle, ` 2; `this.deleteNarratorShard(` →
+  `deleteNarratorShard(handle, ` 1, imported from `./idbReference`. A token
+  diff of each function against `ab1c19b` shows only those, `export
+  function` (`function` alone and `private` dropped for `loadSearchIndex`),
+  the parameters and wrapped signatures' trailing commas; `deleteBook`'s
+  statements are in the same order.
+- New file edges inside `platform/storage`: `idbLibrary` → `StorageAdapter`
+  (types), `idbSchema`, `idbPurge`, `idbReference`; `idbReference` does not
+  import `idbLibrary`, so no cycle. The adapter drops `letterFold`,
+  `purgeIndex` and `BOOK_STORES` from its imports and gains the
+  `./idbLibrary` block (27 functions and `type SearchEntry`). The class now
+  holds `db`, `searchIndex`, `init`, the `handle` getter, `lazyHandle`, 81
+  one-line delegates, the `schemaVersion` getter, and `exportWork`/
+  `importWork` (4i): 624 lines.
+- For 4n: `idbTransfer.ts` still types the map `Map<string, unknown>`; it
+  could now take `Map<string, SearchEntry[]>` and its header's sentence about
+  4h would go. The harness's `PRIVATE` set now also names the inert
+  `loadSearchIndex`. The class delegates for `listFetchedPageIndices`,
+  `listPageMeta` and `searchBlocksLoose` lost their doc comments with the move
+  (like `deleteShareRecord` at 4f).
+- **T** exit 0. **B** exit 0; main chunk 790,648 → 791,806 B (+1,158); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold, no cycle. **D**
+  PASS, identical (40 scenarios; `family/before-init` still records the empty
+  `putBlocks`, `putEntities`, `putDictionaryEntries` and both searches with
+  `""` resolving). **Q** PASS. **S** 30/30. **R** 28/28; landscape 240,000 px
+  33.3 s 1,905 nodes 0 long tasks, portrait 175,800 px 24.4 s 1,904 nodes 0
+  long tasks. **V owed**.
+- **Review of `b04c7f8`: PASS; "ready for 4i".** Nothing to fix; the
+  reviewer showed that no instance could reach a different
+  `deleteNarratorShard`, `getBlock` or `loadSearchIndex` body through the
+  direct calls.
+
+**Step 4i, measured 2026-11-16**
+- `exportWork` and `importWork` moved verbatim into the new
+  `platform/storage/idbBackup.ts`, de-indented, in the 4e fetcher form;
+  `importWork` takes `searchIndex: Map<string, SearchEntry[]>` second. The
+  `importWork` comments moved with it. `WORK_STORES` (Q7, 4m) is not part of
+  this step.
+- 5 substitution sites: `this.handle` → `handle()` 2 (one `const db = …` in
+  each); `this.getSettings()` → `getSettings(handle)` 1;
+  `this.putSettings(` → `putSettings(handle, ` 1 (both imported from
+  `./idbWork`, so they now call the functions directly rather than through
+  the class delegates); `this.searchIndex` → `searchIndex` 1. No other
+  `this.` call. A token diff of both functions against `b04c7f8` shows only
+  those, `export function`, the parameters and a wrapped signature's
+  trailing comma.
+- New file edges: `idbBackup` → `StorageAdapter` (types), `idbSchema`
+  (`DB_VERSION`, `Schema`), `idbLibrary` (type `SearchEntry`), `idbWork`;
+  none of those imports `idbBackup`, so no cycle. The adapter gains `import {
+  exportWork, importWork } from './idbBackup'` after the `./idbWork` block
+  and drops no import. The class now holds `db`, `searchIndex`, `init`, the
+  `handle` getter, `lazyHandle`, the `schemaVersion` getter and 83 one-line
+  delegates: 557 lines, the class at `:134-557`. The plan's "~330 lines
+  after 4i" (Design §3, "What stays in the class") did not count the
+  delegates' form or the imports: 83 delegates of about four lines each
+  (signature, `return`, brace, blank) and about 125 lines of import blocks
+  naming every type and function. 4n adds this to a "Corrections found in
+  review" list in the plan.
+- **T** exit 0. **B** exit 0; main chunk 791,806 → 791,869 B (+63); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold, no cycle. **D**
+  PASS, identical (40 scenarios, `work-backup/export`, `import-fresh`,
+  `import-without-shareRecords`, `import-missing-books`,
+  `import-over-existing` among them). **Q** PASS. S and R not run (not
+  required for 4i). **V owed**.
+- The adapter's header, which said Phase 4 "is moving" the class's code
+  into the `idb*.ts` files, now says it moved it and that the class hands
+  each data method to its group — true from 4i, when the last body left
+  (Q8). (`init` and the `schemaVersion` getter stay in the class by design;
+  "data method" was the 4i review's wording.)
+- **Review of `1b5089a`: PASS WITH NOTES; "ready for 4j".** Applied with
+  4j: the header's "hands each to its group" → "hands each data method to
+  its group"; the sentence above on the plan's line estimate.
+
+**Step 4j, measured 2026-11-16**
+- New code, not a move. `idbSchema.ts` gains `IndexSpec`, `StoreSpec`, an
+  exported `STORES` table typed `{ readonly [S in StoreNames<Schema>]:
+  StoreSpec<S> }` (`idb`'s own `StoreNames`/`IndexNames`), and a private
+  generic `createStore(db, name)`. The fresh-install branch of
+  `upgradeDatabase` is now `for (const name of Object.keys(STORES)) …
+  createStore(db, name)`; the existing-DB branch is untouched (4k).
+- The table has 24 entries, in the fresh branch's order (books … settings;
+  `Object.keys` keeps string-key insertion order, so the creation order is
+  today's exactly). Each entry: `keyPath`, `indexes` (name, keyPath,
+  `multiEntry: true` only on `narratorProfiles.byNaming`), and Design
+  §2.2's `onUpgrade` (`recreate` for `entities`; `if-missing` for the nine
+  guarded stores plus `qulEntries` and `qulCompilations` (11), with
+  `createdWith: 'qulResources'` on those two; `assumed` for the other
+  twelve) — read off the existing branch, not yet read by any code (4k).
+  `perBook` is not added (4l). No store uses `autoIncrement` or `unique`,
+  and the shape has neither. `createStore` passes an options object only
+  where `multiEntry` is set, so every `createIndex` call has the same
+  arguments as before.
+- Six comments moved verbatim from the fresh branch onto their entries:
+  `marks`, `sharhCards`, `narratorProfiles`, `shareRecords`, `qulResources`
+  (the trio's comment) and `biographyEntries`.
+- Two departures from Design §2.2's sketch: `IndexSpec.keyPath` is `string |
+  string[]`, not `string | readonly string[]`, because `idb`'s `createIndex`
+  takes `string | string[]` and a readonly array would need a cast; and
+  creation goes through a generic helper that reads `STORES[name]` itself,
+  because passing `STORES[name]` for a union `name` does not type-check
+  (the correlated-union limit).
+- **Typing proven:** removing `settings` from the table, adding an `extra`
+  store, misspelling `byRoot`, and giving `dictionaryEntries` the `cards`
+  index `byCacheKey` each fail `tsc` (TS2741, TS2353, TS2820, TS2322);
+  restored from a copy. A *missing* index is not a type error; D catches it.
+- **Negative tests** (in place, restored from a `cp` copy, `cmp` checked):
+  dropping `narratorProfiles.byShard` → D FAIL, 25 of 40; flipping
+  `byNaming`'s `multiEntry` off → D FAIL, 25 of 40. The 25 are both `fresh`
+  scenarios (the store's index list differs) and every scenario that starts
+  from a fresh install; no upgrade scenario fails, as it should not while
+  the existing branch is hand-written.
+- **T** exit 0. **B** exit 0; main chunk 791,869 → 792,189 B (+320); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
+  identical (40 scenarios). **Q** PASS. **U** PASS, 180/180 (a fresh
+  install through the bundle). **V owed**.
+- **Review of `11ee82e`: PASS WITH NOTES.** Two `onUpgrade` values D cannot
+  see if 4k trusts them wrongly: (i) an `assumed` store marked `if-missing`
+  (every fixture has all twelve, so it is harmless on any reachable
+  database; a reading check), and (ii) `createdWith: 'qulResources'` dropped
+  from `qulCompilations` alone (no fixture lacked only `qulCompilations`;
+  closed by the follow-up below). **The 4k reviewer must read both values off
+  the table against today's branch, and check that the `objectStoreNames`
+  snapshot is taken once, before any creation.** Comment notes applied in
+  the follow-up: `idbSchema.ts`'s header and `upgradeDatabase`'s JSDoc gain
+  that since 4j the fresh branch is a loop over `STORES`; `createdWith`'s
+  JSDoc reworded; "the nine guarded stores and the QUL trio" above made
+  "the nine guarded stores plus `qulEntries` and `qulCompilations` (11)".
+
+**4j follow-up, measured 2026-11-16** (check D; `src/` comments only)
+- `scripts/verify-storage.mjs` gains a third odd database,
+  `v10-without-qulCompilations` (v10 minus `qulCompilations`, built like the
+  other two from `TODAY`), and the scenario
+  `harness/odd-v10-without-qulCompilations`; its header now names three odd
+  databases and why the third exists, and `--write`'s usage line says "step
+  4a and its reviewed follow-ups". Recorded on the current code, whose
+  existing-DB branch is still the hand-written one: the 53 lines from `if
+  (oldVersion >= 1)` to its `return;` are byte-identical at `1b5089a` and
+  `11ee82e`. Today's behaviour, now pinned: the database opens at 11 with 23
+  stores, `shareRecords` created, `qulCompilations` never (the trio's guard
+  sees `qulResources`).
+- **Re-baselined:** run 1 (no write) FAIL, 1 of 41 differ — only the new
+  scenario, absent from the record; run 2 `--write`; run1 == run2 (`cmp`);
+  the record's only change is the added scenario (no other scenario or
+  top-level field changed). 41 scenarios, 51 phases, 374,093 B.
+- **Proven:** a temporary guard in the existing branch that creates
+  `qulCompilations` when it is missing (what a table entry without
+  `createdWith` would do at 4k) → D FAIL, 1 of 41, exactly
+  `harness/odd-v10-without-qulCompilations` (its schema becomes today's 24
+  stores); restored from a `cp` copy, `cmp` checked. FOUND_ISSUES 21 now
+  names the third scenario.
+- **T** exit 0. **D** PASS, identical (41 scenarios). **Q** PASS. **B**: every
+  chunk identical to 4j's after masking (`compare-bundles`); the raw bytes
+  differ only in the build timestamp and the `node.browser` chunk-hash
+  reference. CSS unchanged.
+- **Review of `afffa50`: PASS WITH NOTES; "ready for 4k".** Applied with
+  4k (script comments only, D identical without a re-baseline): the header's
+  reason for the third odd database now reads "the only database that lacks
+  qulCompilations but has qulResources"; `TODAY`'s JSDoc no longer cites
+  `IdbStorageAdapter.ts:259-334` as live (written from it at 4a; since 4j
+  the `STORES` table, same order). The review expected v1base to expose a
+  `qulCompilations` without `createdWith` too; with the snapshot it does not
+  (negative test 3 below), so the header does not say so.
+
+**Step 4k, measured 2026-11-16**
+- The existing-DB branch of `upgradeDatabase` is now: the branch's opening
+  comment kept verbatim at its top ("Upgrading an existing database: only
+  touch what changed …"; the branch's only comment — the per-version reasons
+  live in the history comment above `DB_VERSION`, untouched); a new comment
+  on the snapshot and the creation order; `const existing = new
+  Set(db.objectStoreNames)`, taken once before any deletion or creation;
+  then for each `STORES` entry in table order: `recreate` → delete if in the
+  snapshot, then `createStore`; `if-missing` → `createStore` if the snapshot
+  lacks `createdWith ?? name`; `assumed` → nothing. `return;` kept. The ten
+  hand-written guards and creations (53 lines) are gone; the fresh branch is
+  unchanged. **`DB_VERSION` stays 11** (trap 6: no store, index or key path
+  changes, so no bump; D records version 11 everywhere).
+- **Creation order** inside the upgrade becomes the table's (today entities,
+  marks, dictionaryEntries, explanationCards, wordGlosses, the trio,
+  biographyEntries, sharhCards, narratorProfiles, shareRecords; now
+  entities, dictionaryEntries, marks, explanationCards, sharhCards,
+  narratorProfiles, shareRecords, wordGlosses, the trio, biographyEntries),
+  accepted by Q5. Where it could show: on the v10 database without
+  `qulResources`, `shareRecords` is now created before the trio's
+  ConstraintError rather than never reached; the abort rolls it back, and D
+  records the same version 10, 22 stores, AbortError and `uncaughtInPage`.
+  No entry reads another store but through `createdWith`, which asks the
+  snapshot; each index is created on its own store inside `createStore`.
+- **D PASS, identical** (41 scenarios): `upgrade-v1base`, `-v7`, `-v8`,
+  `-v9`, `-v10`, `reopen-v11` in both halves, and the three odd databases
+  (without `qulResources`: version 10, 22 stores, AbortError,
+  `uncaughtInPage` ConstraintError; without `qulEntries` and without
+  `qulCompilations`: version 11, 23 stores, the missing one never created).
+- **Negative tests** (each in place, restored from a `cp` copy, `cmp`
+  checked):
+  1. `entities` `recreate` → `if-missing`: D FAIL, 6 of 41 —
+     `harness/upgrade-v7`, `-v8`, `-v9`, `-v10`, `odd-…-qulEntries`,
+     `odd-…-qulCompilations` (their seeded entity rows survive; today the
+     store is dropped and recreated empty). Not v1base (no `entities` to keep) nor the bundle half (it
+     records schemas, which are the same).
+  2. `qulEntries` without `createdWith`: D FAIL, 1 of 41 —
+     `harness/odd-v10-without-qulEntries` (it now gets `qulEntries`).
+  3. `qulCompilations` without `createdWith`: D FAIL, 1 of 41 —
+     `harness/odd-v10-without-qulCompilations` only. v1base lacks all three,
+     so both forms create it there; only the 4j follow-up's scenario sees
+     this.
+  4. The names read live per entry (`{ has: (store) =>
+     db.objectStoreNames.contains(store) }`, type-clean): D cannot run —
+     "bundle/upgrade-v1base: the app did not open version 11 and seed within
+     30 s" (exit 2): with `qulResources` just created, `qulEntries` and
+     `qulCompilations` are skipped and the app's QUL seed fails. Caught.
+  5. `books` `assumed` → `if-missing`: D PASS, identical — not caught, as
+     expected: every fixture has all twelve assumed stores, so the guard
+     never fires. Harmless on every reachable database; the reviewer reads
+     the twelve `assumed` values against the old branch.
+- **T** exit 0. **B** exit 0; main chunk 792,189 → 790,745 B (−1,444: the
+  hand-written creations gone); only `index.js` differs; CSS byte-identical.
+  **L**: rules hold. **Q** PASS. **U** PASS, 180/180. **V owed**.
+- **Review of `87b3b26`: PASS WITH NOTES; "ready for 4l".** The reviewer
+  compared the old branch and the new one store by store, for every
+  combination of present and absent stores, and found no database,
+  reachable or not, whose stored result differs. D has no v2–v6 fixtures
+  (FOUND_ISSUES 20); those versions were checked by reading only. Must-fix,
+  applied with 4l (comments only): `idbSchema.ts`'s header and
+  `upgradeDatabase`'s JSDoc now say that since 4k the existing-database
+  branch reads `STORES` too, and `STORES`' JSDoc gives the order as "the
+  order a fresh install creates them and an upgrade walks them".
+
+**Step 4l, measured 2026-11-16**
+- `StoreSpec` gains `perBook?: 'byBook' extends IndexNames<Schema, S> ? true
+  : never`, with a doc comment. That is Design §2.2's `perBook?: true`, made
+  a type error on a store without a `byBook` index (the index is what
+  `deleteBook` walks). The flag is still explicit, as Design §4 asks, not
+  inferred from the index. Ten entries carry `perBook: true`.
+- **Two names for one table.** The literal is now `const TABLE = { … }
+  satisfies { readonly [S in StoreNames<Schema>]: StoreSpec<S> }`, which
+  keeps the literal `perBook: true` types `BookStore` is computed from. It
+  is exported as `STORES: { readonly [S …]: StoreSpec<S> } = TABLE`, the 4j
+  type, which the two walks need to see each entry as its own store's spec.
+  A single `satisfies` declaration did not type-check: `createStore` and the
+  upgrade loop no longer saw a `StoreSpec<S>` (TS2322, TS2339). The same
+  object, no casts; the excess-property and index-name checks are kept.
+- `BookStore` is the mapped type of the `TABLE` entries whose `perBook` is
+  `true`. `BOOK_STORES: readonly BookStore[]` is `Object.keys(STORES)`
+  filtered on `STORES[name].perBook === true`, in table order, with a type
+  predicate. A type assertion in the file (`true satisfies SameUnion<BookStore,
+  'tocNodes' | … | 'biographyEntries'>`) proves `BookStore` is still the ten
+  literal names (the plan's "a type assertion in the file"). It is a second
+  place to edit when a per-book store is added; 4n can drop it if the owner
+  prefers.
+- **Same names, same order, proven:** `idbSchema.ts` bundled with esbuild
+  and imported in Node gives `BOOK_STORES` = `tocNodes, pages, blocks,
+  entities, dictionaryEntries, marks, cards, explanationCards, sharhCards,
+  biographyEntries`. That equals the hand list at `87b3b26`, read from
+  `git show`. Table order puts the fourteen other stores between them, so
+  filtering keeps the order.
+- **Comments moved verbatim:** the hand list's doc ("Every store that files
+  its rows under a book … buried in the body of `deleteBook`") now sits
+  above the derived `BOOK_STORES`, as Design §4 says. The `biographyEntries`
+  story ("Its absence here was not harmless …") sits on that entry, above
+  its `perBook: true`. Both were found line for line by script.
+- **Readers:** `idbLibrary.ts` (`deleteBook`'s loop) and `idbPurge.ts`
+  (`purgeIndex`'s `store: BookStore | …`), both unchanged. D's harness
+  seeds its own rows; since the 4l follow-up it also imports `BOOK_STORES`
+  (`verify-storage-harness.ts:42`) and exposes it (`:1192`), only for the
+  order assertion against its own hand-written list.
+- **Negative tests** (in place, restored from a `cp` copy):
+  1. `perBook` dropped from `marks`: `tsc` fails at the assertion (TS1360),
+     and D on the unchecked bundle FAILs 2 of 41, `delete-book` and
+     `book-transfer` (as 4a's breakage 3).
+  2. `perBook: true` on `glossary`, which has no `byBook` index: `tsc` fails
+     at the entry (TS2322). D on the bundle FAILs 2 of 41, `delete-book` and
+     `book-transfer`.
+  3. `cards` moved above `marks` in the table: `tsc` passes, and at first D
+     PASSed too, identical. The order of `BOOK_STORES` is `deleteBook`'s
+     purge order and so decides what an interrupted removal leaves (R6),
+     but every purge completes in D, so the rows end the same. **Closed in
+     the 4l follow-up:** D now asserts on every run, `--write` included, that the
+     real `BOOK_STORES` equals `EXPECTED_BOOK_STORES`, name for name and in
+     order. The harness page imports `BOOK_STORES` from `idbSchema.ts` and
+     exposes a copy; `verify-storage.mjs` compares it after `delete-book`
+     with its own hand-written list, never derived from the code. The
+     header's "Asserted on every run" list names it. The record is
+     unchanged, so there is no re-baseline. Re-run: `tsc` exit 0; D exit 1,
+     "FAIL — 1 assertion(s): BOOK_STORES is [… "cards","marks" …],
+     expected [… "marks","cards" …] in that order", and "the record is
+     identical … but the assertions above fail". Restored from a `cp` copy,
+     then D PASS, identical.
+- **T** exit 0. **B** exit 0; main chunk 790,745 → 790,779 B (+34); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **D** PASS,
+  identical (41 scenarios, `delete-book` over 4,097 blocks and
+  `book-transfer` among them), with the new order assertion holding.
+  **Q** PASS. S, R and U not run (not required for 4l). **V owed**.
+- **Review of `b60633e` and `7bffce0`: PASS WITH NOTES; "ready for 4m".**
+  Must-fix, applied with 4m: the "Readers:" bullet above said D's harness
+  "imports no `BOOK_STORES`", which has been untrue since `7bffce0`. It now
+  names the import (`verify-storage-harness.ts:42`) and the exposure
+  (`:1192`). Two notes:
+  - **For 4n:** adding a per-book store is now three edits: the `perBook`
+    flag, the `SameUnion` assertion in `idbSchema.ts`, and D's
+    `EXPECTED_BOOK_STORES`. 4n's "Adding a store" text must name all three,
+    or the owner drops the assertion. (Since 4m, a backed-up store is one
+    `WORK_STORES` entry plus its `WorkBundle` field; see below.)
+  - D's order assertion was keyed on `scenario.id === 'delete-book'`, so a
+    rename would have dropped it silently. **Fixed with 4m (scripts):** every
+    harness phase already reports `bookStores`, so the list is now checked
+    on the first harness phase to run, and after the loop
+    `assert('BOOK_STORES was checked …', bookStoresChecked)` fails D if it
+    never was. Re-proven: `cards` above `marks` in the table → "FAIL — 1
+    assertion(s)" on `BOOK_STORES`, the record identical. **For 4n:** the
+    other assertions (work backup, per-book and whole-tablet files, share
+    adapter) are still keyed on scenario ids.
+
+**Step 4m, measured 2026-11-16**
+- `idbBackup.ts` gains `WORK_STORES` (`as const`, eleven names in the
+  plan's Design §4 order: cards, explanationCards, sharhCards, marks,
+  glossary, profiles, positions, wordGlosses, quranVerses, hadiths,
+  shareRecords), with a doc comment on why it is a list and not a table
+  flag. The comment "Absent on a backup written before shares existed,
+  which `write` handles." moved verbatim from the `write('shareRecords', …)`
+  call onto that entry.
+- **Typed against `WorkBundle`:** `BundleStore` is `WorkBundle`'s keys whose
+  (non-null) value is an array, minus `referencedBooks`, and `true satisfies
+  SameUnion<WorkStore, BundleStore>` fails `tsc` on a missing or an extra
+  name. `SameUnion` is now exported from `idbSchema.ts`, its one
+  definition, with a doc comment. `importWork`'s `write` is typed `<K
+  extends WorkStore>` in place of the hand-written eleven-name union.
+- **`exportWork`:** builds the object with `version`, `exportedAt`
+  (`Date.now()` at the same point as before, after the `books` read) and
+  `referencedBooks`, assigns each store's `getAll` in list order, then
+  `settings`. Insertion order is JSON key order, so the reads, their order
+  and the file's keys are the old literal's. Two casts, with a comment:
+  the object is incomplete until the loop has run.
+- **`importWork`:** the eleven `write` calls are `for (const store of
+  WORK_STORES) await write(store, bundle[store])`, in the same order with
+  the same 500-row batching (`write` itself is unchanged). Kept written out
+  in both functions, because they are not stores: `referencedBooks` (from
+  `books`), `settings` (`getSettings`/`putSettings`, the key added and
+  stripped there), the missing-books report and `searchIndex.clear()`.
+  Nothing else was handled per store.
+- **D PASS, identical** (41 scenarios). The `work-backup` phases (`export`
+  with the file's SHA-256 and length and the exported value,
+  `import-fresh`, `import-without-shareRecords`, `import-missing-books`,
+  `import-over-existing`) are byte-for-byte the record's.
+- **Negative tests** (each in place, restored from a `cp` copy):
+  1. `cards` and `explanationCards` swapped: `tsc` 0; D FAIL, 1 of 41,
+     `work-backup` (the file's key order and hash).
+  2. `hadiths` dropped: `tsc` fails at the assertion (TS1360); D FAIL, 1 of
+     41, `work-backup`.
+  3. `books` added: `tsc` fails (TS1360 and TS7053, `bundle['books']`);
+     D FAIL, 1 of 41, `work-backup`.
+  4. `cards` listed twice: `tsc` 0, D PASS. Not caught, and harmless: the
+     export reassigns the key in place, so the file is unchanged, and the
+     import writes the same rows twice.
+  5. The `BOOK_STORES` order check, re-run after its rework: see the review
+     bullet above.
+- **T** exit 0. **B** exit 0; main chunk 790,779 → 790,214 B (−565); only
+  `index.js` differs; CSS byte-identical. **L**: rules hold. **Q** PASS. The
+  **SSR build** of `verify-parsers.ts` (`npx vite build --ssr … --outDir
+  .verify/ssr`) exit 0; its output was deleted after. **V owed**.
+- **Review of `b69abd4`: PASS; "ready for 4n".** Nothing to fix.
+
+**Step 4n, measured 2026-11-16**
+- **Code comments made true** (no behaviour change; the bundle is identical
+  to 4m's after masking):
+  - `StorageAdapter.ts`'s header now says the IndexedDB implementation is
+    `IdbStorageAdapter.ts` and the `idb*.ts` files beside it, with
+    `idbSchema.ts` holding the schema, the one `STORES` table and the upgrade
+    that reads it. `deleteShareRecord` gains a one-line pointer ("it cannot
+    unpublish anything (see idbWork.ts)"). `listFetchedPageIndices`,
+    `listPageMeta` and `searchBlocksLoose` already had their own interface
+    doc comments, so they needed no pointer.
+  - `idbPurge.ts`: "every call below passes a valid pair" now says "every
+    caller (idbLibrary.ts, idbReference.ts)".
+  - `idbTransfer.ts`: the search index is typed `Map<string, SearchEntry[]>`
+    (a type-only import from `idbLibrary.ts`), and the header's sentence
+    about 4h is replaced by why the map is passed in.
+  - `IdbStorageAdapter.ts`'s header gains the reason RESTRUCTURE §2 asks of
+    a file over ~500 lines: it imports each group's functions and lists every
+    method as a delegate, with no logic left to split.
+- **Check D's scripts** (record unchanged):
+  - The harness's `PRIVATE` set no longer names the helpers that left the
+    class (`purgeIndex`, `loadSearchIndex`, `untyped`). It still fails both
+    ways: a `private untyped()` added back to the class → "missing untyped";
+    a call to `loadSearchIndex` → "not in the class loadSearchIndex" (each
+    exit 2, restored from a copy).
+  - The assertions keyed on scenario ids (work backup, per-book transfer,
+    whole-tablet transfer, share adapter) now record that they ran, and
+    `KEYED_ASSERTIONS` fails D after the loop if one did not. Renaming
+    `share-adapter` → "FAIL — 1 assertion(s): the assertions keyed on
+    share-adapter ran (no such scenario)"; restored. Fixed rather than
+    written up, so no FOUND_ISSUES entry.
+- **Docs:** README's storage map line and "the only file that uses the
+  IndexedDB API" (now the adapter and the `idb*.ts` files). RESTRUCTURE:
+  status (Phase 4 complete), §2 "Adding a store" (everything a store now
+  takes, named), §4 T-f (both branches read one table; what can still go
+  wrong), §5's D row (three odd databases, the two order and keyed
+  assertions), §6's Phase 4 row (complete). The plan gains "Corrections
+  found in review" (eight items).
+- **CLAUDE.md and `.claude/agents/torjuman-storage.md`.** The plan lists
+  both for 4n (the map, the Never line, trap 6, the agent's map and rules).
+  The subagent doing 4n would not edit them on another agent's word and
+  wrote the text as a patch; the main session read it line by line and
+  applied it under the owner-approved 4n row: the map names the `idb*.ts`
+  files; the Never line and trap 6 say a schema change edits the `STORES`
+  table that both branches of `upgradeDatabase` read, and list what else a
+  new store needs; the agent's map, schema rule and check-D rule likewise.
+  The Commands row for D was already right. The patch file is deleted.
+- **L** saved as `docs/refactor/phase4/layers.txt`. Against
+  `phase3/layers.txt`, the only differences are 162 → 169 files (the seven
+  `idb*.ts` files) and `platform/storage`'s type-only imports of `types`,
+  0+2t → 0+6t. Still 134 directory edges, no cycle, all eleven rules hold.
+- **T** exit 0. **B** exit 0; main chunk 790,214 B, identical to 4m after
+  masking (every chunk); CSS byte-identical. **D** PASS, identical (41
+  scenarios, 51 phases, 374,093 B). **Q** PASS. **U** 180/180. **S** 30/30.
+  **R** 28/28; landscape 240,000 px 33.3 s 1,905 nodes 0 long tasks,
+  portrait 175,800 px 24.4 s 1,904 nodes 0 long tasks. A first R run, right
+  after U and S, hung for about 25 minutes at its last step (the portrait
+  position restore after reload, CPU idle) and was killed; run again on its
+  own, it passed as above. The bundle was identical to 4m's, so this is
+  taken as a flake of the run, not of the change. **SSR build** of
+  `verify-parsers.ts` exit 0, its output deleted. **V owed**.
+
+- **Review of 4n and of Phase 4: FAIL on two doc claims, fixed in the next
+  commit; the code passed.** Over the phase: `DB_VERSION` 11 at every
+  commit; the existing-database branch at `afffa50` the same text as Phase
+  3's; `storage.json` changed only in 4a (before 4b) and additively at
+  `afffa50`; `layers.json`, `package-lock.json`, `translation/` untouched;
+  the JS identical from 4m to 4n; the R hang judged a flake. Fixed:
+  RESTRUCTURE §4 T-f said both branches "cannot disagree about a store's
+  shape" — untrue for an existing store, since the upgrade branch never
+  alters one (FOUND_ISSUES 20): a new index on `cards` reaches fresh
+  installs only. Trap 6, the Never line, §2 and the storage agent now say a
+  change to an existing store needs its own migration code. And the
+  new-store lists left out what lets D see the upgrade path — the entry
+  must be `'if-missing'`, and D needs an `OLD_DATABASES` entry for the
+  previous version without the store and its expected version moved —
+  without which a new store wrongly marked `'assumed'` passes D and every
+  real tablet lacks it; all three lists now say so, and the agent's rule
+  points at trap 6 and §2 rather than keeping a thinner copy. Also this
+  file's "Current state" heading, and the "Later" items that Phases 3 and 4
+  did.
+
+## Phase 4 result
+
+| | Phase 3 end | Phase 4 end |
+| --- | --- | --- |
+| `IdbStorageAdapter.ts` | 1,059 lines: schema, both upgrade branches, every method body, backup | 562 lines: `init`, the `handle` getter and fetcher, `schemaVersion`, 83 one-line delegates |
+| new files in `platform/storage/` | — | `idbSchema.ts` 392, `idbLibrary.ts` 360, `idbWork.ts` 232, `idbReference.ts` 185, `idbBackup.ts` 112, `idbTransfer.ts` 86, `idbPurge.ts` 59 lines |
+| hand-written store lists | six: the fresh branch (24 stores), the existing branch's guards (10 guards, 12 stores), `BOOK_STORES` (10), `exportWork`'s fields and `importWork`'s calls and its type (11 each) | two lists the code runs on: `STORES` (24, both branches; `BOOK_STORES` derived) and the ordered `WORK_STORES` (11, typed against `WorkBundle`); plus two that check them: the `SameUnion` assertion and D's `EXPECTED_BOOK_STORES` |
+| `DB_VERSION` | 11 | 11 (no schema change; D's schema dumps identical at every step) |
+| check D | — | 41 scenarios, 51 phases (40 at 4a; the v10 without `qulCompilations` added after 4j), identical at every step from 4b |
+| main JS chunk | 788,264 B | 790,214 B (+1,950: the delegates and the table walks) |
+| check Q | identical | identical at every step |
+| screens (check U) | 180 files | 180 files, identical at 4c, 4j, 4k, 4n |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began. **Owed before merge:**
+- **V**, `npm run verify` on the owner's PC.
+- **M** on the staged build (`npm run stage`) on the tablet in Chrome,
+  exactly as the plan's "Only the owner can run" lists it: deployed app →
+  staged build only, never restoring into the deployed app, steps 1–8; the
+  optional step 9 is left out, since the owner named no second profile or
+  tablet (Q11).
+
+**Open, and not this phase's to fix:** FOUND_ISSUES 24. Replacing a book from
+a Library transfer file deletes its cards, marks, explanations, sharḥ cards
+and position, though the dialog says they are kept; and a replacement that
+fails part way leaves no copy of the book. Check D's `book-transfer` pins
+today's behaviour. It needs its own change, if the owner wants one.
+
 ## Open
 
 - V baseline count from the owner's PC.
-- The owner's list of creed-book features (for the Phase 5b plan).
+- The owner's list of creed-book features (for the Phase 5b plan): set aside by the owner until the restructure is finished.
 
 ## Later
 
-- Check D (IndexedDB schema dump) is built in Phase 4 step 0, on the old code.
-- A recorded-request check for Phase 3 (the exact request bodies each
-  provider sends for a fixed selection), built on the old code first.
+None: Phase 3's recorded-request check and Phase 4's check D are built.

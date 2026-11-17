@@ -28,6 +28,7 @@ its progress log.
 | `node scripts/compare-bundles.mjs <a> <b>` | are two copies of `dist/assets` the same JS, build time and chunk hashes masked | anywhere |
 | `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
 | `npm run verify:requests` | every request the provider call sites send, retries and mapped errors, with fake keys and canned responses, against `docs/refactor/phase3/requests.json` (~1 s) | anywhere |
+| `npm run verify:storage` | Playwright: the IndexedDB schema after a fresh install and every upgrade, and the rows after every storage method, backup and transfer path, against `docs/refactor/phase4/storage.json` (~20 s) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -56,8 +57,10 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   hash to tag.
 - **Merge a PR** without the owner's word in this conversation.
 - **Delete** a file, store, setting or saved data path without the owner's OK.
-- **Change the IndexedDB schema** without bumping `DB_VERSION` and editing
-  *both* upgrade branches in `IdbStorageAdapter.init` — see trap 6.
+- **Change the IndexedDB schema** without bumping `DB_VERSION` and changing
+  the `STORES` table that both upgrade branches of `upgradeDatabase`
+  (`platform/storage/idbSchema.ts`) read — and, for a change to a store that
+  already exists, writing its migration in the upgrade branch. See trap 6.
 - **Force a tool call** (`tool_choice: tool` or `any`) on current Claude
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
@@ -111,7 +114,11 @@ src/
                        (secrets), retrieval log, activity
   platform/http/       HttpClient + WebHttpClient (proxy routing), proxyUrl (the
                        Worker's URL, shared with the relay)
-  platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
+  platform/storage/    StorageAdapter + IdbStorageAdapter, which delegates each
+                       method to an idb*.ts file (the only IndexedDB code):
+                       idbSchema (Schema, the STORES table, upgradeDatabase,
+                       BOOK_STORES), idbWork, idbReference, idbLibrary,
+                       idbBackup (WORK_STORES), idbTransfer, idbPurge
   lib/                 pure helpers: arabic, hash, id, saveFile, takhrij,
                        providers (isCloudProvider), delay, format
                        (formatBytes, percentOf), gzip
@@ -180,11 +187,25 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    a hash of selection, profile id and version, glossary hash, provider and
    model. Changing any input, or the join, silently invalidates every cached
    card. `npm run verify` pins this.
-6. **IndexedDB.** `DB_VERSION` in `IdbStorageAdapter.ts`; the existing-DB
-   branch uses `objectStoreNames.contains` guards, the fresh-install branch
-   creates everything — both must agree. A new store also needs:
-   `StorageAdapter` methods, `ShareStorageAdapter` (it implements the whole
-   interface), `BOOK_STORES` if per book, `WorkBundle` if backed up. The
+6. **IndexedDB.** `DB_VERSION` and its history in `idbSchema.ts`. Both
+   branches of `upgradeDatabase` read the one `STORES` table there: a fresh
+   install creates every entry; an existing database takes one snapshot of
+   its store names first, then acts on each entry's `onUpgrade` (`recreate`,
+   `if-missing`, `assumed`; `createdWith` for the QUL trio's shared guard).
+   A new store needs: its `Schema` type and `STORES` entry; its
+   `StorageAdapter` methods (functions in its group's `idb*.ts` file, a
+   delegate in `IdbStorageAdapter`) and `ShareStorageAdapter` (it implements
+   the whole interface); if per book, `perBook: true`, the `SameUnion`
+   assertion under `BOOK_STORES` and check D's `EXPECTED_BOOK_STORES`; if
+   backed up, its `WorkBundle` field and a `WORK_STORES` entry; the
+   `DB_VERSION` bump; and in check D the store in `TODAY`, an
+   `OLD_DATABASES` entry for the previous version without it that a
+   scenario names, the expected version moved, then a re-baseline
+   (RESTRUCTURE §2 has the detail). Its entry must be
+   `onUpgrade: 'if-missing'`. A new index or key path on an existing store
+   is **not** a table edit: the upgrade branch never alters a store that
+   exists (`'recreate'` empties it), so it needs its own migration code, or
+   fresh installs get it and every existing tablet does not. The
    whole-tablet transfer copies every store raw and refuses a different
    schema version, so both tablets must run the same app version.
 7. **The reader scrolls the page, not a box.** `useWindowVirtualizer` with

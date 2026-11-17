@@ -1,4 +1,4 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { openDB, type IDBPDatabase } from 'idb';
 import type {
   AppSettings,
   BiographyEntry,
@@ -25,7 +25,6 @@ import type {
   WordGloss,
   StoredNarratorProfile,
 } from '../../types';
-import { letterFold } from '../../lib/arabic';
 import type {
   PageMeta,
   SearchHit,
@@ -33,156 +32,109 @@ import type {
   WorkBundle,
   WorkRestoreReport,
 } from './StorageAdapter';
+import { DB_NAME, DB_VERSION, type Schema, upgradeDatabase } from './idbSchema';
+import {
+  clearAllStores,
+  countStoreRows,
+  listStoreNames,
+  putStoreRows,
+  readStoreRows,
+} from './idbTransfer';
+import {
+  clearDictionaryEntries,
+  clearEntities,
+  countBlocks,
+  countPages,
+  deleteBlocksForPage,
+  deleteBook,
+  getBlock,
+  getBook,
+  getCrawlState,
+  getPage,
+  listBlocks,
+  listBlocksForPage,
+  listBooks,
+  listDictionaryEntries,
+  listEntities,
+  listFetchedPageIndices,
+  listPageMeta,
+  listTocNodes,
+  putBlocks,
+  putBook,
+  putCrawlState,
+  putDictionaryEntries,
+  putEntities,
+  putPage,
+  putTocNodes,
+  searchBlocks,
+  searchBlocksLoose,
+  type SearchEntry,
+} from './idbLibrary';
+import {
+  clearBiographyEntries,
+  deleteNarratorShard,
+  deleteQulResource,
+  findNarratorProfiles,
+  getHadith,
+  getQulCompilation,
+  getQulEntries,
+  getQulEntry,
+  getQuranVerse,
+  listBiographyEntries,
+  listNarratorShards,
+  listQulResources,
+  putBiographyEntries,
+  putHadith,
+  putNarratorProfiles,
+  putQulCompilation,
+  putQulEntries,
+  putQulResource,
+  putQuranVerse,
+} from './idbReference';
+import {
+  deleteCard,
+  deleteExplanationCard,
+  deleteGlossaryEntry,
+  deleteMarks,
+  deleteProfile,
+  deleteShareRecord,
+  deleteSharhCard,
+  getCardByCacheKey,
+  getProfile,
+  getReadingPosition,
+  getSettings,
+  getWordGloss,
+  listCards,
+  listExplanationCards,
+  listGlossary,
+  listMarks,
+  listProfiles,
+  listShareRecords,
+  listSharhCards,
+  listWordGlosses,
+  putCard,
+  putExplanationCard,
+  putGlossaryEntry,
+  putMarks,
+  putProfile,
+  putReadingPosition,
+  putSettings,
+  putShareRecord,
+  putSharhCard,
+  putWordGloss,
+} from './idbWork';
+import { exportWork, importWork } from './idbBackup';
 
-// This is the ONLY file that talks to IndexedDB. Everything else goes through
-// the StorageAdapter interface, so replacing this with native SQLite under
-// Capacitor touches nothing else.
-
-const DB_NAME = 'shamela-reader';
-// Schema history: v2 added entities, v3 reshaped them to a multi-block anchor,
-// v4 added marks, v5 the dictionary root index, v6 explanation cards and the
-// word-gloss cache, v7 imported QUL resources and their compiled views.
-// Entities are derived, so an upgrade drops and rebuilds that store rather than
-// migrating it; nothing else is touched.
-// 8 adds biographyEntries. The store is derived from each book's own table of
-// contents, so it is created empty and rebuilt on demand rather than migrated.
-// 9 adds sharhCards: commentary retrieved verbatim from an imported sharḥ. Its
-// own store rather than a kind inside `cards`, which is keyed for the
-// translation cache — a card that was never generated has no cache key.
-// 10 adds narratorProfiles, keyed by a unique id and indexed multiEntry on
-// `namings`. Unlike biographyEntries — a few thousand short rows read whole —
-// this store holds tens of thousands of full profiles, so a lookup must go
-// through an index rather than load it.
-// 11 adds shareRecords: what this device has published as a shared link. A few
-// dozen tiny rows read whole, so no index. It holds each share's decryption
-// key, which exists in no other place — see ShareRecord.
-const DB_VERSION = 11;
-const SETTINGS_KEY = 'app';
-
-/**
- * How many primary keys one purge round trip carries.
- *
- * Large enough that removing a 100,000-block commentary costs a couple of dozen
- * round trips instead of 200,000; small enough that the key array stays a few
- * hundred kilobytes rather than several megabytes.
- */
-const PURGE_BATCH = 4096;
-
-/**
- * Every store that files its rows under a book, and so must be cleared with it.
- *
- * Listed here rather than inline so that adding a per-book store is one line
- * away from being cleaned up too — `biographyEntries` was missed exactly
- * because the list was buried in the body of `deleteBook`.
- */
-const BOOK_STORES = [
-  'tocNodes',
-  'pages',
-  'blocks',
-  'entities',
-  'dictionaryEntries',
-  'marks',
-  'cards',
-  'explanationCards',
-  'sharhCards',
-  // Its absence here was not harmless. Re-importing a biographical work left
-  // the old index in place, and `ensureBiographyIndexes` only builds for a book
-  // with NO entries — so the stale rows survived and kept pointing at page
-  // indices from the previous import. That is what produced "the entry is on a
-  // page that has not been fetched yet" for a book that was fully imported.
-  'biographyEntries',
-] as const;
-
-type BookStore = (typeof BOOK_STORES)[number];
-
-interface Schema extends DBSchema {
-  books: { key: string; value: Book };
-  tocNodes: { key: string; value: TocNode; indexes: { byBook: string } };
-  pages: {
-    key: string;
-    value: Page;
-    indexes: { byBook: string; byBookPage: [string, number] };
-  };
-  blocks: {
-    key: string;
-    value: Block;
-    indexes: { byBook: string; byPage: string; byBookOrder: [string, number] };
-  };
-  entities: {
-    key: string;
-    value: Entity;
-    indexes: { byBook: string; byStartBlock: string };
-  };
-  dictionaryEntries: {
-    key: string;
-    value: DictionaryEntry;
-    indexes: { byBook: string; byRoot: string };
-  };
-  marks: {
-    key: string;
-    value: Mark;
-    indexes: { byBook: string; byStartBlock: string };
-  };
-  cards: {
-    key: string;
-    value: TranslationCard;
-    indexes: { byBook: string; byCacheKey: string };
-  };
-  explanationCards: {
-    key: string;
-    value: ExplanationCard;
-    indexes: { byBook: string };
-  };
-  // Indexed by the book being READ, not the commentary quoted: a card is
-  // anchored in the reader's own book, and that is what a delete has to follow.
-  sharhCards: {
-    key: string;
-    value: SharhCard;
-    indexes: { byBook: string };
-  };
-  narratorProfiles: {
-    key: string;
-    value: StoredNarratorProfile;
-    indexes: { byNaming: string; byShard: string };
-  };
-  shareRecords: { key: string; value: ShareRecord };
-  wordGlosses: { key: string; value: WordGloss };
-  qulResources: { key: string; value: QulResource };
-  qulEntries: {
-    key: string;
-    value: QulEntry;
-    indexes: { byResource: string; byResourceKey: [string, string] };
-  };
-  qulCompilations: { key: string; value: QulCompilation };
-  biographyEntries: {
-    key: string;
-    value: BiographyEntry;
-    indexes: { byBook: string };
-  };
-  profiles: { key: string; value: TranslationProfile };
-  glossary: { key: string; value: GlossaryEntry };
-  quranVerses: { key: string; value: QuranVerse };
-  hadiths: { key: string; value: HadithRecord };
-  crawlStates: { key: string; value: CrawlState };
-  positions: { key: string; value: ReadingPosition };
-  settings: { key: string; value: AppSettings & { key: string } };
-}
-
-/** Minimal per-block record kept in memory for search. */
-interface SearchEntry {
-  id: string;
-  normalized: string;
-  /**
-   * Letters and single spaces only.
-   *
-   * Reader search wants `normalized`, which keeps punctuation, because a
-   * reader types punctuation. Matching one book's passage against another's
-   * wants this: the two editors punctuate differently, and a colon or a
-   * doubled bracket in one and not the other defeats an otherwise exact run.
-   * Computed once, when the index loads.
-   */
-  folded: string;
-}
+// This file and the idb*.ts files beside it are the ONLY code that talks to
+// IndexedDB (restructure Phase 4 moved this class's code into them by store
+// group; the class keeps the StorageAdapter methods and hands each data
+// method to its group). Everything else goes through the StorageAdapter
+// interface, so replacing this with native SQLite under Capacitor touches
+// nothing else.
+//
+// Over 500 lines only because it imports each group's functions by name and
+// lists every StorageAdapter method as a one-line delegate: no logic is left
+// here to split. The schema and its upgrade are in idbSchema.ts.
 
 export class IdbStorageAdapter implements StorageAdapter {
   private db: IDBPDatabase<Schema> | null = null;
@@ -200,139 +152,7 @@ export class IdbStorageAdapter implements StorageAdapter {
 
   async init(): Promise<void> {
     this.db = await openDB<Schema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        if (oldVersion >= 1) {
-          // Upgrading an existing database: only touch what changed. Blocks,
-          // cards, marks and the glossary are left exactly as they are.
-          // Entities are derived, so that store is dropped and rebuilt by
-          // detection rather than migrated.
-          if (db.objectStoreNames.contains('entities')) {
-            db.deleteObjectStore('entities');
-          }
-          const entities = db.createObjectStore('entities', { keyPath: 'id' });
-          entities.createIndex('byBook', 'bookId');
-          entities.createIndex('byStartBlock', 'startBlockId');
-
-          if (!db.objectStoreNames.contains('marks')) {
-            const marks = db.createObjectStore('marks', { keyPath: 'id' });
-            marks.createIndex('byBook', 'bookId');
-            marks.createIndex('byStartBlock', 'startBlockId');
-          }
-          if (!db.objectStoreNames.contains('dictionaryEntries')) {
-            const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-            dictionary.createIndex('byBook', 'bookId');
-            dictionary.createIndex('byRoot', 'root');
-          }
-          if (!db.objectStoreNames.contains('explanationCards')) {
-            const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-            explanations.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('wordGlosses')) {
-            db.createObjectStore('wordGlosses', { keyPath: 'word' });
-          }
-          if (!db.objectStoreNames.contains('qulResources')) {
-            db.createObjectStore('qulResources', { keyPath: 'id' });
-            const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-            qulEntries.createIndex('byResource', 'resourceId');
-            qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-            db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-          }
-          if (!db.objectStoreNames.contains('biographyEntries')) {
-            const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-            biography.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('sharhCards')) {
-            const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-            sharh.createIndex('byBook', 'bookId');
-          }
-          if (!db.objectStoreNames.contains('narratorProfiles')) {
-            const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-            narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-            narrators.createIndex('byShard', 'shard');
-          }
-          if (!db.objectStoreNames.contains('shareRecords')) {
-            db.createObjectStore('shareRecords', { keyPath: 'id' });
-          }
-          return;
-        }
-
-        db.createObjectStore('books', { keyPath: 'id' });
-
-        const toc = db.createObjectStore('tocNodes', { keyPath: 'id' });
-        toc.createIndex('byBook', 'bookId');
-
-        const pages = db.createObjectStore('pages', { keyPath: 'id' });
-        pages.createIndex('byBook', 'bookId');
-        pages.createIndex('byBookPage', ['bookId', 'pageIndex']);
-
-        const blocks = db.createObjectStore('blocks', { keyPath: 'id' });
-        blocks.createIndex('byBook', 'bookId');
-        blocks.createIndex('byPage', 'pageId');
-        blocks.createIndex('byBookOrder', ['bookId', 'order']);
-
-        const entities = db.createObjectStore('entities', { keyPath: 'id' });
-        entities.createIndex('byBook', 'bookId');
-        entities.createIndex('byStartBlock', 'startBlockId');
-
-        const dictionary = db.createObjectStore('dictionaryEntries', { keyPath: 'id' });
-        dictionary.createIndex('byBook', 'bookId');
-        dictionary.createIndex('byRoot', 'root');
-
-        // Indexed by startBlockId so the virtualized reader can look up the
-        // marks for the blocks on screen without scanning thousands.
-        const marks = db.createObjectStore('marks', { keyPath: 'id' });
-        marks.createIndex('byBook', 'bookId');
-        marks.createIndex('byStartBlock', 'startBlockId');
-
-        const cards = db.createObjectStore('cards', { keyPath: 'id' });
-        cards.createIndex('byBook', 'bookId');
-        cards.createIndex('byCacheKey', 'cacheKey');
-
-        const explanations = db.createObjectStore('explanationCards', { keyPath: 'id' });
-        explanations.createIndex('byBook', 'bookId');
-
-        // Retrieved commentary. Its own store rather than a kind inside
-        // `cards`, because that store is keyed for the translation cache —
-        // byCacheKey — and a card that was never generated has no cache key.
-        const sharh = db.createObjectStore('sharhCards', { keyPath: 'id' });
-        sharh.createIndex('byBook', 'bookId');
-
-        // Imported narrator profiles. `byNaming` is multiEntry over every form a
-        // man is cited under, so a short mention in a commentary reaches a
-        // profile filed under a twelve-word nasab in one indexed read.
-        const narrators = db.createObjectStore('narratorProfiles', { keyPath: 'id' });
-        narrators.createIndex('byNaming', 'namings', { multiEntry: true });
-        narrators.createIndex('byShard', 'shard');
-
-        // Shared chapters this device published. No index: there are a few
-        // dozen at most and Settings reads all of them at once.
-        db.createObjectStore('shareRecords', { keyPath: 'id' });
-
-        db.createObjectStore('wordGlosses', { keyPath: 'word' });
-
-        // One store for all four QUL resource kinds. They share a shape — key
-        // in, record out — so a single compound index serves every lookup and
-        // deleting a resource is one range delete rather than four.
-        db.createObjectStore('qulResources', { keyPath: 'id' });
-        const qulEntries = db.createObjectStore('qulEntries', { keyPath: 'id' });
-        qulEntries.createIndex('byResource', 'resourceId');
-        qulEntries.createIndex('byResourceKey', ['resourceId', 'key']);
-        db.createObjectStore('qulCompilations', { keyPath: 'cacheKey' });
-
-        // Derived from each book's contents, so indexed only by book: a lookup
-        // reads every imported biographical work anyway, and there are three of
-        // them at most.
-        const biography = db.createObjectStore('biographyEntries', { keyPath: 'id' });
-        biography.createIndex('byBook', 'bookId');
-
-        db.createObjectStore('profiles', { keyPath: 'id' });
-        db.createObjectStore('glossary', { keyPath: 'id' });
-        db.createObjectStore('quranVerses', { keyPath: 'reference' });
-        db.createObjectStore('hadiths', { keyPath: 'reference' });
-        db.createObjectStore('crawlStates', { keyPath: 'bookId' });
-        db.createObjectStore('positions', { keyPath: 'bookId' });
-        db.createObjectStore('settings', { keyPath: 'key' });
-      },
+      upgrade: upgradeDatabase,
     });
   }
 
@@ -342,237 +162,94 @@ export class IdbStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Delete every row an index points at, a batch of primary keys at a time.
-   *
-   * This replaces the obvious cursor idiom — `openCursor`, then
-   * `await cursor.delete()`, then `await cursor.continue()` — which was wrong
-   * here in two separate ways:
-   *
-   *   - It awaits two IndexedDB requests *per row*. Removing Fatḥ al-Bārī meant
-   *     something like two hundred thousand awaited round trips, which on the
-   *     tablet is minutes with no sign that anything is happening.
-   *   - A value cursor deserializes each record before throwing it away. On
-   *     `pages`, whose values hold the fetched HTML, that read tens of
-   *     megabytes it never looked at — the exact cost `listFetchedPageIndices`
-   *     was written with a key cursor to avoid.
-   *
-   * `getAllKeys` fetches primary keys only, one request per batch, and the
-   * deletes are queued together on the transaction rather than awaited singly.
+   * The handle, fetched when a moved group function first needs it rather than
+   * when the class calls it: a method that returns early without touching the
+   * database (an empty write) still resolves before `init`, as it always has.
    */
-  private async purgeIndex(
-    store: BookStore | 'narratorProfiles' | 'qulEntries',
-    index: 'byBook' | 'byShard' | 'byResource',
-    key: string,
-  ): Promise<number> {
-    // idb's generics cannot express "this index belongs to this store" across a
-    // union of store names, and every call below passes a valid pair. The
-    // untyped handle is the library's own escape hatch for exactly this.
-    const db = this.handle as unknown as IDBPDatabase;
-    let removed = 0;
-    for (;;) {
-      const tx = db.transaction(store, 'readwrite');
-      const keys = await tx.store.index(index).getAllKeys(key, PURGE_BATCH);
-      if (keys.length > 0) {
-        await Promise.all(keys.map((primary) => tx.store.delete(primary)));
-      }
-      await tx.done;
-      removed += keys.length;
-      if (keys.length < PURGE_BATCH) return removed;
-    }
-  }
+  private readonly lazyHandle = (): IDBPDatabase<Schema> => this.handle;
 
   // ---------------------------------------------------------------- books
 
   async putBook(book: Book): Promise<void> {
-    await this.handle.put('books', book);
+    return putBook(this.lazyHandle, book);
   }
 
   async getBook(id: string): Promise<Book | undefined> {
-    return this.handle.get('books', id);
+    return getBook(this.lazyHandle, id);
   }
 
   async listBooks(): Promise<Book[]> {
-    const books = await this.handle.getAll('books');
-    return books.sort((a, b) => b.importedAt - a.importedAt);
+    return listBooks(this.lazyHandle);
   }
 
   async deleteBook(id: string): Promise<void> {
-    const db = this.handle;
-    for (const store of BOOK_STORES) {
-      await this.purgeIndex(store, 'byBook', id);
-    }
-    // Narrator profiles are filed by SHARD, not by book, so they are not in
-    // the loop above. A Taqrīb import's profiles belong to this book and must
-    // go with it; an installed Itqan shard belongs to no book and must not.
-    await this.deleteNarratorShard(`taqrib:${id}`);
-
-    // The book row goes last. An interrupted removal then still lists the book,
-    // so pressing Remove again finishes the job; deleting the row first would
-    // strand every other store's rows with nothing left to reach them by.
-    await db.delete('books', id);
-    await db.delete('crawlStates', id);
-    await db.delete('positions', id);
-    this.searchIndex.delete(id);
+    return deleteBook(this.lazyHandle, this.searchIndex, id);
   }
 
   // ------------------------------------------------------------------ toc
 
   async putTocNodes(nodes: TocNode[]): Promise<void> {
-    const tx = this.handle.transaction('tocNodes', 'readwrite');
-    await Promise.all(nodes.map((node) => tx.store.put(node)));
-    await tx.done;
+    return putTocNodes(this.lazyHandle, nodes);
   }
 
   async listTocNodes(bookId: string): Promise<TocNode[]> {
-    const nodes = await this.handle.getAllFromIndex('tocNodes', 'byBook', bookId);
-    return nodes.sort((a, b) => a.order - b.order);
+    return listTocNodes(this.lazyHandle, bookId);
   }
 
   // ---------------------------------------------------------------- pages
 
   async putPage(page: Page): Promise<void> {
-    await this.handle.put('pages', page);
+    return putPage(this.lazyHandle, page);
   }
 
   async getPage(bookId: string, pageIndex: number): Promise<Page | undefined> {
-    return this.handle.get('pages', `${bookId}:p${pageIndex}`);
+    return getPage(this.lazyHandle, bookId, pageIndex);
   }
 
-  /**
-   * Reads only the compound index keys, never the records themselves — the
-   * stored HTML for a whole book is tens of megabytes and must not be pulled
-   * into memory just to work out which pages are missing.
-   */
   async listFetchedPageIndices(bookId: string): Promise<number[]> {
-    const tx = this.handle.transaction('pages', 'readonly');
-    const indices: number[] = [];
-    let cursor = await tx.store
-      .index('byBookPage')
-      .openKeyCursor(IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]));
-    while (cursor) {
-      indices.push(cursor.key[1]);
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return indices.sort((a, b) => a - b);
+    return listFetchedPageIndices(this.lazyHandle, bookId);
   }
 
-  /**
-   * Cursors the page records and keeps only the three numbers the reader needs.
-   * The stored HTML passes through but is never retained, so the ج/ص margin
-   * costs a few hundred kilobytes of live memory instead of the whole book.
-   */
   async listPageMeta(bookId: string): Promise<PageMeta[]> {
-    const meta: PageMeta[] = [];
-    const tx = this.handle.transaction('pages', 'readonly');
-    let cursor = await tx.store
-      .index('byBookPage')
-      .openCursor(IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]));
-    while (cursor) {
-      meta.push({
-        pageIndex: cursor.value.pageIndex,
-        volume: cursor.value.volume,
-        printPage: cursor.value.printPage,
-      });
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return meta;
+    return listPageMeta(this.lazyHandle, bookId);
   }
 
   async countPages(bookId: string): Promise<number> {
-    return this.handle.countFromIndex('pages', 'byBook', bookId);
+    return countPages(this.lazyHandle, bookId);
   }
 
   // --------------------------------------------------------------- blocks
 
   async putBlocks(blocks: Block[]): Promise<void> {
-    if (blocks.length === 0) return;
-    const tx = this.handle.transaction('blocks', 'readwrite');
-    await Promise.all(blocks.map((block) => tx.store.put(block)));
-    await tx.done;
-    this.searchIndex.delete(blocks[0].bookId);
+    return putBlocks(this.lazyHandle, this.searchIndex, blocks);
   }
 
   async deleteBlocksForPage(pageId: string): Promise<void> {
-    const tx = this.handle.transaction('blocks', 'readwrite');
-    let cursor = await tx.store.index('byPage').openCursor(pageId);
-    let bookId: string | null = null;
-    while (cursor) {
-      bookId = cursor.value.bookId;
-      await cursor.delete();
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    if (bookId) this.searchIndex.delete(bookId);
+    return deleteBlocksForPage(this.lazyHandle, this.searchIndex, pageId);
   }
 
   async listBlocksForPage(pageId: string): Promise<Block[]> {
-    const blocks = await this.handle.getAllFromIndex('blocks', 'byPage', pageId);
-    return blocks.sort((a, b) => a.order - b.order);
+    return listBlocksForPage(this.lazyHandle, pageId);
   }
 
   async listBlocks(bookId: string): Promise<Block[]> {
-    const blocks = await this.handle.getAllFromIndex('blocks', 'byBook', bookId);
-    return blocks.sort((a, b) => a.order - b.order);
+    return listBlocks(this.lazyHandle, bookId);
   }
 
   async getBlock(id: string): Promise<Block | undefined> {
-    return this.handle.get('blocks', id);
+    return getBlock(this.lazyHandle, id);
   }
 
   async countBlocks(bookId: string): Promise<number> {
-    return this.handle.countFromIndex('blocks', 'byBook', bookId);
+    return countBlocks(this.lazyHandle, bookId);
   }
 
-  private async loadSearchIndex(bookId: string): Promise<SearchEntry[]> {
-    const cached = this.searchIndex.get(bookId);
-    if (cached) return cached;
-
-    const entries: SearchEntry[] = [];
-    const tx = this.handle.transaction('blocks', 'readonly');
-    let cursor = await tx.store.index('byBookOrder').openCursor(
-      IDBKeyRange.bound([bookId, -Infinity], [bookId, Infinity]),
-    );
-    while (cursor) {
-      entries.push({
-        id: cursor.value.id,
-        normalized: cursor.value.normalized,
-        folded: letterFold(cursor.value.normalized),
-      });
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-
-    this.searchIndex.set(bookId, entries);
-    return entries;
-  }
-
-  /**
-   * Search on letters alone, for matching a passage across two books.
-   *
-   * Same scan as `searchBlocks`, against the folded field. Separate rather
-   * than a flag because the two have different meanings: one answers "where
-   * did the reader's words occur", the other "is this the same passage".
-   */
   async searchBlocksLoose(
     bookId: string,
     foldedQuery: string,
     limit: number,
   ): Promise<SearchHit[]> {
-    if (!foldedQuery) return [];
-    const entries = await this.loadSearchIndex(bookId);
-
-    const hits: SearchHit[] = [];
-    for (const entry of entries) {
-      const at = entry.folded.indexOf(foldedQuery);
-      if (at === -1) continue;
-      const block = await this.getBlock(entry.id);
-      if (!block) continue;
-      hits.push({ block, matchStart: at, matchLength: foldedQuery.length });
-      if (hits.length >= limit) break;
-    }
-    return hits;
+    return searchBlocksLoose(this.lazyHandle, this.searchIndex, bookId, foldedQuery, limit);
   }
 
   async searchBlocks(
@@ -580,366 +257,281 @@ export class IdbStorageAdapter implements StorageAdapter {
     normalizedQuery: string,
     limit: number,
   ): Promise<SearchHit[]> {
-    if (!normalizedQuery) return [];
-    const entries = await this.loadSearchIndex(bookId);
-
-    const hits: SearchHit[] = [];
-    for (const entry of entries) {
-      const at = entry.normalized.indexOf(normalizedQuery);
-      if (at === -1) continue;
-      const block = await this.getBlock(entry.id);
-      if (!block) continue;
-      hits.push({ block, matchStart: at, matchLength: normalizedQuery.length });
-      if (hits.length >= limit) break;
-    }
-    return hits;
+    return searchBlocks(this.lazyHandle, this.searchIndex, bookId, normalizedQuery, limit);
   }
 
   // ------------------------------------------------------------- entities
 
   async putEntities(entities: Entity[]): Promise<void> {
-    if (entities.length === 0) return;
-    for (let i = 0; i < entities.length; i += 500) {
-      const tx = this.handle.transaction('entities', 'readwrite');
-      await Promise.all(entities.slice(i, i + 500).map((entity) => tx.store.put(entity)));
-      await tx.done;
-    }
+    return putEntities(this.lazyHandle, entities);
   }
 
   async listEntities(bookId: string): Promise<Entity[]> {
-    return this.handle.getAllFromIndex('entities', 'byBook', bookId);
+    return listEntities(this.lazyHandle, bookId);
   }
 
   async clearEntities(bookId: string): Promise<void> {
-    await this.purgeIndex('entities', 'byBook', bookId);
+    return clearEntities(this.lazyHandle, bookId);
   }
 
   // ----------------------------------------------------------- dictionary
 
   async putDictionaryEntries(entries: DictionaryEntry[]): Promise<void> {
-    if (entries.length === 0) return;
-    for (let i = 0; i < entries.length; i += 500) {
-      const tx = this.handle.transaction('dictionaryEntries', 'readwrite');
-      await Promise.all(entries.slice(i, i + 500).map((entry) => tx.store.put(entry)));
-      await tx.done;
-    }
+    return putDictionaryEntries(this.lazyHandle, entries);
   }
 
   async listDictionaryEntries(bookId: string): Promise<DictionaryEntry[]> {
-    return this.handle.getAllFromIndex('dictionaryEntries', 'byBook', bookId);
+    return listDictionaryEntries(this.lazyHandle, bookId);
   }
 
   async clearDictionaryEntries(bookId: string): Promise<void> {
-    await this.purgeIndex('dictionaryEntries', 'byBook', bookId);
+    return clearDictionaryEntries(this.lazyHandle, bookId);
   }
 
   // ---------------------------------------------------------------- marks
 
   async putMarks(marks: Mark[]): Promise<void> {
-    if (marks.length === 0) return;
-    const tx = this.handle.transaction('marks', 'readwrite');
-    await Promise.all(marks.map((mark) => tx.store.put(mark)));
-    await tx.done;
+    return putMarks(this.lazyHandle, marks);
   }
 
   async listMarks(bookId: string): Promise<Mark[]> {
-    return this.handle.getAllFromIndex('marks', 'byBook', bookId);
+    return listMarks(this.lazyHandle, bookId);
   }
 
   async deleteMarks(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
-    const tx = this.handle.transaction('marks', 'readwrite');
-    await Promise.all(ids.map((id) => tx.store.delete(id)));
-    await tx.done;
+    return deleteMarks(this.lazyHandle, ids);
   }
 
   // ---------------------------------------------------------------- cards
 
   async putCard(card: TranslationCard): Promise<void> {
-    await this.handle.put('cards', card);
+    return putCard(this.lazyHandle, card);
   }
 
   async listCards(bookId: string): Promise<TranslationCard[]> {
-    return this.handle.getAllFromIndex('cards', 'byBook', bookId);
+    return listCards(this.lazyHandle, bookId);
   }
 
   async getCardByCacheKey(cacheKey: string): Promise<TranslationCard | undefined> {
-    return this.handle.getFromIndex('cards', 'byCacheKey', cacheKey);
+    return getCardByCacheKey(this.lazyHandle, cacheKey);
   }
 
   async deleteCard(id: string): Promise<void> {
-    await this.handle.delete('cards', id);
+    return deleteCard(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------------- profiles
 
   async putProfile(profile: TranslationProfile): Promise<void> {
-    await this.handle.put('profiles', profile);
+    return putProfile(this.lazyHandle, profile);
   }
 
   async listProfiles(): Promise<TranslationProfile[]> {
-    return this.handle.getAll('profiles');
+    return listProfiles(this.lazyHandle);
   }
 
   async getProfile(id: string): Promise<TranslationProfile | undefined> {
-    return this.handle.get('profiles', id);
+    return getProfile(this.lazyHandle, id);
   }
 
   async deleteProfile(id: string): Promise<void> {
-    await this.handle.delete('profiles', id);
+    return deleteProfile(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------------- glossary
 
   async putGlossaryEntry(entry: GlossaryEntry): Promise<void> {
-    await this.handle.put('glossary', entry);
+    return putGlossaryEntry(this.lazyHandle, entry);
   }
 
   async listGlossary(): Promise<GlossaryEntry[]> {
-    const entries = await this.handle.getAll('glossary');
-    return entries.sort((a, b) => a.addedAt - b.addedAt);
+    return listGlossary(this.lazyHandle);
   }
 
   async deleteGlossaryEntry(id: string): Promise<void> {
-    await this.handle.delete('glossary', id);
+    return deleteGlossaryEntry(this.lazyHandle, id);
   }
 
   // ------------------------------------------------------ retrieval cache
 
   async putQuranVerse(verse: QuranVerse): Promise<void> {
-    await this.handle.put('quranVerses', verse);
+    return putQuranVerse(this.lazyHandle, verse);
   }
 
   async getQuranVerse(reference: string): Promise<QuranVerse | undefined> {
-    return this.handle.get('quranVerses', reference);
+    return getQuranVerse(this.lazyHandle, reference);
   }
 
   async putHadith(record: HadithRecord): Promise<void> {
-    await this.handle.put('hadiths', record);
+    return putHadith(this.lazyHandle, record);
   }
 
   async getHadith(reference: string): Promise<HadithRecord | undefined> {
-    return this.handle.get('hadiths', reference);
+    return getHadith(this.lazyHandle, reference);
   }
 
   // ------------------------------------------------------------------ QUL
 
   async putQulResource(resource: QulResource): Promise<void> {
-    await this.handle.put('qulResources', resource);
+    return putQulResource(this.lazyHandle, resource);
   }
 
   // ---------------------------------------------------------------- biography
 
   async putBiographyEntries(entries: BiographyEntry[]): Promise<void> {
-    const transaction = this.handle.transaction('biographyEntries', 'readwrite');
-    await Promise.all(entries.map((entry) => transaction.store.put(entry)));
-    await transaction.done;
+    return putBiographyEntries(this.lazyHandle, entries);
   }
 
   async listBiographyEntries(bookId?: string): Promise<BiographyEntry[]> {
-    if (bookId === undefined) return this.handle.getAll('biographyEntries');
-    return this.handle.getAllFromIndex('biographyEntries', 'byBook', bookId);
+    return listBiographyEntries(this.lazyHandle, bookId);
   }
 
   async clearBiographyEntries(bookId: string): Promise<void> {
-    await this.purgeIndex('biographyEntries', 'byBook', bookId);
+    return clearBiographyEntries(this.lazyHandle, bookId);
   }
 
   async listQulResources(): Promise<QulResource[]> {
-    const all = await this.handle.getAll('qulResources');
-    return all.sort((a, b) => a.name.localeCompare(b.name));
+    return listQulResources(this.lazyHandle);
   }
 
   async deleteQulResource(id: string): Promise<void> {
-    // Entries first, resource row last. A word-by-word resource is ~77,000
-    // entries, too many to clear in a single transaction without the same
-    // per-row stall `purgeIndex` exists to avoid — so the removal is no longer
-    // atomic, and the ordering is what makes that safe: an interrupted purge
-    // still lists the resource, and pressing Remove again finishes it. The
-    // reverse order would leave entries no longer reachable from anywhere.
-    await this.purgeIndex('qulEntries', 'byResource', id);
-    await this.handle.delete('qulResources', id);
+    return deleteQulResource(this.lazyHandle, id);
   }
 
   async putQulEntries(entries: QulEntry[]): Promise<void> {
-    const transaction = this.handle.transaction('qulEntries', 'readwrite');
-    await Promise.all(entries.map((entry) => transaction.store.put(entry)));
-    await transaction.done;
+    return putQulEntries(this.lazyHandle, entries);
   }
 
   async getQulEntry(resourceId: string, key: string): Promise<QulEntry | undefined> {
-    return this.handle.get('qulEntries', `${resourceId}|${key}`);
+    return getQulEntry(this.lazyHandle, resourceId, key);
   }
 
   async getQulEntries(resourceId: string, keys: string[]): Promise<QulEntry[]> {
-    const transaction = this.handle.transaction('qulEntries', 'readonly');
-    const found = await Promise.all(
-      keys.map((key) => transaction.store.get(`${resourceId}|${key}`)),
-    );
-    await transaction.done;
-    return found.filter((entry): entry is QulEntry => entry !== undefined);
+    return getQulEntries(this.lazyHandle, resourceId, keys);
   }
 
   async putQulCompilation(record: QulCompilation): Promise<void> {
-    await this.handle.put('qulCompilations', record);
+    return putQulCompilation(this.lazyHandle, record);
   }
 
   async getQulCompilation(cacheKey: string): Promise<QulCompilation | undefined> {
-    return this.handle.get('qulCompilations', cacheKey);
+    return getQulCompilation(this.lazyHandle, cacheKey);
   }
 
   // ---------------------------------------------------------------- crawl
 
   async putCrawlState(state: CrawlState): Promise<void> {
-    await this.handle.put('crawlStates', state);
+    return putCrawlState(this.lazyHandle, state);
   }
 
   async getCrawlState(bookId: string): Promise<CrawlState | undefined> {
-    return this.handle.get('crawlStates', bookId);
+    return getCrawlState(this.lazyHandle, bookId);
   }
 
   // ------------------------------------------------------------- position
 
   async putReadingPosition(position: ReadingPosition): Promise<void> {
-    await this.handle.put('positions', position);
+    return putReadingPosition(this.lazyHandle, position);
   }
 
   async getReadingPosition(bookId: string): Promise<ReadingPosition | undefined> {
-    return this.handle.get('positions', bookId);
+    return getReadingPosition(this.lazyHandle, bookId);
   }
 
   // ------------------------------------------------------------- settings
 
   async putSettings(settings: AppSettings): Promise<void> {
-    await this.handle.put('settings', { ...settings, key: SETTINGS_KEY });
+    return putSettings(this.lazyHandle, settings);
   }
 
   async getSettings(): Promise<AppSettings | undefined> {
-    const stored = await this.handle.get('settings', SETTINGS_KEY);
-    if (!stored) return undefined;
-    const { key: _key, ...settings } = stored;
-    return settings;
+    return getSettings(this.lazyHandle);
   }
 
   // --------------------------------------------- explanations and glosses
 
   async putExplanationCard(card: ExplanationCard): Promise<void> {
-    await this.handle.put('explanationCards', card);
+    return putExplanationCard(this.lazyHandle, card);
   }
 
   async listExplanationCards(bookId: string): Promise<ExplanationCard[]> {
-    return this.handle.getAllFromIndex('explanationCards', 'byBook', bookId);
+    return listExplanationCards(this.lazyHandle, bookId);
   }
 
   async deleteExplanationCard(id: string): Promise<void> {
-    await this.handle.delete('explanationCards', id);
+    return deleteExplanationCard(this.lazyHandle, id);
   }
 
   // -------------------------------------------------------------- sharḥ
 
   async putSharhCard(card: SharhCard): Promise<void> {
-    await this.handle.put('sharhCards', card);
+    return putSharhCard(this.lazyHandle, card);
   }
 
   async listSharhCards(bookId: string): Promise<SharhCard[]> {
-    return this.handle.getAllFromIndex('sharhCards', 'byBook', bookId);
+    return listSharhCards(this.lazyHandle, bookId);
   }
 
   async deleteSharhCard(id: string): Promise<void> {
-    await this.handle.delete('sharhCards', id);
+    return deleteSharhCard(this.lazyHandle, id);
   }
 
   // ---------------------------------------------------- narrator profiles
 
   async putNarratorProfiles(profiles: StoredNarratorProfile[]): Promise<void> {
-    for (let i = 0; i < profiles.length; i += 500) {
-      const tx = this.handle.transaction('narratorProfiles', 'readwrite');
-      await Promise.all(profiles.slice(i, i + 500).map((row) => tx.store.put(row)));
-      await tx.done;
-    }
+    return putNarratorProfiles(this.lazyHandle, profiles);
   }
 
   async findNarratorProfiles(naming: string): Promise<StoredNarratorProfile[]> {
-    if (naming.length < 3) return [];
-    return this.handle.getAllFromIndex('narratorProfiles', 'byNaming', naming);
+    return findNarratorProfiles(this.lazyHandle, naming);
   }
 
   async listNarratorShards(): Promise<{ shard: string; count: number }[]> {
-    const counts = new Map<string, number>();
-    const tx = this.handle.transaction('narratorProfiles', 'readonly');
-    // Key cursor only: counting shards must not read tens of thousands of
-    // full profiles into memory just to render a settings row.
-    let cursor = await tx.store.index('byShard').openKeyCursor();
-    while (cursor) {
-      counts.set(cursor.key as string, (counts.get(cursor.key as string) ?? 0) + 1);
-      cursor = await cursor.continue();
-    }
-    await tx.done;
-    return [...counts].map(([shard, count]) => ({ shard, count }));
+    return listNarratorShards(this.lazyHandle);
   }
 
   async deleteNarratorShard(shard: string): Promise<void> {
-    await this.purgeIndex('narratorProfiles', 'byShard', shard);
+    return deleteNarratorShard(this.lazyHandle, shard);
   }
 
   // -------------------------------------------------------- shared chapters
 
   async putShareRecord(record: ShareRecord): Promise<void> {
-    await this.handle.put('shareRecords', record);
+    return putShareRecord(this.lazyHandle, record);
   }
 
   async listShareRecords(): Promise<ShareRecord[]> {
-    const records = await this.handle.getAll('shareRecords');
-    return records.sort((a, b) => b.createdAt - a.createdAt);
+    return listShareRecords(this.lazyHandle);
   }
 
-  /**
-   * Forgets the local record. It does not, and cannot, unpublish anything.
-   *
-   * The file lives in a git repository that only the author can push to, so
-   * withdrawing a share is deleting that file and pushing. Settings says so
-   * rather than implying this button did it.
-   */
   async deleteShareRecord(id: string): Promise<void> {
-    await this.handle.delete('shareRecords', id);
+    return deleteShareRecord(this.lazyHandle, id);
   }
 
   async putWordGloss(gloss: WordGloss): Promise<void> {
-    await this.handle.put('wordGlosses', gloss);
+    return putWordGloss(this.lazyHandle, gloss);
   }
 
   async getWordGloss(word: string): Promise<WordGloss | undefined> {
-    return this.handle.get('wordGlosses', word);
+    return getWordGloss(this.lazyHandle, word);
   }
 
   async listWordGlosses(): Promise<WordGloss[]> {
-    return this.handle.getAll('wordGlosses');
+    return listWordGlosses(this.lazyHandle);
   }
 
   // ------------------------------------------------------ device transfer
-  //
-  // Untyped on purpose: these move rows between this database and a file
-  // without interpreting them, so the per-store generics would add casts and
-  // no safety. The store name is checked against the live database instead.
 
   get schemaVersion(): number {
     return DB_VERSION;
   }
 
   listStoreNames(): string[] {
-    return Array.from(this.handle.objectStoreNames);
-  }
-
-  private untyped(store: string): IDBPDatabase {
-    const db = this.handle as unknown as IDBPDatabase;
-    if (!db.objectStoreNames.contains(store)) {
-      throw new Error(`This database has no "${store}" store.`);
-    }
-    return db;
+    return listStoreNames(this.lazyHandle);
   }
 
   async countStoreRows(store: string): Promise<number> {
-    return this.untyped(store).count(store);
+    return countStoreRows(this.lazyHandle, store);
   }
 
   async readStoreRows(
@@ -947,113 +539,24 @@ export class IdbStorageAdapter implements StorageAdapter {
     after: unknown,
     limit: number,
   ): Promise<{ rows: unknown[]; lastKey: unknown }> {
-    const db = this.untyped(store);
-    const range =
-      after === undefined ? undefined : IDBKeyRange.lowerBound(after as IDBValidKey, true);
-    // One transaction for both reads, so the keys and the rows describe the
-    // same snapshot and line up index for index.
-    const tx = db.transaction(store, 'readonly');
-    const [keys, rows] = await Promise.all([
-      tx.store.getAllKeys(range, limit),
-      tx.store.getAll(range, limit),
-    ]);
-    await tx.done;
-    return { rows, lastKey: keys.length > 0 ? keys[keys.length - 1] : undefined };
+    return readStoreRows(this.lazyHandle, store, after, limit);
   }
 
   async putStoreRows(store: string, rows: unknown[]): Promise<void> {
-    if (rows.length === 0) return;
-    const db = this.untyped(store);
-    const tx = db.transaction(store, 'readwrite');
-    await Promise.all(rows.map((row) => tx.store.put(row)));
-    await tx.done;
-    this.searchIndex.clear();
+    return putStoreRows(this.lazyHandle, this.searchIndex, store, rows);
   }
 
   async clearAllStores(): Promise<void> {
-    const db = this.handle as unknown as IDBPDatabase;
-    const names = Array.from(db.objectStoreNames);
-    const tx = db.transaction(names, 'readwrite');
-    await Promise.all(names.map((name) => tx.objectStore(name).clear()));
-    await tx.done;
-    this.searchIndex.clear();
+    return clearAllStores(this.lazyHandle, this.searchIndex);
   }
 
   // ---------------------------------------------------------- work backup
 
   async exportWork(): Promise<WorkBundle> {
-    const db = this.handle;
-    const books = await db.getAll('books');
-
-    return {
-      version: DB_VERSION,
-      exportedAt: Date.now(),
-      referencedBooks: books.map((book) => ({
-        shamelaId: book.shamelaId,
-        bookId: book.id,
-        title: book.title,
-      })),
-      cards: await db.getAll('cards'),
-      explanationCards: await db.getAll('explanationCards'),
-      sharhCards: await db.getAll('sharhCards'),
-      marks: await db.getAll('marks'),
-      glossary: await db.getAll('glossary'),
-      profiles: await db.getAll('profiles'),
-      positions: await db.getAll('positions'),
-      wordGlosses: await db.getAll('wordGlosses'),
-      quranVerses: await db.getAll('quranVerses'),
-      hadiths: await db.getAll('hadiths'),
-      shareRecords: await db.getAll('shareRecords'),
-      settings: (await this.getSettings()) ?? null,
-    };
+    return exportWork(this.lazyHandle);
   }
 
   async importWork(bundle: WorkBundle): Promise<WorkRestoreReport> {
-    const db = this.handle;
-
-    const write = async <
-      K extends 'cards' | 'explanationCards' | 'sharhCards' | 'marks' | 'glossary' | 'profiles' |
-        'positions' | 'wordGlosses' | 'quranVerses' | 'hadiths' | 'shareRecords',
-    >(
-      store: K,
-      rows: Schema[K]['value'][] | undefined,
-    ) => {
-      if (!rows || rows.length === 0) return;
-      for (let i = 0; i < rows.length; i += 500) {
-        const tx = db.transaction(store, 'readwrite');
-        await Promise.all(rows.slice(i, i + 500).map((row) => tx.store.put(row as never)));
-        await tx.done;
-      }
-    };
-
-    await write('cards', bundle.cards);
-    await write('explanationCards', bundle.explanationCards);
-    await write('sharhCards', bundle.sharhCards);
-    await write('marks', bundle.marks);
-    await write('glossary', bundle.glossary);
-    await write('profiles', bundle.profiles);
-    await write('positions', bundle.positions);
-    await write('wordGlosses', bundle.wordGlosses);
-    await write('quranVerses', bundle.quranVerses);
-    await write('hadiths', bundle.hadiths);
-    // Absent on a backup written before shares existed, which `write` handles.
-    await write('shareRecords', bundle.shareRecords);
-    if (bundle.settings) await this.putSettings(bundle.settings);
-
-    // Work anchored to a book that is not on this device restores fine — block
-    // IDs are deterministic, so it will bind correctly once that book is
-    // imported. Say which ones are missing rather than failing.
-    const present = new Set((await db.getAll('books')).map((book) => book.shamelaId));
-    const missingBooks = (bundle.referencedBooks ?? [])
-      .filter((entry) => !present.has(entry.shamelaId))
-      .map((entry) => ({ shamelaId: entry.shamelaId, title: entry.title }));
-
-    this.searchIndex.clear();
-
-    return {
-      restoredCards: (bundle.cards?.length ?? 0) + (bundle.explanationCards?.length ?? 0),
-      restoredMarks: bundle.marks?.length ?? 0,
-      missingBooks,
-    };
+    return importWork(this.lazyHandle, this.searchIndex, bundle);
   }
 }

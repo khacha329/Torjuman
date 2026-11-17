@@ -266,3 +266,117 @@ Exposed by check Q's second-round scenarios, recorded in
    (`anthropic.translate.429-retry-after-ms-only`); with no header it is null
    too, and the SDK used its own backoff (`…429-no-retry-headers`). Pinned;
    not clearly a bug.
+
+## 16. README's work-backup list is short (2026-11-16, measured)
+
+`README.md:380-381` says the work backup holds "cards, explanations, marks,
+notes, glossary, profiles, positions, the gloss cache". It also carries sharḥ
+cards, the Qurʾān-verse and ḥadīth caches, share records (with their
+decryption keys) and settings (`IdbStorageAdapter.ts:996-1007`; check D's
+`work-backup` → `export`, the `exportWork` value). Docs only. Phase 4 plan,
+Design §6 A.
+
+## 17. RESTRUCTURE §4 T-e says `ShareStorageAdapter` throws on write (2026-11-16, measured)
+
+T-e asks a reshuffle to keep the share adapter's "throw-on-write behaviour".
+It has none: writes are ignored silently (`ShareStorageAdapter.ts:64-70`,
+`:77-78`); `putSettings`, `putQuranVerse` and `putQulCompilation` write through
+to the visitor's own database (`:330`, `:356`, `:397`); only the work backup and
+the five whole-tablet calls throw (`:474-507`). Check D's `share-adapter`
+scenario records all three kinds. Docs only. Design §6 B.
+
+## 18. Compiled QUL views are in no work backup (2026-11-16, measured)
+
+`qulCompilations` — "the one generated thing in the QUL feature"
+(`StorageAdapter.ts:195`), each made by a paid model call — is not in
+`exportWork` (`IdbStorageAdapter.ts:984-1008`), so a work backup restored onto a
+new device brings none of them; they travel only in the whole-tablet transfer.
+Check D's `work-backup`: the export's source has one compilation, the restored
+database none. For the owner to decide. Design §6 C.
+
+## 19. Share records outlive their book (2026-11-16, measured)
+
+`ShareRecord` has a `bookId` (`types/share.ts:31`) but `deleteBook`
+(`IdbStorageAdapter.ts:399-416`) leaves the record: check D's `delete-book`,
+"listShareRecords (outlives its book)". Probably right — a published link still
+works for others, and its key exists only in the link and this record — but
+nothing says so. Design §6 D.
+
+## 20. Databases from before v7 cannot be checked (2026-11-16, by design)
+
+The existing-DB branch never adds an index to a store that already exists, and
+never creates the twelve stores it assumes (`books`, `tocNodes`, `pages`,
+`blocks`, `cards`, `profiles`, `glossary`, `quranVerses`, `hadiths`,
+`crawlStates`, `positions`, `settings`). Versions 1–6 predate the repository
+(its first commit, `810b059`, is v7), so whether their base stores had today's
+indexes is unknown. Every database from v7 on has them (the fresh branch at
+`810b059` creates them as today). Check D upgrades a synthetic `v1base` with
+today's indexes, and v7–v10; the owner named no device with an older database
+(Phase 4 Q2). Design §6 E.
+
+## 21. The three QUL stores share one upgrade guard (2026-11-16, measured)
+
+`qulResources`, `qulEntries` and `qulCompilations` are created together when
+`qulResources` is missing (`IdbStorageAdapter.ts:233-239`). So a database with
+`qulResources` but no `qulEntries` opens and never gets `qulEntries`; and one
+with `qulEntries` but no `qulResources` cannot open at all — the upgrade
+throws a ConstraintError ("An object store with the specified name already
+exists"), Chromium aborts the version change, `init` rejects with an
+AbortError and the database stays at its old version, every row kept. Neither
+database can arise from the app's own code. Check D pins both:
+`harness/odd-v10-without-qulEntries`, `harness/odd-v10-without-qulResources`;
+and, since the 4j follow-up, a third, `harness/odd-v10-without-qulCompilations`
+(opens, never gets `qulCompilations`).
+Design §6 F.
+
+## 22. A work backup is not a snapshot (2026-11-16, by reading)
+
+`exportWork` reads each store in its own transaction
+(`IdbStorageAdapter.ts:996-1006`), so a card saved while the export runs can be
+in one store's read and its sibling's not. Minor; check D cannot show a race.
+Design §6 G.
+
+## 23. `importWork` ignores the backup's version (2026-11-16, by reading)
+
+`WorkBundle.version` is written as `DB_VERSION` (`IdbStorageAdapter.ts:989`) and
+never read by `importWork` (`:1011-1058`), so a backup from a newer app restores
+the fields this one knows and drops the rest without a word. By design — block
+ids are deterministic, so the rows bind wherever they land — but unstated.
+Design §6 H.
+
+## 24. Replacing a book from a Library transfer file deletes its cards and marks (2026-11-16, measured)
+
+Found while building check D (Phase 4 step 4a). When a per-book file is
+imported for a book already on the device, `ui/settings/LibraryTransfer.tsx:58-63`
+asks: "Replace it with the contents of this file? Its translation cards and
+marks are kept — they anchor to block IDs, which are the same either way."
+They are not kept. On a yes, `importBookFile` calls
+`storage.deleteBook(existing.id)` (`library/transfer.ts:248`), and `deleteBook`
+purges every `BOOK_STORES` store — `marks`, `cards`, `explanationCards`,
+`sharhCards` among them — and the book's reading position
+(`IdbStorageAdapter.ts:399-416`); the per-book file carries none of them
+(README "The transfer format"). Check D's `book-transfer` → `import-conflict`:
+the snapshot "after onConflict false" has the book's mark, translation card,
+explanation, sharḥ card and position; "after onConflict true" has none.
+
+The same phase shows a second loss: a replacement that fails part way (a file
+cut short) leaves **no** copy of the book, since the old one was deleted before
+the new one was read and the rollback (`transfer.ts:353`) deletes the new one
+(`… one block short, onConflict true`, then `getBook A` undefined). README
+says "An import that fails partway rolls back to no book", which is true, but
+on a replacement that means the original is gone too.
+
+The dialog's wording has been the same since the first commit in git
+(`810b059`), whose `deleteBook` already purged marks and cards. The work
+survives only in a work backup or a whole-tablet file made beforehand.
+**Possible data loss on the owner's tablet; left unfixed (structure-only
+phase).** A fix — keep the user's work on a replacement, or say plainly that
+it goes — is the owner's call, in its own change.
+
+## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured)
+
+`importWork` reports `restoredCards` as translation cards plus explanation
+cards (`IdbStorageAdapter.ts:1054`); sharḥ cards are restored but not counted.
+Check D's `work-backup` → `import-fresh`: `restoredCards` 3 for two translation
+cards and one explanation, with the one sharḥ card restored beside them.
+Cosmetic.
