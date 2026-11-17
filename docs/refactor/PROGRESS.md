@@ -2325,7 +2325,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d2. `CatalogSection` → its file | T B L R S U pass; review PASS WITH NOTES | `d7c2838` |
 | 5d3. `TranslationSection` → its file | T B L R S U pass; review PASS | `ec12f28` |
 | 5d4. `KeysSection` with `TestState`, `ProviderKeyField`, `SunnahKeyField` | T B L R S U pass; review PASS | `857ad17` |
-| 5d5. `ReadingSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
+| 5d5. `ReadingSection` → its file | T B L R S U pass; review PASS | `35463d9` |
+| 5d6. `DisplaySection` → its file | T pass; B L R S U running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2836,6 +2837,21 @@ holds)
   `ui/settings/ReadingSection.tsx`, `export` added; a three-line header. It
   imports `useApp`, `Field`/`inputClass` and `Section`, all still used by
   `SettingsScreen` too, which only gains the import of `ReadingSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 174 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.4 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d5: PASS; "ready for 5d6".** Byte-identical; no comment
+  above it to move; imports minimal.
+
+**Step 5d6, measured 2026-11-17**
+- `DisplaySection` with its doc comment moved verbatim into the new
+  `ui/settings/DisplaySection.tsx`, `export` added; a three-line header. It
+  imports `useApp`, the `useLayoutMode` line (copied whole, multi-line),
+  `PanelPosition`, `Field`/`inputClass` and `Section`; `SettingsScreen`
+  drops the `useLayoutMode` import and `PanelPosition`, and imports
+  `DisplaySection`.
 - **T** exit 0. **B L R S U** running at commit; results with the review.
 
 ## Open
