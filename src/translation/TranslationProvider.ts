@@ -61,6 +61,12 @@ export interface TranslationResult {
   costUsd: number | null;
   /** Raw model output, kept so a parse failure loses nothing. */
   raw: string;
+  /**
+   * Whether a web search actually ran for this result. Only the Claude
+   * research pass can search; a card says "web search" only when this is true
+   * (FOUND_ISSUES 43), not whenever the profile allowed it.
+   */
+  searched?: boolean;
 }
 
 export class TranslationError extends Error {

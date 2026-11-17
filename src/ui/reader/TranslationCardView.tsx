@@ -310,7 +310,10 @@ function ProviderBadge({ card }: { card: TranslationCard }) {
       )}
       {!offline && badge.isFree && <span className="text-[10px] text-muted">free tier</span>}
       <CostLabel card={card} />
-      {card.usedExternalLookup && (
+      {/* Only Claude can search. Cards made before FOUND_ISSUES 43 carry the
+          profile's setting instead of what ran, so a stored Gemini card can
+          still say true; the provider check keeps it from claiming a search. */}
+      {card.usedExternalLookup && card.providerId === 'anthropic' && (
         <span className="text-[10px] text-muted">· web search</span>
       )}
     </div>

@@ -162,7 +162,10 @@ export function loadingCard({
     collapsed: false,
     cacheKey,
     status: 'loading',
-    usedExternalLookup: activeProfile.allowExternalLookup,
+    // Set by the finished card from what the provider reports. It was the
+    // profile's setting, whatever the provider, so a Gemini card claimed a
+    // search that never ran (FOUND_ISSUES 43).
+    usedExternalLookup: false,
     ...(standalone ? { standalone: true } : {}),
   };
 }

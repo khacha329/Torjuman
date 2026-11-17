@@ -374,6 +374,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         const finished: TranslationCard = {
           ...card,
           status: 'complete',
+          usedExternalLookup: result.searched === true,
           usage: result.usage,
           costUsd: result.costUsd,
           coverage: coverage.ratio,

@@ -100,11 +100,16 @@ export class AnthropicProvider implements TranslationProvider {
     // model calling the search tool at all; tool_choice auto would now allow
     // one pass, but merging them is a separate change from the model upgrade.
     let research: string | null = null;
+    let searched = false;
     if (request.allowExternalLookup) {
-      research = await this.research(client, request, usage, onChunk);
+      ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
     }
 
-    return this.structure(client, request, usage, research, onChunk);
+    const result = await this.structure(client, request, usage, research, onChunk);
+    // Reported only when a search ran: the research pass may answer without
+    // calling the tool, and the card's "web search" must not claim one
+    // (FOUND_ISSUES 43).
+    return searched ? { ...result, searched: true } : result;
   }
 
   /** Pass 1: web search enabled, tool_choice auto, free-form prose. Not parsed. */
@@ -113,7 +118,8 @@ export class AnthropicProvider implements TranslationProvider {
     request: TranslationRequest,
     usage: TranslationUsage,
     onChunk?: (partial: string) => void,
-  ): Promise<string> {
+  ): Promise<{ notes: string; searched: boolean }> {
+    let searched = false;
     const messages: Anthropic.MessageParam[] = [
       {
         role: 'user',
@@ -173,6 +179,7 @@ export class AnthropicProvider implements TranslationProvider {
 
       addUsage(usage, message.usage);
       notes = joinNotes(notes, textOf(message));
+      if (message.content.some((block) => block.type === 'server_tool_use')) searched = true;
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -181,7 +188,7 @@ export class AnthropicProvider implements TranslationProvider {
       break;
     }
 
-    return notes;
+    return { notes, searched };
   }
 
   /** Pass 2 (or the only pass): strict tool, no search, structured out. */
