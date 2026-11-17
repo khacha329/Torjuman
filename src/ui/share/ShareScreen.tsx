@@ -143,7 +143,9 @@ export function ShareScreen({ id, keyText }: { id: string; keyText: string }) {
   return (
     <ReadOnlyContext.Provider value={true}>
       <StorageOverride storage={shareStorage!}>
-        {/* Keyed by book for the reason App gives its reader a key. */}
+        {/* Keyed by book for the reason App gives its reader a key. Not
+            load-bearing today: a new link passes through 'loading', which
+            unmounts the reader anyway; the key keeps that true if it stops. */}
         <ReaderScreen key={state.bundle.sourceBook.bookId} bookId={state.bundle.sourceBook.bookId} />
       </StorageOverride>
     </ReadOnlyContext.Provider>

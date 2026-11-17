@@ -476,7 +476,10 @@ always between two books). Phase 5 plan, Design §9 F.
 change from one book to another mounts a fresh `ReaderScreen`. `restoredRef`
 starts false, and the second book opens at its saved position. The first
 screen's `listCards` resolves into an unmounted component, whose `setCards`
-React drops, so `useTranslator.ts` (lane B's) needed no cancellation. Keying
+React drops, so `useTranslator.ts` (lane B's) needed no cancellation; the
+same holds for `listMarks`, `listExplanationCards` and `listSharhCards`
+(`useMarks.ts:25`, `useExplanations.ts:36`, `useSharh.ts:23`), which could
+each have leaked the first book's list into the second. Keying
 also stops a third problem, found by reading: the debounced position save
 (`useReadingPosition.ts:41-51`) could write the first book's visible block
 order under the second book's id. A remount resets only what going through
@@ -674,3 +677,15 @@ also stores `shortSelection` and `centerY`. A fix corrects both sentences. The
 rest of the comment (why `selectionchange` and not `pointerup`, why debounced)
 still holds. Found while moving the comment for 30; the second sentence by the
 review of 30. Docs only. Left unfixed.
+
+## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
+
+`ui/reader/useBatchTranslate.ts:82-110` runs its loop to the end whatever
+happens to the screen that started it. Leaving the reader (through the
+Library, or by editing the URL to another book) unmounts the bar that shows
+its progress and holds its Stop, but not the loop: it goes on translating
+and saving cards for the first book, and it holds `beginActivity` until it
+ends, so the PWA's update prompt waits for it. Before lane A's fix for 31,
+editing the URL kept the reader mounted, so the bar stayed visible (in the
+wrong book); the Library path has always behaved this way. Found by the
+review of lane A's 31. Left unfixed.
