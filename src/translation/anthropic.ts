@@ -157,9 +157,16 @@ export function toTranslationError(error: unknown): TranslationError {
     return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
   }
   // fetch reports a connection that drops while the body is read as a
-  // TypeError, which the SDK passes through unwrapped: it came out as kind
-  // `api` with the message "network error" (FOUND_ISSUES 14.2).
-  if (error instanceof TypeError) {
+  // TypeError. messages.create (the key check, gloss, compile) passes it
+  // through unwrapped; a stream (translate, Explain) wraps it in a plain
+  // AnthropicError whose `cause` is the TypeError (MessageStream's
+  // handleError). Both came out as kind `api` with the message "network
+  // error" (FOUND_ISSUES 14.2). A bare TypeError from the code around a call
+  // would also land here; the shaping code those `try`s wrap is guarded.
+  if (
+    error instanceof TypeError ||
+    (error instanceof Anthropic.AnthropicError && error.cause instanceof TypeError)
+  ) {
     return new TranslationError(
       'network',
       'The connection to api.anthropic.com dropped mid-reply. Check the network connection.',

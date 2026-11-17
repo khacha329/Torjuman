@@ -1195,11 +1195,12 @@ await scenario(
 // the headers is the realistic input. For a streamed call (translate,
 // Explain) MessageStream wraps the body's TypeError in a plain AnthropicError
 // (lib/MessageStream.mjs, _MessageStream_handleError), which is no APIError
-// subclass, so it lands in the last branch with kind 'api'. For
-// messages.create (validateKey, gloss, compile) response.json() rejects with
-// the TypeError itself, a genuinely non-SDK error; in validateKey that is the
-// `throw toTranslationError(error)` line. Gemini translate and compile do not
-// catch a body read error at all: the TypeError leaves them unmapped.
+// subclass, with the TypeError as its cause. For messages.create
+// (validateKey, gloss, compile) response.json() rejects with the TypeError
+// itself; in validateKey that is the `throw toTranslationError(error)` line.
+// Both landed in the last branch as kind 'api', and Gemini translate and
+// compile did not catch a body read error at all. Since FOUND_ISSUES 14 every
+// one of them is kind 'network'.
 const dropped = (canned: Canned, bytes: number): Canned => ({ ...(canned as Extract<Canned, { status: number }>), dropAfterBytes: bytes });
 await scenario('anthropic.translate.body-drop', [dropped(emitTool(SONNET), 900)], translateAnthropic(translationRequest()));
 await scenario(
