@@ -99,8 +99,9 @@ export function AnchoredPanel({
   // fill in afterwards (the ḥadīth sheet's dorar, sunnah.com and commentaries;
   // the Qurʾān sheet's bundled translation) is its short loading state: chosen
   // to fit below the anchor, it then grew past the bottom of the screen. It was
-  // put right only when something else re-rendered the reader and, by
-  // accident, re-ran the effect above (FOUND_ISSUES 37). Placing it moves its
+  // put right only by a window scroll or resize, or when something else
+  // re-rendered the reader and, by accident, re-ran the effect above
+  // (FOUND_ISSUES 37). Placing it moves its
   // `top` and `left` and never its size (its width is fixed and its height is
   // its content's), so the observer does not fire again in reply. A sheet is
   // pinned to the bottom of the screen and is never placed.
