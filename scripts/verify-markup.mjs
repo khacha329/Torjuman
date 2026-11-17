@@ -66,6 +66,23 @@
 // share-error (#/share/x/y) shows the malformed-key error: the key is checked
 // before any bundle is fetched.
 //
+// Added in Phase 3 step 3b (docs/refactor/plans/phase3-provider-seams.md,
+// Design §6), on the old code, as manifest lines added after the 2a ones, all
+// in the plain build at both sizes — before 3b every capture showed Gemini only:
+//   - onboarding--claude: first run, "Use Claude instead" tapped — the Claude
+//     panel and its 'sk-ant-…' placeholder;
+//   - settings--translation--claude and settings--translation-profiles--claude:
+//     Settings with the Claude card tapped, which writes the active profile —
+//     Claude's model list and the default model's note, and "This profile runs
+//     on Claude — Sonnet 5.5 — recommended";
+//   - reader-cards: the card panel with seeded translation cards (seedCards):
+//     Gemini, Claude on the current default, Claude on a superseded model
+//     ("Sonnet 5"), on-device, and a collapsed Claude card — every badge;
+//   - reader-retranslate: the same panel with the retranslate menu open on the
+//     superseded card — every provider's models in registry order, then the
+//     on-device ones.
+// None writes an API key: none of these states needs one.
+//
 // A failing run lists each differing file; with a .verify/markup/base/ dump
 // present (VERIFY_OUT=.verify/markup/base on the 2a commit, `git worktree add`
 // with node_modules linked if .verify/ was cleared) it also prints the first
@@ -79,7 +96,28 @@
 //     path only;
 //   - ShareChapter's sealed state: reached through the share dialog; its
 //     formatBytes is moved verbatim, so the Published chapters capture (all
-//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it.
+//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it;
+//   - (3b) the Claude captures in the proxy build: neither screen reads the
+//     proxy setting, and the proxy build's Settings capture is the whole column
+//     with Gemini chosen;
+//   - (3b) onboarding's key check ("Checking…", rejected, "Could not reach
+//     Claude: …"): it needs an answer from the model host, which is aborted
+//     here, and the error state carries the browser's own message;
+//   - (3b) Settings → API keys with a Claude key saved: the field is a password
+//     input and the dump would carry the key, so it is not seeded; the empty
+//     field and both placeholders are in settings--api-keys;
+//   - (3b) a card loading, streaming or failed (ErrorPanel): the badge, which
+//     is what Phase 3 moves, is the same in every state, and reaching them
+//     needs a translation in flight;
+//   - (3b) the top of the retranslate menu in reader-retranslate.png: the menu
+//     opens upward inside the panel's scroll box, which clips it; the .html
+//     has all of it;
+//   - (3b, found by its deliberate-edit proof) the "This profile runs on …"
+//     line in 960x600/settings--translation-profiles--claude.png: the section
+//     is taller than the landscape viewport and the element screenshot comes
+//     out with the sticky top bar over its top and its last lines cut off, as
+//     the 2a capture settings--translation-profiles.png does; the .html, and
+//     the 600x960 screenshot, have the line.
 //
 // Like verify-reader-scroll.mjs it needs Chromium through Playwright and is
 // kept out of `npm run verify`.
@@ -214,9 +252,56 @@ function seedRows() {
   };
 }
 
+/**
+ * Translation cards for the reader captures (Phase 3 step 3b), written only
+ * into the contexts that take them, so every earlier capture's database is
+ * what it was. Synthetic, like the rows above: the Arabic is the seeded
+ * blocks' own text, the English says it is a placeholder.
+ *
+ * One per badge the panel can draw: Gemini (free), Claude on the current
+ * default, Claude on a superseded model — which only findModelOption's
+ * superseded table turns into "Sonnet 5" rather than the bare id — and the
+ * on-device model; plus a collapsed Claude card for the collapsed row's badge.
+ * The model ids are copied from src/translation/models.ts (CLAUDE_SONNET_5_5, CLAUDE_HAIKU_5_5,
+ * CLAUDE_SONNET_5, the first GEMINI_MODELS entry) and from OFFLINE_MODELS in
+ * src/translation/offline/OfflineProvider.ts; this script cannot import
+ * TypeScript, and a copy that went out of date would show as the bare id.
+ *
+ * Every card anchors on the first five blocks, so the panel's default Visible
+ * scope shows all of them at both sizes. Their cacheKey is made up, so all of them read as
+ * stale — the same on every run, which is all the capture needs.
+ */
+function seedCards() {
+  const at = FIXED_NOW - 3_600_000;
+  const card = (index, providerId, model, extra = {}) => {
+    // The seeded blocks' ids: four to a page (seedRows' PER_PAGE).
+    const blockId = `${BOOK}:p${Math.floor(index / 4) + 1}:${index}`;
+    const sourceText = `الفقرة ${index + 1}: هذا نص تجريبي للتحقق من العرض، وليس من كتاب حقيقي.`;
+    return {
+      id: `card-${index}`, bookId: BOOK, kind: 'translation', startBlockId: blockId, startOffset: 0,
+      endBlockId: blockId, endOffset: sourceText.length, createdAt: at + index, collapsed: false, sourceText,
+      segments: [{ type: 'prose', arabic: '', english: `Paragraph ${index + 1}: a placeholder translation, not from a real book.`, source: providerId === 'offline' ? 'offline' : 'model' }],
+      coverage: 1, reachedEnd: true, profileId: 'profile-study-circle', promptVersion: 1, glossaryHash: 'synthetic',
+      providerId, model, cacheKey: `synthetic-${index}`, status: 'complete',
+      usage: { inputTokens: 1200, outputTokens: 300, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      costUsd: providerId === 'anthropic' ? 0.0081 : null,
+      ...extra,
+    };
+  };
+  return [
+    card(0, 'gemini', 'gemini-3.7-flash'),
+    card(1, 'anthropic', 'claude-sonnet-5-5', {
+      usage: { inputTokens: 1200, outputTokens: 300, cacheReadTokens: 2048, cacheWriteTokens: 0 },
+    }),
+    card(2, 'anthropic', 'claude-sonnet-5'),
+    card(3, 'offline', 'opus-mt-ar-en', { usage: undefined }),
+    card(4, 'anthropic', 'claude-haiku-5-5', { collapsed: true }),
+  ];
+}
+
 // ------------------------------------------------------------------ browser
 
-async function newPage(browser, base, profile, { onboarded = true, seed = true, network = {} } = {}) {
+async function newPage(browser, base, profile, { onboarded = true, seed = true, cards = false, network = {} } = {}) {
   const context = await browser.newContext({
     viewport: profile.viewport,
     hasTouch: true,
@@ -328,7 +413,7 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
         });
       }
       db.close();
-    }, seedRows());
+    }, cards ? { ...seedRows(), cards: seedCards() } : seedRows());
   }
   await page.reload();
   await page.waitForFunction(() => document.body.innerText.length > 0);
@@ -536,6 +621,48 @@ async function plainCaptures(browser, base, profile, dir) {
   await offline.locator('.bg-parchment .bg-accent').waitFor({ timeout: STABLE_LIMIT_MS });
   await capture(page, dir, 'settings--offline-downloading', offline);
   await page.context().close();
+
+  // The Claude side (Phase 3 step 3b): every capture above shows Gemini only.
+  // Each starts from a fresh context, so nothing it taps reaches the others.
+  // No API key is needed for any of them, so none is written: the Translation
+  // card says "no key yet", and the dumps carry no key-shaped string.
+  page = await fresh({ onboarded: false, seed: false });
+  await page.getByRole('button', { name: 'Use Claude instead (paid, higher quality)' }).click();
+  await page.locator('h2', { hasText: 'Use Claude' }).waitFor();
+  await capture(page, dir, 'onboarding--claude');
+  await page.context().close();
+
+  // Tapping the Claude card writes the active profile (chooseProvider:
+  // provider anthropic, model defaultModelFor('anthropic')); both sections
+  // that read it are captured after the profile line has changed.
+  page = await fresh();
+  await go(page, '#/settings');
+  const translation = section(page, /^Translation$/);
+  await translation.waitFor();
+  await translation.getByRole('button', { name: /^Claude/ }).click();
+  const profiles = section(page, 'Translation profiles');
+  await profiles.getByText(/This profile runs on\s*Claude/).waitFor();
+  await capture(page, dir, 'settings--translation--claude', translation);
+  await capture(page, dir, 'settings--translation-profiles--claude', profiles);
+  await page.context().close();
+
+  // Translation cards (Q13): the card panel with the seeded cards (seedCards).
+  // Beside the text at 960×600; at 600×960 the panel is a bottom sheet, opened
+  // with its handle first.
+  const cardPanel = (p) => p.locator('div.ltr-isolate.flex.h-full.flex-col').filter({ has: p.locator('[data-card-id]') });
+  page = await fresh({ cards: true });
+  await go(page, `#/read/${encodeURIComponent(BOOK)}`);
+  await page.locator('[data-block-id]').first().waitFor();
+  const handle = page.getByRole('button', { name: /^▲ Cards/ });
+  if (await handle.count()) await handle.click();
+  await page.locator('[data-card-id="card-3"]').waitFor();
+  await capture(page, dir, 'reader-cards', cardPanel(page));
+  // The retranslate menu, opened on the Claude card on the superseded model
+  // (the tap also focuses the card, which jumps the text to its block).
+  await page.locator('[data-card-id="card-2"]').getByRole('button', { name: 'Retranslate ▾' }).click();
+  await page.getByRole('button', { name: 'Same provider and model' }).waitFor();
+  await capture(page, dir, 'reader-retranslate', cardPanel(page));
+  await page.context().close();
 }
 
 async function proxyCaptures(browser, base, profile, dir) {
@@ -728,7 +855,7 @@ function writeManifest() {
   writeFileSync(
     MANIFEST,
     `# Check U (scripts/verify-markup.mjs): SHA-256 of each normalized capture, per profile.\n` +
-      `# Written once, in Phase 2 step 2a, on the old code; every later step must match it.\n` +
+      `# Written on the old code (Phase 2 step 2a; captures added in Phase 3 step 3b); every later step must match it.\n` +
       lines.join('\n') +
       '\n',
   );

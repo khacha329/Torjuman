@@ -15,8 +15,8 @@ import { Crawler } from '../ingest/crawler';
 import { CatalogImportBatch } from '../catalog/importBatch';
 import type { AppSettings, GlossaryEntry, TranslationProfile } from '../types';
 import { createDefaultProfile, DEFAULT_PROFILE_ID } from '../translation/profiles';
-import { isClaudeModel, successorModel } from '../translation/models';
-import { DEFAULT_PROVIDER_ID } from '../translation/providers/registry';
+import { successorModel } from '../translation/models';
+import { DEFAULT_PROVIDER_ID, providerIdForModel } from '../translation/providers/registry';
 import { DEFAULT_TRANSLATION_ID, DEFAULT_TRANSLATION_NAME } from '../retrieval/quran';
 import { seedQulResources, type SeedOutcome, type SeedProgress } from '../qul/seed';
 
@@ -139,8 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // cards keep the model that wrote them, since that is history.
       const migrated = await Promise.all(
         allProfiles.map(async (profile) => {
-          const providerId =
-            profile.providerId ?? (isClaudeModel(profile.model) ? 'anthropic' : 'gemini');
+          const providerId = profile.providerId ?? providerIdForModel(profile.model);
           const model = successorModel(profile.model);
           if (providerId === profile.providerId && model === profile.model) return profile;
           const updated: TranslationProfile = { ...profile, providerId, model };

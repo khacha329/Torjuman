@@ -4,8 +4,12 @@ import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, ExplanationCard, TranslationCard } from '../../types';
 import { TranslationError } from '../../translation/TranslationProvider';
-import { explainPhrase, searchLibrary } from '../../translation/explain';
-import { ANTHROPIC_EXPLAIN_FALLBACK_MODEL, isClaudeModel } from '../../translation/models';
+import {
+  explainPhrase,
+  searchLibrary,
+  EXPLAIN_PROVIDER_ID,
+  explainModelFor,
+} from '../../translation/explain';
 import { isOnlineNow } from '../../app/useOnline';
 
 /**
@@ -15,7 +19,7 @@ const NO_REFERENCE_WORKS =
   'Nothing in your library matches this phrase, and external sources are unavailable offline. ' +
   'Importing a commentary — Fatḥ al-Bārī, or an-Nawawī’s Sharḥ Ṣaḥīḥ Muslim — as a reference work ' +
   'would give this something to search. Settings → Reference works.';
-import { costOf } from '../../translation/providers/AnthropicProvider';
+import { costOf } from '../../translation/models';
 import type { SelectionAnchor } from './selection';
 
 // "Explain this phrase" — a research question, answered into its own card.
@@ -54,7 +58,7 @@ export function useExplanations(bookId: string, blocks: Block[]) {
       // Offline, this degrades rather than disabling: searching the user's own
       // imported books is the higher-quality half of the feature anyway, and a
       // local-only result is a first-class answer, not a consolation.
-      const apiKey = secrets.getProviderKey('anthropic');
+      const apiKey = secrets.getProviderKey(EXPLAIN_PROVIDER_ID);
       const localOnly = !isOnlineNow() || !apiKey;
 
       if (localOnly && !apiKey && isOnlineNow()) {
@@ -91,10 +95,8 @@ export function useExplanations(bookId: string, blocks: Block[]) {
         localSources: [],
         webSources: [],
         status: 'loading',
-        providerId: 'anthropic',
-        model: isClaudeModel(activeProfile.model)
-          ? activeProfile.model
-          : ANTHROPIC_EXPLAIN_FALLBACK_MODEL,
+        providerId: EXPLAIN_PROVIDER_ID,
+        model: explainModelFor(activeProfile.model),
       };
 
       upsert(card);

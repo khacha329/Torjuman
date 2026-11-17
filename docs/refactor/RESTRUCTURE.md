@@ -1,8 +1,8 @@
 # Restructuring Ḥāshiya
 
-Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9 and Phase 2 on
-`claude/restructure-phase-2`, all complete and awaiting the owner's
-`npm run verify`, the tablet check after Phase 2, and merge. Base commit
+Status: Phase 0 in PR khacha329/Torjuman#8, Phase 1 in PR #9, Phase 2 in PR
+#10 and Phase 3 on `claude/restructure-phase-3`, all complete and awaiting the
+owner's `npm run verify`, the tablet checks after Phases 2 and 3, and merge. Base commit
 `56a412c` (`main`, v0.6.14).
 
 ## 1. Why
@@ -70,7 +70,15 @@ And concretely:
   `docs/refactor/layers.json` holds a rule for each layer boundary, checked
   with `--check`.
 - **Adding a translation provider** is one file in `translation/providers/`
-  plus one registry entry that carries its key field, model list and default.
+  (the provider object describes itself: name, key link and placeholder,
+  models offered and known, default), one registry entry, its id in
+  `ProviderId`, and whatever `tsc` then reports — each `Record<CloudProviderId,
+  …>` missing a key (`PROVIDER_KEYS` in `services/secrets.ts`, compile's
+  `COMPILERS`), and the reader's `Record<ProviderId, number>` request counts
+  in `useTranslator.ts`. Onboarding's copy and toggle, and the reader's
+  per-provider session totals and banner, are copy written per provider.
+  (Reworded at the end of Phase 3, the owner's Q16: `ProviderId` is a type,
+  so "one file plus one entry" cannot hold literally.)
 - **Adding a store** is one entry in one schema table that both upgrade paths
   read.
 - **Adding a settings section** is one component using the shared shell, plus
@@ -164,6 +172,7 @@ walks into:
 | **V** | `npm run verify` | all pass (owner reports the count) | **owner's PC** |
 | **D** | IndexedDB schema dump, fresh install and upgrade from the previous version (built in Phase 4 step 0) | identical to baseline | here |
 | **U** | `npm run verify:markup` (`scripts/verify-markup.mjs`, from Phase 2): normalized DOM and screenshots of every screen and state that shows a shared UI piece, at 960×600 and 600×960 touch, in a build without and a build with a proxy | every file matches `docs/refactor/phase2/markup.sha256` | here |
+| **Q** | `npm run verify:requests` (`scripts/verify-requests.ts`, from Phase 3): every request each provider call site hands to `fetch` (method, URL, headers, body), retries, waits and mapped errors, for fixed inputs and canned responses, plus cache keys and model values | identical to `docs/refactor/phase3/requests.json`; fake keys only in their own header; no `Authorization` | here |
 | **M** | the staged build on the tablet: open a book, select across screens, translate, open a verse sheet, Settings, a transfer | the owner says it works | **tablet** |
 | **X** | `torjuman-reviewer` on the commit | PASS or PASS WITH NOTES | here |
 
@@ -181,7 +190,7 @@ mechanical, high-payoff work first; the owner's data last but one.
 | **0** | **Complete (PR #8).** `CLAUDE.md`, the six agents, this plan, `scripts/check-layers.mjs`, baselines, README map corrected | none (no source change) | T B L S R |
 | **1** | **Complete.** **Seams**: break the cycle. Move `retrievalLog`, `activity`, `secrets` to `services/`; move the hook out of `catalog/`; move the cross-layer types into `types`; move `RAIL_WIDTH`; move the registry under `providers/`. Split `types.ts` behind a barrel. Add a `layers.json` rule as each boundary becomes true. Plan: [`plans/phase1-seams.md`](plans/phase1-seams.md) | low: whole-file moves and type moves | T B L S R X, V at the end |
 | **2** | **Complete.** **Shared pieces**: `lib/gzip`, `lib/delay`, `lib/format`, one proxy base, `ui/kit` (`ProgressBar`, `SettingsSection`, `Button` and the rest of `ui/common`), and the settings sections on the shared shell (21 sections, 15 shells) | low–medium: markup must stay identical | T B L S R X, screenshots before and after |
-| **3** | **Provider seams**: one Anthropic client and error mapping used by all four call sites; one Gemini call; provider descriptors in the registry (key field, placeholder, models, default) so Settings, Onboarding, secrets and models stop naming providers | medium: cache keys and requests must be byte-identical | T B L X; V (cache keys, `maxTokensFor`); a recorded-request check built first |
+| **3** | **Complete.** **Provider seams**: one Anthropic client used by all four call sites, with two error mappings (short and full, not merged: Q4); one Gemini model POST; provider descriptors in the registry (placeholder, models offered and known, default) that Settings' key and model fields, Onboarding's key field and the card's model label now read; compile picks a compiler from a `Record<CloudProviderId, …>` table (Q5); Explain and gloss export the provider they run on, so the reader does not name it (Q10). What still names a provider on purpose — compile's table, Explain and gloss (Claude-only), Onboarding's copy and toggle, the session totals, the seeded profile, Offline's "back to Gemini" (Q6), `secrets` (Q8) — is §2 above, the plan's Design §5 and FOUND_ISSUES 4 | medium: cache keys and requests must be byte-identical | T B L Q U S R X; V (cache keys, `maxTokensFor`, prices); M with real keys |
 | **4** | **Storage**: check D first; one schema table driving both upgrade branches; `IdbStorageAdapter` split by store group; `WorkBundle` and transfers on the same table | **high**: the owner's data | D on every step; T B L X; V; M with a copy of the real database |
 | **5** | **Big UI files**: `ReaderScreen` into hooks (position, navigation, panel divider, gloss) and parts (header, sheets host); `EntitySheet` into `QuranSheet`, `CompileTab`, `HadithSheet`; `SettingsScreen` inline sections into files; `BlockList` estimates and `settleOn` into a module; `useTranslator` steps into named functions | medium: the reader is the app | S R on every step; T B L X; screenshots; M |
 | **6** | **Docs**: `docs/EXTENDING.md` (how to add a provider, a source, a store, a route, a setting, a sheet tab), README map and links, CLAUDE.md map updated | none | X |

@@ -3,7 +3,7 @@
 What has been done, what was measured, and what is open. Newest phase last.
 Plan and rules: [`RESTRUCTURE.md`](RESTRUCTURE.md).
 
-## Current state: Phase 0 in PR khacha329/Torjuman#8; Phase 1 done on `claude/restructure-phase-1`, awaiting the owner's `npm run verify` and merge
+## Current state: Phases 0–3 complete (PRs khacha329/Torjuman#8, #9, #10, and Phase 3's on `claude/restructure-phase-3`), awaiting the owner's `npm run verify`, the tablet checks and merge
 
 ## Phase 0: rules, agents, baselines
 
@@ -840,6 +840,622 @@ wait) was fixed and re-reviewed. **Owed before merge:** `npm run verify` on the
 owner's PC (steps 2b, 2d, 2e, 2f touch modules it builds), and **M** on the
 tablet with `npm run stage` — including one book exported and imported back,
 which no automated check covers.
+
+## Phase 3: provider seams (complete, branch `claude/restructure-phase-3`)
+
+Plan: [`plans/phase3-provider-seams.md`](plans/phase3-provider-seams.md),
+written by the `torjuman-planner` agent on `ef2c626`; **approved 2026-11-16,
+all sixteen answers as recommended**. Checked here: the SDK takes `fetch` when a client is
+built (`client.mjs`: `options.fetch ?? Shims.getDefaultFetch()`), and all
+four call sites build a client per call — the basis of check Q.
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 3a. Check Q (`scripts/verify-requests.ts`, `npm run verify:requests`), baselined on the old code | Q proven; review PASS WITH NOTES | `707095f` |
+| review notes: 3a — plan and FOUND_ISSUES 11 corrected | applied | `aacf81b` |
+| harness: check Q's coverage gaps closed, on the old code | Q proven; review PASS WITH NOTES | `9306ea6` |
+| harness: check Q's second-round gaps | Q proven; review PASS WITH NOTES | `33078d4` |
+| harness: SyntaxError messages masked in Q | review PASS WITH NOTES | `f444b44` |
+| review notes: f444b44 — comment, plan text | applied | `2012536` |
+| 3b. U captures for the Claude side and the reader's cards | U proven; review PASS WITH NOTES | `da5d0f0` |
+| 3c. the short Anthropic error mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `dc90a29` |
+| 3d. one Anthropic client, `anthropicClient` | T B L Q pass; V owed; review PASS WITH NOTES | `5f87f7d` |
+| 3e. the full Anthropic mapping → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `bb1d962` |
+| 3f. `textOf` → `translation/anthropic.ts`, five sites | T B L Q pass; V owed; review PASS WITH NOTES | `6de2d88` |
+| 3g. `addUsage` → `translation/anthropic.ts` (Explain's `accumulate`) | T B L Q pass; V owed; review PASS WITH NOTES | `8c79cb3` |
+| 3h. `WEB_SEARCH_TOOL` → `translation/anthropic.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `1e019c2` |
+| 3i. one Gemini POST, `translation/gemini.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `034d11f` |
+| 3j. gloss's `max_tokens` and effort → `models.ts` | T B L Q pass; V owed; review PASS WITH NOTES | `d0ff6e1` |
+| 3k. `costOf` → `models.ts` | T B L Q S R U pass; V owed; review PASS WITH NOTES | `fff14db` |
+| 3l. compile's provider choice → a `COMPILERS` table | T B L Q pass; V owed; review PASS | `2655b79` |
+| 3m. legacy inference → `registry.ts` `providerIdForModel` | T B L Q (additions only) U pass; V owed; review PASS | `b114143` |
+| 3n. `knownModels`; `modelsFor`, `findModelOption`, `defaultModelFor` → `registry.ts` | T B L Q U S R pass; V owed; review PASS WITH NOTES | `309b5e2` |
+| 3o. `keyPlaceholder` on the contract; Settings and Onboarding read it | T B L Q U pass; V owed; review PASS WITH NOTES | `d424770` |
+| 3p. Offline's "use a cloud provider" uses `GEMINI_DEFAULT_MODEL` | T B L Q U pass; V owed; review PASS WITH NOTES | `469aa90` |
+| 3q. `EXPLAIN_PROVIDER_ID`, `explainModelFor`, `GLOSS_PROVIDER_ID`; the reader uses them | T B L Q (additions only) U S R pass; V owed; review PASS WITH NOTES | `4027b03` |
+| 3r. docs; comments that became true; the SDK allowlist narrowed; end of phase | part 1 docs `7743f69`; part 2 `afd3605` T B L Q U S R pass; review of 3r and the phase PASS WITH NOTES; its fixes `0648b5a` (review FAIL: two wordings) and this commit | this commit |
+
+**Plan read before 3a (owner's Q14), by `torjuman-llm`.** Four corrections,
+applied to the plan: the SDK reads `ANTHROPIC_*` environment variables at
+client construction (the cloud container sets `ANTHROPIC_BASE_URL`; a set
+`ANTHROPIC_AUTH_TOKEN` would have put a credential in the committed record) —
+the check deletes them and fails on any `Authorization` header; the key
+check's network failure returns `true` (FOUND_ISSUES 12); `validateKey`
+builds its client inside its `try` (3d keeps it there); the glossary hash
+sorts with `localeCompare` (FOUND_ISSUES 13). The survey's quirks are
+FOUND_ISSUES 11.
+
+**Step 3a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`)
+- Built by the `torjuman-llm` agent from plan §1, checked here.
+  `scripts/verify-requests.ts` runs through `vite build --ssr` in Node, with a
+  stubbed `globalThis.fetch` and canned responses: **74 call-site scenarios,
+  111 requests, 7 value sections** (glossary hash, `cacheKeyFor`,
+  `compileCacheKey`, token budgets, `costOf`, registry and models, secrets).
+  Record: `docs/refactor/phase3/requests.json`, 349,096 B.
+- Masked: `x-stainless-os`, `-arch`, `-runtime`, `-runtime-version` (they
+  describe the machine). Pinned: sleeps under 60 s recorded and run at once,
+  `Math.random`, `Date.now`, the `en-US` locale, `navigator.onLine`,
+  `localStorage`; `ANTHROPIC_*` deleted.
+- Assertions that fail even with `--write`: each fake key only in its own
+  header (`x-api-key` / `x-goog-api-key`); no `Authorization`; only the two
+  model hosts; no unanswered or unused response; 20 s per scenario. The
+  SDK-import allowlist (Q12) is in place as a superset that step 3r narrows.
+- **Proof.** Two runs identical; a run under `TZ=Pacific/Kiritimati` and a
+  German locale identical; dummy `ANTHROPIC_*` variables set → still PASS.
+  Deliberate edits, each restored with `cmp`: gloss "Rate limited." → "!" →
+  exit 1, `gloss.429`; Gemini's `responseMimeType`/`responseSchema` swapped →
+  exactly the 13 `gemini.translate.*`; `dangerouslyAllowBrowser` dropped in
+  compile → the 5 `compile.anthropic.*`; `cacheKeyFor`'s join changed →
+  `values.cacheKeyFor`; the key put in a Gemini URL → 6 assertion failures;
+  an SDK import added to `coverage.ts` → the allowlist. Re-run here: PASS;
+  the record holds only `sk-ant-q-check-not-a-real-key` and
+  `AIza-q-check-not-a-real-key`.
+- T exit 0; build unchanged (789,438 B); layers 11 rules hold.
+
+- **Review of 3a: PASS WITH NOTES.** Confirmed: only the two fake keys in
+  the record (one per request), no network, `ANTHROPIC_*` deleted before any
+  client is built, the assertions run before `--write`. Fixed: FOUND_ISSUES 11
+  cited a wrong scenario id; the plan now says the allowlist exists since 3a
+  and 3r narrows it. **Coverage gaps found** that later steps would move
+  unseen: cache-read usage per turn (3g), the provider mapping's non-SDK branch
+  (3e), running out of research turns (3h), Gemini's later backoff waits, 403
+  and `PROHIBITED_CONTENT` (3i), offline model ids (3n), compile's Gemini 400.
+  These are added to Q on the old code in a harness commit before 3b.
+
+**Harness, 2026-11-16: check Q's coverage gaps** (no `src/` change)
+- By the `torjuman-llm` agent, checked here: **21 scenarios and 1 value
+  section added** (now 95 scenarios, 152 requests, 8 value sections, 475,575
+  B). The 81 earlier entries are byte-identical (the new record minus the
+  added entries re-serialises to the old file exactly).
+- Added: per-turn cache-read/write usage (3g); research turns used up at both
+  sites (3h); a connection dropped mid-body at every site, an empty stream,
+  an in-stream error event — the realistic inputs that reach the mappings'
+  last branches (3e); Gemini backoff without retry-after (waits 2000, 4000,
+  8000), an HTTP-date retry-after, 403, `PROHIBITED_CONTENT`, a blocked prompt
+  (3i); offline model ids (3n); compile's Gemini 400. A new
+  `…-http-date-only` scenario reaches the SDK's own `Date.parse` branch (the
+  3a review found the old one never did); the header says so. The stub gained
+  `dropAfterBytes`.
+- Not reachable and not faked: in the streamed Anthropic path a genuinely
+  non-SDK error never reaches the last branch, because the SDK's stream wraps
+  it first.
+- **Proof**: two runs identical; 18 deliberate edits (usage arithmetic, turn
+  limits, last-branch kinds, Gemini backoff base and exponent, 403, refusal
+  reasons, offline labels, compile's 400, the SDK's date branch), each exit 1
+  naming the new scenarios — several caught *only* by them — and each restored
+  byte for byte. The one edit inside `node_modules/@anthropic-ai/sdk/client.mjs`
+  was checked here against the published 0.120.0 tarball: identical.
+- Behaviours the new scenarios expose: FOUND_ISSUES 14.
+
+- **Reviews of aacf81b (PASS) and 9306ea6 (PASS WITH NOTES).** The 81 earlier
+  entries re-verified identical; every new scenario realistic; security
+  assertions hold. Applied: the plan's §8 names these harness commits;
+  FOUND_ISSUES 14.2 adds `anthropic.validateKey.body-drop`. **Second-round
+  gaps**, being closed in a second harness commit: a 429 with no `retry-after`
+  header (3e), multi-text-block replies at every joining site (3f), absent
+  cache-token counts (3g), an in-stream error after partial text (3e),
+  compile's Gemini 200 with an empty or non-JSON body (3i).
+
+**Harness, 2026-11-16: check Q's second-round gaps** (no `src/` change)
+- By the `torjuman-llm` agent, checked here: **16 scenarios added** (now 111
+  scenarios, 179 requests, 8 value sections). The 103 earlier entries are
+  byte-identical (same proof as before). Covered: a 429 with only
+  `retry-after-ms` and with no retry header (3e); an in-stream error after text
+  and after tool-input deltas (3e); several text blocks at every joining site
+  — translate research and fallback, both Explain passes, gloss (3f); null and
+  absent cache counts at translate and Explain (3g); compile's Gemini 200 with
+  an empty and a non-JSON body (3i).
+- **Proof**: three runs byte-identical; 13 deliberate edits, one or more per
+  gap, each exit 1 naming the new scenarios — only two of them were caught by
+  any earlier scenario — and each restored (sha256). No `node_modules` edit.
+- **Limits, recorded:** a null cache count cannot pin `?? 0` (`0 + null` is
+  0); only the absent field shows it. The two compile `SyntaxError` messages
+  are Node's JSON parser's wording (recorded on Node 22.22, the deploy
+  workflow's major version); a much different Node could word them otherwise
+  and make Q report a false difference there. Gloss and compile's Anthropic
+  usage with absent counts are not driven (no step moves their arithmetic).
+- Behaviours exposed: FOUND_ISSUES 15.
+
+- **Reviews of c64f411 (PASS) and 33078d4 (PASS WITH NOTES): "ready for
+  3b".** Applied: FOUND_ISSUES 15's wording (what the record shows and what
+  is by reading; a billing claim softened; `retry-after-ms` vs none).
+- **Harness, on the reviewer's recommendation:** a `SyntaxError`'s message is
+  now masked in Q's record (class, name and kind kept), because it is the
+  JavaScript engine's wording and differs between Node versions (Node 18
+  words it otherwise), so Q would fail falsely on the owner's PC. The only
+  record changes: the two `compile.gemini.200-*` messages and one `masked`
+  header line — the one deliberate exception to "earlier entries
+  byte-identical", made before 3b, after which §8 forbids any. Two runs PASS.
+
+- **Review of f444b44: PASS WITH NOTES; "ready for 3b".** Only the two
+  intended entries hold a `SyntaxError`; neither has `raw`. Applied: the
+  comment's Node-version example corrected; the plan's "Nothing else is
+  masked" and §8's harness paragraph now name this one exception (owner told).
+
+**Step 3b, measured 2026-11-16** (no `src/` change)
+- Built by a delegated agent from plan §6, checked here. **Ten captures**
+  (five names × both sizes, `.html` + `.png`: 20 manifest lines), plain build,
+  each in a fresh context: `onboarding--claude` (the Claude panel and its
+  `sk-ant-…` placeholder), `settings--translation--claude` (Claude's four
+  models, Sonnet 5.5 selected), `settings--translation-profiles--claude`
+  ("This profile runs on Claude — …"), **`reader-cards`** (five seeded cards:
+  Gemini, Claude Sonnet 5.5 with cost and cache, a superseded Claude model,
+  on-device, a collapsed Claude card) and **`reader-retranslate`** (the
+  provider groups and models in registry order). Both reader captures made it
+  (owner's Q13). Cards are seeded only for these two (`seedCards()` behind an
+  option), so no earlier capture's data changed. No key is stored anywhere;
+  no mask added.
+- Manifest: rewritten sorted by `--write-manifest`; `git diff` is 20 added
+  lines and no removed line; every earlier line present.
+- Known limit, recorded in the script's header: at 960×600 the two
+  "translation-profiles" screenshots (the Phase 2 one too) are cut by the
+  viewport and the sticky bar, so for that line the `.html` and the 600×960
+  `.png` are the proof.
+- **Proof**: three runs PASS 180/180 (≈150 s each); deliberate edits, each
+  restored — Onboarding's Claude placeholder → exit 1, both
+  `onboarding--claude` files at both sizes; a Claude model label in
+  `models.ts` → `settings--translation--claude`, `…-profiles--claude`,
+  `reader-retranslate`; the card badge separator → `reader-cards`,
+  `reader-retranslate`. Re-run here: PASS 180/180.
+
+- **Review of 3b: PASS WITH NOTES; "ready for 3c".** No key in any dump;
+  seeded model ids match `models.ts`; earlier captures unaffected. Noted, not
+  changed: the `<select>`'s chosen option is a DOM property, so only the PNG
+  shows it; what 3m–3q change that no capture shows — a legacy profile without
+  `providerId` (3m, Q and reading), a card on an unknown model or a Gemini
+  non-default model, the switch back from Claude to Gemini (3n), Explain's
+  "needs an Anthropic key" notice and explanation cards (3q, S R Q). The
+  manifest's line 2 ("Written once, in 2a") is left for 3r, so this step's
+  diff stays additions only.
+
+**Step 3c, measured 2026-11-16**
+- New `translation/anthropic.ts` with `anthropicCallError`, the short mapping
+  moved from `explain.ts` (its multi-line `'api'` throw kept), returning instead
+  of throwing (the plan names this), with a header. `explain.ts`, `gloss.ts`
+  and `qul/compile.ts`: each `catch` body became `throw
+  anthropicCallError(error);`. Gloss's copy was the same lines; compile's
+  lacked the pass-through line, which its `try` cannot need (plan §1). Each
+  file imports the function; their SDK imports stay until 3d.
+- **T** exit 0. **Q** PASS, identical (every Explain, gloss and compile error
+  scenario). **B** exit 0; main chunk 789,438 → 788,800 B (−638); only
+  `index.js` differs; CSS byte-identical. SSR build of `verify-parsers.ts`
+  resolves; **V owed** (compile). **L**: 134 edges (`qul → translation`
+  existed), no cycles; rules hold.
+
+- **Review of 3c: PASS WITH NOTES; "ready for 3d".** Compile's `try` body
+  read statement by statement: no `TranslationError` can reach its `catch`, so
+  the added pass-through cannot run. Note: the new module's header described
+  the provider using it a step early — true from 3d.
+
+**Step 3d, measured 2026-11-16**
+- `anthropicClient(apiKey)` added to `translation/anthropic.ts`, returning
+  `new Anthropic({ apiKey, dangerouslyAllowBrowser: true })`, with the
+  `dangerouslyAllowBrowser` paragraph moved verbatim from
+  `AnthropicProvider.ts`'s header over it (the provider's header keeps its
+  first line, now pointing here, and its output-shape paragraph). Four sites
+  call it: the provider's private `client()` (`return anthropicClient(key);`,
+  so `validateKey` still builds inside its `try`), `explain.ts`, `gloss.ts`,
+  `qul/compile.ts` — each at the same place as before.
+- Explain, gloss and compile now use `Anthropic` only in type positions, so
+  their import is `import type` (the plan's "after these steps" condition,
+  met now): value imports of the SDK are only `translation/anthropic.ts` and
+  the provider, which Q's allowlist reports.
+- **T** exit 0. **Q** PASS, identical — every Anthropic scenario, headers
+  included (`anthropic-dangerous-direct-browser-access`). **B** exit 0; main
+  chunk 788,800 → 788,708 B (−92); only `index.js`; CSS byte-identical. SSR
+  build resolves; **V owed**. **L**: no new edge; rules hold.
+
+- **Review of 3d: PASS WITH NOTES; "ready for 3e".** The `import type`
+  change belongs to row 3d itself ("imports become `import type` where only
+  types remain"). Note applied in 3e: `anthropic.ts`'s header line re-wrapped.
+
+**Step 3e, measured 2026-11-16**
+- `toTranslationError` moved verbatim from the end of
+  `providers/AnthropicProvider.ts` to `translation/anthropic.ts`, exported,
+  with a short doc comment (new text); the provider imports it beside
+  `anthropicClient`. Its three call sites (translate's two passes,
+  `validateKey`'s last line) are unchanged, and `validateKey`'s boolean
+  `instanceof` checks stay in the provider. The module header now names both
+  mappings and is re-wrapped (3d review).
+- **T** exit 0. **Q** PASS, identical — every provider error scenario
+  (401, 403, 429 with and without a readable retry-after, 400, 500, connection
+  failure, body drop, stream errors). **B** exit 0; main chunk 788,708 B
+  (unchanged size, the mapping emitted beside the short one); only `index.js`;
+  CSS byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
+  hold.
+
+- **Review of 3e: PASS WITH NOTES; "ready for 3f".** The moved body is
+  byte-identical (`cmp`). Note for 3r: FOUND_ISSUES 11 still places the
+  `retry-after` read in `AnthropicProvider.ts`; it is now in `anthropic.ts`.
+
+**Step 3f, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `textOf` moved verbatim, with its doc comment ("Text from EVERY text
+  block…"), from `providers/AnthropicProvider.ts` to `translation/anthropic.ts`;
+  the provider imports it (its two calls unchanged). The four inline copies —
+  Explain's research notes and structuring text, gloss's text, compile's text
+  (which keeps its `.trim()`) — became `textOf(…)`. Each copy was the same
+  filter–map–join. Nothing outside the provider imported its `textOf`.
+- `qul/compile.ts` no longer uses the SDK at all, not even its types, so its
+  `import type Anthropic` line went; the SDK census now lists four files.
+- **T** exit 0. **Q** PASS, identical — including the multi-text-block
+  scenarios added for this step. **B** exit 0; main chunk 788,708 → 788,484 B
+  (−224); only `index.js`; CSS byte-identical. SSR build resolves; **V owed**.
+  **L**: no new edge; rules hold.
+
+- **Review of 3f: PASS WITH NOTES; "ready for 3g".** `finalMessage()`'s
+  `ParsedMessage` is an `Anthropic.Message`; every site was the same
+  expression on the same type. Note applied in 3g: the header re-wrapped.
+
+**Step 3g, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `addUsage` moved verbatim from `providers/AnthropicProvider.ts` to
+  `translation/anthropic.ts`, exported, with a doc comment (new text);
+  `anthropic.ts` gains a `type` import of `TranslationUsage`. The provider's
+  two calls are unchanged. Explain's `accumulate`, character-identical apart
+  from its name, is deleted, and its two calls now say `addUsage`. The module
+  header names the running token total; its re-wrap was only partial (the 3g
+  review found one 123-character line left), finished in 3h.
+- **T** exit 0. **Q** PASS, identical — including per-turn cache-read and
+  cache-write counts and the null and absent counts added for this step. **B**
+  exit 0; main chunk 788,484 → 788,298 B (−186); only `index.js`; CSS
+  byte-identical. SSR build resolves; **V owed**. **L**: no new edge; rules
+  hold.
+
+- **Review of 3g: PASS WITH NOTES; "ready for 3h".** Bodies identical, calls
+  unchanged. The header re-wrap claimed in 3g was partial; corrected above and
+  finished in 3h.
+
+**Step 3h, measured 2026-11-16** (optional step, included by the owner's Q3)
+- `WEB_SEARCH_TOOL` moved verbatim from `providers/AnthropicProvider.ts` to
+  `translation/anthropic.ts`, exported, with a doc comment (new text); the
+  provider imports it. Explain's inline `{ type: 'web_search_20260209', name:
+  'web_search', max_uses: 5 }` — the same keys in the same order — became
+  `WEB_SEARCH_TOOL`, so the request body serialises the same. The module
+  header names the tool and is now re-wrapped as a whole paragraph (closing
+  the 3f and 3g notes); its other long lines are code and message strings.
+- **T** exit 0. **Q** PASS, identical — the dig-deeper and Explain research
+  request bodies included. **B** exit 0; main chunk 788,298 → 788,249 B (−49);
+  only `index.js`; CSS byte-identical. SSR build resolves; **V owed**. **L**:
+  no new edge; rules hold.
+
+- **Review of 3h: PASS WITH NOTES; "ready for 3i".** The shared object is never
+  mutated (the SDK spreads params); Q's Explain and dig-deeper bodies carry the
+  same tool JSON. Note: one header line is 81 characters (cosmetic).
+
+**Step 3i, measured 2026-11-16**
+- New `translation/gemini.ts` (plan §3): `geminiModelUrl(model, method)` —
+  the URL both sites built — and `postGemini(url, apiKey, body)` — the `POST`
+  with the `x-goog-api-key` and `content-type` headers, in the same order, and
+  `JSON.stringify(body)` — with a header (new text). The provider's note 1 on
+  why the key goes in a header moved over `postGemini`; the provider's
+  numbered list keeps the note's first sentence with a pointer, so its "two
+  deliberate differences" still reads as two.
+- `GeminiProvider.translate`: the URL is still built once before the loop
+  (`geminiModelUrl(request.model, 'streamGenerateContent?alt=sse')`); the
+  fetch inside its `try` is `postGemini(url, key, body)`. `qul/compile.ts`:
+  `postGemini(geminiModelUrl(model, 'generateContent'), apiKey, { … })`, the
+  body object unchanged, inside its `try`; its pointer comment now names
+  `postGemini`. Evaluation order — URL, body object, `JSON.stringify`,
+  `fetch` — unchanged at both. Error handling, status checks and parsing stay
+  at each site (owner's Q4). `validateKey`'s `GET` untouched.
+- Compile no longer imports `GEMINI_BASE`; Q's census lists `gemini.ts`,
+  `models.ts` and the provider (`validateKey`).
+- **T** exit 0. **Q** PASS, identical — every Gemini scenario, URLs, headers
+  and bodies. **B** exit 0; main chunk 788,249 → 788,188 B (−61); only
+  `index.js`; CSS byte-identical. SSR build resolves; **V owed** (compile).
+  **L**: 134 edges (`qul → translation` existed); rules hold.
+
+- **Review of 3i: PASS WITH NOTES; "ready for 3j".** URLs, header order and
+  bodies identical in both bundles; `JSON.stringify` still runs inside each
+  caller's `try` (`postGemini` is not async). Applied in 3j: `gemini.ts`'s
+  header says "both Gemini model calls" (the key check is a GET of its own) and
+  points at compile's Gemini branch in FOUND_ISSUES 11.
+
+**Step 3j, measured 2026-11-16** (owner's Q6 (a))
+- `GLOSS_MAX_TOKENS = 2000` and `GLOSS_OUTPUT_CONFIG: { effort: Effort } = {
+  effort: 'low' }` in `models.ts`, right after `ANTHROPIC_GLOSS_MODEL`, each
+  under its comment moved verbatim from `gloss.ts`. `gloss.ts`'s request reads
+  `max_tokens: GLOSS_MAX_TOKENS, output_config: GLOSS_OUTPUT_CONFIG,` in the
+  same place, so the body's key order is unchanged. FOUND_ISSUES 4 notes the
+  move. No model fact changed: the values are the ones gloss sent.
+- **T** exit 0. **Q** PASS, identical — every gloss request body. **B** exit 0;
+  main chunk 788,188 → 788,200 B (+12, two named constants); only `index.js`;
+  CSS byte-identical. SSR build resolves; **V owed** (`models.ts`). **L**: no
+  new edge; rules hold.
+
+- **Review of 3j: PASS WITH NOTES; "ready for 3k".** Gloss's `create()` keys,
+  order and values identical in both bundles; sharing one
+  `GLOSS_OUTPUT_CONFIG` object is safe (SDK 0.120.0 copies the params
+  shallowly and never writes `output_config`). Note: the constant is not
+  frozen; not a defect today. `Effort` is assignable to the SDK's
+  `OutputConfig.effort`.
+
+**Step 3k, measured 2026-11-16** (owner's Q7)
+- `costOf` and its doc comment moved verbatim from
+  `providers/AnthropicProvider.ts` to `models.ts`, right after
+  `CACHE_WRITE_MULTIPLIER`. `models.ts`'s `types` import gains
+  `TranslationUsage` (type-only, R11). The provider imports `costOf` from
+  `../models` and no longer imports `PRICES` or the two multipliers.
+  `ui/reader/useExplanations.ts`, `verify-parsers.ts:4159` and
+  `verify-requests.ts:330` import it from `translation/models`.
+- **T** exit 0. **Q** PASS, identical (`values.costOf` included). **B** exit 0;
+  main chunk 788,200 → 788,200 B (0); only `index.js` differs (the function's
+  position); CSS byte-identical. SSR build resolves; **V owed** (`models.ts`,
+  the cost checks at `verify-parsers.ts:4224-4243`). **L**: 134 edges, no new
+  one; rules hold. **S R U** were still running when 3k was committed (the
+  commit added only this text to the tree they ran on): **S** 30/30; **R**
+  28/28, perf identical to the baseline (240,000 px in 33.3 s, 1,905 DOM
+  nodes, 0 long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes); **U**
+  180/180.
+
+- **Review of 3k: PASS WITH NOTES; "ready for 3l".** The moved block diffs
+  identical; no importer of `costOf` from the provider path is left anywhere;
+  every import left in the provider is used; no new edge. Notes applied here:
+  the 3j row's hash in backticks, the over-long line above re-wrapped. Noted,
+  not changed: the plan's 3k paragraph cites the old line numbers (316-341,
+  now 282-307) and leaves `verify-requests.ts` out of its sentence (the Steps
+  row names it).
+
+**Step 3l, measured 2026-11-16** (owner's Q5)
+- `compile.ts`'s `compileAyah` dispatches through
+  `const COMPILERS: Record<CloudProviderId, (model, apiKey, prompt) =>
+  Promise<CompileResult>>` instead of the `=== 'anthropic' ? … : …` ternary,
+  so a new cloud provider is a `tsc` error there rather than a fall into
+  Gemini. Same function for both ids. A value outside `CloudProviderId`
+  (which the type forbids and `EntitySheet.tsx` guards) would now reject with
+  a `TypeError` instead of going to Gemini — unreachable.
+- **T** exit 0. **Q** PASS, identical — every compile scenario. **B** exit 0;
+  main chunk 788,200 → 788,198 B (−2); only `index.js` differs; CSS
+  byte-identical. SSR build resolves; **V owed**. **L**: rules hold.
+
+- **Review of 3l: PASS; "ready for 3m".** Both ids reach the same function
+  with the same arguments; the lookup and the old ternary both return the
+  inner promise from the async body, so errors still arrive as rejections;
+  the table names hoisted `async function` declarations, so there is no TDZ
+  (the bundle keeps that order).
+
+**Step 3m, measured 2026-11-16** (plan Design §4)
+- `providerIdForModel(model): CloudProviderId` in `providers/registry.ts`,
+  right after `providerFor`: the expression moved verbatim from
+  `AppContext.tsx:143`, whose comment stays where it is. The line now reads
+  `profile.providerId ?? providerIdForModel(profile.model)`. `AppContext` no
+  longer imports `isClaudeModel` (that line was its only use); the registry
+  imports it from `../models`, an edge `translation/providers → translation`
+  already had.
+- **Q**: section `values.providerIdForModel` added (every model id Q knows,
+  both offline ids, `'some-model'`, `''`); the record's diff is 21 lines
+  added, none removed. Checked by reading against `isClaudeModel`
+  (`startsWith('claude-')`): the seven Claude ids are `anthropic`, everything
+  else `gemini`. Then PASS, identical. **T** exit 0. **B** exit 0; main chunk
+  788,198 → 788,224 B (+26, an exported function); only `index.js` differs;
+  CSS byte-identical. SSR build resolves; **V owed**. **L**: 134 edges, rules
+  hold. **U** 180/180 (boot path changed).
+
+- **Review of 3m: PASS; "ready for 3n".** Types reduce to `ProviderId` before
+  and after; a legacy profile with no model still yields `gemini`; the
+  record's diff is strictly additive. Note for the plan, applied in 3r: Design
+  §4's "nothing new from `models.ts`" should read "nothing beyond
+  `isClaudeModel` (3m)".
+
+**Step 3n, measured 2026-11-16** (plan Design §4)
+- `TranslationProvider` gains `knownModels` (comment from Design §4):
+  Anthropic `[...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS]` (the
+  superseded list gains `export`), Gemini `GEMINI_MODELS`. `modelsFor`,
+  `findModelOption` (with its doc comment) and `defaultModelFor` are deleted
+  from `models.ts` and written in `registry.ts` as lookups on `providerFor`
+  — the one rewrite of the phase. `models.ts` drops its now-unused
+  `ProviderId` import; the registry imports `ModelOption`. Importers:
+  `SettingsScreen.tsx` and `ProfileEditor.tsx` merge the names into their
+  registry import, `TranslationCardView.tsx` likewise (its `models` import
+  line goes), `verify-parsers.ts:4196` uses the registry's `findModelOption`
+  (imported in that block), `verify-requests.ts` calls `registry.*`.
+- Equivalence: `anthropic` → the same arrays and default; `gemini` → Gemini's;
+  `offline` → the old else branch (Gemini) and now `providerFor`'s fallback
+  to `DEFAULT_PROVIDER_ID` (`gemini`). The one difference: `findModelOption`
+  used to build a fresh array per call; `knownModels` is one array per
+  provider, never mutated, and `find` returns the same option objects.
+- **T** exit 0. **Q** PASS, identical — every id × model, and
+  `modelsForIsProviderArray` still true. **B** exit 0; main chunk 788,224 →
+  788,246 B (+22); only `index.js` differs; CSS byte-identical. SSR build
+  resolves; **V owed** (`verify-parsers.ts:4196`). **L**: 134 edges, rules
+  hold. **U S R** were running when 3n was committed, on the same
+  `src`/`scripts` content (the commit added only this text): **U** 180/180;
+  **S** 30/30; **R** 28/28, perf identical to the baseline in both
+  orientations.
+
+- **Review of 3n: PASS WITH NOTES; "ready for 3o".** All three ids give the
+  same results; nothing mutates `availableModels` or `knownModels` (grepped
+  for sort/push/splice/reverse and the rest); no stale `models.`-qualified
+  use anywhere. Notes, for 3r: `verify-requests.ts:333`'s "a value 3n's
+  knownModels may read" is untrue (`knownModels` does not read
+  `OFFLINE_MODELS`); the commit message says offline "still falls to Gemini"
+  without saying that holds while `DEFAULT_PROVIDER_ID` is `gemini` (this
+  entry and the plan's R6 do).
+
+**Step 3o, measured 2026-11-16** (plan Design §4)
+- `TranslationProvider` gains `keyPlaceholder` (comment from Design §4),
+  after `keyHelpUrl`; Anthropic `'sk-ant-…'`, Gemini `'AIza…'`. The strings
+  were taken by script from the two ternaries they replace, not retyped: both
+  end in U+2026. `SettingsScreen.tsx:273` and `OnboardingScreen.tsx:106` read
+  `placeholder={provider.keyPlaceholder}` (`provider` was already
+  `providerFor(providerId)` in both).
+- **U** 180/180; the captured DOM holds `placeholder="AIza…"` and
+  `placeholder="sk-ant-…"` eight times each (settings, settings--api-keys,
+  settings-proxy, onboarding, onboarding--claude, both sizes). **T** exit 0.
+  **Q** PASS, identical (the descriptor section lists fields by name and
+  does not record the new one, by design: the record does not change at 3o).
+  **B** exit 0; main chunk 788,246 → 788,258 B (+12); only `index.js`; CSS
+  byte-identical. **L**: rules hold.
+
+- **Review of 3o: PASS WITH NOTES; "ready for 3p".** Both strings
+  byte-identical in source and bundle (`E2 80 A6`); `provider` is recomputed
+  each render from the same `providerId` in both screens; no `sk-ant`/`AIza`
+  left in `src` outside the two providers. Note, for 3r: the plan's Design §3
+  row says `SettingsScreen.tsx:274`; the line was 273.
+
+**Step 3p, measured 2026-11-16** (owner's Q6 (b), the first option)
+- `OfflineTranslation.tsx:206`: "No — use a cloud provider" saves
+  `{ providerId: 'gemini', model: GEMINI_DEFAULT_MODEL }` instead of the
+  inline `'gemini-3.7-flash'` (the same value, `models.ts:153`); the
+  provider literal stays — "back to Gemini", not a new "back to the default".
+  The file imports `GEMINI_DEFAULT_MODEL` from `translation/models` (an edge
+  `ui/settings → translation` already had). FOUND_ISSUES 4 notes it.
+- **T** exit 0. **Q** PASS, identical. **B** exit 0; main chunk 788,258 →
+  788,242 B (−16; the bundle's handler now reads the shared constant
+  `providerId:"gemini",model:bp`); only `index.js`; CSS byte-identical.
+  **L**: rules hold. **U** 180/180 (the section is unchanged; the handler
+  itself is read, not run: it needs an installed on-device model).
+
+- **Review of 3p: PASS WITH NOTES; "ready for 3q".** Value byte-identical;
+  no model id left in `src` outside `models.ts` (the one `gemini-` hit is the
+  localStorage key name in `services/secrets.ts`); the handler is exercised
+  by no check (the select renders only with an installed on-device model) —
+  verified by reading. Note, for 3r: FOUND_ISSUES 4 still cites
+  `OfflineTranslation.tsx:210` (the Phase 0 line); it is `:206`.
+
+**Step 3q, measured 2026-11-16** (owner's Q10)
+- `explain.ts` exports `EXPLAIN_PROVIDER_ID = 'anthropic' as const` and
+  `explainModelFor(profileModel)`, the expression moved from
+  `useExplanations.ts:95-97` (`isClaudeModel(…) ? … :
+  ANTHROPIC_EXPLAIN_FALLBACK_MODEL`, the parameter renamed); `explain.ts`'s
+  `models` import gains the two names. `gloss.ts` exports
+  `GLOSS_PROVIDER_ID = 'anthropic' as const`. Each has a short comment saying
+  why the feature is Claude-only. `useExplanations.ts` uses them at the key
+  read and the card (its `models` import of the two names goes);
+  `ReaderScreen.tsx` uses `GLOSS_PROVIDER_ID` at the gloss's key read and the
+  `meaningAvailable` test. The notice "needs an Anthropic key" is copy and
+  stays. Two imports that grew past the line were wrapped.
+- **Q**: section `values.explainModelFor` added (the ids of
+  `values.providerIdForModel`); the record's diff is 21 lines added, none
+  removed. Checked by reading: the seven Claude ids map to themselves,
+  everything else to `claude-sonnet-5-5` (`ANTHROPIC_EXPLAIN_FALLBACK_MODEL =
+  CLAUDE_SONNET_5_5`). Then PASS, identical. **T** exit 0. **B** exit 0; main
+  chunk 788,242 → 788,264 B (+22); only `index.js`; CSS byte-identical. SSR
+  build resolves; **V owed**. **L**: 134 edges, rules hold. **U S R** were
+  running when 3q was committed, on the same content: **U** 180/180; **S**
+  30/30; **R** 28/28 — 240,000 px in 33.6 s landscape (33.3 s baseline; the
+  same distance, nodes and blocks, 0 long tasks: timing noise), 175,800 px in
+  24.4 s portrait, 1,905 / 1,904 DOM nodes.
+
+- **Review of 3q: PASS WITH NOTES; "ready for 3r"** (conditional on U S R,
+  which then passed). Behaviour value-identical; the moved ternary token for
+  token; the record's diff strictly additive; the only `'anthropic'` left in
+  `src/ui` is Onboarding's Q9 toggle. Applied in 3r: `explainModelFor`'s
+  comment said "verbatim", but the parameter was renamed.
+
+**Step 3r, measured 2026-11-16**
+- Part 1 (`7743f69`, docs only): RESTRUCTURE status, Phase 3 marked complete,
+  §2's provider sentence reworded (Q16, from Design §5); the CLAUDE.md map
+  names `anthropic` and `gemini`, and its model-facts pointers (Never, trap 4)
+  say no model id is inline any more and where the remaining call parameters
+  are listed; `torjuman-llm.md`'s map and its "still hard-coded" paragraph;
+  README's list of direct callers names the two shared modules; FOUND_ISSUES
+  4 (Phase 3 status, `:206`), 11 (the retry-after read is now
+  `toTranslationError` in `anthropic.ts`) and 12 (`validateKey`'s lines); the
+  plan gains "Corrections found in review", its approved text left as is.
+- Part 2: the comments that became true — `TranslationProvider.ts`'s header
+  (screens ask the registry; what still names a provider is Design §5) and
+  `registry.ts`'s (what adding a provider takes; the old "only place" claim
+  named as corrected, FOUND_ISSUES 4); `explainModelFor`'s "verbatim but for
+  the parameter's name"; `verify-requests.ts`'s note on `OFFLINE_MODELS`
+  (3n review). Check Q's allowlist narrowed to the end state (Design §10):
+  the SDK as a value only in `anthropic.ts` and `AnthropicProvider.ts`,
+  `GEMINI_BASE` only in `models.ts`, `gemini.ts` and `GeminiProvider.ts`.
+  Negative test: `gloss.ts`'s SDK import made a value import → Q FAIL
+  "allowlist: src/translation/gloss.ts imports @anthropic-ai/sdk as a value";
+  restored from a copy → PASS. The markup manifest's line 2 (and the line in
+  `verify-markup.mjs` that writes it) now says captures were added in 3b; `#`
+  lines are not compared.
+- **End of phase:** **T** exit 0. **B** exit 0, main chunk 788,264 B, every
+  chunk identical to 3q's (comments only); CSS byte-identical. SSR build of
+  `verify-parsers.ts` resolves. **L** `--check`: 162 files (`anthropic.ts`,
+  `gemini.ts`), 134 edges, no cycles, 11 rules hold; report saved as
+  [`phase3/layers.txt`](phase3/layers.txt) — against Phase 2's, the same
+  edges, `ui/reader → translation/providers` 3 → 2 (useExplanations no longer
+  reaches a provider file). **Q** PASS identical: 111 scenarios, 179
+  requests, 10 value sections. **U S R** were running when part 2 was
+  committed, on the same content: **U** 180/180 (the manifest's sha256
+  `83434fbe…` unchanged by the run); **S** 30/30; **R** 28/28, perf
+  identical to the baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s;
+  1,905 / 1,904 DOM nodes; 404 / 406 blocks; 0 long tasks).
+
+- **Review of 3r and of Phase 3 as a whole: PASS WITH NOTES; "ready for the
+  PR stacked on #10", merged only after V and M (Q15).** Over the range:
+  `prompt.ts`, `profiles.ts`, `services/`, `platform/`, `package-lock.json`,
+  `layers.json`, `.gitignore`, `.github/` unchanged (no cache-key input, no
+  IndexedDB change, no dependency; `package.json` gains only the
+  `verify:requests` script); `requests.json` changed after the harness
+  commits only by the two added sections; every chunk of 3r identical to
+  3q's; the layer report at HEAD byte-identical to `phase3/layers.txt`; no
+  refactor commit fixed a bug. Fixed here (four required, docs and one
+  comment): the agent's and CLAUDE.md's "no other file imports the SDK as a
+  value" now name `AnthropicProvider.ts` too (its key check tests the SDK's
+  error classes); RESTRUCTURE §6's Phase 3 row matched to §2 and Design §5
+  (two mappings, by Q4; what still names a provider); `anthropicCallError`'s
+  comment, stale since 3e, points at `toTranslationError` in the same file;
+  CLAUDE.md says no *cloud* model id is inline (the on-device ids live in
+  `OfflineProvider.ts`) and is re-wrapped. Notes applied: README says the
+  Gemini key check's `GET` does not go through `gemini.ts`; the registry,
+  RESTRUCTURE §2 and the agent add `useTranslator.ts`'s
+  `Record<ProviderId, number>` to what `tsc` reports; `TranslationProvider.ts`
+  names compile's table.
+
+- **Review of `0648b5a` (the phase fixes): FAIL, two wordings, fixed here.**
+  RESTRUCTURE's Phase 3 row said compile, Explain and gloss "now read" the
+  registry's descriptors — they do not (compile has its own table, Explain
+  and gloss export a fixed provider); the row now says what each does and
+  lists them, and Offline's "back to Gemini" (Q6), among what still names a
+  provider. And `useTranslator.ts`'s request counts are a
+  `Record<ProviderId, number>`, not a `Record<CloudProviderId, …>`: the
+  registry comment, RESTRUCTURE §2 and the agent now say so. Three lines left
+  unwrapped (RESTRUCTURE §2, `registry.ts`, README) are re-wrapped.
+- **Review of `6fa343b`: PASS WITH NOTES; "ready for the Phase 3 PR".** Both
+  wordings true against the code. Applied in the next commit: one line the
+  re-wrap left at 88 characters (RESTRUCTURE §2), and the agent's list of
+  what still names a provider gains compile's table and Offline's "back to
+  Gemini". Noted: the entry for `0648b5a` above says the `Record<ProviderId,
+  number>` wording was added there; it arrived in `6fa343b`.
+
+## Phase 3 result
+
+| | Phase 2 end | Phase 3 end |
+| --- | --- | --- |
+| Anthropic SDK clients | built in 4 files | `anthropicClient` in `translation/anthropic.ts`; the SDK a value import in 2 files (Q enforces) |
+| error mappings | 4 copies (2 kinds) | `anthropicCallError` and `toTranslationError`, one each (FOUND_ISSUES 11: not merged) |
+| Gemini model POSTs | 2 hand-built | `geminiModelUrl` + `postGemini` in `translation/gemini.ts` |
+| provider named by | models' three functions, Settings, Onboarding, AppContext, compile, the reader, Offline | the provider objects (`knownModels`, `keyPlaceholder`), the registry's lookups, `COMPILERS`, `EXPLAIN_`/`GLOSS_PROVIDER_ID`; what stays is plan Design §5 |
+| model ids outside `models.ts` | 1 (`OfflineTranslation`) | 0 |
+| main JS chunk | 789,438 B | 788,264 B (−1,174) |
+| check Q (recorded requests) | — | 111 scenarios, 179 requests, 10 value sections; identical at every step but the two additive sections (3m, 3q) |
+| screens (check U) | 160 files | 180 files (3b's captures), identical at every step |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began. **Owed before merge:** `npm
+run verify` on the owner's PC (3c–3l and 3n touch modules it builds, and its
+own imports at `verify-parsers.ts:4159` and `:4196`), and **M** on the
+staged build with real keys: test both keys; translate one passage on each
+provider; Dig deeper once; Explain once; a word's Meaning (gloss); Compile one
+āyah on each provider; switch a profile between providers and see the model
+list and default follow.
 
 ## Open
 

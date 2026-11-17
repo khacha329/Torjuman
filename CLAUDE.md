@@ -27,6 +27,7 @@ its progress log.
 | `npm run layers` | import graph by directory, cycles, layer rules (`-- --check` to fail on a break) | anywhere |
 | `node scripts/compare-bundles.mjs <a> <b>` | are two copies of `dist/assets` the same JS, build time and chunk hashes masked | anywhere |
 | `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
+| `npm run verify:requests` | every request the provider call sites send, retries and mapped errors, with fake keys and canned responses, against `docs/refactor/phase3/requests.json` (~1 s) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -61,7 +62,10 @@ change touches anything it covers (`shamela/`, `ingest/`, `lib/`,
   models — they reject it with a 400. See trap 4.
 - **Guess model facts.** Model IDs, prices, context windows and output limits
   come from the `claude-api` skill (or the provider's docs), never memory, and
-  belong in `src/translation/models.ts` (known exceptions: FOUND_ISSUES 4).
+  belong in `src/translation/models.ts` (since Phase 3 no cloud model ID is
+  inline elsewhere; the on-device models are listed in
+  `translation/offline/OfflineProvider.ts`; the call parameters still inline
+  are in FOUND_ISSUES 4 and 11).
 - **Skip, weaken or delete a check** to get green.
 
 ## Working pattern
@@ -120,7 +124,8 @@ src/
   retrieval/           quran.com, sunnah.com, dorar.net, sharḥ, enrichment
   qul/                 Qurʾān Universal Library resources (seed, read, compile)
   translation/         provider contract, models, profiles, prompt, schema,
-                       parsing, Explain, gloss
+                       parsing, Explain, gloss; anthropic (the one SDK
+                       client, error mappings), gemini (the one POST)
     providers/         AnthropicProvider, GeminiProvider, the registry
     offline/           on-device model (transformers.js)
   library/             per-book transfer, whole-tablet transfer, relay, share target
@@ -165,7 +170,11 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    a text fallback (`parseSegments.ts`). Opus 5.5 takes `output_config.effort`.
    IDs, prices (with per-model cache-read multipliers and Haiku 5.5's long
    context tier), output ceilings and effort belong in `translation/models.ts`;
-   the few that are still inline elsewhere are listed in FOUND_ISSUES 4.
+   the call parameters still inline elsewhere are listed in FOUND_ISSUES 4
+   and 11. Every Claude call builds its client with `anthropicClient` in
+   `translation/anthropic.ts`; check Q (`npm run verify:requests`) fails if
+   any file but that one and `AnthropicProvider.ts` (whose key check tests the
+   SDK's error classes) imports the SDK as a value.
    Saved profiles are migrated when a model is retired (`successorModel`).
 5. **Translation cache keys** (`cacheKeyFor` in `translation/prompt.ts`) are
    a hash of selection, profile id and version, glossary hash, provider and

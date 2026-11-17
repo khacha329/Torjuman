@@ -1,10 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { BlockType, WordGloss } from '../types';
 import { normalize } from '../lib/arabic';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
+import { anthropicCallError, anthropicClient, textOf } from './anthropic';
+import { GLOSS_MAX_TOKENS, GLOSS_OUTPUT_CONFIG } from './models';
 
 // "What does this word mean here, in English?"
 //
@@ -16,6 +18,13 @@ import { TranslationError } from './TranslationProvider';
 // Cached by normalized word form, so a repeated word is free and works offline
 // afterwards. It never writes to the glossary — these are transient lookups,
 // not terminology decisions.
+
+/**
+ * The gloss runs on Claude whatever the active profile's provider: it is a
+ * strict-tool call on a small Claude model. Exported so the reader names no
+ * provider (restructure Phase 3 step 3q, the owner's Q10).
+ */
+export const GLOSS_PROVIDER_ID = 'anthropic' as const;
 
 const GLOSS_TOOL_NAME = 'emit_gloss';
 
@@ -100,18 +109,13 @@ export async function glossWord(
     throw new TranslationError('auth', 'No API key is set. Add one in Settings.');
   }
 
-  const client = new Anthropic({ apiKey: request.apiKey, dangerouslyAllowBrowser: true });
+  const client = anthropicClient(request.apiKey);
 
   try {
     const message = await client.messages.create({
       model: request.model,
-      // Small in, small out. The answer itself is a few hundred tokens, but
-      // Haiku 5.5 thinks by default and thinking counts against this limit,
-      // so it leaves room for some. Billing is on what is actually generated.
-      max_tokens: 2000,
-      // A glance, not an article: the least thinking that does the job. Haiku
-      // 5.5's own default is `medium`.
-      output_config: { effort: 'low' },
+      max_tokens: GLOSS_MAX_TOKENS,
+      output_config: GLOSS_OUTPUT_CONFIG,
       system: answerWithTool(SYSTEM, GLOSS_TOOL_NAME),
       messages: [
         {
@@ -133,10 +137,7 @@ export async function glossWord(
 
     // Without a forced call the model can answer in text instead, usually with
     // the same JSON written out. Recover it before giving up on a paid reply.
-    const text = message.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    const text = textOf(message);
     const fields = (call?.input ?? parseJsonObject(text)) as Record<string, unknown> | null;
     if (!fields || typeof fields.meaning !== 'string' || !fields.meaning.trim()) {
       throw new TranslationError('parse', 'No gloss was returned.', { raw: text });
@@ -163,16 +164,6 @@ export async function glossWord(
     await storage.putWordGloss(gloss);
     return gloss;
   } catch (error) {
-    if (error instanceof TranslationError) throw error;
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError('api', error instanceof Error ? error.message : String(error));
+    throw anthropicCallError(error);
   }
 }

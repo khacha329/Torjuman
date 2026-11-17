@@ -11,14 +11,14 @@ import {
   ANTHROPIC_DEFAULT_MODEL,
   ANTHROPIC_KEY_CHECK_MODEL,
   ANTHROPIC_MODELS,
-  CACHE_READ_MULTIPLIER,
-  CACHE_WRITE_MULTIPLIER,
   maxTokensFor,
   outputCeilingFor,
   outputConfigFor,
-  PRICES,
+  costOf,
+  SUPERSEDED_ANTHROPIC_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
+import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -27,22 +27,10 @@ import {
   stripJsonInstruction,
 } from '../schema';
 
-// Anthropic, via the official SDK.
-//
-// `dangerouslyAllowBrowser` is what makes the SDK send
-// `anthropic-dangerous-direct-browser-access: true`, required for browser calls
-// and correct here: a local, single-user, bring-your-own-key app. The key goes
-// to api.anthropic.com and nowhere else, is never logged, and never appears in
-// an error message.
+// Anthropic, via the official SDK. The client is built in ../anthropic.ts.
 //
 // Output shape is enforced by a strict tool rather than requested in prose —
 // see schema.ts for why, and for why the tool is not forced.
-
-const WEB_SEARCH_TOOL = {
-  type: 'web_search_20260209' as const,
-  name: 'web_search' as const,
-  max_uses: 5,
-};
 
 const MAX_RESEARCH_TURNS = 4;
 
@@ -50,13 +38,15 @@ export class AnthropicProvider implements TranslationProvider {
   readonly id = 'anthropic' as const;
   readonly displayName = 'Claude';
   readonly availableModels: ModelOption[] = ANTHROPIC_MODELS;
+  readonly knownModels: ModelOption[] = [...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS];
   readonly defaultModel = ANTHROPIC_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://console.anthropic.com/settings/keys';
+  readonly keyPlaceholder = 'sk-ant-…';
   readonly isFree = false;
   readonly fitFor = 'For passages you intend to teach from.';
 
   private client(key: string): Anthropic {
-    return new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+    return anthropicClient(key);
   }
 
   async validateKey(key: string): Promise<boolean> {
@@ -286,97 +276,6 @@ function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | 
   return null;
 }
 
-/**
- * Text from EVERY text block, not the first.
- *
- * `content` is an array, and with the search tool enabled it holds
- * `server_tool_use` and `web_search_tool_result` blocks interleaved with
- * several text blocks. Reading `content[0].text` finds a non-text block and
- * concludes there is no answer — the single most likely cause of dig-deeper
- * failing far more often than plain translation.
- */
-export function textOf(message: Anthropic.Message): string {
-  return message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-    .map((block) => block.text)
-    .join('\n');
-}
-
 function emptyUsage(): TranslationUsage {
   return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-}
-
-function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void {
-  total.inputTokens += usage.input_tokens ?? 0;
-  total.outputTokens += usage.output_tokens ?? 0;
-  total.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-  total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
-}
-
-/**
- * USD estimate from the token counts the API reported.
- *
- * `usage` can be the sum of several requests (dig deeper, Explain). A model
- * with long-context pricing is priced at the higher rate when the summed prompt
- * crosses its threshold, which is exact for one request and an upper bound for
- * several. Only Haiku 5.5 has such a tier, at 100,000 prompt tokens.
- */
-export function costOf(model: string, usage: TranslationUsage): number | null {
-  const price = PRICES[model];
-  if (!price) return null;
-
-  const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
-  const rates =
-    price.longContext && promptTokens > price.longContext.overPromptTokens
-      ? price.longContext
-      : price;
-  const cacheReadMultiplier = price.cacheReadMultiplier ?? CACHE_READ_MULTIPLIER;
-
-  const input = usage.inputTokens * rates.inputPerMTok;
-  const cacheRead = usage.cacheReadTokens * rates.inputPerMTok * cacheReadMultiplier;
-  const cacheWrite = usage.cacheWriteTokens * rates.inputPerMTok * CACHE_WRITE_MULTIPLIER;
-  const output = usage.outputTokens * rates.outputPerMTok;
-
-  return (input + cacheRead + cacheWrite + output) / 1_000_000;
-}
-
-function toTranslationError(error: unknown): TranslationError {
-  if (error instanceof TranslationError) return error;
-
-  if (error instanceof Anthropic.AuthenticationError) {
-    return new TranslationError(
-      'auth',
-      'Your Anthropic API key was rejected. Check it in Settings — this is a key problem, not a usage limit.',
-    );
-  }
-  if (error instanceof Anthropic.PermissionDeniedError) {
-    return new TranslationError(
-      'auth',
-      'That Anthropic key is valid but not permitted to use this model. Check the key’s workspace and model access.',
-    );
-  }
-  if (error instanceof Anthropic.RateLimitError) {
-    const header = error.headers?.get?.('retry-after');
-    return new TranslationError(
-      'rate-limit',
-      'Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.',
-      { retryAfterSeconds: header ? Number(header) : null },
-    );
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return new TranslationError(
-      'network',
-      'Could not reach api.anthropic.com. Check the network connection.',
-    );
-  }
-  if (error instanceof Anthropic.BadRequestError) {
-    return new TranslationError('api', `Anthropic rejected the request: ${error.message}`);
-  }
-  if (error instanceof Anthropic.APIError) {
-    return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
-  }
-  return new TranslationError(
-    'api',
-    error instanceof Error ? error.message : String(error),
-  );
 }

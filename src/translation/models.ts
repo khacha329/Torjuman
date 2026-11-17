@@ -7,7 +7,7 @@
 // this is deliberately the only place they appear.
 
 import type { ModelOption } from './TranslationProvider';
-import type { ProviderId } from '../types';
+import type { TranslationUsage } from '../types';
 
 // ---------------------------------------------------------------- Anthropic
 
@@ -55,6 +55,15 @@ export const ANTHROPIC_KEY_CHECK_MODEL = CLAUDE_HAIKU_5_5;
 /** The reader's "Meaning" lookup: a tiny request, so the cheapest model. */
 export const ANTHROPIC_GLOSS_MODEL = CLAUDE_HAIKU_5_5;
 
+// Small in, small out. The answer itself is a few hundred tokens, but
+// Haiku 5.5 thinks by default and thinking counts against this limit,
+// so it leaves room for some. Billing is on what is actually generated.
+export const GLOSS_MAX_TOKENS = 2000;
+
+// A glance, not an article: the least thinking that does the job. Haiku
+// 5.5's own default is `medium`.
+export const GLOSS_OUTPUT_CONFIG: { effort: Effort } = { effort: 'low' };
+
 /**
  * Explain runs on Claude even when the active profile is on Gemini, since it
  * relies on Anthropic's web-search tool. This is the model it uses then.
@@ -65,7 +74,7 @@ export const ANTHROPIC_EXPLAIN_FALLBACK_MODEL = CLAUDE_SONNET_5_5;
  * Labels for models no longer offered, so a card made with one still shows
  * which model wrote it rather than a bare ID.
  */
-const SUPERSEDED_ANTHROPIC_MODELS: ModelOption[] = [
+export const SUPERSEDED_ANTHROPIC_MODELS: ModelOption[] = [
   { id: CLAUDE_SONNET_5, label: 'Sonnet 5', note: 'Previous generation' },
   { id: CLAUDE_HAIKU_4_5, label: 'Haiku 4.5', note: 'Previous generation' },
   { id: CLAUDE_OPUS_5, label: 'Opus 5', note: 'Previous generation' },
@@ -189,21 +198,31 @@ export const PRICES: Record<string, Price> = {
 export const CACHE_READ_MULTIPLIER = 0.1;
 export const CACHE_WRITE_MULTIPLIER = 2.0;
 
-export function modelsFor(providerId: ProviderId): ModelOption[] {
-  return providerId === 'anthropic' ? ANTHROPIC_MODELS : GEMINI_MODELS;
-}
+/**
+ * USD estimate from the token counts the API reported.
+ *
+ * `usage` can be the sum of several requests (dig deeper, Explain). A model
+ * with long-context pricing is priced at the higher rate when the summed prompt
+ * crosses its threshold, which is exact for one request and an upper bound for
+ * several. Only Haiku 5.5 has such a tier, at 100,000 prompt tokens.
+ */
+export function costOf(model: string, usage: TranslationUsage): number | null {
+  const price = PRICES[model];
+  if (!price) return null;
 
-/** The option for a model ID, including ones no longer offered. */
-export function findModelOption(providerId: ProviderId, model: string): ModelOption | undefined {
-  const known =
-    providerId === 'anthropic'
-      ? [...ANTHROPIC_MODELS, ...SUPERSEDED_ANTHROPIC_MODELS]
-      : GEMINI_MODELS;
-  return known.find((entry) => entry.id === model);
-}
+  const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
+  const rates =
+    price.longContext && promptTokens > price.longContext.overPromptTokens
+      ? price.longContext
+      : price;
+  const cacheReadMultiplier = price.cacheReadMultiplier ?? CACHE_READ_MULTIPLIER;
 
-export function defaultModelFor(providerId: ProviderId): string {
-  return providerId === 'anthropic' ? ANTHROPIC_DEFAULT_MODEL : GEMINI_DEFAULT_MODEL;
+  const input = usage.inputTokens * rates.inputPerMTok;
+  const cacheRead = usage.cacheReadTokens * rates.inputPerMTok * cacheReadMultiplier;
+  const cacheWrite = usage.cacheWriteTokens * rates.inputPerMTok * CACHE_WRITE_MULTIPLIER;
+  const output = usage.outputTokens * rates.outputPerMTok;
+
+  return (input + cacheRead + cacheWrite + output) / 1_000_000;
 }
 
 /**

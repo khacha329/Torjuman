@@ -1,17 +1,42 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { LocalSourceRef, TranslationUsage, WebSourceRef } from '../types';
 import { normalize } from '../lib/arabic';
-import { explainStructureMaxTokens, outputConfigFor } from './models';
+import {
+  explainStructureMaxTokens,
+  outputConfigFor,
+  ANTHROPIC_EXPLAIN_FALLBACK_MODEL,
+  isClaudeModel,
+} from './models';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
+import { addUsage, anthropicCallError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
 // The user understands the words; what is unclear is the concept. So this
 // searches his own library first, then the web, and returns an explanation with
 // citations. It never touches the translation card it hangs from.
+
+/**
+ * Explain runs on Claude whatever the active profile's provider: its research
+ * pass is Anthropic's server-side web search. Exported so the reader names no
+ * provider (restructure Phase 3 step 3q, the owner's Q10).
+ */
+export const EXPLAIN_PROVIDER_ID = 'anthropic' as const;
+
+/**
+ * The model an Explain card runs on: the profile's own when it is a Claude
+ * model, otherwise ANTHROPIC_EXPLAIN_FALLBACK_MODEL. Moved from
+ * ui/reader/useExplanations.ts in step 3q, verbatim but for the parameter's
+ * name.
+ */
+export function explainModelFor(profileModel: string): string {
+  return isClaudeModel(profileModel)
+    ? profileModel
+    : ANTHROPIC_EXPLAIN_FALLBACK_MODEL;
+}
 
 export interface ExplainResult {
   explanation: string;
@@ -165,10 +190,7 @@ export async function explainPhrase(options: {
   localSources: LocalSourceRef[];
   onProgress?: (partial: string) => void;
 }): Promise<ExplainResult> {
-  const client = new Anthropic({
-    apiKey: options.apiKey,
-    dangerouslyAllowBrowser: true,
-  });
+  const client = anthropicClient(options.apiKey);
 
   const usage: TranslationUsage = {
     inputTokens: 0,
@@ -204,7 +226,7 @@ export async function explainPhrase(options: {
         max_tokens: 8000,
         system: SYSTEM,
         messages,
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
+        tools: [WEB_SEARCH_TOOL],
         output_config: outputConfigFor(options.model),
       });
 
@@ -215,11 +237,8 @@ export async function explainPhrase(options: {
       });
 
       const message = await stream.finalMessage();
-      accumulate(usage, message.usage);
-      notes += message.content
-        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('\n');
+      addUsage(usage, message.usage);
+      notes += textOf(message);
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -246,7 +265,7 @@ export async function explainPhrase(options: {
     });
 
     const final = await structured.finalMessage();
-    accumulate(usage, final.usage);
+    addUsage(usage, final.usage);
 
     const call = final.content.find(
       (block): block is Anthropic.ToolUseBlock =>
@@ -256,10 +275,7 @@ export async function explainPhrase(options: {
     // tool_choice auto cannot make the model call the tool. When it answers in
     // text instead, it has usually written the same JSON there, and a reply
     // that has been paid for is recovered rather than thrown away.
-    const text = final.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    const text = textOf(final);
     const recovered = call ? null : parseJsonObject(text);
     const fields = (call?.input ?? recovered) as Record<string, unknown> | null;
 
@@ -297,26 +313,6 @@ export async function explainPhrase(options: {
       costUsd: null,
     };
   } catch (error) {
-    if (error instanceof TranslationError) throw error;
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError(
-      'api',
-      error instanceof Error ? error.message : String(error),
-    );
+    throw anthropicCallError(error);
   }
-}
-
-function accumulate(total: TranslationUsage, usage: Anthropic.Usage): void {
-  total.inputTokens += usage.input_tokens ?? 0;
-  total.outputTokens += usage.output_tokens ?? 0;
-  total.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-  total.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
 }

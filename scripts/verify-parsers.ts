@@ -4156,7 +4156,8 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
 
 {
   const models = await import('../src/translation/models');
-  const { costOf } = await import('../src/translation/providers/AnthropicProvider');
+  const { costOf } = await import('../src/translation/models');
+  const { findModelOption } = await import('../src/translation/providers/registry');
   const { parseJsonObject } = await import('../src/translation/parseSegments');
   const { EMIT_TRANSLATION_TOOL, GEMINI_RESPONSE_SCHEMA, answerWithTool } = await import(
     '../src/translation/schema'
@@ -4192,7 +4193,7 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
   check('a Gemini model is left alone', models.successorModel('gemini-3.7-flash'), 'gemini-3.7-flash');
   check(
     'an old card still shows which model wrote it',
-    models.findModelOption('anthropic', 'claude-sonnet-5')?.label,
+    findModelOption('anthropic', 'claude-sonnet-5')?.label,
     'Sonnet 5',
   );
 

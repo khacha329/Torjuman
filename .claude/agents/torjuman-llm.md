@@ -21,26 +21,49 @@ and the code disagree, say so — do not silently pick one.
   `CloudProviderId`, `TranslationUsage` are in `types/translation.ts`, and
   `isCloudProvider` in `lib/providers.ts`.
 - `translation/providers/registry.ts` — providers available to the UI (offline is
-  deliberately outside it; see its comment).
+  deliberately outside it; see its comment), and the lookups on them:
+  `modelsFor`, `findModelOption`, `defaultModelFor`, `providerIdForModel`.
+  Each provider object describes itself (`availableModels`, `knownModels`,
+  `defaultModel`, `keyHelpUrl`, `keyPlaceholder`, `isFree`, `fitFor`).
+- `translation/anthropic.ts` — the one Anthropic SDK client
+  (`anthropicClient`), `WEB_SEARCH_TOOL`, `textOf`, `addUsage`, and the two
+  error mappings (`anthropicCallError` for Explain, gloss and compile;
+  `toTranslationError` for translation and the key check; FOUND_ISSUES 11).
+  Only it and `providers/AnthropicProvider.ts` (whose key check tests the
+  SDK's error classes) import the SDK as a value — check Q fails if any
+  other file does.
+- `translation/gemini.ts` — `geminiModelUrl` and `postGemini`, the one
+  Gemini model POST (key in the header, never the URL).
 - `translation/models.ts` — the only place model IDs, prices
   (`PRICES`, `cacheReadMultiplier`, `longContext`), output ceilings,
   `outputConfigFor` (effort), `successorModel`, `explainStructureMaxTokens` and
-  the named purpose constants (`ANTHROPIC_GLOSS_MODEL` …) live.
+  the named purpose constants (`ANTHROPIC_GLOSS_MODEL` …), gloss's
+  `GLOSS_MAX_TOKENS`/`GLOSS_OUTPUT_CONFIG`, and `costOf` live.
 - `translation/prompt.ts` — prompt text and `cacheKeyFor`.
 - `translation/schema.ts` — `EMIT_TRANSLATION_TOOL` (strict) and the Gemini
   response schema; `answerWithTool()`.
 - `translation/parseSegments.ts` — text fallbacks (`parseJsonObject`,
   `extractBalanced`).
-- `translation/explain.ts` (two-pass), `translation/gloss.ts`,
-  `qul/compile.ts` — further Anthropic/Gemini call sites.
+- `translation/explain.ts` (two-pass; `EXPLAIN_PROVIDER_ID`,
+  `explainModelFor`), `translation/gloss.ts` (`GLOSS_PROVIDER_ID`),
+  `qul/compile.ts` (one compiler per provider in `COMPILERS`) — further
+  Anthropic/Gemini call sites.
 - `translation/offline/` — transformers.js, dynamically imported.
 - `services/secrets.ts` — keys; `app/AppContext.tsx` — profile migration at
   load.
 
-Provider names are still hard-coded outside the registry (models.ts lists,
-secrets, Settings and Onboarding key fields, compile.ts). Until the Phase 3
-restructure removes that, a new provider touches all of them — list each in
-your plan.
+Since Phase 3, adding a provider is its file in `translation/providers/`, its
+entry in `PROVIDERS` and `PROVIDER_ORDER`, its id in `ProviderId`, and what
+`tsc` then reports: each `Record<CloudProviderId, …>` missing a key
+(`PROVIDER_KEYS` in `services/secrets.ts`, `COMPILERS` in `qul/compile.ts`)
+and the reader's `requestsByProvider: Record<ProviderId, number>` in
+`ui/reader/useTranslator.ts`. What still names a
+provider on purpose — the seeded profile, Onboarding's copy and toggle, the
+session totals and banner, compile's table, Explain and gloss, Offline's
+"back to Gemini" — is listed with the reason in
+`docs/refactor/plans/phase3-provider-seams.md` Design §5. Check Q
+(`npm run verify:requests`) records every request each call site sends; a
+change that should not alter one must leave it identical.
 
 ## Rules
 

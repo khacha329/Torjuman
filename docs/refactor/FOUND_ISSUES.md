@@ -48,14 +48,25 @@ Found by the Phase 0 review.
   `ui/reader/ReaderScreen.tsx`, `ui/reader/useExplanations.ts` and
   `ui/settings/OfflineTranslation.tsx` all do.
 - A model ID outside `models.ts`: `ui/settings/OfflineTranslation.tsx:210`
-  saves `model: 'gemini-3.7-flash'` inline.
-- Call parameters outside `models.ts`: `translation/gloss.ts:111,114` sets
+  (`:206` by Phase 3)
+  saves `model: 'gemini-3.7-flash'` inline. **Replaced in Phase 3 step 3p**
+  (owner's Q6 (b)) by `GEMINI_DEFAULT_MODEL`, the same value; the provider
+  literal `'gemini'` stays ("back to Gemini", not "back to the default").
+- Call parameters outside `models.ts`: `translation/gloss.ts:111,114` set
   `max_tokens: 2000` and `output_config: { effort: 'low' }` inline (with
-  comments saying why).
+  comments saying why). **Moved in Phase 3 step 3j** (owner's Q6) to
+  `models.ts` as `GLOSS_MAX_TOKENS` and `GLOSS_OUTPUT_CONFIG`, comments
+  verbatim.
 
 Left as is: Phase 3 (provider seams) is where these move, as structure. The
 comment in `registry.ts` is corrected when the registry moves in Phase 1 step
-1h only if the plan names it; otherwise in Phase 3.
+1h only if the plan names it; otherwise in Phase 3. **Phase 3 status:** the
+model id and gloss's parameters moved (3j, 3p); the names in `AppContext`,
+`compile.ts`, `ReaderScreen.tsx` and `useExplanations.ts` became registry,
+table or module constants (3l, 3m, 3q); the registry's and
+`TranslationProvider.ts`'s comments were corrected in 3r. What still names a
+provider, and why, is the plan's Design §5. The call parameters still inline
+are in entry 11's last paragraph.
 
 ## 5. A detached and miscounted comment about the API keys (2026-11-15, measured)
 
@@ -164,3 +175,94 @@ Found while planning Phase 2, real duplicates but deferred:
   Q3: not now).
 
 Not duplicates: the nine red error boxes, which all differ.
+
+## 11. Error handling differs between the Claude call sites (2026-11-16, measured)
+
+Found by the Phase 3 plan survey. Left as is (owner's answer to Phase 3 Q4:
+unifying them is a behaviour change for its own PR):
+
+- `translation/providers/AnthropicProvider.ts` (~359–363; since Phase 3 step
+  3e `toTranslationError` in `translation/anthropic.ts` ~116–121) reads
+  `retry-after` with `Number()`, so a date-form value gives `NaN` seconds (check Q records
+  it: `anthropic.translate.429-retry-after-http-date`).
+- Explain, gloss and compile map Anthropic errors more coarsely than
+  translation: a 403 comes out as `api`, and a 429 carries no retry-after.
+- Compile's Gemini branch does not retry a 429 or read the error body, so a
+  bad key reported as a 400 comes out as `api`, not `auth`.
+- The SDK retries twice by itself, so a rate-limited Claude call is three
+  requests (check Q shows them).
+- `ANTHROPIC_VERSION` (`translation/models.ts` ~117) is exported and unused.
+
+More inline call parameters for FOUND_ISSUES 4's list, left where they are:
+compile's `max_tokens` 4000 (both branches), research 8000 (both sites), the
+research turn limit, the web-search `max_uses`, Gemini's `MAX_RETRIES`.
+
+## 12. A network failure passes the Claude key check (2026-11-16, measured)
+
+`AnthropicProvider.validateKey` (~62–80; ~51–69 by Phase 3) returns `true` for every `APIError`
+that is not a 401 or 403, on the reasoning that a rate limit or a 400 still
+proves the key authenticated. But the SDK's `APIConnectionError` is an
+`APIError` with no status (`node_modules/@anthropic-ai/sdk/core/error.mjs`
+~71), so with no network the key test reports the key as good — after three
+attempts. Check Q records it (`anthropic.validateKey.connection-failure` →
+`true`). Left as is; a fix would treat a status-less error as "could not
+check". Found by the `torjuman-llm` plan read before Phase 3 step 3a.
+
+## 13. The translation cache key depends on the device's locale (2026-11-16, measured)
+
+`glossaryHashOf` (`translation/prompt.ts` ~20) sorts glossary entries with
+`localeCompare`, whose order depends on the browser's locale. Two devices with
+different locales could compute different glossary hashes, and so different
+cache keys (trap 5), for the same glossary — a cached card made on one would
+not be found on the other after a tablet transfer. Not known to have happened;
+the owner's tablets share a locale. Check Q pins `en-US`. Left as is. Found by
+the `torjuman-llm` plan read before Phase 3 step 3a.
+
+## 14. Five error paths check Q's added scenarios expose (2026-11-16, measured)
+
+Found while closing the 3a review's coverage gaps; each is recorded by a
+scenario in `docs/refactor/phase3/requests.json`. Left as is:
+
+1. A connection that drops after the headers (`TypeError` reading the body)
+   escapes unmapped from Gemini translate and Gemini compile — no
+   `TranslationError` (`gemini.translate.body-drop`,
+   `compile.gemini.body-drop`).
+2. At every Anthropic site the same drop maps to kind `api` with the message
+   "network error", not kind `network` (`anthropic.translate.body-drop`,
+   `anthropic.validateKey.body-drop`, `explain.body-drop`, `gloss.body-drop`,
+   `compile.anthropic.body-drop`).
+3. An error event inside the Anthropic stream reads "Anthropic API error
+   undefined: {…json…}" (`anthropic.translate.stream-error-event`).
+4. Gemini's `promptFeedback.blockReason` is ignored, so a blocked prompt is
+   reported as a parse failure, not a refusal
+   (`gemini.translate.prompt-blocked`).
+5. Research notes from successive turns are joined with no separator ("Turn
+   1: searching.Turn 2: …"), in translate and Explain
+   (`anthropic.translate.research-out-of-turns`,
+   `explain.research-out-of-turns`).
+
+## 15. Four more error paths (2026-11-16, measured)
+
+Exposed by check Q's second-round scenarios, recorded in
+`docs/refactor/phase3/requests.json` except where marked. Left as is:
+
+1. A 200 from Gemini that is not JSON — an empty body, or an HTML page such
+   as a captive portal — escapes compile as a raw `SyntaxError`, not a
+   `TranslationError` (`compile.gemini.200-empty-body`,
+   `compile.gemini.200-non-json`). Beside FOUND_ISSUES 14.1.
+2. An overload error that arrives after the Claude reply has started loses the
+   partial reply: `raw` is null in the research and the structuring pass, and
+   the progress text already shown is dropped (the tokens are probably billed
+   all the same; neither the code nor the record shows that)
+   (`anthropic.translate.dig-deeper-stream-error-after-text`,
+   `anthropic.translate.stream-error-after-tool-deltas`).
+3. Live progress runs a reply's text blocks together ("…first.Passage …"),
+   while the notes sent onward join the same blocks with a newline. Cosmetic.
+   Recorded for Explain (`explain.research-multi-text-blocks`); for translate
+   it is true by reading (`turnText += delta` in `research()`), as the record
+   keeps only translate's progress count.
+4. The app reads only `retry-after`, never `retry-after-ms`: with only the
+   latter `retryAfterSeconds` is null though the SDK knew the wait
+   (`anthropic.translate.429-retry-after-ms-only`); with no header it is null
+   too, and the SDK used its own backoff (`…429-no-retry-headers`). Pinned;
+   not clearly a bug.

@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { sha256 } from '../lib/hash';
-import { GEMINI_BASE } from '../translation/models';
 import { TranslationError } from '../translation/TranslationProvider';
+import { anthropicCallError, anthropicClient, textOf } from '../translation/anthropic';
+import { geminiModelUrl, postGemini } from '../translation/gemini';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -130,6 +130,18 @@ export function renderCompilePrompt(source: CompileSource): string {
   return parts.join('\n');
 }
 
+// One compiler per cloud provider. A table rather than a ternary, so a new
+// cloud provider is a type error here instead of a silent fall into the Gemini
+// branch (restructure Phase 3 step 3l, the owner's Q5). The functions are
+// declarations below, hoisted, so the table can name them before they appear.
+const COMPILERS: Record<
+  CloudProviderId,
+  (model: string, apiKey: string, prompt: string) => Promise<CompileResult>
+> = {
+  anthropic: compileWithAnthropic,
+  gemini: compileWithGemini,
+};
+
 export async function compileAyah(options: {
   providerId: CloudProviderId;
   model: string;
@@ -137,9 +149,7 @@ export async function compileAyah(options: {
   source: CompileSource;
 }): Promise<CompileResult> {
   const prompt = renderCompilePrompt(options.source);
-  return options.providerId === 'anthropic'
-    ? compileWithAnthropic(options.model, options.apiKey, prompt)
-    : compileWithGemini(options.model, options.apiKey, prompt);
+  return COMPILERS[options.providerId](options.model, options.apiKey, prompt);
 }
 
 async function compileWithAnthropic(
@@ -147,7 +157,7 @@ async function compileWithAnthropic(
   apiKey: string,
   prompt: string,
 ): Promise<CompileResult> {
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+  const client = anthropicClient(apiKey);
 
   try {
     const message = await client.messages.create({
@@ -160,11 +170,7 @@ async function compileWithAnthropic(
     });
 
     return {
-      text: message.content
-        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('\n')
-        .trim(),
+      text: textOf(message).trim(),
       usage: {
         inputTokens: message.usage.input_tokens ?? 0,
         outputTokens: message.usage.output_tokens ?? 0,
@@ -174,16 +180,7 @@ async function compileWithAnthropic(
       costUsd: null,
     };
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new TranslationError('auth', 'Your Anthropic API key was rejected.');
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-    }
-    if (error instanceof Anthropic.APIConnectionError) {
-      throw new TranslationError('network', 'Could not reach api.anthropic.com.');
-    }
-    throw new TranslationError('api', error instanceof Error ? error.message : String(error));
+    throw anthropicCallError(error);
   }
 }
 
@@ -194,20 +191,13 @@ async function compileWithGemini(
 ): Promise<CompileResult> {
   let response: Response;
   try {
-    response = await fetch(
-      `${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        // The key travels in the header, never in the query string — see the
-        // note in GeminiProvider.
-        headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 4000 },
-        }),
-      },
-    );
+    // The key travels in the header, never in the query string — see the
+    // note on postGemini in translation/gemini.ts.
+    response = await postGemini(geminiModelUrl(model, 'generateContent'), apiKey, {
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4000 },
+    });
   } catch {
     throw new TranslationError('network', 'Could not reach the Gemini API.');
   }

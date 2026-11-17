@@ -103,7 +103,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
             dir="ltr"
             type="password"
             autoComplete="off"
-            placeholder={providerId === 'gemini' ? 'AIza…' : 'sk-ant-…'}
+            placeholder={provider.keyPlaceholder}
             value={key}
             onChange={(event) => {
               setKey(event.target.value);
