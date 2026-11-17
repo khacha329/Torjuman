@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useApp } from '../../app/AppContext';
 import { BidiText } from '../../components/BidiText';
 import type { QulResource } from '../../types';
 import {
@@ -20,13 +21,26 @@ import type { QuranEnglish, QuranIndex } from '../../quran/quranIndex';
 // the Compile tab generates, and it lives in its own component with its own
 // badge so the distinction is visible rather than remembered.
 
+/**
+ * The verse in the reader's own font, the one the blocks and the dictionary
+ * sheet use (`settings.fontFamily`, Amiri behind it). The `arabic` class sets
+ * no family, so without this the verse fell back to the device's system stack,
+ * and where that lacks the Uthmani marks (ٱ, the small high signs) they drew
+ * as empty boxes (FOUND_ISSUES 38). Both bundled reader fonts draw every
+ * character in the bundled muṣḥaf.
+ */
 export function ArabicVerse({ text, size = 19 }: { text: string; size?: number }) {
+  const { settings } = useApp();
   return (
     <p
       dir="rtl"
       lang="ar"
       className="arabic text-verse leading-loose"
-      style={{ fontSize: size, ['--reader-line-height' as string]: '2.1' }}
+      style={{
+        fontFamily: `'${settings.fontFamily}', 'Amiri', serif`,
+        fontSize: size,
+        ['--reader-line-height' as string]: '2.1',
+      }}
     >
       {text}
     </p>
