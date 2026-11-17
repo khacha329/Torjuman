@@ -1068,3 +1068,14 @@ item stays (it is how B is judged) and step 12 is done only if the owner
 has a link; the reviewer after every commit, `torjuman-reader` reading the
 plan and 5a's and 5b's additions before their baselines, `torjuman-llm`
 reading P before 5c's (Q16); the book-kinds seam as in Design §8 (Q17).
+
+**Amendment to Q2 (2026-11-17, the owner's answer).** After R hung a second
+time on an unchanged bundle (Phase 4 step 4n, after its last portrait step;
+Phase 5 step 5a, between the landscape report and the portrait start) and
+five traced runs did not reproduce it, the owner chose "a small fix to the
+script" over leaving R as is: every wait in `scripts/verify-reader-scroll.mjs`
+that had no limit gets one, the seed's IndexedDB writes also fail on an
+abort or a blocked open, and a watchdog names the step a stall is in. No
+assertion changes, and a stall is a failure, never a pass. R still runs
+first and alone under `timeout 1200`.
+

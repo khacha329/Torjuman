@@ -2465,6 +2465,23 @@ holds)
   30/30. **T** exit 0. **B** main chunk 790,214 B (unchanged). **L**
   `--check`: no file-level cycle, 11 rules hold.
 
+**Check R's hang, 2026-11-17** (the owner's amendment to Q2)
+- R hung twice on unchanged bundles at two different points (4n; the 5a
+  fix). Five runs with `DEBUG=pw:api` afterwards all passed (28/28, 88–90 s,
+  performance as the baseline), so the cause was not caught. The 5a
+  re-review's candidate: the seed's IndexedDB transactions had `oncomplete`
+  and `onerror` but no `onabort`, so an aborted write would wait forever.
+- By the owner's choice, `scripts/verify-reader-scroll.mjs` now gives every
+  wait that had no limit one (`within(ms, label, …)`: the seed, the
+  onboarding write, opening and closing each context, closing the browser
+  and the preview server), adds `onabort` to the seed's transactions and
+  `onblocked` to its open, and runs a ten-minute watchdog that prints the
+  step it was in and exits 2. No assertion changed.
+- **Proven:** a normal run PASS 28/28 (240,000 px in 33.4 s, 1,905 nodes, 0
+  long tasks; 175,800 px in 24.4 s, 1,904 nodes); a seed made never to
+  finish fails after 61 s with "timed out after 60000 ms: seeding the book"
+  and exit 1, instead of hanging; restored from a copy (`cmp` equal).
+
 ## Open
 
 - V baseline count from the owner's PC.

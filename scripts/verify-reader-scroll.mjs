@@ -31,6 +31,33 @@ const VERSE_BLOCK = 12;
 const VERSE =
   'وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ ۖ وَلَئِن كَفَرْتُمْ إِنَّ عَذَابِي لَشَدِيدٌ';
 
+// Twice this check hung with nothing on screen and the CPU idle (Phase 4
+// step 4n, after its last portrait step; Phase 5 step 5a, between the
+// landscape report and the portrait start), on bundles that had not
+// changed, and five traced runs afterwards did not reproduce it. A hang
+// gives no clue where it was, and once Phase 5 adds scenarios a hang caused
+// by a real regression would look the same. So, by the owner's decision
+// (Phase 5 plan, Owner's answers, the amendment to Q2), every wait that had
+// no limit now has one, the seed's IndexedDB writes also fail on an abort
+// or a blocked open, and a watchdog names the step it was in. No assertion
+// changed: a stall is reported as a failure of its own, not as a pass.
+let currentStep = 'starting';
+const step = (label) => { currentStep = label; };
+const STALL_MS = 10 * 60_000;
+const watchdog = setTimeout(() => {
+  console.log(`\nFAIL — stalled for ${STALL_MS / 60_000} min at: ${currentStep}\n`);
+  process.exit(2);
+}, STALL_MS);
+watchdog.unref();
+/** A wait that had no limit of its own, given one, and named if it runs out. */
+function within(ms, label, promise) {
+  let timer;
+  const limit = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms: ${label}`)), ms);
+  });
+  return Promise.race([promise, limit]).finally(() => clearTimeout(timer));
+}
+
 let failures = 0;
 let checks = 0;
 function check(label, ok, detail = '') {
@@ -59,12 +86,13 @@ async function seed(page) {
     { title: 'كتاب الصلاة', page: 60 },
     { title: 'كتاب الصيام', page: 200 },
   ];
-  await page.evaluate(
+  await within(60_000, 'seeding the book', page.evaluate(
     async ({ book, count, perPage, texts, toc }) => {
       const db = await new Promise((resolve, reject) => {
         const request = indexedDB.open('shamela-reader');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error('seed: opening the database was blocked'));
       });
       const put = (store, rows) =>
         new Promise((resolve, reject) => {
@@ -72,6 +100,7 @@ async function seed(page) {
           for (const row of rows) tx.objectStore(store).put(row);
           tx.oncomplete = resolve;
           tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error ?? new Error(`seed: the ${store} transaction was aborted`));
         });
       const pages = Math.ceil(count / perPage);
       await put('books', [{
@@ -96,7 +125,7 @@ async function seed(page) {
       db.close();
     },
     { book: BOOK, count: BLOCKS, perPage: PER_PAGE, texts: Array.from({ length: BLOCKS }, (_, i) => textOf(i)), toc },
-  );
+  ));
 }
 
 /** Where a block sits on screen, and where the header ends. */
@@ -152,7 +181,8 @@ async function settle(page, ms = 500) {
 
 async function runProfile(browser, base, name, options, layout, screenshot) {
   console.log(`\n=== ${name} ===`);
-  const context = await browser.newContext(options);
+  step(`${name}: opening a context`);
+  const context = await within(60_000, `${name}: opening a context`, browser.newContext(options));
   // Long tasks from the very start, so the scroll measurement sees them all.
   await context.addInitScript(() => {
     window.__longTasks = [];
@@ -168,13 +198,16 @@ async function runProfile(browser, base, name, options, layout, screenshot) {
   const page = await context.newPage();
   page.on('pageerror', (error) => console.log(`  pageerror: ${error.message}`));
 
+  step(`${name}: loading the app`);
   await page.goto(base);
-  await page.evaluate(() => {
+  await within(30_000, `${name}: marking onboarding done`, page.evaluate(() => {
     localStorage.setItem('shamela-reader.onboarded', '1');
     localStorage.setItem('shamela-reader.catalogOffered', '1');
-  });
+  }));
   await page.waitForFunction(() => document.body.innerText.length > 0);
+  step(`${name}: seeding`);
   await seed(page);
+  step(`${name}: opening the book`);
   await page.goto(`${base}#/read/${encodeURIComponent(BOOK)}`);
   await page.reload();
   await page.locator(`[data-block-id="${blockId(0)}"]`).waitFor();
@@ -182,10 +215,13 @@ async function runProfile(browser, base, name, options, layout, screenshot) {
 
   // REPORT_ONLY measures and nothing else, so the same numbers can be taken
   // from a build where the reader still scrolls in a box of its own.
+  step(`${name}: the checks`);
   if (!process.env.REPORT_ONLY) await runChecks(page, layout);
+  step(`${name}: measuring scrolling`);
   await reportScrolling(page);
   if (screenshot) await screenshotSelection(page, screenshot);
-  await context.close();
+  step(`${name}: closing the context`);
+  await within(60_000, `${name}: closing the context`, context.close());
 }
 
 async function runChecks(page, layout) {
@@ -407,8 +443,10 @@ try {
     'sheet', shots && `${shots}/portrait-600x960-selection.png`,
   );
 } finally {
-  await browser.close();
-  await own?.close();
+  step('closing the browser');
+  await within(60_000, 'closing the browser', browser.close());
+  step('closing the preview server');
+  await within(60_000, 'closing the preview server', own ? own.close() : Promise.resolve());
 }
 
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);
