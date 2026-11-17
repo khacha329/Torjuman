@@ -581,3 +581,54 @@ area (about 25 px in landscape, 46 px in portrait). Cosmetic and a little
 wasted work; left unfixed (structure-only phase). R's search and card checks
 use a tolerance and its read-mark checks judge which block is at the middle
 of the visible area, so a fix needs no re-baseline.
+
+## 41. A failed card is served from the translation cache (2026-11-17, measured)
+
+Found while building check P (Phase 5 step 5c). A failed translation is
+stored like a finished one: the failed card (`ui/reader/useTranslator.ts:343-350`)
+keeps the `cacheKey` the loading card was given (`:244`) and is written with
+`putCard`. The cache read before every translation (`:207-212`) returns any
+card under that key without looking at its `status`, and
+`getCardByCacheKey` (`platform/storage/idbWork.ts:64-69`) does not filter
+either. So selecting the same passage again and tapping Translate returns the
+failure, with no request; Translate all… does the same for each block of its
+range (`ui/reader/useBatchTranslate.ts:85-98`), counting the cached failure
+as "did not complete" — the proposal bar's "Blocks already translated are
+served from the cache" holds for failures too. A transient failure (`network`,
+`rate-limit`, a 500) therefore sticks until the card's own Retry or
+Retranslate, which pass `force`. Measured in P: `error-cached` (the HTTP 400
+block selected again: no request, the same failed card) and `batch-again`
+(the batch re-run: no request, "Finished — 2 of 3 blocks translated, 1 did not
+complete."). **A tablet user who retries by translating the passage again sees
+the same error indefinitely.** Left unfixed (structure-only phase); a fix
+changes those two scenarios of P.
+
+## 42. Retranslate deletes the card before the key check refuses (2026-11-17, measured)
+
+Found while building check P. `retranslate` (`ui/reader/useTranslator.ts:378-394`)
+deletes the card from storage and from the list first (`:383-384`) and then
+calls `translate`, whose key check returns `null` with a notice when the
+chosen provider has no key (`:185-192`). So "Retranslate ▾ → a provider
+whose key is not set" removes the card and translates nothing. For a Claude
+card that throws away a paid response, against README.md:501 ("A paid
+response is never discarded"). Measured in P, `retranslate-no-key`: the verse
+block's Gemini card, Retranslate ▾ → a Claude model with no Claude key — the
+cards store goes from 7 rows to 6 and the notice "No Claude API key is set.
+Add one in Settings before translating." shows. Left unfixed; a fix changes
+that scenario of P.
+
+## 43. A Gemini card says "web search" though Gemini searches nothing (2026-11-17, by reading, recorded by P)
+
+Found in the `torjuman-llm` agent's read of check P. The card's
+`usedExternalLookup` is set from the profile (`digDeeper ||
+activeProfile.allowExternalLookup`, `ui/reader/useTranslator.ts:246`)
+whatever the provider, and the card's header shows "· web search" whenever it
+is true (`ui/reader/TranslationCardView.tsx:313-315`). Only
+`AnthropicProvider` reads `request.allowExternalLookup` (it runs a research
+pass with the web-search tool, `translation/providers/AnthropicProvider.ts:86`);
+`GeminiProvider` never does, so a Gemini card from a profile with external
+lookup allowed claims a search that did not happen. P's `external-lookup`
+scenario records exactly that (the request is the plain one, the card says
+web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
+(`useTranslator.ts:330`) and read nowhere in `src/ui` (the session line shows
+cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.

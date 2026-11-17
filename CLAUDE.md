@@ -29,6 +29,7 @@ its progress log.
 | `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
 | `npm run verify:requests` | every request the provider call sites send, retries and mapped errors, with fake keys and canned responses, against `docs/refactor/phase3/requests.json` (~1 s) | anywhere |
 | `npm run verify:storage` | Playwright: the IndexedDB schema after a fresh install and every upgrade, and the rows after every storage method, backup and transfer path, against `docs/refactor/phase4/storage.json` (~20 s) | anywhere |
+| `npm run verify:translate` | Playwright: the translate pipeline through the real reader (selection → Translate, cache hit, retranslate, stale card, errors, batch, no key, Claude with cost and web search, on device) with canned Gemini and Anthropic responses and fake keys, against `docs/refactor/phase5/translate.json` (~70 s) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing

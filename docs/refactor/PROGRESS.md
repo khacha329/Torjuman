@@ -2320,6 +2320,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5a re-review's notes — FOUND_ISSUES 38 and a 37 wording fix | docs only | `7726a45` |
 | R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
 | 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
+| 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2595,6 +2596,153 @@ holds)
   Applied: the script header said nothing "checked" those states before 5b,
   untrue given U's captures — now "asserted the behaviour of"; departure (6)
   above records what happened; FOUND_ISSUES 39's line range.
+
+**Step 5c, measured 2026-11-17** (no `src/` change; `git diff --quiet -- src`
+holds)
+- **Check P** (`scripts/verify-translate.mjs`, `npm run verify:translate`,
+  record `docs/refactor/phase5/translate.json`): the production build under
+  `vite preview`, Chromium 960×600 touch, en-US, UTC, service workers
+  blocked; a synthetic 12-block book (a verse — Ibrāhīm 2 from the committed
+  muṣḥaf, as U — a numbered matn, two sharḥ blocks, the next matn, test
+  sentences) with a Qurʾān and a ḥadīth entity. The two model hosts are
+  answered from canned responses copied from Q's (Gemini's SSE and error
+  JSON; Anthropic's Messages event stream with the strict emit_translation
+  tool and a web-search research turn, non-zero cache read and write), **each
+  request held until its scenario answers it**; every other host is aborted.
+  Every scenario goes through the reader's own controls (a selection and the
+  rail's Translate, the card's Retranslate menu, the verse sheet's footer, a
+  600 ms press on the matn's margin and Translate all…). Watchdog,
+  `within()` and `step()` as R (the amendment to Q2).
+- **23 scenarios in 6 groups, 18 requests.** With Gemini and sunnah.com keys,
+  the default profile: `translate` (three blocks, the middle a verse;
+  recorded while held, and again with a second selection showing the rail's
+  busy button), `cache-hit` (no request), `retranslate` (same model, forced),
+  `retranslate-with` (Flash Lite 3.5: the model in the URL and on the card),
+  `stale` (a glossary row written, reloaded: the old card's stale note —
+  `isStale`'s `cacheKeyFor` — then a cache miss with the glossary in the
+  prompt), `block` (the verse sheet's "Translate the surrounding passage"),
+  `error-400` (api), `error-auth` (403, auth), `error-truncated` (MAX_TOKENS
+  twice: two requests, the doubled budget, `rawResponse`), `error-network`
+  (dropped), `error-cached` (the failed card served from the cache, no
+  request: FOUND_ISSUES 41), `retranslate-no-key` (a Claude model with no
+  Claude key: 7 cards → 6, FOUND_ISSUES 42), `batch` (the proposal; each of
+  three requests held, "Translating k of 3…"; the third a 500: "Finished — 2
+  of 3 blocks translated, 1 did not complete."), `batch-again` (all from the
+  cache, no request). Without a key: `no-key` (banner, notice, no request, no
+  card), `no-key-dismiss`, `no-key-batch` ("0 of 3 …, 3 did not complete",
+  the notice). Gemini profiles: `external-lookup` (GeminiProvider sends no
+  flag, so this pins only the card's `usedExternalLookup` and its "web
+  search" label — FOUND_ISSUES 43), `transliteration`
+  (`TRANSLITERATION_INSTRUCTION` in the system prompt). A Claude profile
+  (fake Anthropic key): `claude-translate` (one request with the tool; the
+  card's cost and usage; "Claude: 1 · $0.0072", "2,048 tokens from cache")
+  and `claude-external-lookup` (a second profile with allowExternalLookup made
+  active, reloaded: the research request carries the `web_search` tool, then
+  the structure request; "Claude: 1 · $0.014"). On the device:
+  `offline-no-bundle` (the bundled English refused: a plain Error, mapped by
+  `translate` itself to `api` — the only route found to that branch) and
+  `offline` (the model download refused: OfflineProvider's own `network`).
+- **Recorded per scenario:** each model request (method, URL, every header
+  Chromium sends — `allHeaders()` — and the body, parsed JSON that
+  re-serializes to the exact text sent), the `cards` rows in key order as
+  IndexedDB holds them, and the screen: the bars above the text, the session
+  line, each panel card's text, the rail's Translate when up; some scenarios
+  also a state while a request is held. **Record 352,616 bytes, 4,951
+  lines.**
+- **Masked:** `x-goog-api-key`'s and `x-api-key`'s values (after each is
+  asserted to be its host's fake key, so the record can be asserted
+  key-free); the SDK's `x-stainless-os`, `-arch`, `-runtime`,
+  `-runtime-version` exactly as Q masks them; `user-agent`, `sec-ch-ua`,
+  `sec-ch-ua-platform` (the OS and Chromium build, which would differ on the
+  owner's PC); the preview origin in `origin` and `referer` (its port is the
+  first free one). No id, timestamp or card field.
+- **Pinned:** `page.clock` fixed, **one instant per page load, a minute after
+  the last**; `Math.random` seeded (D's mulberry32) before the app's scripts.
+  Found while building: with one instant for every load, `newId` repeated
+  its ids after a reload (its counter restarts with the page, the seed is
+  installed afresh), and a card written after the reload overwrote an older
+  one (`error-400`'s card replaced `retranslate-with`'s).
+- **Asserted** every run: each model key in its own header (`x-goog-api-key`,
+  `x-api-key`) of every request to its own host and nowhere else; the
+  sunnah.com key only in a request to sunnah.com (directly or through the
+  proxy's `/sunnah/`), never in a model request or a card; no key in any
+  request's URL, body or other header (`allHeaders()`), any IndexedDB store,
+  sessionStorage, a cookie, Cache Storage's names, the DOM, the page's URL,
+  `history.state`, `window.name`, the console or page errors, the record; in
+  localStorage only its own entry; no `Authorization`; every held request
+  answered and none unexpected; a request is tagged with the scenario it
+  arrived in, so one that comes late fails its own scenario rather than
+  being taken by the next.
+- **Not seen by any scenario, so 5i3's reviewer checks them by reading**
+  (also in the script's header): the offline stats updater
+  (`useTranslator.ts:263-270` — both offline scenarios fail before it, and
+  `translateProse` always loads the model, `OfflineProvider.ts:365`); the
+  streaming entry's removal in `finally` (`:356-360` — the streaming text
+  renders only while a card is loading, and a fulfilled response arrives at
+  once); `SessionStats.cacheWriteTokens` (`:330` — summed, read nowhere in
+  `src/ui`). Everything else Design §7 moves is seen, the cost sum and the
+  per-provider count through the Claude group.
+- **Run time** 62–63 s for the script, about 70 s for `npm run
+  verify:translate` with its build.
+- **Determinism:** the final script: a run with `--out`, then `--write` from
+  a second run, byte-identical to each other; a compare under
+  `TZ=America/St_Johns` PASS; and the gate run PASS. Earlier versions were as
+  stable (before the Claude group: five identical, under two other zones).
+- **Breakages**, each a temporary edit restored from a `cp` backup (`cmp`
+  equal; `git diff --quiet -- src` after each run), each a full
+  `npm run verify:translate` against the final record, all exit 1:
+  1. the cache check skipped when not forced → 25 assertions (an unexpected
+     request at `cache-hit`, named there, and every later scenario off);
+  2. the no-key notice's text changed → 3 assertions;
+  3. `errorKind` dropped from the failed card → 10 scenarios differ;
+  4. `isStale`'s `cacheKeyFor` dropped (never stale) → 11 scenarios differ;
+  5. `contextBefore` joined with `\n` → 9 scenarios differ;
+  6. `TRANSLITERATION_INSTRUCTION` dropped → `transliteration` differs;
+  7. the cloud stats not incremented → 18 scenarios differ;
+  8. the non-TranslationError kind `api` → `network` → the two offline
+     scenarios differ;
+  9. (`useBatchTranslate.ts`) the range run in reverse → `batch`,
+     `batch-again` differ;
+  10. the Gemini key written into a failed card's `rawResponse` → 3
+      assertions (IndexedDB, the DOM, the record);
+  11. `setBusy(true)` dropped → `translate` differs (the rail's busy button);
+  12. `allowExternalLookup` dropped from the request literal → 1 assertion
+      (`claude-external-lookup` gets no research request; 17 requests);
+  13. the cost sum dropped in the cloud stats updater → both Claude
+      scenarios differ (the session line's $);
+  14. the `requestsByProvider` key swapped (always `gemini`) → both Claude
+      scenarios differ;
+  15. the sunnah.com key written into a failed card → 3 assertions.
+- **Gates**, after the fixes: R first and alone, `timeout 1200 npm run
+  verify:reader`: PASS 55/55; landscape 240,000 px in 33.4 s, 1,905 nodes, 0
+  long tasks; portrait 175,800 px in 24.4 s, 1,904 nodes, 0 long tasks;
+  report lines as at 5b. **T** exit 0. **B** main chunk 790,214 B
+  (unchanged; its hash moves with the build time). **L** `--check`: 169
+  files, 134 directory edges, no file-level cycle, 11 rules hold. **Q** PASS.
+  **S** PASS 30/30. **P** PASS.
+- **Departures from the plan.** (1) Masked: the machine and SDK platform
+  headers and the preview origin beside the keys (above); the plan said
+  "nothing masked" of ids and timestamps, which holds. (2) More than Design
+  §1.4's nine scenarios and five breakages (the plan's five are 1, 3, 5, 6,
+  7), and a Claude group, which §1.4 put out of scope ("the hook is
+  provider-blind") but which is the only way to see the request's external
+  lookup flag, the cost sum and the per-provider count. (3) Breakage 9 is in
+  `useBatchTranslate.ts`: the batch's order lives there. (4) The CLAUDE.md
+  Commands row is written by the main session.
+- **The `torjuman-llm` read (Q16): NOT READY, two must-fixes, both done.**
+  M1: GeminiProvider never reads `allowExternalLookup` and its cost is
+  always null, so deleting the flag from the request literal, the cost sum
+  or the per-provider key would have passed P, and the `external-lookup`
+  scenario's description claimed a flag it did not record — fixed by the
+  Claude group (fake Anthropic key, Q's Anthropic stream copied, SDK platform
+  headers masked as Q does, the key asserted only in `x-api-key`), the
+  description corrected, and breakages 12–14. M2: the claim that every step
+  Design §7 moves is seen was false — the three unseen steps are now named
+  (above, and in the script's "Not covered"). Also taken from its optional
+  list: `allHeaders()` for the record and the key scan, the page's URL,
+  `history.state` and `window.name` scanned, a fake sunnah.com key (breakage
+  15), and late requests failing in their own scenario. FOUND_ISSUES 41, 42
+  and 43 filed from its read, left unfixed.
 
 ## Open
 
