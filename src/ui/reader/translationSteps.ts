@@ -13,14 +13,19 @@ import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
 import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
 
 // The steps of one translation that only compute a value: the passage
-// around the selection, the request handed to the provider, and the loading
-// and failed cards. No storage, no React state, no `await`. The loading
-// card's `newId('card')` and `Date.now()` are inside its literal, as they
-// were, so they run when the card is built. `translate` in useTranslator.ts
-// keeps every side effect, every `await` and its cache key in its own order
-// (`isStale` keeps the other), and calls these where their text was. Moved
-// verbatim from useTranslator.ts in restructure Phase 5 steps 5i1 and 5i2
-// (docs/refactor/plans/phase5-big-ui-files.md, Design §7).
+// around the selection, the request handed to the provider, the loading and
+// failed cards, and the streaming text without the card's entry. No
+// storage, no React state, no `await`. The one exception is the loading
+// card's `newId('card')` (a module counter and a random draw) and
+// `Date.now()`, inside its literal as they were, so they run when the card
+// is built. `translate` in useTranslator.ts keeps every other side effect,
+// every `await` and its cache key in its own order (`isStale` keeps the
+// other), and calls these where their text was. Its session-stats updaters
+// stay in useTranslator.ts beside `SessionStats`, since importing that type
+// here would make a file cycle. Moved verbatim from useTranslator.ts in
+// restructure Phase 5 steps 5i1, 5i2 and 5i3
+// (docs/refactor/plans/phase5-big-ui-files.md, Design §7 and the amendment
+// to Q12).
 
 export function passageFor(
   blocks: Block[],
@@ -142,4 +147,13 @@ export function failedCard(card: TranslationCard, caught: unknown): TranslationC
     rawResponse: error.raw ?? undefined,
   };
   return failed;
+}
+
+export function withoutStream(
+  previous: Record<string, string>,
+  card: Pick<TranslationCard, 'id'>,
+): Record<string, string> {
+  const next = { ...previous };
+  delete next[card.id];
+  return next;
 }

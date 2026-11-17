@@ -1080,3 +1080,16 @@ bounds every other wait and names the step a stall is in. No
 assertion changes, and a stall is a failure, never a pass. R still runs
 first and alone under `timeout 1200`.
 
+**Amendment to Q12 (2026-11-17, the owner's answer).** Design §7's 5i3 rows
+put `withOfflineRequest` and `withCloudRequest` in `translationSteps.ts`, but
+their `previous` is a `SessionStats`, declared in `useTranslator.ts`, which
+imports `translationSteps.ts`. Importing the type back makes a file-level
+cycle that `check-layers --check` rejects, because the checker counts
+type-only imports (line 294 above); a probe with the one `import type` added
+failed with `file-level cycle: {ui/reader/translationSteps.ts,
+ui/reader/useTranslator.ts}` (the session's scratchpad `l-5i3-probe.txt`).
+The owner chose to keep the two stats updaters as module-level functions in
+`useTranslator.ts`, next to `SessionStats` and `EMPTY_STATS`, so RESTRUCTURE
+§2's "request counts in `useTranslator.ts`" stays true; `withoutStream` goes
+to `translationSteps.ts` as planned. The bodies still move verbatim and the
+`setStats(…)` and `setStreaming(…)` calls stay in `translate`.

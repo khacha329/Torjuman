@@ -5,6 +5,7 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
+import type { TranslationResult } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
@@ -15,7 +16,13 @@ import {
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
-import { failedCard, loadingCard, passageFor, translationRequestFor } from './translationSteps';
+import {
+  failedCard,
+  loadingCard,
+  passageFor,
+  translationRequestFor,
+  withoutStream,
+} from './translationSteps';
 
 // Orchestrates one translation: pick the provider the profile pins → cache
 // check → provider call → scripture retrieval → persist.
@@ -52,6 +59,38 @@ const EMPTY_STATS: SessionStats = {
   cacheReadTokens: 0,
   cacheWriteTokens: 0,
 };
+
+// The session-stats updaters of `translate`'s offline and cloud branches,
+// moved verbatim from it in restructure Phase 5 step 5i3. They are here, not
+// in translationSteps.ts, because `SessionStats` is declared here and
+// importing it there would make a file cycle (the plan's amendment to Q12).
+function withOfflineRequest(previous: SessionStats): SessionStats {
+  return {
+    ...previous,
+    requests: previous.requests + 1,
+    requestsByProvider: {
+      ...previous.requestsByProvider,
+      offline: previous.requestsByProvider.offline + 1,
+    },
+  };
+}
+
+function withCloudRequest(
+  previous: SessionStats,
+  useProviderId: ProviderId,
+  result: TranslationResult,
+): SessionStats {
+  return {
+    requests: previous.requests + 1,
+    requestsByProvider: {
+      ...previous.requestsByProvider,
+      [useProviderId]: previous.requestsByProvider[useProviderId] + 1,
+    },
+    costUsd: previous.costUsd + (result.costUsd ?? 0),
+    cacheReadTokens: previous.cacheReadTokens + result.usage.cacheReadTokens,
+    cacheWriteTokens: previous.cacheWriteTokens + result.usage.cacheWriteTokens,
+  };
+}
 
 export function useTranslator(bookId: string, blocks: Block[], entities: Entity[] = []) {
   const { storage, http, activeProfile, glossary, settings, refreshGlossary } = useApp();
@@ -238,14 +277,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           const finished = await runOffline(card, useModel);
           await storage.putCard(finished);
           upsert(finished);
-          setStats((previous) => ({
-            ...previous,
-            requests: previous.requests + 1,
-            requestsByProvider: {
-              ...previous.requestsByProvider,
-              offline: previous.requestsByProvider.offline + 1,
-            },
-          }));
+          setStats((previous) => withOfflineRequest(previous));
           return finished;
         }
 
@@ -292,16 +324,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         await storage.putCard(finished);
         upsert(finished);
 
-        setStats((previous) => ({
-          requests: previous.requests + 1,
-          requestsByProvider: {
-            ...previous.requestsByProvider,
-            [useProviderId]: previous.requestsByProvider[useProviderId] + 1,
-          },
-          costUsd: previous.costUsd + (result.costUsd ?? 0),
-          cacheReadTokens: previous.cacheReadTokens + result.usage.cacheReadTokens,
-          cacheWriteTokens: previous.cacheWriteTokens + result.usage.cacheWriteTokens,
-        }));
+        setStats((previous) => withCloudRequest(previous, useProviderId, result));
 
         return finished;
       } catch (caught) {
@@ -312,11 +335,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       } finally {
         endActivity();
         setBusy(false);
-        setStreaming((previous) => {
-          const next = { ...previous };
-          delete next[card.id];
-          return next;
-        });
+        setStreaming((previous) => withoutStream(previous, card));
       }
     },
     [

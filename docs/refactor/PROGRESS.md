@@ -2347,6 +2347,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
 | 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
 | 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
+| 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3645,7 +3646,12 @@ holds)
   no hook's return type can express them; with it, 5e3's
   correction to Design §10 (`quran/quranIndex.ts:427` untrue from 5e4, not
   5e3) and 5f2's `settleOn as settleOnBlock` import alias (the module
-  function and the `useCallback` share Q8's name).
+  function and the `useCallback` share Q8's name). Added at 5i3: a
+  correction to Design §7's 5i3 rows — `withOfflineRequest` and
+  `withCloudRequest` are module functions in `useTranslator.ts`, not in
+  `translationSteps.ts`, since importing `SessionStats` there is a
+  file-level cycle (the plan's amendment to Q12); `withoutStream` is in
+  `translationSteps.ts` as planned.
 
 **Step 5h3, measured 2026-11-17**
 - The eight sheet conditionals (`ReaderScreen.tsx:795-989` at `1a3e6a6`,
@@ -4041,9 +4047,10 @@ holds)
   24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
   PASS, identical — P pins `Date.now` and `Math.random`, so the card ids
   (`newId` embeds the clock, its counter and a random draw) and
-  `createdAt` values it records also show the calls happen in the same order and number; its `error`,
-  `error-cached`, `batch-again` and `retranslate-no-key` scenarios
-  included; **Q** PASS, identical to `docs/refactor/phase3/requests.json`.
+  `createdAt` values it records also show the calls happen in the same
+  order and number; its `error`, `error-cached`, `batch-again` and
+  `retranslate-no-key` scenarios included; **Q** PASS, identical to
+  `docs/refactor/phase3/requests.json`.
 - **Review of 5i2 (`a44f5bd`): PASS WITH NOTES; "ready for 5i3".** `error`
   read only by the `failed` literal; `TranslationError`'s constructor only
   assigns fields; the evaluation order of `newId('card')` and `Date.now()`
@@ -4054,6 +4061,125 @@ holds)
   499's references, not 43's: corrected above; (n2) the header's "keeps
   every side effect" reads as excepting `newId`'s counter, as intended;
   left, or made explicit when the header is next touched.
+
+**Step 5i3, measured 2026-11-17**
+- The three updater bodies of `translate` moved (adaptation (k), Design
+  §7 as amended for Q12): the offline branch's `setStats` updater
+  (`useTranslator.ts:241-248` at `a44f5bd`, the plan's 263-270) and the
+  cloud branch's (`:295-304`, the plan's 322-331) as module functions
+  `withOfflineRequest` and `withCloudRequest` in `useTranslator.ts`,
+  straight after `EMPTY_STATS`, with a four-line comment saying why they
+  are there; the `finally`'s `setStreaming` updater (`:315-319`, the
+  plan's 356-360) as `withoutStream` in `translationSteps.ts`, after
+  `failedCard`. Each was one arrow's body; the arrow and its `setStats(…)`
+  or `setStreaming(…)` call stay in `translate`, a fresh arrow per call as
+  before, so the updater's identity is as irrelevant as it was. No free
+  name in them is reassigned (`previous` is the arrow's parameter;
+  `useProviderId`, `result` and `card` are `const`s).
+- The probe that led to the amendment: `import type { SessionStats } from
+  './useTranslator'` added to `translationSteps.ts` made `check-layers
+  --check` exit 1 with `file-level cycle: {ui/reader/translationSteps.ts,
+  ui/reader/useTranslator.ts}` (scratchpad `l-5i3-probe.txt`); the file
+  was restored before any other change. The owner chose to keep the stats
+  updaters beside `SessionStats` (the plan's amendment to Q12, and an item
+  on the 5j Corrections list above).
+- Signatures: `withOfflineRequest(previous: SessionStats): SessionStats`;
+  `withCloudRequest(previous: SessionStats, useProviderId: ProviderId,
+  result: TranslationResult): SessionStats`, positional as the plan names
+  them (the three types differ); `withoutStream(previous: Record<string,
+  string>, card: Pick<TranslationCard, 'id'>): Record<string, string>`.
+  Under (f) the last takes `card`, not the plan's `cardId`: the body reads
+  `card.id`, and a same-named parameter keeps it verbatim and keeps the
+  read of `.id` inside the updater, where it was. The return types are the
+  state types the setters' updaters had contextually.
+- Word diff (`git diff --no-index --word-diff`, indentation aside): the
+  offline updater's 8 lines `[-setStats((previous) => ({-]{+return {+}`,
+  6 identical lines, `[-}));-]{+};+}`; the cloud updater's 10 lines the
+  same pair around 8 identical lines; `withoutStream`'s 3 body lines
+  identical, `[-setStreaming((previous) => {-]` and `[-});-]` the call that
+  stays.
+- Call sites (h): `setStats((previous) => withOfflineRequest(previous));`
+  at `:280`, `setStats((previous) => withCloudRequest(previous,
+  useProviderId, result));` at `:327`, `setStreaming((previous) =>
+  withoutStream(previous, card));` at `:338`. React still receives one
+  updater function per call and calls it with the same `previous`; the
+  values each reads (`useProviderId`, `result`, `card.id`) are the same
+  `const`s, read when the updater runs, as before.
+- `translate` after 5i3 against Design §7's "What stays", item by item:
+  (1) the provider choice and key check with its `setNotice` (`:218-231`),
+  in place; (2) both `cacheKeyFor` calls, `translate`'s (`:233-243`) and
+  `isStale`'s (`:178-196`), untouched (trap 5); (3) the cache read and its
+  `upsert` (`:245-251`); then the `passageFor` and `loadingCard` calls
+  (`:253`, `:255-264`), 5i1's and 5i2's; (4) `upsert`, `setBusy`,
+  `setNotice`, `beginActivity` (`:268-273`); (5) the offline branch
+  (`:276-282`), `runOffline` not moved; (6) the provider call
+  (`:284-298`) with `translationRequestFor`; (7) `coverageOf` (`:303`);
+  (8) the finished card literal with its `await enrichSegments`
+  (`:305-322`), not moved; (9) the `putCard`s, here and in the offline
+  branch and the `catch`, with the `upsert`s and both `setStats` calls;
+  the `catch` with `failedCard` (`:330-334`); (10) `finally` (`:335-339`)
+  with `endActivity`, `setBusy(false)` and `setStreaming`. Every `await`,
+  setter, storage call and `beginActivity` is in `translate` in its old
+  order. `translate`'s deps array (`:341-353`) unchanged; `SessionStats`
+  and `EMPTY_STATS` stay, so RESTRUCTURE §2's "request counts in
+  `useTranslator.ts`" holds.
+- The header of `translationSteps.ts` (5i2's review note n2 made
+  explicit): it now lists the streaming text without the card's entry;
+  "The one exception is the loading card's `newId('card')` (a module
+  counter and a random draw) and `Date.now()`"; `translate` keeps "every
+  other side effect"; the stats updaters stay in `useTranslator.ts` since
+  importing `SessionStats` would make a file cycle; steps 5i1, 5i2 and 5i3
+  and the amendment to Q12 named. Fourteen lines.
+- Imports: `useTranslator.ts` adds `import type { TranslationResult }`
+  (`translation/TranslationProvider`) for `withCloudRequest`'s `result`
+  and `withoutStream` to its `translationSteps` import (now multi-line);
+  `translationSteps.ts` adds nothing (`TranslationCard` was imported). No
+  cycle. `useTranslator.ts` is 444 lines (466 at the plan base, 453 after
+  5i1, 425 after 5i2; the two module functions and their comment add 32);
+  `translate` is 147 lines (`:208-354`), 207 at the plan base;
+  `translationSteps.ts` 159 (145).
+- **For 5j**, `useTranslator.ts` from `a44f5bd`: `:8-17` down 1 (the new
+  type import); `:18` (the `translationSteps` import) now `:19-25`;
+  `:19-55` down 7; then the 32 new lines (`:63-94`); `:56-240` down 39;
+  `:241-248` now `:280`; `:249-294` down 32; `:295-304` now `:327`;
+  `:305-314` down 23; `:315-319` now `:338`; past `:319` down 19.
+  `translationSteps.ts` from `a44f5bd`: the header five lines longer, so
+  every line after it down 5: `passageFor`'s body `:35-43`, the request
+  literal `:68-83`, the loading card `:108-130`, the failed card
+  `:134-148`, `withoutStream` `:152-159`. FOUND_ISSUES against the plan's
+  base: 26's `:195-205` now `:233-243`, `:207-213` now `:245-251`,
+  `:215-223` and `:277-288` now `translationSteps.ts:35-43` and `:70-81`;
+  29's `:62` now `:100`, its `:252` and `:355` (`setBusy`) now `:269` and
+  `:337`; 31's `:66-68` now `:104-106`; 35's `:88-94` now `:126-132`; 36's
+  `:32` now `:38`, its `:173` now `:211`, its `:246` and `:289` now
+  `translationSteps.ts:129` and `:82`; 41's `:343-350` now
+  `translationSteps.ts:142-148` with its `putCard` at `:332`, its `:244`
+  now `translationSteps.ts:127`, its `:207-212` now `:245-250`; 42's
+  `:378-394` now `:356-372`, `:383-384` now `:361-362`, `:185-192` now
+  `:223-230`; 43's `:246` now `translationSteps.ts:129`, its `:330` now
+  `:91` (in `withCloudRequest`). P's header
+  (`scripts/verify-translate.mjs:99-105`) names the plan base's `:263-270`,
+  `:356-360`, `:330` and `:322-331`: now `withOfflineRequest`
+  (`useTranslator.ts:67-76`), `withoutStream` (`translationSteps.ts:152-159`),
+  `:91` and `withCloudRequest` (`:78-93`).
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,868 B (+67 B), only `index.js` differs
+  (`compare-bundles` against post-5i2; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5i2's run, the portrait restore too (700 both), and every
+  report line but the timings (33.4 s and 24.5 s here, 33.3 s and 24.4 s
+  there): 240,000 px, 1,905 nodes, 0 long tasks / 175,800 px, 1,904
+  nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P** PASS, identical
+  — the session lines (the cloud updater's request counts and cost)
+  included; **Q** PASS, identical to
+  `docs/refactor/phase3/requests.json`. P's header
+  (`scripts/verify-translate.mjs:97-107`) names what no scenario can show,
+  so it rests on the word diff above and the reviewer's reading: the
+  offline updater (both offline scenarios fail before it), the streaming
+  entry's removal (a canned response arrives at once), `cacheWriteTokens`
+  (read nowhere in `src/ui`) and the cost sum's accumulation across
+  translations.
 
 ## Open
 
