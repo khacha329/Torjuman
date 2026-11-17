@@ -2348,7 +2348,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
 | 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
 | 5i3. `withOfflineRequest`, `withCloudRequest` → module functions in `useTranslator.ts`, `withoutStream` → `translationSteps.ts` (the plan's amendment to Q12); the header; 5i2's review note n2 | T B L R S U P Q pass; review PASS WITH NOTES | `6ed8c0d` |
-| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T L pass (the end checks are below); review pending | this commit |
+| 5j. Docs and comments made true (Design §10 and the 5j list below); FOUND_ISSUES 26–43's references recomputed; RESTRUCTURE status, §5, §6; the plan's corrections | T B L R S U P Q D and the SSR build pass; phase review pending | `6284661` and the commit after it |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -4231,6 +4231,19 @@ statement in `src/` or `scripts/` changed: every `+`/`-` line of `git diff
   edges, 0 directory and 0 file-level cycles, all eleven rules hold. The end
   checks (T B L S R U P Q D, the SSR build of `verify-parsers.ts`, then X on
   the whole phase) are run by the main session on the commit.
+- **End checks, run on `6284661` with CLAUDE.md's trap 7 and map applied**
+  (the tree as committed): **T** exit 0. **B** exit 0; main chunk 793,868 B,
+  and `compare-bundles` against post-5i3 shows every JS file identical (the
+  step changed comments only); CSS byte-identical. **L** 193 files, 134
+  edges, `--check` holds. **R** first and alone, 55/55; every ok line
+  identical to 5i3's but the portrait restore (699 here, 700 there), the
+  known noise; 240,000 px in 33.4 s and 175,800 px in 24.4 s, 0 long tasks.
+  **S** 30/30. **U** 254/254. **P** identical to
+  `docs/refactor/phase5/translate.json`. **Q** identical to
+  `docs/refactor/phase3/requests.json`. **D** identical to
+  `docs/refactor/phase4/storage.json`. The **SSR build** of
+  `scripts/verify-parsers.ts` resolves (exit 0); **V is owed** on the owner's
+  PC.
 
 ## Phase 5 result
 
