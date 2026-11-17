@@ -38,3 +38,43 @@ Numbers are `FOUND_ISSUES.md` section numbers.
 
 - **5** (a detached and miscounted comment about the API keys) and **17**
   (RESTRUCTURE §4 T-e on `ShareStorageAdapter`): fixed in lane D.
+
+## Delegated to lane B, 2026-11-17
+
+The owner delegated these to lane B, within limits: a paid response is never
+discarded, scripture is never model-generated, no API key in any error
+message, no new dependency, and no change to the number of requests sent
+(the SDK's retries and Gemini's `MAX_RETRIES` stay). Each is the smallest fix
+lane B found.
+
+- **11. Error handling differs between the Claude call sites.** One Anthropic
+  mapping (`toTranslationError`) for translate, the key check, Explain, gloss
+  and compile; `anthropicCallError` removed. A date-form `retry-after` is read
+  as a date (`translation/retryAfter.ts`), on the Claude and Gemini paths.
+  Compile's Gemini branch maps errors with the provider's
+  `geminiHttpError` (moved to `translation/gemini.ts`) and reports a 429's
+  wait, but still does not retry. `ANTHROPIC_VERSION` removed.
+- **12. A network failure passes the Claude key check.** A status-less
+  `APIError` throws the mapped network error ("Could not reach Claude: …")
+  instead of returning `true`.
+- **14. Five error paths.** All five fixed: a body drop is kind `network` at
+  every Gemini and Anthropic site; a stream error event reads its own message;
+  Gemini's `blockReason` is a refusal; research turns are joined by a blank
+  line.
+- **15. Four more error paths.** All four fixed: compile's non-JSON 200 is a
+  `TranslationError` with the body as raw; a stream error after the reply
+  began keeps the partial reply as raw; progress joins text blocks with a
+  newline; `retry-after-ms` is read before `retry-after`.
+- **26. "Translate this entry".** The card stays on the visible block for
+  display, but is marked `standalone`. Its cache key uses the block id plus a
+  hash of the entry text (`cacheKeyFor` itself unchanged), and its request is
+  the entry alone: no context, block types, ḥadīth numbers or verses. On the
+  on-device provider it is refused with a notice, since that path cuts text
+  from the book's blocks.
+- **29. `busy`.** A count of translations in flight; busy while above zero.
+- **35. Offline ḥadīth reads.** Only the ḥadīth whose blocks overlap the
+  selection, read with one `Promise.all`.
+- **43. "web search" on a Gemini card.** Label only. The Claude provider
+  reports whether its research pass used the search tool, and the card
+  records that. The label also requires a Claude card, for cards stored
+  before. Gemini gains no search.
