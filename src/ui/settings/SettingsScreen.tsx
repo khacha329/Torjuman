@@ -27,6 +27,7 @@ import { RetrievalSection } from './RetrievalSection';
 import { NarratorSources } from './NarratorSources';
 import { PublishedShares } from './PublishedShares';
 import { Section } from './Section';
+import { CatalogSection } from './CatalogSection';
 
 export function SettingsScreen() {
   return (
@@ -65,26 +66,6 @@ export function SettingsScreen() {
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * The suggested library, reachable again after first run.
- *
- * The catalog is a list of Shamela IDs and a line each on why the book is
- * worth having — the app never contains the books, which is what keeps a
- * distributed build clear of redistributing modern copyrighted commentary.
- */
-function CatalogSection() {
-  return (
-    <Section
-      title="Add from catalog"
-      description="Recommended works with their Shamela IDs, grouped by what they are for. The list is bundled and refreshes from the project repository when you are online."
-    >
-      <LinkButton to={{ name: 'catalog' }} variant="primary">
-        Open the catalog
-      </LinkButton>
-    </Section>
   );
 }
 

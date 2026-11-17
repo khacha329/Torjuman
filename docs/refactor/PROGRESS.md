@@ -2321,7 +2321,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | R's hang — limits on R's setup and teardown waits, `onabort`/`onblocked` in its seed, a watchdog (the owner's amendment to Q2) | R PASS 28/28, a never-ending seed fails in 61 s; review PASS WITH NOTES; wording fixed | `2b2f9da`, `33a7c1c`, `5fd796b` |
 | 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
 | 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review PASS WITH NOTES | `ea6c34e` |
-| 5d1. `Section` → `ui/settings/Section.tsx` | T pass; B L R S U running at commit; review pending | this commit |
+| 5d1. `Section` → `ui/settings/Section.tsx` | T B L R S U pass; review PASS WITH NOTES | `541ab15` |
+| 5d2. `CatalogSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2768,8 +2769,23 @@ holds)
   caught by the typecheck, restored, and the script fixed before any check
   ran. Comments made untrue here, for 5j (Q13): `ui/kit/SettingsSection.tsx`'s
   header still says "SettingsScreen's local Section".
-- **T** exit 0. **B L R S U** were running when this was committed;
-  results with the review.
+- **T** exit 0. **B L R S U**, run on the tree just before the commit
+  (which added only this entry): **B** exit 0, main chunk 790,214 B
+  (unchanged), only `index.js` differs (the function's place), CSS
+  byte-identical; **L** 170 files, 134 edges, rules hold; **R** first and
+  alone 55/55, 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px
+  in 24.4 s, 1,904 nodes; **S** 30/30; **U** 254/254.
+- **Review of 5d1: PASS WITH NOTES; "ready for 5d2".** Byte-identical
+  move; all seven `<Section` uses resolve to the import; the filtered
+  `import { type ReactNode }` is rule 4 (a); the kit comment deferred to 5j
+  as Q13 says.
+
+**Step 5d2, measured 2026-11-17**
+- `CatalogSection` with its doc comment moved verbatim into the new
+  `ui/settings/CatalogSection.tsx`, `export` added; a two-line header. It
+  imports `LinkButton` and `Section`; `SettingsScreen` drops `LinkButton`
+  and imports `CatalogSection`.
+- **T** exit 0. **B L R S U** running at commit; results with the review.
 
 ## Open
 
