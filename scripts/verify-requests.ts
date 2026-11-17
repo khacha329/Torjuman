@@ -63,9 +63,9 @@
 //     seen only by the app's Number(), which makes it NaN.
 //   * Number.prototype.toLocaleString and String.prototype.localeCompare
 //     default to 'en-US' when called without a locale: the truncation messages
-//     format the budget with toLocaleString(); localeCompare is still pinned
-//     for other callers, but glossaryHashOf no longer uses it (FOUND_ISSUES
-//     13: it sorts by code point). Pinned in-process rather than by running under
+//     format the budget with toLocaleString(). localeCompare stays pinned
+//     in case a call site reaches one; glossaryHashOf, which once sorted with
+//     it, sorts by code point since FOUND_ISSUES 13. Pinned in-process rather than by running under
 //     LANG=C.UTF-8, because an environment prefix in an npm script does not
 //     work in every shell, and on some systems Node takes its default locale
 //     from the OS rather than LANG.
