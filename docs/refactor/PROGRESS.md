@@ -2346,7 +2346,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review PASS WITH NOTES | `dbfa2c4` |
 | 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
 | 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
-| 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review pending | this commit |
+| 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review PASS WITH NOTES | `a44f5bd` |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -4027,7 +4027,9 @@ holds)
   now `translationSteps.ts:122`, its `:207-212` now `:206-211`; 42's
   `:378-394` now `:337-353`, `:383-384` now `:342-343`, `:185-192` now
   `:184-191`; 43's `:246` now `translationSteps.ts:124`; 43's `:330` now
-  `:303`; `:32`, `:62`, `:66-68`, `:88-94` unchanged.
+  `:303`. In the up-1 range, the references of FOUND_ISSUES.md:431, 454,
+  491 and 499 (29's `:62`, 31's `:66-68`, 35's `:88-94`, 36's `:32`) are
+  now `:61`, `:65-67`, `:87-93` and `:31`.
 - **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
   **B** exit 0, main chunk 793,801 B (+250 B), only `index.js` differs
   (`compare-bundles` against post-5i1; minified names), CSS byte-identical
@@ -4042,6 +4044,16 @@ holds)
   `createdAt` values it records also show the calls happen in the same order and number; its `error`,
   `error-cached`, `batch-again` and `retranslate-no-key` scenarios
   included; **Q** PASS, identical to `docs/refactor/phase3/requests.json`.
+- **Review of 5i2 (`a44f5bd`): PASS WITH NOTES; "ready for 5i3".** `error`
+  read only by the `failed` literal; `TranslationError`'s constructor only
+  assigns fields; the evaluation order of `newId('card')` and `Date.now()`
+  unchanged; FOUND_ISSUES 41 and 42 preserved; P re-run identical. Notes:
+  (n1) the "For 5j and 5i3" bullet said "`:32`, `:62`, `:66-68`, `:88-94`
+  unchanged", but they are in the up-1 range, so `:31`, `:61`, `:65-67`,
+  `:87-93` at `a44f5bd`, and they are FOUND_ISSUES.md:431, 454, 491 and
+  499's references, not 43's: corrected above; (n2) the header's "keeps
+  every side effect" reads as excepting `newId`'s counter, as intended;
+  left, or made explicit when the header is next touched.
 
 ## Open
 
