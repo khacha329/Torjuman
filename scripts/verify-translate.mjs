@@ -86,8 +86,9 @@
 // carries an Authorization header. A model request that arrives after its
 // scenario's end check fails that scenario, not the next.
 //
-// Not covered, said here as the plan asks: the Claude provider in the browser
-// (its requests are Q's, and the hook is provider-blind); the on-device
+// Not covered, said here as the plan asks: Claude's error paths and retries
+// in the browser (the Claude group translates twice, both succeeding; Q pins
+// what AnthropicProvider sends and maps for every error); the on-device
 // model's real translation (`runOffline` needs a downloaded model — the
 // `offline` scenarios record only its failures: the model's download refused,
 // which OfflineProvider maps itself, and the bundled English refused, a plain
@@ -99,8 +100,11 @@
 // both offline scenarios fail before it, and translateProse always loads the
 // model); the streaming entry's removal in `finally` (:356-360 — the
 // streaming text renders only while a card is loading, and a fulfilled
-// response arrives at once); and SessionStats.cacheWriteTokens (:330 —
-// summed, and read nowhere in src/ui).
+// response arrives at once); SessionStats.cacheWriteTokens (:330 —
+// summed, and read nowhere in src/ui); and the cost sum's accumulation in
+// the cloud stats updater (`previous.costUsd +`, :322-331 — every Claude
+// session line comes from one translation after a fresh load, so a sum that
+// dropped the previous total would show the same figure).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';

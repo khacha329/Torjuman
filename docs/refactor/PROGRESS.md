@@ -2680,8 +2680,11 @@ holds)
   streaming entry's removal in `finally` (`:356-360` — the streaming text
   renders only while a card is loading, and a fulfilled response arrives at
   once); `SessionStats.cacheWriteTokens` (`:330` — summed, read nowhere in
-  `src/ui`). Everything else Design §7 moves is seen, the cost sum and the
-  per-provider count through the Claude group.
+  `src/ui`); and the cost sum's accumulation (`previous.costUsd +`,
+  `:322-331` — each Claude session line follows one translation after a
+  fresh load, so a sum that dropped the previous total would show the same
+  figure). Everything else Design §7 moves is seen, the per-provider count
+  and the cost of a single Claude translation through the Claude group.
 - **Run time** 62–63 s for the script, about 70 s for `npm run
   verify:translate` with its build.
 - **Determinism:** the final script: a run with `--out`, then `--write` from
@@ -2743,6 +2746,16 @@ holds)
   `history.state` and `window.name` scanned, a fake sunnah.com key (breakage
   15), and late requests failing in their own scenario. FOUND_ISSUES 41, 42
   and 43 filed from its read, left unfixed.
+
+- **Review of 5c (`ea6c34e`): PASS WITH NOTES; "ready for 5d1".** Two P runs
+  identical (one under `TZ=Asia/Riyadh`); key containment traced — each fake
+  key in its own header to its own host and nowhere else, no scan vacuous
+  where it matters; the masks cover nothing `useTranslator` produces;
+  FOUND_ISSUES 41–43 accurate. Applied: the script header still said "the
+  Claude provider in the browser" is not covered, untrue since the Claude
+  group — now Claude's error paths and retries; and the cost sum is seen
+  only from zero, so its accumulation joins the steps 5i3's reviewer checks
+  by reading (header and above).
 
 ## Open
 
