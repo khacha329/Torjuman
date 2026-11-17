@@ -2322,7 +2322,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5b. R's new scenarios, baselined on the old code; FOUND_ISSUES 39, 40 | R five runs PASS 55/55 in a row, ten breakages; T B L S U pass; review PASS WITH NOTES | `ad16fdc` |
 | 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review PASS WITH NOTES | `ea6c34e` |
 | 5d1. `Section` → `ui/settings/Section.tsx` | T B L R S U pass; review PASS WITH NOTES | `541ab15` |
-| 5d2. `CatalogSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
+| 5d2. `CatalogSection` → its file | T B L R S U pass; review PASS WITH NOTES | `d7c2838` |
+| 5d3. `TranslationSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2783,8 +2784,24 @@ holds)
 **Step 5d2, measured 2026-11-17**
 - `CatalogSection` with its doc comment moved verbatim into the new
   `ui/settings/CatalogSection.tsx`, `export` added; a two-line header. It
-  imports `LinkButton` and `Section`; `SettingsScreen` drops `LinkButton`
-  and imports `CatalogSection`.
+  imports `LinkButton` and `Section`; `SettingsScreen` imports
+  `CatalogSection` and keeps `LinkButton`, which its header's Library button
+  uses (the commit message says it drops it; it does not).
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 171 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d2: PASS WITH NOTES; "ready for 5d3".** A pure move; the
+  note on `LinkButton` corrected above.
+
+**Step 5d3, measured 2026-11-17**
+- `TranslationSection` moved verbatim into the new
+  `ui/settings/TranslationSection.tsx`, `export` added; a three-line header.
+  It imports `useApp`, `secrets`, `allProviders`/`defaultModelFor`/
+  `modelsFor`, `CloudProviderId`, `Field`/`inputClass` and `Section`
+  (filtered copies of the source's lines); `SettingsScreen` drops
+  `defaultModelFor` and `modelsFor` and imports `TranslationSection`.
 - **T** exit 0. **B L R S U** running at commit; results with the review.
 
 ## Open
