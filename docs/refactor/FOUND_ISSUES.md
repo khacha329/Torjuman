@@ -259,7 +259,7 @@ scenario in `docs/refactor/phase3/requests.json`. Left as is:
 
 ## 15. Four more error paths (2026-11-16, measured)
 
-**Fixed in lane B** (commits "15." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+**Fixed in lane B** (commits "15." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; 15.2 for translate only, Explain is 45).
 
 Exposed by check Q's second-round scenarios, recorded in
 `docs/refactor/phase3/requests.json` except where marked. Left as is:
@@ -703,7 +703,7 @@ deeper' toggle", stale since Explain replaced it (FOUND_ISSUES 36). The name
 also survives for the Claude research pass, which still exists (reached only
 through a profile's `allowExternalLookup`): README.md ~483 ("Dig deeper runs
 as two passes"), the comment in `translation/providers/AnthropicProvider.ts`
-(`translate`), and check Q's `anthropic.translate.dig-deeper*` scenario ids
+(`translate`), `translation/models.ts` ("(dig deeper, Explain)"), and check Q's `anthropic.translate.dig-deeper*` scenario ids
 (which should keep their names; renaming means a re-record for no behaviour
 change). Lane D material. Left unfixed.
 
@@ -754,6 +754,14 @@ prose sent to the model and shown as an untranslated "ḥadīth" with the
 no-offline-source note; a narrator inside a ḥadīth also overlaps the ḥadīth
 piece, and `cursor = max(...)` does not drop the overlap, so that text
 appears twice. Left unfixed.
+
+Since the fix, a verse quoted inside a ḥadīth is read in the ḥadīth's Arabic
+and no longer gets a segment of its own, so its bundled English and
+reference no longer show (before, they showed as a duplicate after the
+ḥadīth). Where a clipped piece is emitted, `pushEntity` still substitutes
+the whole `textUthmani` or verified Arabic, so in that edge case the overlap
+can still show twice. Offline cards made before the fix keep their old
+segments until retranslated.
 
 ## 53. The online signal is never corrected by request outcomes (2026-11-17, by reading)
 
@@ -808,3 +816,26 @@ Found by the review of lane B. Gemini translate waits whatever `retry-after`
 asks, number or (since 11) date, before its next attempt, with no upper
 bound, so a far-future value holds the card spinning. Request count is
 unaffected. Left unfixed.
+
+## 59. An unresolved ḥadīth reaches the on-device model (2026-11-17, by reading)
+
+Found by the review of lane B's fix to 52. **Against the ḥadīth invariant.**
+`translation/offline/segmentSelection.ts` skips every entity whose
+`matchQuality` is `'unresolved'`, and `quran/detectEntities.ts` (~311)
+marks the ḥadīth entity of a `hadith_matn` block with no `hadithNumber` as
+`unresolved`. Those entities are stored and passed to `useTranslator`
+(`quran/entityService.ts` stores them all; only `markableByBlock` drops
+them). So on device the whole text of an unnumbered matn goes into `prose`
+and reaches the model, against "A ḥadīth with no offline source must never
+reach the translation model" (README, "The invariant"; the header of
+`segmentSelection.ts`). Present since 810b059 (2026-08-27); not caused by
+lane B. Left unfixed, for the owner to decide: a fix would cut an
+unresolved ḥadīth out of the prose like a resolved one, with the
+no-offline-source note.
+
+## 60. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
+
+Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
+once per block's share, and each time `pushEntity` uses the whole
+`textUthmani` and English, so a verse spanning two blocks appears twice in
+an offline card. Pre-existing. Left unfixed.
