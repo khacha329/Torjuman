@@ -11,7 +11,14 @@ import {
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { addUsage, toTranslationError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
+import {
+  addUsage,
+  anthropicClient,
+  joinNotes,
+  textOf,
+  toTranslationError,
+  WEB_SEARCH_TOOL,
+} from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -233,12 +240,12 @@ export async function explainPhrase(options: {
       let turnText = '';
       stream.on('text', (delta) => {
         turnText += delta;
-        options.onProgress?.(notes + turnText);
+        options.onProgress?.(joinNotes(notes, turnText));
       });
 
       const message = await stream.finalMessage();
       addUsage(usage, message.usage);
-      notes += textOf(message);
+      notes = joinNotes(notes, textOf(message));
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });

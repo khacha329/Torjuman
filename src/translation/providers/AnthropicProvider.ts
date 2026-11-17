@@ -18,7 +18,14 @@ import {
   SUPERSEDED_ANTHROPIC_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
+import {
+  addUsage,
+  anthropicClient,
+  joinNotes,
+  textOf,
+  toTranslationError,
+  WEB_SEARCH_TOOL,
+} from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -138,7 +145,7 @@ export class AnthropicProvider implements TranslationProvider {
       let turnText = '';
       stream.on('text', (delta) => {
         turnText += delta;
-        onChunk?.(`Researching…\n\n${notes}${turnText}`);
+        onChunk?.(`Researching…\n\n${joinNotes(notes, turnText)}`);
       });
 
       let message: Anthropic.Message;
@@ -149,7 +156,7 @@ export class AnthropicProvider implements TranslationProvider {
       }
 
       addUsage(usage, message.usage);
-      notes += textOf(message);
+      notes = joinNotes(notes, textOf(message));
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });

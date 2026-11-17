@@ -214,7 +214,7 @@ async function compileWithGemini(
     throw await geminiHttpError(response);
   }
 
-  const payload = (await response.json()) as {
+  let payload: {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
     usageMetadata?: {
       promptTokenCount?: number;
@@ -222,6 +222,19 @@ async function compileWithGemini(
       cachedContentTokenCount?: number;
     };
   };
+  try {
+    payload = (await response.json()) as typeof payload;
+  } catch (caught) {
+    // A connection that drops while the body is read rejects with a
+    // TypeError, which escaped unmapped (FOUND_ISSUES 14.1).
+    if (caught instanceof TypeError) {
+      throw new TranslationError(
+        'network',
+        'The connection to the Gemini API dropped mid-reply. Check the network connection.',
+      );
+    }
+    throw caught;
+  }
 
   const text = (payload.candidates ?? [])
     .flatMap((candidate) => candidate.content?.parts ?? [])

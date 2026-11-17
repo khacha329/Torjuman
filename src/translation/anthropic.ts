@@ -52,6 +52,19 @@ export function textOf(message: Anthropic.Message): string {
 }
 
 /**
+ * Research notes so far, with the next turn's text after a blank line.
+ *
+ * A research pass that pauses (`pause_turn`) is several replies, and their
+ * notes were concatenated with no separator ("…searching.Turn 2: …"), in
+ * translate and in Explain alike (FOUND_ISSUES 14.5).
+ */
+export function joinNotes(notes: string, next: string): string {
+  if (notes === '') return next;
+  if (next === '') return notes;
+  return `${notes}\n\n${next}`;
+}
+
+/**
  * Add one reply's token counts to a running total. A count the API leaves out
  * or sends as null adds nothing. Moved verbatim from providers/
  * AnthropicProvider.ts in restructure Phase 3 step 3g; Explain had the same
@@ -108,7 +121,30 @@ export function toTranslationError(error: unknown): TranslationError {
     return new TranslationError('api', `Anthropic rejected the request: ${error.message}`);
   }
   if (error instanceof Anthropic.APIError) {
+    // An error event inside a stream arrives as an APIError with no status,
+    // whose message is the event's JSON: it read "Anthropic API error
+    // undefined: {…}" (FOUND_ISSUES 14.3). The event's own type and message
+    // are read instead.
+    if (error.status === undefined) {
+      const inner = (error.error as { error?: { type?: string; message?: string } } | undefined)
+        ?.error;
+      if (inner?.message) {
+        return new TranslationError(
+          'api',
+          `Anthropic reported an error mid-reply: ${inner.message}${inner.type ? ` (${inner.type})` : ''}.`,
+        );
+      }
+    }
     return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
+  }
+  // fetch reports a connection that drops while the body is read as a
+  // TypeError, which the SDK passes through unwrapped: it came out as kind
+  // `api` with the message "network error" (FOUND_ISSUES 14.2).
+  if (error instanceof TypeError) {
+    return new TranslationError(
+      'network',
+      'The connection to api.anthropic.com dropped mid-reply. Check the network connection.',
+    );
   }
   return new TranslationError(
     'api',

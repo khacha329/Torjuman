@@ -49,6 +49,8 @@ interface GeminiChunk {
     finishReason?: string;
   }[];
   usageMetadata?: GeminiUsageMetadata;
+  /** Set, with no candidates, when Gemini refuses the prompt itself. */
+  promptFeedback?: { blockReason?: string };
 }
 
 export class GeminiProvider implements TranslationProvider {
@@ -91,6 +93,7 @@ export class GeminiProvider implements TranslationProvider {
 
     let text = '';
     let finishReason: string | undefined;
+    let blockReason: string | undefined;
     let budget = maxTokensFor(request.targetText);
     let truncationRetried = false;
     const usage: TranslationUsage = {
@@ -156,7 +159,20 @@ export class GeminiProvider implements TranslationProvider {
       let buffer = '';
 
       while (true) {
-        const { done, value } = await reader.read();
+        let read: ReadableStreamReadResult<Uint8Array>;
+        try {
+          read = await reader.read();
+        } catch {
+          // A connection that drops after the headers rejects the read with a
+          // TypeError, which escaped unmapped (FOUND_ISSUES 14.1). What
+          // arrived before the drop is kept as raw.
+          throw new TranslationError(
+            'network',
+            'The connection to the Gemini API dropped mid-reply. Check the network connection.',
+            { raw: text || null },
+          );
+        }
+        const { done, value } = read;
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -185,6 +201,9 @@ export class GeminiProvider implements TranslationProvider {
               }
             }
             if (candidate.finishReason) finishReason = candidate.finishReason;
+          }
+          if (chunk.promptFeedback?.blockReason) {
+            blockReason = chunk.promptFeedback.blockReason;
           }
 
           if (chunk.usageMetadata) {
@@ -217,6 +236,16 @@ export class GeminiProvider implements TranslationProvider {
         'truncated',
         `The answer was cut off at the ${budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
         { raw: text },
+      );
+    }
+
+    // A blocked prompt has no candidates, only promptFeedback.blockReason; it
+    // was reported as an empty parse failure (FOUND_ISSUES 14.4).
+    if (blockReason) {
+      throw new TranslationError(
+        'refusal',
+        `Gemini declined to translate this passage (${blockReason}).`,
+        { raw: text || null },
       );
     }
 
