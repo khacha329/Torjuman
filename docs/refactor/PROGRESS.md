@@ -2330,7 +2330,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
 | 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
 | 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `ad81ec7` |
-| 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review pending | this commit |
+| 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review PASS | `bdd5a5c` |
+| 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2960,6 +2961,42 @@ holds)
   directory and 0 file-level cycles, rules hold; **R** first and alone
   55/55 (240,000 px in 33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in
   24.6 s, 1,904 nodes, 0 long tasks); **S** 30/30; **U** 254/254.
+- **Review of 5e2 (`bdd5a5c`): PASS; "ready for 5e3".** The interface
+  byte-identical but for `export`; every chunk identical after masking;
+  the `import type` lines confirmed right under `verbatimModuleSyntax`
+  (filtered inline `type` names would have left side-effect imports).
+
+**Step 5e3, measured 2026-11-17**
+- `CompileTab` (`EntitySheet.tsx:281-424` at `bdd5a5c`: the `compiled`
+  divider, which heads only it, its doc comment and the function) moved
+  verbatim into the new `ui/reader/CompileTab.tsx`, `export` added; a
+  four-line header. Byte diff: identical but for the `export`;
+  `EntitySheet.tsx` is the old file minus lines 280-424 and the import
+  changes, nothing reordered. It has no private helper. It imports
+  `useEffect`/`useState`, `useApp`, `secrets`, `useOnline`, `BidiText`, the
+  `qul/compile` line whole, `isCloudProvider`, `Entity`/`ProviderId`/
+  `QulCompilation`, `Button`/`Spinner` and `type QuranSheetData` from
+  `./quranSheetData` — nothing from `EntitySheet.tsx`, so no cycle.
+  `EntitySheet` drops `secrets`, `useOnline`, the `qul/compile` import,
+  `isCloudProvider`, `ProviderId` and `QulCompilation`, keeps the rest
+  (`QuranSheet` uses them), and imports `CompileTab`. `EntitySheet.tsx` is
+  270 lines.
+- **Comments.** `quran/quranIndex.ts:427` ("`data.verse?.english ||
+  data.bundledEnglish` in EntitySheet"), which plan Design §10 lists as
+  untrue from 5e3, is by reading still true: the expression is in both
+  sheets, but the sentence is about what "the sheet shows", which is
+  `QuranSheet`'s line (`EntitySheet.tsx:227`), still here;
+  `CompileTab.tsx`'s copy (`:80`) feeds the model, shows nothing. It
+  becomes untrue at 5e4, when `QuranSheet` moves; for 5j either way. No
+  other comment made untrue.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5e2: the module's place), CSS
+  byte-identical (`cmp`); **L** 180 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.6 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-quran-compiled` at
+  both sizes among them.
 
 ## Open
 
