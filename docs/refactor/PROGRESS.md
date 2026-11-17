@@ -2341,7 +2341,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review PASS WITH NOTES | `24d1188` |
 | 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review PASS WITH NOTES | `8810abb` |
 | 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review PASS WITH NOTES | `98f44f8` |
-| 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review pending | this commit |
+| 5h1. `ReaderHeader` with `ReadMarkNav`, `JumpToPage` → `ui/reader/ReaderHeader.tsx` | T B L R S U P pass; review PASS WITH NOTES | `0c52e6b` |
+| 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3547,7 +3548,11 @@ holds)
   `:665` to `:1071` up 43; `:1115` to `:1140` (`blockElementFor`,
   `NoKeyBanner`) up 86. FOUND_ISSUES 39's `ReadMarkNav`
   (`ReaderScreen.tsx:1240-1275` at the plan's base) is now in
-  `ReaderHeader.tsx`.
+  `ReaderHeader.tsx`; the entry itself still names the screen, to be
+  updated at 5j. **Untrue from 5h1, fixed at 5j (Q13, Design §10):**
+  `.claude/agents/torjuman-reader.md:14-16` ("`ReaderScreen.tsx` composes
+  …, the header is `sticky top-0 z-30`"): the header is now
+  `ReaderHeader.tsx`. (Both added at 5h1's review.)
 - **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
   exit 0, main chunk 791,495 B (+468 B: the props object and the part's
   function), only `index.js` differs (`compare-bundles` against post-5g5;
@@ -3562,6 +3567,64 @@ holds)
   nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-header`,
   `reader-page` and `reader-page-cards` at both sizes among them; **P**
   PASS, identical.
+- **Review of 5h1 (`0c52e6b`): PASS WITH NOTES; "ready for 5h2".** The
+  subtree identical but for its indentation, both components byte-
+  identical, all 17 props checked `x={x}` one by one with no swap; no
+  wrapper, `memo`, effect or `useApp()`. Notes, both added to the 5j list
+  above: (i) `.claude/agents/torjuman-reader.md:14-16` is untrue from 5h1
+  (it puts the `sticky top-0 z-30` header in `ReaderScreen`), fixed at 5j;
+  (ii) FOUND_ISSUES 39's entry still names `ReaderScreen.tsx:1240-1275`,
+  where `ReadMarkNav` was.
+
+**Step 5h2, measured 2026-11-17**
+- The four ḥadīth bars (`ReaderScreen.tsx:642-683` at `0c52e6b`, the
+  plan's 847-888: the sharḥ notice with its comment, the batch proposal
+  with its comment, the running batch, the sharḥ search in progress —
+  adjacent, blank lines only between them, nothing else) moved into
+  `export function CommentaryBars(…)` in the new
+  `ui/reader/CommentaryBars.tsx`, returned as one `Fragment` of the four
+  conditionals: `return ( <> … </> )`, no wrapper element, the conditions
+  inside, no `memo`, no effect, no `useApp()`. `cmp`: the 42 lines
+  identical, at the same indentation (six spaces, as under the screen's
+  root `div`). The named ḥadīth-only piece Design §8 asks for.
+- Adaptation (f), 5 props, each `x={x}`, in the order of first use:
+  `sharh`, `batchProposal`, `batch`, `activeProfile`, `setBatchProposal`.
+  Objects passed whole (`sharh.notice`, `sharh.setNotice`, `sharh.busy`,
+  `batch.progress`, `batch.run`, `batch.cancel`, `batch.dismiss`,
+  `activeProfile.model` as written). No two props are same-typed
+  callbacks: the only callback prop is `setBatchProposal`. The same-typed
+  pairs are inside the moved text, unchanged — `BatchProposal`'s
+  `onStart`/`onCancel` and `BatchRunning`'s `onStop={batch.cancel}` /
+  `onDismiss={batch.dismiss}`. (i) types: `ReturnType<typeof useSharh>`,
+  `ReturnType<typeof useBatchTranslate>`, `ReturnType<typeof
+  useApp>['activeProfile']`, and the screen's own state shape `{ range:
+  Block[]; estimate: BatchEstimate } | null` restated for `batchProposal`
+  and inside `Dispatch<SetStateAction<…>>` for its setter (the screen names
+  no type for it). (h) `<CommentaryBars … />` stands where the sharḥ
+  notice's comment was, between the translator notice and the columns.
+- Imports: `CommentaryBars.tsx` takes `type Dispatch`/`SetStateAction`,
+  `type useApp`, `type Block`, `BatchProposal`/`BatchRunning`, `type
+  BatchEstimate`, `type useSharh`, `type useBatchTranslate`; none imports
+  it back, so no cycle. `ReaderScreen` drops the `BatchTranslateBar`
+  import (no other use; it keeps `BatchEstimate` for its state) and
+  imports `CommentaryBars`. A four-line header. `ReaderScreen.tsx` is
+  1,019 lines (1,054); `CommentaryBars.tsx` 81.
+- **For 5j:** the screen's references from `:28` to `:63` move up 1 (the
+  dropped import); `:64` to `:641` do not move (the added import cancels
+  it); `:684` on move up 35.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,684 B (+189 B), only `index.js` differs
+  (`compare-bundles` against post-5h1; minified names), CSS byte-identical
+  (`cmp`); **L** 190 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5h1's run but the portrait restore (699 here, 700 there,
+  the known noise), every report line identical but the portrait timing:
+  240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.7 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, with
+  `reader-batch-proposal` at both sizes the capture of these bars (no
+  capture shows the sharḥ notice or the sharḥ search bar; `reader-notice`
+  is the translator's notice, still in the screen); **P** PASS, identical,
+  its `batch`, `batch-again` and `no-key-batch` scenarios included.
 
 ## Open
 
