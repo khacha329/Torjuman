@@ -2323,7 +2323,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5c. check P, baselined on the old code; FOUND_ISSUES 41–43 | `torjuman-llm` read NOT READY (M1 a Claude group, M2 unseen steps named), both fixed; P identical runs (one under another host TZ), fifteen breakages; T B L Q R S pass; review PASS WITH NOTES | `ea6c34e` |
 | 5d1. `Section` → `ui/settings/Section.tsx` | T B L R S U pass; review PASS WITH NOTES | `541ab15` |
 | 5d2. `CatalogSection` → its file | T B L R S U pass; review PASS WITH NOTES | `d7c2838` |
-| 5d3. `TranslationSection` → its file | T pass; B L R S U running at commit; review pending | this commit |
+| 5d3. `TranslationSection` → its file | T B L R S U pass; review PASS | `ec12f28` |
+| 5d4. `KeysSection` with `TestState`, `ProviderKeyField`, `SunnahKeyField` | T pass; B L R S U running at commit; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2802,6 +2803,24 @@ holds)
   `modelsFor`, `CloudProviderId`, `Field`/`inputClass` and `Section`
   (filtered copies of the source's lines); `SettingsScreen` drops
   `defaultModelFor` and `modelsFor` and imports `TranslationSection`.
+- **T** exit 0. **B L R S U**, on the committed tree: **B** exit 0, main
+  chunk 790,214 B (unchanged), only `index.js` differs, CSS byte-identical;
+  **L** 172 files, 134 edges, rules hold; **R** first and alone 55/55
+  (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes); **S** 30/30; **U** 254/254.
+- **Review of 5d3: PASS; "ready for 5d4".** The doc comment moved with the
+  function; every import kept or dropped is right.
+
+**Step 5d4, measured 2026-11-17**
+- `KeysSection` and its private parts `TestState`, `ProviderKeyField` and
+  `SunnahKeyField` moved verbatim, in their order, into the new
+  `ui/settings/KeysSection.tsx`; only `KeysSection` is exported. A
+  four-line header. It imports `useState`, `secrets`, `allProviders`/
+  `providerFor`, `CloudProviderId`, `Button`/`inputClass` and `Section`;
+  `SettingsScreen` drops `secrets`, `allProviders`, `providerFor` and
+  `CloudProviderId` and imports `KeysSection`. `SunnahKeyField`, one of the
+  ḥadīth-only pieces Design §8 names, now lives in this file, rendered only
+  by `KeysSection`.
 - **T** exit 0. **B L R S U** running at commit; results with the review.
 
 ## Open
