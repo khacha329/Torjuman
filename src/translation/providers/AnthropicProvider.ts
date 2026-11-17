@@ -61,8 +61,17 @@ export class AnthropicProvider implements TranslationProvider {
     } catch (error) {
       if (error instanceof Anthropic.AuthenticationError) return false;
       if (error instanceof Anthropic.PermissionDeniedError) return false;
-      // A rate limit or a 400 still proves the key authenticated.
-      if (error instanceof Anthropic.APIError && error.status !== 401 && error.status !== 403) {
+      // A rate limit or a 400 still proves the key authenticated. An error
+      // with no status proves nothing: the SDK's APIConnectionError is an
+      // APIError without one, so with no network the key used to test as good
+      // (FOUND_ISSUES 12). It is thrown instead, and the key screens show
+      // "Could not reach Claude: …" rather than a verdict on the key.
+      if (
+        error instanceof Anthropic.APIError &&
+        error.status !== undefined &&
+        error.status !== 401 &&
+        error.status !== 403
+      ) {
         return true;
       }
       throw toTranslationError(error);
