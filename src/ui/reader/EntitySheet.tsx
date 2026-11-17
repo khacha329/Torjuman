@@ -44,7 +44,7 @@ import {
   TafsirTab,
   TopicsTab,
 } from './QuranTabs';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // The sheet that opens when a verse or ḥadīth is tapped.
 //

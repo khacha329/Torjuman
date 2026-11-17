@@ -26,6 +26,7 @@ its progress log.
 | `npm run verify:reader` | Playwright: every scroll-dependent reader feature | anywhere |
 | `npm run layers` | import graph by directory, cycles, layer rules (`-- --check` to fail on a break) | anywhere |
 | `node scripts/compare-bundles.mjs <a> <b>` | are two copies of `dist/assets` the same JS, build time and chunk hashes masked | anywhere |
+| `npm run verify:markup` | Playwright: DOM and screenshots of every screen showing a shared UI piece, against `docs/refactor/phase2/markup.sha256` (~2 min) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -104,10 +105,12 @@ src/
                        online state, read-only context
   services/            module singletons the lower layers share: API keys
                        (secrets), retrieval log, activity
-  platform/http/       HttpClient + WebHttpClient (proxy routing)
+  platform/http/       HttpClient + WebHttpClient (proxy routing), proxyUrl (the
+                       Worker's URL, shared with the relay)
   platform/storage/    StorageAdapter + IdbStorageAdapter (the only IndexedDB code)
   lib/                 pure helpers: arabic, hash, id, saveFile, takhrij,
-                       providers (isCloudProvider)
+                       providers (isCloudProvider), delay, format
+                       (formatBytes, percentOf), gzip
   components/          BidiText
   shamela/             HTML parsers for shamela.ws pages
   ingest/              book import + resumable crawler
@@ -124,19 +127,24 @@ src/
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
   ui/                  screens; reader/ and settings/ hold most of the UI
+    kit/               shared pieces: Button, Field, TopBar, Spinner, …,
+                       ProgressBar, SettingsSection — import the directory
+                       (`../kit`, or `./kit` from top-level `ui`)
 proxy/                 Cloudflare Worker: CORS proxy + transfer relay (KV)
 scripts/               verify-*.{ts,mjs}, check-layers.mjs, build tools
 ```
 
 `npm run layers` prints the real dependency graph; trust it over this map.
 Since Phase 1 it has no cycle, and `npm run layers -- --check` (also run by
-the deploy workflow) fails on any cycle or any import the ten rules in
+the deploy workflow) fails on any cycle or any import the eleven rules in
 `docs/refactor/layers.json` forbid: `types` imports nothing and `lib` only
 `types`; `platform`, `services` and `components` import only `lib` and
 `types`; domain directories import neither `app` nor the UI (`components`
 included); `app` does not import the UI; top-level `ui` does not reach into a
-screen folder (`ui/reader` …); the translation core does not import its
-providers; and nothing outside the root imports `main.tsx` or `App.tsx`.
+screen folder (`ui/reader` …) except the shared `ui/kit`, which itself imports
+only `app` (the router), `lib` and `types`; the translation core does not
+import its providers; and nothing outside the root imports `main.tsx` or
+`App.tsx`.
 
 ## Traps
 

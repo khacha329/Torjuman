@@ -1,4 +1,5 @@
 import { useOnline } from '../../app/useOnline';
+import { SettingsSection } from '../kit';
 
 // What works without a network, stated plainly so expectations are correct.
 //
@@ -53,7 +54,7 @@ export function OfflineCapabilities() {
   const online = useOnline();
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold">What works offline</h2>
         <span
@@ -103,6 +104,6 @@ export function OfflineCapabilities() {
         server on your local network cannot register a service worker over plain HTTP, so
         it will not run offline there.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

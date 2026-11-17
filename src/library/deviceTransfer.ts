@@ -1,5 +1,6 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import { API_KEY_STORAGE_KEYS } from '../services/secrets';
+import { canGunzip, canGzip, gunzipStream, gzipStream } from '../lib/gzip';
 
 // Moving everything on one tablet to another, as one file.
 //
@@ -217,11 +218,11 @@ export async function exportDevice(
 
   const bytes = lines.pipeThrough(new TextEncoderStream());
   const blob =
-    typeof CompressionStream === 'undefined'
+    !canGzip()
       ? // Uncompressed rather than no transfer at all. The reader tells the
         // two apart by content, not by the filename.
         await new Response(bytes).blob()
-      : await new Response(bytes.pipeThrough(new CompressionStream('gzip'))).blob();
+      : await new Response(gzipStream(bytes)).blob();
 
   // Rows can change while the export runs if the user keeps working. Saying
   // so beats a file whose header disagrees with its body, which the reader
@@ -435,10 +436,10 @@ async function* readLines(file: Blob, size = { bytes: 0 }): AsyncGenerator<Line>
 
   let stream: ReadableStream = file.stream();
   if (gzipped) {
-    if (typeof DecompressionStream === 'undefined') {
+    if (!canGunzip()) {
       throw new Error('This browser cannot read compressed transfer files.');
     }
-    stream = stream.pipeThrough(new DecompressionStream('gzip'));
+    stream = gunzipStream(stream);
   }
 
   const reader = (stream as ReadableStream<Uint8Array>).getReader();

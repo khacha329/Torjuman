@@ -39,10 +39,11 @@ src/
                      online state, read-only context
   services/          shared singletons: API keys, retrieval log, activity
   platform/          the two swap points for Capacitor
-    http/            HttpClient interface + WebHttpClient (uses the proxy)
+    http/            HttpClient interface + WebHttpClient (uses the proxy),
+                     and proxyUrl, the Worker's address
     storage/         StorageAdapter interface + IdbStorageAdapter
   lib/               pure helpers: arabic, hash, id, saveFile, takhrij,
-                     providers
+                     providers, delay, format, gzip
   components/        BidiText
   shamela/           parsers: parseBook, parsePage, structure, quranRefs, urls
   ingest/            importer (metadata, TOC, block building) + crawler
@@ -59,6 +60,7 @@ src/
   share/             encrypted shared chapters
   catalog/           the recommended books and batch import
   ui/                screens; reader/ and settings/ hold most of it
+    kit/             the shared pieces every screen uses
 proxy/               the Cloudflare Worker: CORS proxy + transfer relay
 scripts/             verify-*, check-layers, build tools
 fixtures/            unmodified HTML fetched from shamela.ws (not committed)

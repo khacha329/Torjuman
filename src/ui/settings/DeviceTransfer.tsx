@@ -9,7 +9,8 @@ import {
   sendViaRelay,
   type RelayProgress,
 } from '../../library/relayTransfer';
-import { Button } from '../common';
+import { Button, ProgressBar, SettingsSection } from '../kit';
+import { percentOf } from '../../lib/format';
 
 // The sending half of moving to another tablet: everything on this one, as a
 // single file, saved to Downloads or sent through the proxy. The receiving
@@ -95,7 +96,7 @@ export function DeviceTransfer() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Move to another tablet</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Everything on this tablet in one file — books, QUL resources, narrator profiles,
@@ -155,28 +156,18 @@ export function DeviceTransfer() {
       {progress && (
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{progress.message}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{
-                width: `${progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            percent={percentOf(progress.done, progress.total)}
+          />
         </div>
       )}
 
       {relayProgress && (
         <div className="mt-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{relayProgress.message}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{
-                width: `${relayProgress.total > 0 ? Math.round((relayProgress.done / relayProgress.total) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            percent={percentOf(relayProgress.done, relayProgress.total)}
+          />
         </div>
       )}
 
@@ -214,7 +205,7 @@ export function DeviceTransfer() {
         tablets need the same version of the app; update both first if one is behind. The
         offline translation model is not included — download it again there if you use it.
       </p>
-    </section>
+    </SettingsSection>
   );
 }
 

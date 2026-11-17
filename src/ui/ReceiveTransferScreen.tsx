@@ -16,7 +16,8 @@ import {
   receiveViaRelay,
   type RelayProgress,
 } from '../library/relayTransfer';
-import { Button, inputClass, TopBar } from './common';
+import { Button, inputClass, TopBar, ProgressBar } from './kit';
+import { percentOf } from '../lib/format';
 
 // The receiving half of moving to another tablet.
 //
@@ -217,14 +218,9 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
                   : 'Restoring. Keep the app open until it finishes.'}
             </p>
             <p className="mb-2 text-xs text-muted">{progress?.message ?? 'Starting…'}</p>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-              <div
-                className="h-full bg-accent transition-all"
-                style={{
-                  width: `${progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-                }}
-              />
-            </div>
+            <ProgressBar
+              percent={progress ? percentOf(progress.done, progress.total) : 0}
+            />
           </section>
         )}
 

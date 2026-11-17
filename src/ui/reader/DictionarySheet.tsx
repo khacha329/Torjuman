@@ -6,7 +6,7 @@ import { BidiText } from '../../components/BidiText';
 import type { LookupResult } from '../../dictionary/dictionaryService';
 import type { WordGloss } from '../../types';
 import { AnchoredPanel } from './AnchoredPanel';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 export type GlossState =
   | { status: 'loading' }

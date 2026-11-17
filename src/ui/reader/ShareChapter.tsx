@@ -6,8 +6,9 @@ import { buildBundle, chapterRange, orderRange, tocSubtree } from '../../share/b
 import { generateShareKey, InsecureContextError, sealBundle, toBase64Url } from '../../share/crypto';
 import { shareFileName, shareLinkFor } from '../../share/shareLink';
 import { saveFile } from '../../lib/saveFile';
+import { formatBytes } from '../../lib/format';
 import { AnchoredPanel } from './AnchoredPanel';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 
 // Export a chapter — or a run of them — as a link.
 //
@@ -44,12 +45,6 @@ const RANGE_CHOICES = 40;
  * multiple megabytes usually means the range is wider than intended.
  */
 const LARGE_BUNDLE = 700 * 1024;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 /**
  * Save the sealed bundle, under a name that MUST be exact.

@@ -514,6 +514,333 @@ before the next began. **Owed before merge: `npm run verify` on the owner's
 PC** (steps 1d, 1g and 1i–1m touch modules its script builds; here only its
 SSR build could run, and it resolved at every step).
 
+## Phase 2: shared pieces (complete, branch `claude/restructure-phase-2`)
+
+Plan: [`plans/phase2-shared-pieces.md`](plans/phase2-shared-pieces.md), written
+by the `torjuman-planner` agent on `146dc62`; **approved 2026-11-15, all
+fifteen answers as recommended**.
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 2a. Check U (`scripts/verify-markup.mjs`, `npm run verify:markup`), baselined on the old code | U proven; review FAIL (harness wait) → fixed | `3b15ef3` |
+| review notes: 2a — a real seed wait, text mask dropped, manifest re-proven | U proven; re-review PASS WITH NOTES | `c6d2998`, `c30e388`, `059266f` |
+| review notes: 2a re-review (header wrap, FOUND_ISSUES 7 wording) | applied | `fe6065e` |
+| 2b. `delay` → `lib/delay.ts` | T B L U pass; V owed; review PASS WITH NOTES | `c121141` |
+| review notes: fe6065e and 2b | applied | `18f2a5d` |
+| 2c. `formatBytes` → `lib/format.ts` | T B L U pass; review PASS WITH NOTES | `6e3bea2` |
+| review notes: 18f2a5d and 2c | applied | `ede0a6e` |
+| 2d. one proxy URL → `platform/http/proxyUrl.ts` | T B L U pass; V owed; review PASS | `93d0b9a` |
+| 2e. gzip platform call → `lib/gzip.ts` | T B L U pass; V owed; review PASS WITH NOTES | `2680fdd` |
+| review notes: 2e | applied | `0feb5ae` |
+| 2f. `subtle()` exported from `share/crypto.ts`; the relay drops its copy | T B L U pass; V owed; review PASS | `5e92294` |
+| 2g. `ui/common.tsx` → `ui/kit/index.tsx`; layer rules | T B L U S R pass; review PASS WITH NOTES | `c5f4f6e`, `60f7ebe` |
+| 2h. `ProgressBar` in `ui/kit`, copies 1–7 | T B L U pass; review PASS WITH NOTES | `c748f5d` |
+| review notes: 2h | applied | `3db8af1` |
+| 2i. `percentOf` in `lib/format.ts`, six sites | T B L U pass; review PASS WITH NOTES | `4f9ff79` |
+| review notes: 3db8af1 and 2i | applied | `06b20c7` |
+| 2j. `SettingsSection` in `ui/kit`, 15 copies | T B L U pass; review PASS WITH NOTES | `6d840a8` |
+| 2k. docs, maps, FOUND_ISSUES 10; end-of-phase checks | T B L U S R pass; review PASS WITH NOTES | `41fd1f2`, `f4b0a44` |
+| review notes: 2k and the phase | applied | this commit |
+
+**Step 2a, measured 2026-11-15** (no `src/` change; `git diff --quiet -- src`
+holds)
+- Built by a delegated agent from plan §9, checked and re-baselined here. Two
+  builds (no proxy; `VITE_PROXY_URL=https://proxy.invalid`), both tablet
+  profiles, fixed clock, en-US, UTC, service worker blocked; synthetic seed
+  only. **80 captures** (plain 32 per profile, proxy 8 per profile), each an
+  `.html` and a `.png`: 160 hashes in `docs/refactor/phase2/markup.sha256`.
+  **Screenshots are in the manifest** (byte-stable here; on the owner's PC
+  font rasterization may differ — then `--html-only` or `--compare`).
+- **All seven in-progress states captured**: library-transfer-exporting,
+  device-transfer-exporting, offline-downloading, catalog-importing,
+  receive-fetching, device-transfer-relay, import-crawling.
+- Masks: the "Built" time; the storage-usage line; React `useId` ids; the
+  **order** of Settings → Retrieval's log rows (two boot lookups race). A text
+  mask on those rows, added for a "2 pending"/"3 pending" flake, was removed
+  after the review found the real cause (below).
+- Deviations from §9, each in the script's header: more environment pinned
+  (`GITHUB_REF_NAME`, `GITHUB_SHA`, `npm_package_version`); untracked
+  `qul/` files answer 404 so the owner's licensed files cannot change the
+  result; offline-downloading answers the size probes, `config.json` and
+  `generation_config.json`; import-crawling opens `#/import` after the Library
+  shows "Importing…" (FOUND_ISSUES 6); share-error shows the "link is
+  incomplete" error, not a 404.
+- **Proof.** Agent: two runs identical (160/160); a class swap in the first
+  progress bar's track in `LibraryScreen.tsx` → exit 1, 158/160, naming
+  `library.html` at both sizes (PNGs unchanged, as class order does not
+  render); an added space in Published chapters' description → exit 1,
+  154/160, naming that section, `settings.html`, `settings-proxy.html`; both
+  files restored byte for byte. Here, after the text mask: manifest rewritten
+  from a fresh run, then **three runs, each PASS 160/160**. Run time ≈ 2 min
+  15 s (builds ~6.5 s each).
+- **T** exit 0 (agent); the production CSS is byte-identical with the new
+  script present (Tailwind finds no new class in it).
+
+- **Review of 2a: FAIL**, on the harness, not the app. The wait before the
+  reload passed an async predicate to `page.waitForFunction`, which does not
+  await it, so it waited for nothing; the reload could interrupt the first
+  boot's seed of `matching-ayah`, and the next boot (correctly, by design)
+  reported 3 pending instead of 2 — the flake. Fixed in `c6d2998`: a Node-side
+  poll with a 30 s timeout that throws; the Retrieval text mask removed; the
+  header's two false claims corrected; `VERIFY_OUT` refused outside
+  `.verify/` (checked before the builds; tested: exit 2); the dev-server
+  proxy paths aborted. FOUND_ISSUES 7 withdrawn and replaced by the cosmetic
+  wording issue it really is. Notes kept for later steps: `lib/gzip` (2e) must
+  look `CompressionStream` up at call time, as the export captures stub it
+  after load; the gap list below.
+- **Re-proof after the fix** (manifest in `c30e388`), `src/` unchanged:
+  manifest rewritten from a fresh run; **three runs, each PASS 160/160**; the
+  class swap in `LibraryScreen.tsx:163` → exit 1, 158/160, `library.html` at
+  both sizes; the added space in Published chapters' description → exit 1,
+  154/160, `settings--published-chapters`, `settings`, `settings-proxy` at
+  both sizes; both files restored (`cmp` equal, `git diff --quiet -- src`).
+- **Not captured, so read by the reviewer** (beyond the plan's three
+  exceptions): the reader's sheets and cards that use `ui/common`
+  (`BiographySheet`, `DictionarySheet`, `EntitySheet`, `ExplanationCardView`,
+  `SearchPanel`, `TranslationCardView`, `NarratorCard`, `SelectionRail`,
+  `ReaderScreen` beyond its header), `ShareScreen`'s loading and success
+  states, `LibraryScreen`'s "Deleting…" spinner. All of them change only an
+  import path in 2g, where S and R also run.
+
+- **Re-review of the 2a fix: PASS WITH NOTES.** The manifest changed in
+  exactly the six `.html` dumps holding the Retrieval section; no `[masked]`
+  text remains; the poll cannot pass on a timeout. Applied: a header line
+  re-wrapped; FOUND_ISSUES 7 says "in the deployed build". Kept for later: the
+  poll hard-codes `db.version === 11`, so Phase 4's schema work must update it
+  (it fails loudly otherwise).
+
+**Step 2b, measured 2026-11-15**
+- `delay` moved verbatim from `ingest/importer.ts` (its last function) to the
+  new `lib/delay.ts`, with a three-line header (new text). `importer.ts`
+  imports it from there; `crawler.ts` takes it from `../lib/delay` instead of
+  `./importer` (its other two names stay); `GeminiProvider.ts` deletes its
+  identical private copy and imports it. No re-export left in `importer.ts`.
+  No script imports `delay`.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed**
+  (`ingest/importer` is in it). **B** exit 0; main chunk 791,838 → 791,787 B
+  (−51, the second copy gone); `compare-bundles`: only `index.js` differs;
+  `index-*.css` byte-identical. **L**: 155 files, 128 edges, no cycles; rules
+  hold. **U** PASS 160/160.
+
+- **Reviews of fe6065e and 2b: PASS WITH NOTES.** The two `delay` copies were
+  character-identical; all four call sites get the same function; no rebinding.
+  Applied: `verify-markup.mjs`'s header line is now really re-wrapped (the
+  first attempt only moved the overflow); `lib/delay.ts`'s header names the
+  crawler's retry backoff too. Comments only.
+
+**Step 2c, measured 2026-11-15**
+- `formatBytes` moved verbatim from `ui/reader/ShareChapter.tsx` to the new
+  `lib/format.ts` (now `export`ed, adaptation (b)), with a header (new text).
+  `PublishedShares.tsx` deletes its identical copy; both import it from
+  `lib/format`. The three formatters that differ stay (owner's Q6): recorded as
+  FOUND_ISSUES 8 with their exact outputs. No script imports either file.
+- **T** exit 0. **B** exit 0; main chunk 791,787 → 791,674 B (−113);
+  `compare-bundles`: only `index.js` differs; CSS byte-identical (the new
+  FOUND_ISSUES text names no new class). **L**: 128 edges (`ui/settings → lib`
+  and `ui/reader → lib` already existed); rules hold. **U** PASS 160/160 — the
+  Published chapters capture shows all three branches ("512 B", "300 KB",
+  "2.5 MB"). V not owed (no module the verify script builds).
+
+- **Reviews of 18f2a5d and 2c: PASS WITH NOTES.** Applied: `lib/delay.ts` and
+  `lib/format.ts` headers re-wrapped (comments only); FOUND_ISSUES 8's
+  impossible "1,234 KB" example replaced by a real one ("1,000 KB" vs "1000
+  KB"), and a fifth format added (Offline translation's storage line).
+
+**Step 2d, measured 2026-11-15**
+- New `platform/http/proxyUrl.ts`: `PROXY_URL`, the expression both files
+  computed (`(import.meta.env.VITE_PROXY_URL ?? '').replace(/\/+$/, '')`), with
+  a header (new text). `WebHttpClient.ts`: `PROXY_BASE = DEV ? '' :
+  PROXY_URL`, its comment kept; `relayTransfer.ts`: `RELAY_BASE = PROXY_URL`,
+  its comment kept. Both names and both values unchanged (empty in dev for the
+  client, the Worker's URL for the relay). `vite.config.ts`'s `define` comment
+  now says "Read by src/platform/http/proxyUrl.ts" (a pointer the plan names).
+- `scripts/verify-parsers.ts` imports `WebHttpClient` (`PROXIED_ORIGINS`,
+  ~4547) and `relayTransfer` (~5343): its SSR build resolves; **V owed**.
+- **T** exit 0. **B** exit 0; main chunk 791,674 → 791,661 B (−13);
+  `compare-bundles`: only `index.js` differs; CSS byte-identical. **L**: 129
+  edges (+1, `library → platform/http`, as the plan says); no cycles; rules
+  hold. **U** PASS 160/160, both builds.
+
+- **Reviews of ede0a6e (PASS) and 2d (PASS WITH NOTES, nothing to fix).** The
+  bundle now holds one copy of the proxy expression, aliased by both names.
+
+**Step 2e, measured 2026-11-15**
+- New `lib/gzip.ts`: `canGzip`, `canGunzip`, `gzipStream`, `gunzipStream`,
+  with a header (new text) saying why the globals are looked up per call (the
+  2a review's note: check U stubs `CompressionStream` after load). In
+  `library/transfer.ts`, `library/deviceTransfer.ts` and `share/crypto.ts`,
+  each `typeof CompressionStream === 'undefined'` became `!canGzip()`, each
+  `typeof DecompressionStream === 'undefined'` `!canGunzip()`, each
+  `x.pipeThrough(new …Stream('gzip'))` `gzipStream(x)` / `gunzipStream(x)`.
+  Fallbacks, error messages, detection and comments stay at the call sites;
+  statement and evaluation order unchanged (the stream is created before the
+  compressor in both versions).
+- Types: the DOM typings want `ReadableStream<BufferSource>` in and give
+  `ReadableStream<Uint8Array<ArrayBuffer>>` out; the helpers say so.
+- Round trip in Node 22 (same stream classes): 25,500 B of Arabic → 154 B,
+  magic `1f 8b`, decoded equal; deleting `CompressionStream` after import makes
+  `canGzip()` false (the per-call lookup).
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves; **V owed** (seal and
+  open, device export and restore, book transfer are in it). **B** exit 0;
+  main chunk 791,661 → 791,514 B (−147); `compare-bundles`: only `index.js`;
+  CSS byte-identical. **L**: 129 edges (library and share → lib already
+  existed); rules hold. **U** PASS 160/160, including both "Compressing…"
+  export states.
+
+- **Review of 2e: PASS WITH NOTES**, nothing to fix in code. Evaluation order
+  checked site by site. **Gap found:** book export and import
+  (`library/transfer.ts`) are covered by no automated check — V does not
+  import that file, U holds the export mid-compression — so the plan's tablet
+  check M now includes exporting one book and importing it back. Plan text
+  corrected: six call sites, not five; the helpers' types (recorded above)
+  differ from §4's sketch.
+
+**Step 2f, measured 2026-11-15** (optional step, included by the owner's Q10)
+- `share/crypto.ts`'s `subtle()` gains `export` (adaptation (b));
+  `library/relayTransfer.ts` deletes its character-identical copy (under its
+  "crypto" banner, which stays) and imports `subtle` from `../share/crypto`.
+  `InsecureContextError` leaves the relay's import: only the deleted copy used
+  it there. The error the relay throws without WebCrypto is the same class
+  from the same module as before.
+- **T** exit 0. SSR build of `verify-parsers.ts` resolves (it imports the
+  relay, ~5343); **V owed**. **B** exit 0; main chunk 791,514 → 791,438 B (−76);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 129 edges
+  (`library → share` already existed); rules hold. **U** PASS 160/160.
+
+- **Reviews of 0feb5ae and 2f: both PASS.**
+
+**Step 2g, measured 2026-11-15**
+- `git mv src/ui/common.tsx src/ui/kit/index.tsx`; its router import becomes
+  `../../app/router` (adaptation (a)); a header comment added (the plan names
+  it). The 30 importers change only `…/common` → `…/kit`. No script imports
+  it.
+- Layer rules: rule "top-level ui does not reach into a screen's folder" now
+  reads `ui/(?!kit$).+`; new rule: `ui/kit` imports only `app`, `lib`,
+  `types`. Before the rule change the old rule fired on the six top-level
+  screens, as the plan foresaw. **Negative tests**, each undone: a temporary
+  `ui/kit/zzNegativeTest.ts` importing `ui/reader/selection` → exit 1 (the new
+  rule and a `{ui, ui/kit, ui/reader}` cycle); a temporary rule forbidding
+  `ui → ui/kit` → exit 1, 6 problems (the six screens); `layers.json`
+  restored byte for byte.
+- **T** exit 0. **B** exit 0; main chunk 791,438 B, **unchanged**, and
+  `compare-bundles`: every file identical (a pure rename emits the same JS);
+  CSS byte-identical. SSR build resolves. **L**: 133 edges (129 + 5 − 1; the
+  plan's "132" was counted before 2d's edge), no cycles; 11 rules hold.
+  **U** PASS 160/160. **S** PASS 30/30. **R** PASS 28/28, performance as the
+  baseline (240,000 px in 33.3 s / 175,800 px in 24.4 s; 1,905 / 1,904 DOM
+  nodes; 0 long tasks).
+
+- **Review of 2g: PASS WITH NOTES**, nothing to fix. Notes: the kit header
+  read as a description of today's imports and promised an `export … from`
+  line that did not exist yet — both fixed in 2h, which adds the first one.
+  For 2k: CLAUDE.md's "ten rules" (now 11), its rules paragraph (the kit
+  exception), the map (`ui/kit/`).
+
+**Step 2h, measured 2026-11-15**
+- New `ui/kit/ProgressBar.tsx` (plan §6, with a header), re-exported from
+  `ui/kit/index.tsx` by its first `export { … } from` line; the kit header now
+  says what the kit *may* import and how new pieces are added (2g review).
+- The seven identical track-and-fill pairs replaced, each by one
+  `<ProgressBar percent={…} />` with the width expression moved unchanged from
+  the `style` template into `percent`: `LibraryScreen`, `CatalogScreen`
+  (`className="mt-2"`), `ReceiveTransferScreen`, `DeviceTransfer` ×2,
+  `LibraryTransfer`, `OfflineTranslation`. Three long ones wrapped. Each file
+  appends `ProgressBar` to its existing kit import. `ImportScreen` and
+  `BatchTranslateBar` untouched; their differences are FOUND_ISSUES 9.
+- **T** exit 0. **B** exit 0; main chunk 791,438 → 790,661 B (−777);
+  `compare-bundles`: only `index.js`; CSS byte-identical (every class token is
+  still in `src/`). **L**: 133 edges, no cycles, 11 rules hold. **U** PASS
+  160/160 — the seven bars' captures (library, catalog-importing,
+  receive-fetching, device-transfer-exporting, device-transfer-relay,
+  library-transfer-exporting, offline-downloading) render the same DOM and
+  pixels. V not owed (no module the verify script builds).
+
+- **Review of 2h: PASS WITH NOTES**, nothing to fix in code. All seven width
+  expressions are numbers; a null `progress` gives 0 in both versions.
+  Applied: `ProgressBar.tsx`'s header says "seven bars on six screens" and
+  names the model download; FOUND_ISSUES 9 adds BatchTranslateBar's missing
+  zero-total guard.
+
+**Step 2i, measured 2026-11-15** (optional step, included by the owner's Q10)
+- `percentOf(done, total)` added to `lib/format.ts`:
+  `total > 0 ? Math.round((done / total) * 100) : 0`, with a doc comment.
+  Six sites now call it: `LibraryScreen` (book pages), `ImportScreen` (crawl
+  pages), `ReceiveTransferScreen` (`progress && …` became
+  `progress ? percentOf(…) : 0`, the same value for every input),
+  `DeviceTransfer` ×2, `LibraryTransfer`. `CatalogScreen` (capped at 99) and
+  `BatchTranslateBar` (no guard) compute theirs differently and stay. Each file
+  gains one import line after its imports.
+- **T** exit 0. **B** exit 0; main chunk 790,661 → 790,558 B (−103);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 134 edges (+1,
+  `ui → lib`: the top-level screens had not imported `lib` before; allowed);
+  no cycles; rules hold. **U** PASS 160/160 (the library's "Import incomplete —
+  40%", the crawl panel's 40%, every bar width).
+
+- **Reviews of 3db8af1 and 2i: PASS WITH NOTES**, nothing to fix in code. The
+  Receive rewrite gives the same value for every input (`progress` is an
+  object or null). Applied: `ProgressBar.tsx` header re-wrapped;
+  `percentOf`'s comment says "six progress lines" and "a progress line";
+  FOUND_ISSUES 9 says "at least one block". Comments and docs only.
+
+**Step 2j, measured 2026-11-15**
+- New `ui/kit/SettingsSection.tsx` (plan §7, the bare shell, with a header),
+  re-exported from `ui/kit/index.tsx`. All 15 copies were first checked to be
+  the exact tag `<section dir="ltr" className="ltr-isolate rounded-lg border
+  border-rule bg-white p-5">`, one per file. In each, only that opening tag and
+  its `</section>` became `<SettingsSection>` / `</SettingsSection>`; nothing
+  inside changed, nothing was re-indented. `SettingsScreen.tsx`'s local
+  `Section` keeps its name, props, `h2`, paragraph and wrapper `div`; only its
+  outer tag changed. Fourteen files appended `SettingsSection` to their kit
+  import; `OfflineCapabilities.tsx`, which had none, gained one import line.
+- **T** exit 0. **B** exit 0; main chunk 790,558 → 789,438 B (−1,120);
+  `compare-bundles`: only `index.js`; CSS byte-identical. **L**: 134 edges, no
+  cycles, rules hold. **U** PASS 160/160 — all 21 `settings--*` captures, the
+  whole Settings screen, `settings-proxy`, and the three in-progress Settings
+  states.
+
+- **Reviews of 06b20c7 and 2j: PASS WITH NOTES**, nothing to fix in code.
+  The swapped tag is the one each section component returns; no `<section>`
+  is left in `ui/settings`; RESTRUCTURE §2's promise for settings sections now
+  holds. Notes applied in 2k (comments only).
+
+**Step 2k, measured 2026-11-15**
+- Docs as the plan lists them (`41fd1f2`): CLAUDE.md map and its rules
+  paragraph (eleven rules, the `ui/kit` exception), README map, RESTRUCTURE
+  status, §1 counts, Phase 2 marked complete; FOUND_ISSUES 10 (duplicates
+  deferred by Q10, and 2j′). Two comment notes from the 2i and 2j reviews.
+  End-of-phase report: [`phase2/layers.txt`](phase2/layers.txt).
+- **End of phase:** **T** exit 0. **B** exit 0, main chunk 789,438 B; CSS
+  byte-identical to 2j's base (the doc text names no new class). SSR build of
+  `verify-parsers.ts` resolves. **L** `--check`: 160 files, 134 edges, no
+  cycles, 11 rules hold. **U** PASS 160/160. **S** PASS 30/30. **R** PASS
+  28/28, performance as the Phase 0 baseline (240,000 px in 33.3 s / 175,800
+  px in 24.4 s; 1,905 / 1,904 DOM nodes; 404 / 406 blocks; 0 long tasks).
+
+- **Review of 2k and of Phase 2 as a whole: PASS WITH NOTES; "ready for PR",
+  merged only after V and M.** Layer report at HEAD byte-identical to
+  `phase2/layers.txt`; −2,400 B checked step by step; no stale `ui/common` or
+  old-helper pointer in live docs. Applied: RESTRUCTURE status re-wrapped;
+  CLAUDE.md says top-level `ui` imports `./kit`; README's map names
+  `proxyUrl`; FOUND_ISSUES 10 adds Onboarding's card shell and the build
+  script's `delay`; FOUND_ISSUES 8's line refs updated.
+
+## Phase 2 result
+
+| | Phase 1 end | Phase 2 end |
+| --- | --- | --- |
+| shared helpers | — | `lib/delay`, `lib/format` (`formatBytes`, `percentOf`), `lib/gzip`, `platform/http/proxyUrl` |
+| shared UI | `ui/common.tsx` | `ui/kit/` with `ProgressBar` (7 bars) and `SettingsSection` (15 shells, 21 sections) |
+| main JS chunk | 791,838 B | 789,438 B (−2,400) |
+| layer rules | 10 | 11 |
+| screens (check U, 80 captures × HTML + PNG) | — | identical to the Phase 1 code at every step |
+| verify:selection / verify:reader | 30/30, 28/28 | 30/30, 28/28, same performance |
+
+Every step was reviewed before the next began; the one FAIL (2a's harness
+wait) was fixed and re-reviewed. **Owed before merge:** `npm run verify` on the
+owner's PC (steps 2b, 2d, 2e, 2f touch modules it builds), and **M** on the
+tablet with `npm run stage` — including one book exported and imported back,
+which no automated check covers.
+
 ## Open
 
 - V baseline count from the owner's PC.

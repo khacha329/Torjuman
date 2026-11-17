@@ -75,3 +75,92 @@ keys" still holds, but by convention; a `layers.json` rule could restrict
 which files import `services/secrets.ts` (today: `App.tsx`,
 `ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
 settings files). For the owner to decide.
+
+## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured)
+
+`LibraryScreen.tsx` (~180): "Resume import" navigates to `#/import` first and
+starts the crawler second, and `ImportScreen` picks its stage once, on mount,
+from `crawler.isRunning`. When the screen mounts before the crawler has
+started, it shows the empty input form instead of the crawl panel, though the
+import is running. Reproduced at both tablet sizes while building check U, which
+therefore waits on the Library for "Importing…" before opening `#/import`. Not
+seen on the owner's tablet yet, as far as is known. Left as is. Found in Phase 2
+step 2a.
+
+## 7. "N pending of 3 bundled resources" counts resources that are not bundled (2026-11-15, measured; first version withdrawn)
+
+`qul/seed.ts` (~311) writes "N pending of 3 bundled resources" to the
+Retrieval log, but of the three entries in `SEED_MANIFEST` only
+`matching-ayah` is bundled; the other two are left out of the build by
+licence and, in the deployed build, always come back absent. So a fully
+seeded install there reads "2 pending of 3 bundled resources" (a first boot
+legitimately reads 3; on the owner's PC, licensed files in `public/qul/`
+would be installed). Cosmetic. Left as is.
+
+The first version of this entry blamed timing in the app for the count
+varying between 2 and 3. That was wrong: the variation came from check U
+reloading the page while the first boot was still seeding (its wait did not
+wait), which the app survives by design — the next boot redoes the seed.
+Fixed in the check, not the app. Found in Phase 2 step 2a and its review.
+
+## 8. Byte sizes are written five different ways (2026-11-15, measured)
+
+Only two of the app's byte formatters were the same; Phase 2 step 2c merged
+those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
+whole kilobytes, one decimal for megabytes). The others differ, so merging
+them would change text the owner sees (owner's answer to Phase 2 Q6: not now):
+
+- `ui/settings/DeviceTransfer.tsx` `sizeOf` (~212): never shows bytes —
+  anything under 1 MB is at least "1 KB", kilobytes rounded and with a
+  thousands separator (just under 1 MB reads "1,000 KB" where `formatBytes`
+  says "1000 KB", at most "1,024 KB"); megabytes as `formatBytes`.
+- `library/deviceTransfer.ts` `mb` (~393), in the "not enough space" message:
+  megabytes only, rounded **up**, with a separator ("1,024 MB").
+- `ui/settings/LibraryTransfer.tsx` (~41), the export status: megabytes only,
+  one decimal ("0.3 MB" for 300 KB).
+- `ui/settings/OfflineTranslation.tsx` (~63, ~225), the storage-usage line:
+  whole megabytes, no separator (`usageMB.toFixed(0)`).
+
+Left as is. A later, visible change can pick one format. Found in Phase 2
+planning, step 2c and its review.
+
+## 9. Two progress bars look different from the other seven (2026-11-15, measured)
+
+Phase 2 step 2h put the seven identical progress bars (`h-1.5`, rule-coloured
+track, accent fill) on `ui/kit/ProgressBar`. Two differ, and keep their own
+markup (owner's answer to Phase 2 Q5):
+
+- `ui/ImportScreen.tsx` (~287), the crawl panel: taller (`h-2`) with a bottom
+  margin (`mb-2`).
+- `ui/reader/BatchTranslateBar.tsx` (~99), the batch translation bar:
+  thinner (`h-1`) with `mt-1.5`, no `w-full`, and a width-only, 300 ms
+  transition (`transition-[width] duration-300`). Its percentage (~65) also
+  has no zero-total guard: `(done + failed) / total` with `total` 0 gives
+  `NaN%`, where the other bars write 0. A batch always has at least one
+  block (`useBatchTranslate.ts` returns early on an empty range), so it is not
+  known to show.
+
+Left as is; making them match would change what the owner sees. Found in
+Phase 2 planning.
+
+## 10. Duplicates left for later (2026-11-15, by the owner's answer to Phase 2 Q10)
+
+Found while planning Phase 2, real duplicates but deferred:
+
+- `parseHtml` — `shamela/parsePage.ts` (~58) and `shamela/parseBook.ts` (~54),
+  identical; in the parsers `npm run verify` covers most heavily, so moved
+  only with V in hand.
+- `pageIndexOf` — `ui/reader/BlockList.tsx` (~134) and
+  `share/buildBundle.ts` (~84), identical; it parses block ids and belongs
+  with `blockIdFor` in `ingest/importer.ts`, a larger question.
+- `toLine` — `library/transfer.ts` (~85) and `library/deviceTransfer.ts`
+  (~398), the same body with different parameter types and comments.
+- The plain card shell in `ui/ReceiveTransferScreen.tsx` (four places) and
+  `ui/OnboardingScreen.tsx` (~54), like the settings shell but without
+  `dir`/`ltr-isolate`.
+- A third `delay`, in a different form, in `scripts/build-catalog.ts` (~212):
+  a build script, outside `src/` (found by the Phase 2 end review).
+- `title`/`description` props on `SettingsSection` (Phase 2 step 2j′, owner's
+  Q3: not now).
+
+Not duplicates: the nine red error boxes, which all differ.

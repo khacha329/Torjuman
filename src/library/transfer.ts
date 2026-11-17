@@ -2,6 +2,7 @@ import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book, Page, TocNode } from '../types';
 import { normalize } from '../lib/arabic';
 import { sha256 } from '../lib/hash';
+import { canGunzip, canGzip, gunzipStream, gzipStream } from '../lib/gzip';
 import { regenerateEntities } from '../quran/entityService';
 import { buildRootIndex } from '../dictionary/dictionaryService';
 
@@ -146,14 +147,12 @@ export async function exportBook(
 
   onProgress({ phase: 'writing', done: blocks.length, total: blocks.length, message: 'Compressing…' });
 
-  if (typeof CompressionStream === 'undefined') {
+  if (!canGzip()) {
     // Uncompressed fallback rather than failing the export outright.
     return new Blob([bytes], { type: 'application/x-ndjson' });
   }
 
-  const compressed = new Blob([bytes as BufferSource])
-    .stream()
-    .pipeThrough(new CompressionStream('gzip'));
+  const compressed = gzipStream(new Blob([bytes as BufferSource]).stream());
 
   return new Response(compressed).blob();
 }
@@ -190,10 +189,10 @@ export async function importBookFile(
   let stream: ReadableStream = file.stream();
   const looksCompressed = file.name.endsWith('.gz');
   if (looksCompressed) {
-    if (typeof DecompressionStream === 'undefined') {
+    if (!canGunzip()) {
       throw new Error('This browser cannot read compressed transfer files.');
     }
-    stream = stream.pipeThrough(new DecompressionStream('gzip'));
+    stream = gunzipStream(stream);
   }
 
   const reader = (stream as ReadableStream<Uint8Array>).getReader();

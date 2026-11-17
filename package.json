@@ -14,6 +14,7 @@
     "verify": "vite build --ssr scripts/verify-parsers.ts --outDir .verify --logLevel warn && node .verify/verify-parsers.js",
     "verify:selection": "vite build --logLevel warn && node scripts/verify-selection.mjs",
     "verify:reader": "vite build --logLevel warn && node scripts/verify-reader-scroll.mjs",
+    "verify:markup": "node scripts/verify-markup.mjs",
     "glossary": "vite build --ssr scripts/build-glossary.ts --outDir .verify --logLevel warn && node .verify/build-glossary.js",
     "catalog": "vite build --ssr scripts/build-catalog.ts --outDir .verify --logLevel warn && node .verify/build-catalog.js"
   },

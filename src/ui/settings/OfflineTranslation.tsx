@@ -14,7 +14,7 @@ import {
   type OfflineDtype,
   type OfflineLoadDiagnostics,
 } from '../../translation/offline/OfflineProvider';
-import { Button, Field, inputClass } from '../common';
+import { Button, Field, inputClass, ProgressBar, SettingsSection } from '../kit';
 
 // Downloading, choosing and removing the on-device translation model.
 //
@@ -131,7 +131,7 @@ export function OfflineTranslation() {
   const usingOffline = activeProfile.providerId === 'offline';
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Offline translation</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         A translation model that runs on this device. No account, no key, no cost, and it
@@ -186,12 +186,7 @@ export function OfflineTranslation() {
           <p className="mb-2 text-xs text-muted">
             {progress.file} — {progress.percent}%
           </p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{ width: `${progress.percent}%` }}
-            />
-          </div>
+          <ProgressBar percent={progress.percent} />
         </div>
       )}
 
@@ -386,6 +381,6 @@ export function OfflineTranslation() {
           </div>
         )}
       </div>
-    </section>
+    </SettingsSection>
   );
 }

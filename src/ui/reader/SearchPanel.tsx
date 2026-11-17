@@ -3,7 +3,7 @@ import { useApp } from '../../app/AppContext';
 import { findInDisplayText, normalize, toArabicNumerals } from '../../lib/arabic';
 import type { PageMeta } from '../../platform/storage/StorageAdapter';
 import type { Block } from '../../types';
-import { inputClass } from '../common';
+import { inputClass } from '../kit';
 
 export interface SearchResult {
   block: Block;

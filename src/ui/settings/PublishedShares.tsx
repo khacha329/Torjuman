@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import type { ShareRecord } from '../../types';
 import { shareFileName, shareLinkFromKeyText } from '../../share/shareLink';
-import { Button } from '../common';
+import { Button, SettingsSection } from '../kit';
+import { formatBytes } from '../../lib/format';
 
 // Chapters this device has published, and the honest limits of that list.
 //
@@ -28,12 +29,6 @@ import { Button } from '../common';
 // not have, and the failure would be silent: the author would believe a chapter
 // was withdrawn while its link kept working.
 // ---------------------------------------------------------------------------
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function PublishedShares() {
   const { storage } = useApp();
@@ -61,7 +56,7 @@ export function PublishedShares() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Published chapters</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Shared links made on this device. Each one carries its own key — the only copy, so
@@ -134,7 +129,7 @@ export function PublishedShares() {
         shared from another device will not appear here, and one whose file has been
         deleted from the repository will.
       </p>
-    </section>
+    </SettingsSection>
   );
 }
 

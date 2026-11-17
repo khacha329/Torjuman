@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { importItqanFile } from '../../biography/narratorService';
 import { isItqanShard } from '../../biography/itqan';
-import { Button } from '../common';
+import { Button, SettingsSection } from '../kit';
 
 // Installing narrator data.
 //
@@ -81,7 +81,7 @@ export function NarratorSources() {
   );
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Narrator profiles</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         What fills the structured card when you tap a name. Taqrīb at-Tahdhīb is read
@@ -172,6 +172,6 @@ export function NarratorSources() {
         <code>app/data/rijal/</code> on the <code>master</code> branch. They are not
         distributed with this app — see docs/RESOURCES.md for why.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

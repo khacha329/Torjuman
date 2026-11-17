@@ -139,7 +139,7 @@ export default defineConfig({
     'import.meta.env.VITE_CATALOG_URL': JSON.stringify(resolveCatalogUrl()),
     // Read by src/share/shareLink.ts.
     'import.meta.env.VITE_SHARE_BASE_URL': JSON.stringify(resolveShareBaseUrl()),
-    // Read by src/platform/http/WebHttpClient.ts.
+    // Read by src/platform/http/proxyUrl.ts.
     'import.meta.env.VITE_PROXY_URL': JSON.stringify(resolveProxyUrl()),
     // What build is this? Shown in Settings and copied into a bug report, so a
     // tester's "it does X" can be pinned to an actual build rather than to

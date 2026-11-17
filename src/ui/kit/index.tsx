@@ -1,5 +1,17 @@
 import type { ReactNode } from 'react';
-import { hrefFor, type Route } from '../app/router';
+import { hrefFor, type Route } from '../../app/router';
+
+// The shared UI kit: the buttons, fields, bars and other small pieces every
+// screen uses, so each looks and behaves the same everywhere. It may import
+// only React, `lib`, `types` and, for LinkButton, the router from `app` — no
+// screen, no domain code, no service — so any screen can use it and it can
+// never pull a screen in (docs/refactor/layers.json). Pieces older than the
+// kit are defined in this file; new ones get their own file beside it and an
+// `export { … } from './…'` line here. Until restructure Phase 2 step 2g this
+// file was src/ui/common.tsx.
+
+export { ProgressBar } from './ProgressBar';
+export { SettingsSection } from './SettingsSection';
 
 export function Button({
   children,

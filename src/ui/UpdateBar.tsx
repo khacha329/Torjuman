@@ -6,7 +6,7 @@ import {
   updateState,
   type UpdateState,
 } from '../app/pwaUpdate';
-import { Button } from './common';
+import { Button } from './kit';
 
 // The two things a service worker ever needs to say.
 //

@@ -5,7 +5,7 @@ import {
   lastOfflineLoad,
   OFFLINE_DTYPE,
 } from '../../translation/offline/OfflineProvider';
-import { Button } from '../common';
+import { Button, SettingsSection } from '../kit';
 import { formatRetrievalLog } from '../../services/retrievalLog';
 import { describeLayout } from '../useLayoutMode';
 
@@ -138,7 +138,7 @@ export function BuildSection() {
   }, [modelFiles, seedOutcome, settings.panelPosition, storage]);
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">This build</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Quote the version when reporting anything. Deploys are cut from tags, so
@@ -176,6 +176,6 @@ export function BuildSection() {
         Includes the version, what is imported and what the on-device model has
         cached. It contains no API keys and no book text.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

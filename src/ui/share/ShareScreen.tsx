@@ -5,7 +5,7 @@ import { fromBase64Url } from '../../share/crypto';
 import { loadShare, ShareLoadError } from '../../share/loadShare';
 import { ShareStorageAdapter } from '../../share/ShareStorageAdapter';
 import type { ShareBundle } from '../../share/bundle';
-import { Button, Spinner } from '../common';
+import { Button, Spinner } from '../kit';
 import { ReaderScreen } from '../reader/ReaderScreen';
 
 // A shared chapter, opened from a link.

@@ -9,7 +9,8 @@ import {
 } from '../../library/transfer';
 import type { Book } from '../../types';
 import { saveFile } from '../../lib/saveFile';
-import { Button } from '../common';
+import { Button, ProgressBar, SettingsSection } from '../kit';
+import { percentOf } from '../../lib/format';
 
 // Moving crawled books between the user's own devices.
 //
@@ -77,7 +78,7 @@ export function LibraryTransfer() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">Library transfer</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Move a crawled book to another device as a file, instead of crawling it again.
@@ -105,14 +106,9 @@ export function LibraryTransfer() {
       {progress && (
         <div className="mb-4 rounded-md border border-rule bg-parchment p-3">
           <p className="mb-2 text-xs text-muted">{progress.message}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{
-                width: `${progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-              }}
-            />
-          </div>
+          <ProgressBar
+            percent={percentOf(progress.done, progress.total)}
+          />
         </div>
       )}
 
@@ -147,6 +143,6 @@ export function LibraryTransfer() {
         page HTML, the search index and verse detection are all left out and rebuilt on
         arrival — they are derived, and together they are most of the bulk.
       </p>
-    </section>
+    </SettingsSection>
   );
 }

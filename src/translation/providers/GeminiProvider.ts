@@ -16,6 +16,7 @@ import {
 import { renderSystem, renderUser } from '../prompt';
 import { parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
+import { delay } from '../../lib/delay';
 
 // Google Generative Language API.
 //
@@ -291,8 +292,4 @@ async function geminiHttpError(response: Response): Promise<TranslationError> {
   }
 
   return new TranslationError('api', `Gemini API error: ${message}`);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -5,7 +5,7 @@ import { QulFormatError } from '../../qul/read';
 import { liveSqlJsRuntimes } from '../../qul/sqlite';
 import { SEED_APPROX_BYTES, SEED_MANIFEST, type SeedProgress } from '../../qul/seed';
 import type { QulResource } from '../../types';
-import { Button, Spinner } from '../common';
+import { Button, Spinner, SettingsSection } from '../kit';
 
 // Settings → QUL resources.
 //
@@ -119,7 +119,7 @@ export function QulResources() {
   };
 
   return (
-    <section dir="ltr" className="ltr-isolate rounded-lg border border-rule bg-white p-5">
+    <SettingsSection>
       <h2 className="text-base font-semibold">QUL resources</h2>
       <p className="mt-0.5 mb-4 text-sm text-muted">
         Tafsīr, similar āyāt, topics and sūrah background, imported from files you download
@@ -329,6 +329,6 @@ export function QulResources() {
         loaded afterwards
         {liveSqlJsRuntimes() === 0 ? ' (none is loaded right now).' : '.'}
       </p>
-    </section>
+    </SettingsSection>
   );
 }
