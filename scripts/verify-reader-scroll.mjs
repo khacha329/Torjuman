@@ -445,8 +445,10 @@ async function screenshotSelection(page, screenshot) {
 //
 // Added in Phase 5 step 5b, on the code as it was, so that the moves of the
 // screen's hooks and parts that follow have something to fail on: before this
-// nothing checked the divider, Ctrl+\, Hide cards, the sheet's handle, a
-// marker or card tap, the read-mark ↑ ↓, double-tap or the restore's guard.
+// nothing asserted the behaviour of the divider, Ctrl+\, Hide cards, the
+// sheet's handle, a marker or card tap, the read-mark ↑ ↓, double-tap or the
+// restore's guard (check U pictures some of those states, but judges no
+// behaviour).
 //
 // Every scenario opens its own context and seeds the book afresh, so the
 // existing checks and the performance report above run on exactly the page

@@ -543,7 +543,7 @@ container's fonts, which is stable here.
 ## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
 
 Found while building check R's read-mark scenario (Phase 5 step 5b).
-`ReadMarkNav` (`ui/reader/ReaderScreen.tsx:1240-1276`) picks "next" as the
+`ReadMarkNav` (`ui/reader/ReaderScreen.tsx:1240-1275`) picks "next" as the
 first read mark after `currentOrder` (`:1250`), which is the order of the
 block at the **top** of the screen (`visibleBlock`, `:804`; `topIndex` in
 `ui/reader/BlockList.tsx:360-369`). Its jump **centres** the mark

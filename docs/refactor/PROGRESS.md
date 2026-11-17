@@ -2546,9 +2546,12 @@ holds)
   once with or without the guard (run 11 below passes 55/55); the only route
   to a second restore today is a book-to-book hash change (FOUND_ISSUES 31).
   The check is proven instead with the restore applied a second time, 2 s
-  after the first. (6) The plan's `torjuman-reader` reading of 5b's additions
-  before the baseline (Q16) was not done by this subagent, which cannot start
-  other agents; owed before the commit.
+  after the first. (6) Q16 asked for a `torjuman-reader` reading of 5b's
+  additions before the baseline. The additions were built by the
+  `torjuman-reader` agent itself, which cannot start another agent, so the
+  independent read was the `torjuman-reviewer`'s, after the baseline was
+  committed (`ad16fdc`) — as for 5a. A departure from Q16, reported to the
+  owner.
 - **Breakages**, each a temporary edit to `ui/reader/ReaderScreen.tsx`
   restored from a `cp` backup (`cmp` equal, `git diff --quiet -- src` after
   each), each a full `npm run verify:reader`; none failed any of the 28
@@ -2579,6 +2582,19 @@ holds)
 - FOUND_ISSUES **39** (↓ from a centred read mark) and **40** (centred jumps
   one header low, `settleOn`'s eight passes) filed, left unfixed. RESTRUCTURE
   §5's R row now says 55 and names the report lines.
+
+- **Review of 5b (`ad16fdc`): PASS WITH NOTES; "ready for 5c".** Two R runs
+  55/55, every new line identical to the builder's; each new check can fail
+  and none passes when its element is missing; the departures acceptable
+  (the read-mark checks do not build FOUND_ISSUES 39 in); 39 and 40
+  accurate. Coverage gaps for the parts to come, guarded by reading the
+  same-name props only: CommentaryBars' sharḥ notice and busy bar, the card
+  panel's per-kind collapse/delete/note/glossary actions, the sheets' close
+  paths. Note: the portrait read-mark checks pass by 8–9 px, deterministic;
+  a header-height change of ~17 px would flip them (U would show it too).
+  Applied: the script header said nothing "checked" those states before 5b,
+  untrue given U's captures — now "asserted the behaviour of"; departure (6)
+  above records what happened; FOUND_ISSUES 39's line range.
 
 ## Open
 
