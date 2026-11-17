@@ -36,9 +36,10 @@
 //     exactly as passed to fetch (never re-serialized: JSON key order is what
 //     "byte-identical" means), and the names of any other init fields.
 //   * A canned response can also drop the connection part-way through its
-//     body (`dropAfterBytes`), the realistic way to reach the error mapping's
-//     not-an-API-error branches (since FOUND_ISSUES 14, the dropped-reply
-//     branch just before the last): see the scenarios added after the 3a
+//     body (`dropAfterBytes`), the realistic way to reach the Anthropic
+//     mapping's not-an-API-error branches (since FOUND_ISSUES 14, the
+//     dropped-reply branch just before the last) and the body-read catches of
+//     Gemini translate and compile: see the scenarios added after the 3a
 //     review, near the end of the call-site scenarios.
 //   * Every `ANTHROPIC_*` environment variable is deleted before anything
 //     runs. The SDK reads ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
@@ -60,17 +61,18 @@
 //     reading of an HTTP-date retry-after (Date.parse(header) - Date.now()).
 //     Only anthropic.translate.429-retry-after-http-date-only reaches that
 //     branch: the older anthropic.translate.429-retry-after-http-date also
-//     sends retry-after-ms, which the SDK reads first, so there the date is
-//     seen only by the app, whose Number() made it NaN until FOUND_ISSUES 11
-//     (retryAfterSeconds reads the date, against this same Date.now).
+//     sends retry-after-ms, which the SDK reads first. There the app's
+//     Number() made the date NaN until FOUND_ISSUES 11; since 15.4 the app
+//     reads retry-after-ms first too (1 s), so the date is read by neither.
+//     The -only scenario's date is read by both (30 s, this Date.now).
 //   * Number.prototype.toLocaleString and String.prototype.localeCompare
 //     default to 'en-US' when called without a locale: the truncation messages
 //     format the budget with toLocaleString(). localeCompare stays pinned
 //     in case a call site reaches one; glossaryHashOf, which once sorted with
 //     it, sorts by code point since FOUND_ISSUES 13. Pinned in-process
-//     rather than by running under LANG=C.UTF-8, because an environment prefix in an npm script does not
-//     work in every shell, and on some systems Node takes its default locale
-//     from the OS rather than LANG.
+//     rather than by running under LANG=C.UTF-8, because an environment
+//     prefix in an npm script does not work in every shell, and on some
+//     systems Node takes its default locale from the OS rather than LANG.
 //   * navigator.onLine (Node's navigator has none): true, false in one gloss
 //     scenario. localStorage: a Map, emptied before the secrets section.
 //
@@ -1279,8 +1281,9 @@ await scenario(
 // Date.now(), 30 000 ms with Date.now pinned). The older http-date scenario
 // above also sends retry-after-ms, which the SDK reads first, so its Date.parse
 // never runs; this one sends the date alone. The app's own reading was
-// Number() of the header, NaN in both; since FOUND_ISSUES 11 it reads the date
-// (retryAfterSeconds), so both report 30 s.
+// Number() of the header, NaN in both. Since FOUND_ISSUES 11 it reads the
+// date, so this one reports 30 s; since 15.4 it reads retry-after-ms first, so
+// the older one reports 1 s.
 await scenario(
   'anthropic.translate.429-retry-after-http-date-only',
   times(3, () => anthropicError(429, { 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
