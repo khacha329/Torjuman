@@ -314,18 +314,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // ------------------------------------------------------------- selection
 
-  /**
-   * Track whether a selection exists, so the bottom bar can show.
-   *
-   * `selectionchange` on `document`, not `pointerup` on the reader: on Android
-   * the selection handles are native UI drawn above the WebView, so dragging
-   * them delivers no pointer event to the page at all. A pointerup handler
-   * fires only on some later, unrelated tap. selectionchange *is* delivered
-   * during handle drags, which makes it the only correct signal here.
-   *
-   * Debounced because it fires continuously during a drag. Nothing is resolved
-   * or stored — only whether a selection exists and whether it is one word.
-   */
   // Checked once per book rather than on every selection: the rail needs to
   // know whether to offer the action at all, and importing a biographical work
   // mid-read is not a thing that happens.
@@ -346,6 +334,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     };
   }, [storage]);
 
+  /**
+   * Track whether a selection exists, so the bottom bar can show.
+   *
+   * `selectionchange` on `document`, not `pointerup` on the reader: on Android
+   * the selection handles are native UI drawn above the WebView, so dragging
+   * them delivers no pointer event to the page at all. A pointerup handler
+   * fires only on some later, unrelated tap. selectionchange *is* delivered
+   * during handle drags, which makes it the only correct signal here.
+   *
+   * Debounced because it fires continuously during a drag. Nothing is resolved
+   * or stored — only whether a selection exists and whether it is one word.
+   */
   useEffect(() => {
     let timer: number;
 

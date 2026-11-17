@@ -443,13 +443,17 @@ finish clears it, and the rail's Translate and Explain
 (`ui/reader/SelectionRail.tsx:128-139`, `disabled={busy}`) come back while the
 other is still running. Minor. Phase 5 plan, Design §9 D.
 
-## 30. A detached doc comment in the reader (2026-11-16, by reading)
+## 30. A detached doc comment in the reader (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/ReaderScreen.tsx:317-328` ("Track whether a selection exists…
 `selectionchange` on `document`, not `pointerup`…") describes the
 `selectionchange` effect at `:349-362`, but sits above the
 biography-availability effect (`:332-347`), whose own comment follows it
 (`:329-331`). Docs only. Phase 5 plan, Design §9 E.
+
+**Fixed in lane A:** the comment was moved, verbatim, from above the
+biography-availability effect to directly above the `selectionchange` effect
+it describes. No code changed.
 
 ## 31. The reader is not keyed by book (2026-11-16, by reading)
 
@@ -641,3 +645,12 @@ scenario records exactly that (the request is the plain one, the card says
 web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
+
+## 44. The selection comment still names the bottom bar (2026-11-17, by reading)
+
+`ui/reader/ReaderScreen.tsx:338` ("Track whether a selection exists, so the
+bottom bar can show.") names the bottom bar of Amendment 10. README "Selection
+actions are a left rail" records that the bar was replaced by `SelectionRail`,
+a vertical rail on the left. The rest of the comment (why `selectionchange`
+and not `pointerup`, why debounced) still holds. Found while moving the comment
+for 30. Docs only. Left unfixed.
