@@ -657,7 +657,8 @@ its block on since 40, and `ReadMarkNav` counts "previous" and "next" from it
 The mark just centred is then neither, so ↓ moves on from it, and ↑ still
 skips it (strict `<`). A mark already on screen above the middle now counts as
 behind: from the very top of the book, ↓ goes to the first mark below the
-middle of the first screen, and one above it is reached with ↑. R judges it:
+middle of the first screen, and one above it is behind (↑) and is
+already on screen; see 52. R judges it:
 "↓ ↓ ↓ from the top visits the read marks in order" in both layouts (on the
 old code 400, 400, 400 and ↓ still on), and the `readMarkDown` report line now
 reads `atMiddle` 500.

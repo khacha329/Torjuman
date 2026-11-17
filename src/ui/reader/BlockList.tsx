@@ -320,10 +320,11 @@ export function BlockList({
   }, [topIndex, bottomIndex, onVisibleRangeChange]);
 
   // The handlers rows receive, held stable. BlockList renders on every scroll
-  // frame, and so does ReaderScreen whenever the top block changes; a row
-  // handed a new function each time could not skip rendering, and there are
-  // OVERSCAN of them either side of the screen. These always call the latest
-  // handler, so nothing is lost by keeping their identity fixed.
+  // frame, and so does ReaderScreen whenever the top or the middle block
+  // changes; a row handed a new function each time could not skip rendering,
+  // and there are OVERSCAN of them either side of the screen. These always
+  // call the latest handler, so nothing is lost by keeping their identity
+  // fixed.
   const latest = useRef({ onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer });
   latest.current = { onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer };
   const stableMarginTap = useCallback((block: Block) => latest.current.onMarginTap?.(block), []);
