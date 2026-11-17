@@ -36,8 +36,9 @@
 //     exactly as passed to fetch (never re-serialized: JSON key order is what
 //     "byte-identical" means), and the names of any other init fields.
 //   * A canned response can also drop the connection part-way through its
-//     body (`dropAfterBytes`), the realistic way to reach the error mappings'
-//     last, not-an-API-error branch: see the scenarios added after the 3a
+//     body (`dropAfterBytes`), the realistic way to reach the error mapping's
+//     not-an-API-error branches (since FOUND_ISSUES 14, the dropped-reply
+//     branch just before the last): see the scenarios added after the 3a
 //     review, near the end of the call-site scenarios.
 //   * Every `ANTHROPIC_*` environment variable is deleted before anything
 //     runs. The SDK reads ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
@@ -1250,8 +1251,9 @@ await scenario(
 );
 await scenario(
   'gemini.translate.prompt-blocked',
-  // A blocked prompt: no candidates, only promptFeedback.blockReason, which
-  // GeminiProvider does not read, so it ends as an empty parse failure.
+  // A blocked prompt: no candidates, only promptFeedback.blockReason. Until
+  // FOUND_ISSUES 14.4 GeminiProvider did not read it, so it ended as an empty
+  // parse failure; it is a refusal naming the reason since.
   [
     {
       status: 200,

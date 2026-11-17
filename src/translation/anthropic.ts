@@ -94,7 +94,8 @@ export function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void 
  * The one error mapping every Claude call uses: translation, the key check,
  * Explain, gloss and QUL compile. A rejected key, a key without access to the
  * model (403), a rate limit with its retry-after, no connection, a rejected
- * request, and any other API error with its status. It returns the error so a
+ * request, an error event inside a stream, a connection that drops mid-reply,
+ * and any other API error with its status. It returns the error so a
  * caller writes `throw toTranslationError(error)`.
  *
  * Until FOUND_ISSUES 11 there were two: this one, moved from
@@ -163,8 +164,17 @@ export function toTranslationError(error: unknown): TranslationError {
   // through unwrapped; a stream (translate, Explain) wraps it in a plain
   // AnthropicError whose `cause` is the TypeError (MessageStream's
   // handleError). Both came out as kind `api` with the message "network
-  // error" (FOUND_ISSUES 14.2). A bare TypeError from the code around a call
-  // would also land here; the shaping code those `try`s wrap is guarded.
+  // error" (FOUND_ISSUES 14.2).
+  //
+  // A TypeError from other code inside a caller's `try` lands here too and is
+  // labelled "network": the reply shaping in Explain, gloss and compile (which
+  // is guarded), gloss's storage write, and the stream listeners (onChunk,
+  // onProgress, the streamEvent handler), which MessageStream calls
+  // synchronously, so their TypeError arrives as an AnthropicError cause. All
+  // of them are `setState` calls or guarded reads; a mislabel would cost the
+  // heading and message only, and raw is still kept. Narrowing by message is
+  // brittle ("network error" in Chrome, "terminated" in undici, others in
+  // WebViews), so the check stays by type.
   if (
     error instanceof TypeError ||
     (error instanceof Anthropic.AnthropicError && error.cause instanceof TypeError)
