@@ -522,7 +522,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  const { dragging } = usePanelControls({ settings, updateSettings });
+  const { dragging, dragWidth } = usePanelControls({ settings, updateSettings });
 
   const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
@@ -723,11 +723,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         {panelVisible && (
           <>
             <div
-              onPointerDown={() => {
+              onPointerDown={(event) => {
                 dragging.current = true;
                 document.body.style.userSelect = 'none';
+                // Captured, so a drag that leaves the narrow divider keeps
+                // coming to it; the events still bubble to the window
+                // listeners in usePanelControls, which do the resizing.
+                event.currentTarget.setPointerCapture(event.pointerId);
               }}
-              className="sticky shrink-0 cursor-col-resize self-start bg-rule/60 transition hover:bg-accent/40"
+              // touch-none: without it the browser may take a finger drag on
+              // the divider as a pan and cancel it (FOUND_ISSUES 27). Only the
+              // divider, so the page still scrolls under a finger elsewhere.
+              className="sticky shrink-0 cursor-col-resize touch-none self-start bg-rule/60 transition hover:bg-accent/40"
               style={{ ...stickyColumn, width: DIVIDER_WIDTH }}
               role="separator"
               aria-label="Resize card panel"
@@ -738,7 +745,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               // text, and the cards must not scroll away with it. Clamped to
               // what this screen can spare; the saved width is untouched, so a
               // desktop's wide panel stays wide there.
-              style={{ ...stickyColumn, width: clampPanelWidth(settings.panelWidth, viewportWidth) }}
+              style={{ ...stickyColumn, width: clampPanelWidth(dragWidth ?? settings.panelWidth, viewportWidth) }}
             >
               {cardPanel}
             </aside>

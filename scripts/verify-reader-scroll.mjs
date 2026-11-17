@@ -27,8 +27,9 @@
 //     book opened by its URL at its own position (FOUND_ISSUES 31); an open
 //     popover's outside-tap listener kept while the page scrolls
 //     (FOUND_ISSUES 34); the
-//     divider dragged with a mouse; the divider dragged with a finger
-//     (reported, not judged: FOUND_ISSUES 27)
+//     divider dragged with a mouse; a divider drag ended by pointercancel
+//     (FOUND_ISSUES 27); the divider dragged with a finger (its width
+//     reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓;
 //     double-tap
@@ -984,8 +985,9 @@ async function landscapeControls(browser, base, profile) {
     );
   });
 
-  // The pointer drag is the one scenario that writes the panel's width; it
-  // runs last of the judged ones (the plan's 5b), then the finger's report.
+  // The divider drags are the scenarios that write the panel's width; they
+  // run last (the plan's 5b): the mouse drag, the drag ended by a
+  // pointercancel, then the finger's.
   await scenario(browser, base, profile, 'the divider, dragged with a mouse', async (page) => {
     const divider = page.getByRole('separator', { name: 'Resize card panel' });
     const drag = async (to) => {
@@ -1025,14 +1027,65 @@ async function landscapeControls(browser, base, profile) {
     );
   });
 
-  // Reported, not judged (Phase 5 plan, Design §1.2): what Chromium's touch
-  // emulation does with the divider today. The divider has no touch-action
-  // and its window listeners ignore pointercancel (FOUND_ISSUES 27), so a
-  // finger drag may be taken by the browser; a mouse move afterwards shows
-  // whether the drag was left switched on. Only the tablet can say what a
-  // real finger does (the plan's M, item 3). Every later step must print the
-  // same line.
-  await scenario(browser, base, profile, 'the divider, dragged with a finger (reported)', async (page, context) => {
+  // A drag that ends in pointercancel (FOUND_ISSUES 27) — what a browser sends
+  // when it takes a finger drag for itself. The cancel is dispatched on the
+  // window by hand, so it comes at a known point of the drag on every run: it
+  // must stop the drag where it got to, store that width, and turn text
+  // selection back on, and the moves after it must not resize the panel.
+  // Until the drag ends nothing is stored: every pointermove used to write the
+  // whole settings row.
+  await scenario(browser, base, profile, 'a divider drag that ends in pointercancel', async (page) => {
+    const divider = page.getByRole('separator', { name: 'Resize card panel' });
+    const box = await divider.boundingBox();
+    const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
+    const start = (await panelState(page)).aside;
+    const storedAtStart = (await storedSettings(page))?.panelWidth ?? null;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 60, from.y, { steps: 4 });
+    await settle(page, 300);
+    const during = { aside: (await panelState(page)).aside, stored: (await storedSettings(page))?.panelWidth ?? null };
+    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 })));
+    await settle(page, 300);
+    const cancelled = {
+      aside: (await panelState(page)).aside,
+      stored: (await storedSettings(page))?.panelWidth ?? null,
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+    };
+    // The button is still down in Playwright's mouse: these are moves of a
+    // pointer the page has been told is cancelled.
+    await page.mouse.move(from.x + 120, from.y, { steps: 4 });
+    await settle(page, 300);
+    const afterMoves = (await panelState(page)).aside;
+    await page.mouse.up();
+    await settle(page, 300);
+    const detail = `panel ${start} → ${during.aside} during, ${cancelled.aside} at the cancel, ${afterMoves} after more moves; stored ${storedAtStart} → ${during.stored} during, ${cancelled.stored} at the cancel; user-select ${JSON.stringify(cancelled.userSelect)}`;
+    check(
+      'a divider drag stores its width only when it ends',
+      during.aside < start && during.stored === storedAtStart,
+      detail,
+    );
+    check(
+      '  a pointercancel ends it where it got to: the width stored, text selection back on',
+      cancelled.aside === during.aside && cancelled.stored === during.aside && cancelled.userSelect === '',
+      detail,
+    );
+    check(
+      '  and moves after the cancel leave the panel alone',
+      afterMoves === cancelled.aside,
+      detail,
+    );
+  });
+
+  // Reported (Phase 5 plan, Design §1.2): what Chromium's touch emulation
+  // does with the divider. Until FOUND_ISSUES 27 was fixed the divider had no
+  // touch-action and its window listeners ignored pointercancel, so the
+  // browser took the drag part way and left it switched on: the report read
+  // after 405, userSelect "none", and a stray mouse move resized the panel to
+  // 300. Now the line shows what the fixed divider does, and its tail is
+  // judged below. Only the tablet can say what a real finger does (the plan's
+  // M, item 3).
+  await scenario(browser, base, profile, 'the divider, dragged with a finger', async (page, context) => {
     const divider = page.getByRole('separator', { name: 'Resize card panel' });
     const box = await divider.boundingBox();
     const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
@@ -1053,6 +1106,15 @@ async function landscapeControls(browser, base, profile) {
     await settle(page, 400);
     const afterStrayMove = (await panelState(page)).aside;
     console.log(`  report: ${JSON.stringify({ fingerDrag: { from: from.x, to: from.x + 120, before, after: after.aside, userSelect, storedWidth: stored, afterStrayMouseMove: afterStrayMove } })}`);
+    // Judged since FOUND_ISSUES 27 was fixed: however far the finger got, the
+    // drag is over once it ends — selection back on, and a stray mouse move
+    // does not resize the panel. How far a real finger gets is the tablet's
+    // to say.
+    check(
+      'after a finger drag on the divider, text selection is back on and a stray mouse move leaves the panel alone',
+      userSelect === '' && afterStrayMove === after.aside,
+      `user-select ${JSON.stringify(userSelect)}, panel ${after.aside} → ${afterStrayMove} after the stray move`,
+    );
   });
 }
 

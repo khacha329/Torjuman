@@ -410,7 +410,7 @@ model is told the entry is that block. **Could put a wrong
 translation in front of a lesson; left unfixed (structure-only phase).** Not
 pinned by any check, so a fix needs no re-baseline. Phase 5 plan, Design §9 A.
 
-## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading)
+## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/usePanelControls.ts:39-56`: the divider sets `dragging` on
 `pointerdown` (`ui/reader/ReaderScreen.tsx:726-729`) and the window listens for `pointermove` and
@@ -424,6 +424,22 @@ every `pointermove` while dragging writes the whole settings row
 the panel on the tablet at all is not known: check R's touch report (Phase 5
 step 5b) shows what Chromium's emulation does, and the tablet run (M) is the
 answer. **May make a feature unusable on the tablet.** Phase 5 plan, Design §9 B.
+
+**Fixed in lane A:** the divider has `touch-none` (`touch-action: none`, on
+the divider alone, so the page still pans elsewhere) and captures the pointer
+on `pointerdown`; the captured events still bubble to the window listeners.
+`usePanelControls` ends a drag on `pointercancel` exactly as on `pointerup`:
+`dragging` off, `user-select` restored. A cancelled drag keeps the width it got
+to, as a released one does. During the drag the width is the screen's own
+state (`dragWidth`, shown in place of `settings.panelWidth`); `updateSettings`
+runs once, when the drag ends, instead of on every `pointermove`. R judges it:
+"a divider drag that ends in pointercancel" (three checks: nothing stored
+during the drag; the cancel stores the width reached and restores
+`user-select`; later moves leave the panel alone) and the finger drag's tail
+(selection back on, a stray mouse move leaves the panel alone). On the old
+code all four failed (stored during the drag, `user-select` "none", a stray
+move to 300). Whether a real finger drag now resizes the panel is the tablet's
+to show (plan item M3).
 
 ## 28. The sheet handle counts translations only (2026-11-16, by reading, fixed in lane A)
 
