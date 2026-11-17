@@ -53,7 +53,6 @@ export function translationRequestFor({
   glossary,
   useModel,
   known,
-  digDeeper,
 }: {
   anchor: Pick<SelectionAnchor, 'sourceText'>;
   before: Block[];
@@ -63,7 +62,6 @@ export function translationRequestFor({
   glossary: GlossaryEntry[];
   useModel: string;
   known: ReturnType<typeof passageFor>['known'];
-  digDeeper: boolean;
 }): TranslationRequest {
   return {
     targetText: anchor.sourceText,
@@ -79,7 +77,7 @@ export function translationRequestFor({
       .map((block) => block.hadithNumber)
       .filter((value): value is string => Boolean(value)),
     knownQuranRefs: known.quran,
-    allowExternalLookup: digDeeper || activeProfile.allowExternalLookup,
+    allowExternalLookup: activeProfile.allowExternalLookup,
   };
 }
 
@@ -91,7 +89,6 @@ export function loadingCard({
   useProviderId,
   useModel,
   cacheKey,
-  digDeeper,
 }: {
   bookId: string;
   anchor: Pick<
@@ -103,7 +100,6 @@ export function loadingCard({
   useProviderId: ProviderId;
   useModel: string;
   cacheKey: string;
-  digDeeper: boolean;
 }): TranslationCard {
   return {
     id: newId('card'),
@@ -126,7 +122,7 @@ export function loadingCard({
     collapsed: false,
     cacheKey,
     status: 'loading',
-    usedExternalLookup: digDeeper || activeProfile.allowExternalLookup,
+    usedExternalLookup: activeProfile.allowExternalLookup,
   };
 }
 

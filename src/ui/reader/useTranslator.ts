@@ -35,7 +35,6 @@ export interface TranslateRequest {
     SelectionAnchor,
     'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
   >;
-  digDeeper?: boolean;
   /** Re-run even if a cached card already covers this exact range. */
   force?: boolean;
   /** "Retranslate with…" — run this one on a different provider/model. */
@@ -225,7 +224,6 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
   const translate = useCallback(
     async ({
       anchor,
-      digDeeper = false,
       force = false,
       providerId,
       model,
@@ -278,7 +276,6 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         useProviderId,
         useModel,
         cacheKey,
-        digDeeper,
       });
 
       // Held in memory only while in flight — a card left mid-request by a
@@ -310,7 +307,6 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             glossary,
             useModel,
             known,
-            digDeeper,
           }),
           apiKey,
           (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
@@ -382,11 +378,10 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
   const retranslate = useCallback(
     async (
       card: TranslationCard,
-      options: { digDeeper?: boolean; providerId?: ProviderId; model?: string } = {},
+      options: { providerId?: ProviderId; model?: string } = {},
     ) =>
       translate({
         anchor: card,
-        digDeeper: options.digDeeper,
         providerId: options.providerId,
         model: options.model,
         force: true,
