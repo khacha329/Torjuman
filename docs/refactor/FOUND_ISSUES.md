@@ -186,6 +186,8 @@ Not duplicates: the nine red error boxes, which all differ.
 
 ## 11. Error handling differs between the Claude call sites (2026-11-16, measured)
 
+**Fixed in lane B** (commits starting "11." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+
 Found by the Phase 3 plan survey. Left as is (owner's answer to Phase 3 Q4:
 unifying them is a behaviour change for its own PR):
 
@@ -207,6 +209,8 @@ research turn limit, the web-search `max_uses`, Gemini's `MAX_RETRIES`.
 
 ## 12. A network failure passes the Claude key check (2026-11-16, measured)
 
+**Fixed in lane B** (commit "12." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+
 `AnthropicProvider.validateKey` (~62–80; ~51–69 by Phase 3) returns `true` for every `APIError`
 that is not a 401 or 403, on the reasoning that a rate limit or a 400 still
 proves the key authenticated. But the SDK's `APIConnectionError` is an
@@ -218,6 +222,8 @@ check". Found by the `torjuman-llm` plan read before Phase 3 step 3a.
 
 ## 13. The translation cache key depends on the device's locale (2026-11-16, measured)
 
+**Fixed in lane B** (commits "13." on `claude/lane-b-translation`, per DECISIONS 13).
+
 `glossaryHashOf` (`translation/prompt.ts` ~20) sorts glossary entries with
 `localeCompare`, whose order depends on the browser's locale. Two devices with
 different locales could compute different glossary hashes, and so different
@@ -227,6 +233,8 @@ the owner's tablets share a locale. Check Q pins `en-US`. Left as is. Found by
 the `torjuman-llm` plan read before Phase 3 step 3a.
 
 ## 14. Five error paths check Q's added scenarios expose (2026-11-16, measured)
+
+**Fixed in lane B** (commits "14." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
 
 Found while closing the 3a review's coverage gaps; each is recorded by a
 scenario in `docs/refactor/phase3/requests.json`. Left as is:
@@ -250,6 +258,8 @@ scenario in `docs/refactor/phase3/requests.json`. Left as is:
    `explain.research-out-of-turns`).
 
 ## 15. Four more error paths (2026-11-16, measured)
+
+**Fixed in lane B** (commits "15." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
 
 Exposed by check Q's second-round scenarios, recorded in
 `docs/refactor/phase3/requests.json` except where marked. Left as is:
@@ -391,6 +401,8 @@ Cosmetic.
 
 ## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
 
+**Fixed in lane B** (commits "26." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; older cards: 44).
+
 Found by the Phase 5 survey. The dictionary sheet's "Translate this entry"
 (`ui/reader/DictionarySheet.tsx:79`) hands the entry's text (`:42`) to
 `onTranslateEntry` (`ui/reader/ReaderSheets.tsx:190-203`), which anchors it
@@ -436,6 +448,8 @@ Design §9 C.
 
 ## 29. `busy` is one flag for every translation (2026-11-16, by reading)
 
+**Fixed in lane B** (commit "29." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+
 `ui/reader/useTranslator.ts:100` holds one `busy`; each translation sets it
 (`:269`) and clears it in its `finally` (`:337`). When two run at once — a
 manual Translate during a batch, or a retranslate during either — the first to
@@ -475,6 +489,8 @@ restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
 
 ## 33. When Meaning is offered (2026-11-16, by reading)
 
+**Fixed in lane B** (commit "33." on `claude/lane-b-translation`, per DECISIONS 33).
+
 `ui/reader/ReaderSheets.tsx:131`: the rail gets `meaningAvailable={navigator.onLine ||
 secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}`. Offline with a key, Meaning
 is offered and fails unless the word is cached; offline without a key it is
@@ -496,6 +512,8 @@ Minor. Phase 5 keeps it exactly (its plan, Design §6.4). Phase 5 plan, Design
 
 ## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
 
+**Fixed in lane B** (commits "35." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+
 `ui/reader/useTranslator.ts:126-132`: before each on-device translation, the
 loop awaits `storage.getHadith` for every ḥadīth entity in the book, one read
 after another, whatever the selection covers. On a large collection that is
@@ -503,6 +521,8 @@ thousands of sequential reads per translation. Performance. Phase 5 plan,
 Design §9 J.
 
 ## 36. `digDeeper` is unreachable (2026-11-16, by reading)
+
+**Fixed in lane B** (commits "36." on `claude/lane-b-translation`, per DECISIONS 36).
 
 `TranslateRequest.digDeeper` (`ui/reader/useTranslator.ts:38`), its default
 (`:211`), its two uses (`ui/reader/translationSteps.ts:129`, `:82`) and
@@ -592,6 +612,8 @@ of the visible area, so a fix needs no re-baseline.
 
 ## 41. A failed card is served from the translation cache (2026-11-17, measured)
 
+**Fixed in lane B** (commit "41." on `claude/lane-b-translation`, per DECISIONS 41).
+
 Found while building check P (Phase 5 step 5c). A failed translation is
 stored like a finished one: the failed card (`ui/reader/translationSteps.ts:142-148`)
 keeps the `cacheKey` the loading card was given (`:127`) and is written with
@@ -614,6 +636,8 @@ changes those two scenarios of P.
 
 ## 42. Retranslate deletes the card before the key check refuses (2026-11-17, measured)
 
+**Fixed in lane B** (commits "42." on `claude/lane-b-translation`, per DECISIONS 42).
+
 Found while building check P. `retranslate` (`ui/reader/useTranslator.ts:356-372`)
 deletes the card from storage and from the list first (`:361-362`) and then
 calls `translate`, whose key check returns `null` with a notice when the
@@ -627,6 +651,8 @@ Add one in Settings before translating." shows. Left unfixed; a fix changes
 that scenario of P.
 
 ## 43. A Gemini card says "web search" though Gemini searches nothing (2026-11-17, by reading, recorded by P)
+
+**Fixed in lane B** (commit "43." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
 
 Found in the `torjuman-llm` agent's read of check P. The card's
 `usedExternalLookup` is set from the profile (`digDeeper ||
@@ -648,8 +674,12 @@ Found by the review of lane B. A "Translate this entry" card stored before
 FOUND_ISSUES 26 was fixed has no `standalone` flag and holds the visible
 block's cache key, so a later Translate of that whole block, or Translate
 all over it, still returns the entry's card. Nothing migrates such cards.
-Left unfixed; a fix would need a way to tell an old entry card from a block
-card (its `sourceText` differs from the block's text).
+Retranslating such a card brings the old bug back each time: with no flag it
+is treated as a block selection, so the request carries the visible block's
+context, types, ḥadīth numbers and verses with the entry's text, and the new
+card is stored under the block's key again. Left unfixed; a fix would need a
+way to tell an old entry card from a block card (its `sourceText` differs
+from the block's text).
 
 ## 45. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
 
@@ -669,8 +699,13 @@ unfixed.
 ## 47. README still names the per-card "dig deeper" toggle (2026-11-17, by reading)
 
 Found by the review of lane B: README.md ~1108 says "beyond the per-card 'dig
-deeper' toggle", stale since Explain replaced it (FOUND_ISSUES 36). Lane D
-material. Left unfixed.
+deeper' toggle", stale since Explain replaced it (FOUND_ISSUES 36). The name
+also survives for the Claude research pass, which still exists (reached only
+through a profile's `allowExternalLookup`): README.md ~483 ("Dig deeper runs
+as two passes"), the comment in `translation/providers/AnthropicProvider.ts`
+(`translate`), and check Q's `anthropic.translate.dig-deeper*` scenario ids
+(which should keep their names; renaming means a re-record for no behaviour
+change). Lane D material. Left unfixed.
 
 ## 48. Consequences of 41 and 42 as decided (2026-11-17, by reading)
 
@@ -683,3 +718,91 @@ DECISIONS 41 and 42, none is a defect of the fix:
    is not replaced (B replaces F): two complete cards for one range.
 3. Two retranslations of one card started while the first is in flight both
    survive.
+
+## 49. The Claude key check passes on a server error (2026-11-17, by reading)
+
+Found by the review of lane B. `AnthropicProvider.validateKey` still returns
+`true` for any 5xx (500, 529 overloaded) through the branch whose comment
+says a rate limit or a 400 still proves the key authenticated, which does
+not obviously hold for a server error. Check Q has no
+`anthropic.validateKey.500` scenario. Outside 12 as decided. Left unfixed.
+
+## 50. Two error messages repeat themselves (2026-11-17, by reading)
+
+Found by the review of lane B. Cosmetic: the key screens read "Could not
+reach Claude: Could not reach api.anthropic.com. …" (the screen's prefix
+plus the mapped message; Gemini reads the same way), and an Anthropic 500 in
+Explain, gloss and compile reads "Anthropic API error 500: 500 {…}" (the
+status in the prefix and again in the SDK's message). Left unfixed.
+
+## 51. `useSharh` keeps one busy flag (2026-11-17, by reading)
+
+Found by the review of lane B. `ui/reader/useSharh.ts` has the single-flag
+pattern FOUND_ISSUES 29 fixed in `useTranslator`; its busy bar is in
+`CommentaryBars.tsx`. If two sharḥ lookups can run at once, the first to
+finish hides the bar (inferred, not checked). Left unfixed.
+
+## 52. On device, a marked name in the selection is treated as a ḥadīth (2026-11-17, by reading)
+
+Found by the review of lane B. `translation/offline/segmentSelection.ts`
+`pushEntity` emits every entity that is not a verse as a `hadith` segment,
+and the reader passes it every entity, `narrator` and `person` included. So
+on the on-device path a marked name inside the selection is cut out of the
+prose sent to the model and shown as an untranslated "ḥadīth" with the
+no-offline-source note; a narrator inside a ḥadīth also overlaps the ḥadīth
+piece, and `cursor = max(...)` does not drop the overlap, so that text
+appears twice. Left unfixed.
+
+## 53. The online signal is never corrected by request outcomes (2026-11-17, by reading)
+
+Found by the review of lane B. `app/useOnline.ts` exports
+`reportNetworkFailure` and `reportNetworkSuccess`, and its header says the
+signal is "corrected by real request outcomes", but nothing in `src/` calls
+either, so `useOnline()` is a reactive `navigator.onLine`. Related, since
+FOUND_ISSUES 33: `glossWord`'s "No API key is set" branch is now reachable
+only if the key is removed while the rail is open; it stays as a guard.
+Left unfixed.
+
+## 54. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
+
+Found by the review of lane B, beside 15.2. In
+`translation/providers/AnthropicProvider.ts` `structure`:
+
+1. A first attempt cut off at `max_tokens` has its streamed tool JSON
+   (`partial`, paid) reset before the retry; if the retry fails, raw holds
+   only the second attempt's.
+2. Only tool `inputJson` deltas are collected while streaming; text the
+   model writes instead is not in raw if the stream then fails.
+3. A refusal keeps no raw, and the truncated and parse errors keep `partial`
+   or the text but not the research notes, unlike `withRaw` on a stream
+   error.
+
+Left unfixed.
+
+## 55. A failure after research loses the research pass's cost (2026-11-17, by reading)
+
+Found by the review of lane B. When the structuring pass fails after a
+research pass, the error carries no usage, so the research pass's tokens and
+cost reach neither the failed card nor the session totals. Left unfixed.
+
+## 56. Two finished cards under one key: the oldest id wins (2026-11-17, by reading)
+
+Found by the review of lane B. Since 41, `getCardByCacheKey` walks
+`byCacheKey` and returns the first complete row, which is the lowest primary
+key, not necessarily the newest card. Two complete cards under one key
+happen through 48.2, 48.3 or a failed `dropReplaced`. Left unfixed.
+
+## 57. The "web search" badge names a provider (2026-11-17, by reading)
+
+Found by the review of lane B. FOUND_ISSUES 43's fix shows the badge only
+when `card.providerId === 'anthropic'` (`ui/reader/TranslationCardView.tsx`),
+for cards stored before the fix. That is a new place in the UI that names a
+provider, not in the Phase 3 plan's Design §5 list. Left as it is unless the
+owner wants a provider capability instead.
+
+## 58. Gemini's 429 wait has no cap (2026-11-17, by reading)
+
+Found by the review of lane B. Gemini translate waits whatever `retry-after`
+asks, number or (since 11) date, before its next attempt, with no upper
+bound, so a far-future value holds the card spinning. Request count is
+unaffected. Left unfixed.

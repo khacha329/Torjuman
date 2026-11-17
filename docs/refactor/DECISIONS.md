@@ -62,9 +62,14 @@ lane B found.
   Gemini's `blockReason` is a refusal; research turns are joined by a blank
   line.
 - **15. Four more error paths.** All four fixed: compile's non-JSON 200 is a
-  `TranslationError` with the body as raw; a stream error after the reply
-  began keeps the partial reply as raw; progress joins text blocks with a
-  newline; `retry-after-ms` is read before `retry-after`.
+  `TranslationError` with the body as raw; in translate, a stream error
+  after earlier paid output keeps that output (research notes, streamed tool
+  JSON) as raw (Explain does not yet: FOUND_ISSUES 45); progress joins text
+  blocks with a newline; `retry-after-ms` is read before `retry-after`, as
+  the SDK reads it.
+- **11, after review.** A `retry-after` date already past is no usable wait
+  (null), so Gemini keeps its backoff; the shared Claude 429 message says
+  "try again", since Explain, gloss and compile show it too.
 - **26. "Translate this entry".** The card stays on the visible block for
   display, but is marked `standalone`. Its cache key uses the block id plus a
   hash of the entry text (`cacheKeyFor` itself unchanged), and its request is
