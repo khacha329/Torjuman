@@ -15,9 +15,27 @@ import type { TranslationRequest } from './TranslationProvider';
 // message, and never filter the glossary per call: a prefix that changes is a
 // prefix that is re-billed in full every time.
 
+/**
+ * Order two strings by code point. `localeCompare` orders by the browser's
+ * locale, so two devices could sort the same glossary differently, hash it
+ * differently, and miss each other's cached cards after a tablet transfer
+ * (FOUND_ISSUES 13). Code-point order is the same everywhere. Plain `<` would
+ * compare UTF-16 units, which differs from code points only for characters
+ * outside the BMP; comparing code points keeps the order exact for those too.
+ */
+function compareCodePoints(a: string, b: string): number {
+  const left = Array.from(a, (ch) => ch.codePointAt(0)!);
+  const right = Array.from(b, (ch) => ch.codePointAt(0)!);
+  const shared = Math.min(left.length, right.length);
+  for (let i = 0; i < shared; i++) {
+    if (left[i] !== right[i]) return left[i] < right[i] ? -1 : 1;
+  }
+  return left.length - right.length;
+}
+
 export function glossaryHashOf(glossary: GlossaryEntry[]): string {
   const canonical = [...glossary]
-    .sort((a, b) => a.arabic.localeCompare(b.arabic))
+    .sort((a, b) => compareCodePoints(a.arabic, b.arabic))
     .map((entry) => `${entry.arabic} ${entry.english} ${entry.note ?? ''}`)
     .join('');
   return sha256(canonical).slice(0, 16);
