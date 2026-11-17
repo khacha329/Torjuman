@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../services/secrets';
@@ -59,6 +59,7 @@ import { useWordLookup } from './useWordLookup';
 import { useReadingPosition } from './useReadingPosition';
 import { useReaderNavigation } from './useReaderNavigation';
 import { usePanelControls } from './usePanelControls';
+import { useHeaderHeight } from './useHeaderHeight';
 
 export function ReaderScreen({ bookId }: { bookId: string }) {
   const { storage, settings, updateSettings, activeProfile, glossary } = useApp();
@@ -111,13 +112,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   const listRef = useRef<BlockListHandle>(null);
 
-  /**
-   * The sticky header's height. The page scrolls (see BlockList), so the
-   * header stays put over the top of it: jumps land below it, and the side
-   * columns start under it and fill the rest of the screen.
-   */
-  const headerRef = useRef<HTMLElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
   const shareButtonRef = useRef<HTMLSpanElement>(null);
   const [showShare, setShowShare] = useState(false);
   /**
@@ -517,15 +511,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   const { dragging } = usePanelControls({ settings, updateSettings });
 
-  useLayoutEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-    const update = () => setHeaderHeight(header.offsetHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, [loading, book]);
+  const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
   /**
    * A side column that stays on screen while the page scrolls: it starts under

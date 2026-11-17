@@ -2339,7 +2339,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review PASS WITH NOTES | `c0ea5e3` |
 | 5g2. `useReadingPosition` → `ui/reader/useReadingPosition.ts` | T B L R S U P pass; review PASS WITH NOTES | `63f03d7` |
 | 5g3. `useReaderNavigation` → `ui/reader/useReaderNavigation.ts`; 5g2's header word | T B L R S U P pass; review PASS WITH NOTES | `24d1188` |
-| 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review pending | this commit |
+| 5g4. `usePanelControls` → `ui/reader/usePanelControls.ts`; 5g3's shift sentence | T B L R S U P pass; review PASS WITH NOTES | `8810abb` |
+| 5g5. `useHeaderHeight` → `ui/reader/useHeaderHeight.ts`; 5g4's 5j wording | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3411,8 +3412,10 @@ holds)
   width) and imports `usePanelControls`. A four-line header.
   `ReaderScreen.tsx` is 1,201 lines (1,239); `usePanelControls.ts` 59.
 - **For 5j:** the screen's references past `:556` shift up a further 38
-  (40 lines become 1, the import adds 1); `:61`–`:516` move down 1. FOUND_ISSUES 27's
-  `:649-666` is now `usePanelControls.ts`.
+  (40 lines become 1, the import adds 1); `:61`–`:516` move down 1.
+  FOUND_ISSUES 27's `ReaderScreen.tsx:649-666` is now in
+  `usePanelControls.ts`; the entry itself still names the screen, to be
+  updated at 5j. (Wrapped at 5g5's review note.)
 - **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
   exit 0, main chunk 790,918 B (+95 B), only `index.js` differs
   (`compare-bundles` against post-5g3; minified names), CSS byte-identical
@@ -3429,6 +3432,63 @@ holds)
   noise — the step adds nothing to scrolling. Perf (second run): 240,000
   px in 33.5 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904
   nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P** PASS, identical.
+- **Review of 5g4 (`8810abb`): PASS WITH NOTES; "ready for 5g5".** The 40
+  lines byte-identical, both deps arrays character for character;
+  `dragging`'s `useRef` did not move relative to its neighbours (it was
+  inside the region); keeping the `divider` heading in the hook is
+  consistent with 5g3's choice, since here it sat inside the region; both
+  5j shift sentences checked right; the 61 ms long task accepted as noise.
+  Notes: FOUND_ISSUES 27's entry still names `ReaderScreen.tsx` for the
+  divider, on the 5j list above; one over-long line in the "For 5j" bullet,
+  wrapped at 5g5.
+
+**Step 5g5, measured 2026-11-17**
+- The header's height (`ReaderScreen.tsx:114-120` at `8810abb`, the plan's
+  117-123: the "sticky header's height" doc comment, `headerRef =
+  useRef<HTMLElement>(null)` and `[headerHeight, setHeaderHeight] =
+  useState(0)`, between `listRef` and `shareButtonRef`) and the screen's
+  only layout effect (`:520-528`, the plan's 668-676: `headerRef.current`,
+  a `ResizeObserver` on it, `observer.disconnect()` in the cleanup, deps
+  `[loading, book]`) moved into `export function useHeaderHeight({
+  loading, book })` in the new `ui/reader/useHeaderHeight.ts`: the state
+  first, a blank line, the effect, then (g) `return { headerRef,
+  headerHeight }`. `cmp`: both identical, at the same indentation; the deps
+  character for character. (f) Design §6.1's two fields; (i) `boolean` and
+  `Book | null`; (h) the call `const { headerRef, headerHeight } =
+  useHeaderHeight({ loading, book });` stands where the layout effect was,
+  between `usePanelControls` and `stickyColumn`, so the layout effect keeps
+  its place. The effect reads nothing else, and the screen uses no setter:
+  `setHeaderHeight` stays the hook's own. The I/O list is complete.
+- Hook order: only the `useRef` and `useState` move (from among the
+  screen's refs to the hook's start), as Design §6.1 allows. Readers of
+  `headerHeight`, all in the screen's same render as before:
+  `stickyColumn` (`top` and `height`; the search column, the divider,
+  the aside and the collapsed edge tab use it) and `BlockList`'s
+  `topInset={headerHeight}`; `ref={headerRef}` stays on the `<header>`.
+  `scrollMargin` is `BlockList`'s own measurement of the screen root, not
+  this value. No sheet or anchored panel reads it.
+- Imports: `useHeaderHeight.ts` takes `useLayoutEffect`/`useRef`/
+  `useState` and `type Book`; `ReaderScreen` drops `useLayoutEffect` (no
+  other use; `tsc` reports it unused otherwise) and imports
+  `useHeaderHeight`. A three-line header. `ReaderScreen.tsx` is 1,187
+  lines (1,201); `useHeaderHeight.ts` 28. 5g1–5g5 done: Design §6's
+  "about 750-850" is for after 5h4.
+- **For 5j:** the screen's references from `:64` to `:113` move down 1;
+  `:121` to `:519` up 6; past `:528` up 14.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 791,027 B (+109 B), only `index.js` differs
+  (`compare-bundles` against post-5g4; minified names), CSS byte-identical
+  (`cmp`); **L** 188 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55; against 5g4's second
+  run every `ok` line identical but the portrait restore (700 here, 699
+  there, the known noise) — the header and sticky-column lines ("the
+  header stays at the top… headerBottom 51 / 93", "the card panel is a
+  column held under the header… aside 51–600", "the cards sheet stays at
+  the bottom"), and every jump landing (ص 120 top 66 / 109, contents 66 /
+  109, search 50 / 300, card 295) included; report lines identical but the
+  timings: 240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
+  PASS, identical.
 
 ## Open
 
