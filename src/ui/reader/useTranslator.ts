@@ -141,13 +141,30 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     async (card: TranslationCard, modelId: string): Promise<TranslationCard> => {
       const [quran, english] = await Promise.all([loadQuranIndex(), loadQuranEnglish()]);
 
-      // Verified hadith translations already cached locally, if any.
-      const cache = new Map<string, { arabic: string; english: string }>();
+      // Verified hadith translations already cached locally, if any — for the
+      // ḥadīth that touch the selection only, read together. Every ḥadīth in
+      // the book was read, one after another, before each translation:
+      // thousands of sequential reads on a large collection (FOUND_ISSUES 35).
+      // segmentSelection looks up only the entities overlapping the selected
+      // blocks, so the cache it gets is the same for those.
+      const orderOf = new Map(blocks.map((block) => [block.id, block.order]));
+      const firstOrder = orderOf.get(card.startBlockId) ?? 0;
+      const lastOrder = orderOf.get(card.endBlockId) ?? 0;
+      const references = new Set<string>();
       for (const entity of entities) {
         if (entity.type !== 'hadith' || !entity.reference) continue;
-        const record = await storage.getHadith(entity.reference);
+        const entityFirst = orderOf.get(entity.startBlockId) ?? 0;
+        const entityLast = orderOf.get(entity.endBlockId) ?? 0;
+        if (entityLast < firstOrder || entityFirst > lastOrder) continue;
+        references.add(entity.reference);
+      }
+      const records = await Promise.all(
+        [...references].map(async (reference) => [reference, await storage.getHadith(reference)] as const),
+      );
+      const cache = new Map<string, { arabic: string; english: string }>();
+      for (const [reference, record] of records) {
         if (record?.english) {
-          cache.set(entity.reference, { arabic: record.arabic, english: record.english });
+          cache.set(reference, { arabic: record.arabic, english: record.english });
         }
       }
 
