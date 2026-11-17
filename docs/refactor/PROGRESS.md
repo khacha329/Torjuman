@@ -2329,6 +2329,7 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d6. `DisplaySection` → its file | T B L R S U pass; review PASS | `8589497` |
 | 5d7. `QuranSection` → its file | T B L R S U pass; review PASS | `21331d4` |
 | 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
+| 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2897,6 +2898,36 @@ holds)
   kit's `SettingsSection.tsx:3-9` and `verify-storage-harness.ts:901`, as
   the plan lists, and FOUND_ISSUES 32's line reference
   (`SettingsScreen.tsx:533-546`, now `BackupSection.tsx:26-39`).
+
+**Step 5e1, measured 2026-11-17**
+- `HadithSheet` (`EntitySheet.tsx:457-756`, with the `ḥadīth` divider and
+  its doc comment) and its private part `Diagnostic` (`:68-77`) moved
+  verbatim, in their order, into the new `ui/reader/HadithSheet.tsx`; only
+  `HadithSheet` is exported (rule 4 (b)). A five-line header. Byte diff of
+  each block against the old file: `Diagnostic` identical, `HadithSheet`
+  identical but for the added `export`; what stays in `EntitySheet.tsx` is
+  the old file minus those lines and four import lines, nothing reordered.
+  `HadithSheet.tsx` imports `useEffect`/`useState`, `useApp`, `useReadOnly`,
+  `navigate`, `secrets`, `useOnline`, `BidiText`, `lookupHadith`,
+  `DorarDiagnostics`, `Book`/`Entity`/`HadithRecord`, `commentaryWorks`,
+  `AnchoredPanel` and `Button`/`Spinner` (filtered copies of the source's
+  lines); `EntitySheet` drops `lookupHadith`, `DorarDiagnostics`,
+  `HadithRecord` and `commentaryWorks`, keeps every other import (the
+  Qurʾān sheet and CompileTab use them), and imports `HadithSheet`.
+  `HadithSheet.tsx` imports nothing from `EntitySheet.tsx`, so no cycle.
+  `EntitySheet.tsx` is 441 lines. No comment made untrue: `:49` ("a verse
+  or ḥadīth is tapped") is still the dispatcher's, and nothing outside the
+  file names the moved lines (`plans/phase3-provider-seams.md:710`'s
+  `EntitySheet.tsx:341-359` is a closed plan's record of CompileTab, whose
+  lines shift up by 14 here and move at 5e3).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5d8: the module's place), CSS
+  byte-identical (`cmp`); **L** 178 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-hadith` and
+  `reader-hadith-diagnostics` at both sizes among them.
 
 ## Open
 
