@@ -22,17 +22,19 @@
 //
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
-//     bringing its block to the middle; the read-mark ↑ ↓; a centred jump at
-//     the middle below the header, settled in a few passes (FOUND_ISSUES
-//     40); double-tap opening the dictionary; the restored position applied
-//     once; a second book opened by its URL at its own position
-//     (FOUND_ISSUES 31); an open popover's outside-tap listener kept while
-//     the page scrolls (FOUND_ISSUES 34); the divider dragged with a mouse; a
-//     divider drag ended by pointercancel (FOUND_ISSUES 27); the divider
-//     dragged with a finger (its width reported, its end judged)
+//     bringing its block to the middle; the read-mark ↑ ↓ and ↓ in turn
+//     (FOUND_ISSUES 39); a centred jump at the middle below the header,
+//     settled in a few passes (FOUND_ISSUES 40); double-tap opening the
+//     dictionary; the restored position applied once; a second book opened
+//     by its URL at its own position (FOUND_ISSUES 31); an open popover's
+//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); the
+//     divider dragged with a mouse; a divider drag ended by pointercancel
+//     (FOUND_ISSUES 27); the divider dragged with a finger (its width
+//     reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
-//     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓;
-//     the centred jump (FOUND_ISSUES 40); double-tap
+//     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
+//     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
+//     double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
 // out of `npm run verify` because jsdom has no layout. SCREENSHOT_DIR, if set,
@@ -682,6 +684,30 @@ async function centredJump(page, maxJumps) {
   );
 }
 
+/**
+ * ↓ ↓ ↓ from the top of the book visits the three read marks in order
+ * (FOUND_ISSUES 39). ReadMarkNav used to find "next" from the block at the
+ * top of the screen; a mark it had just centred sits below that block, so the
+ * second ↓ found the same mark and the page stayed where it was. It now
+ * counts from the block at the middle of the area below the header, where a
+ * centred jump lands.
+ */
+async function readMarkSequence(page) {
+  const next = page.getByTitle('Next passage marked to read');
+  const visited = [];
+  for (let step = 0; step < READ_MARKS.length; step++) {
+    await next.click();
+    await settle(page, 900);
+    visited.push((await atMiddle(page, READ_MARKS[step])).block ?? null);
+  }
+  const disabled = await next.isDisabled();
+  check(
+    `↓ ↓ ↓ from the top visits the read marks in order (${READ_MARKS.join(', ')}), and ↓ is then off`,
+    visited.join() === READ_MARKS.join() && disabled,
+    `at the middle after each ↓: ${visited.join(', ')}; ↓ disabled after: ${disabled}`,
+  );
+}
+
 /** The jump to ج/ص page `printed`, as the header's Go does it. */
 async function jumpToPrinted(page, printed) {
   await page.getByLabel('Printed page').fill(String(printed));
@@ -751,9 +777,10 @@ async function readMarkJumps(page) {
   const middle = await atMiddle(page, READ_MARKS[1]);
   check(`  and ↑ again the one before it (block ${READ_MARKS[1]})`, middle.ok, JSON.stringify(middle));
 
-  // ↓ from a mark that ↑ centred: reported, not judged. ReadMarkNav finds
-  // "next" from the block at the top of the screen, and a centred mark is not
-  // at the top, so this can land on the same mark again (FOUND_ISSUES 39).
+  // ↓ from a mark that ↑ centred: reported. Until FOUND_ISSUES 39 was fixed
+  // ReadMarkNav found "next" from the block at the top of the screen, and a
+  // centred mark is below it, so this landed on the same mark again (450);
+  // it now goes on to 500. `readMarkSequence` judges ↓ in turn from the top.
   await next.click();
   await settle(page, 900);
   const landed = (await atMiddle(page, READ_MARKS[2])).block ?? null;
@@ -869,6 +896,7 @@ async function landscapeControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
   await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_LANDSCAPE));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 
@@ -1244,6 +1272,7 @@ async function portraitControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
   await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_PORTRAIT));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }

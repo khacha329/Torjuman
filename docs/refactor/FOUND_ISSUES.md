@@ -629,7 +629,7 @@ system stack fell back to DejaVu Sans and FreeSerif. U's Qurʾān captures no
 longer depend on the container's fonts for the Arabic (their English and
 labels still do).
 
-## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
+## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured, fixed in lane A)
 
 Found while building check R's read-mark scenario (Phase 5 step 5b).
 `ReadMarkNav` (`ui/reader/ReaderHeader.tsx:129-164`) picks "next" as the
@@ -649,6 +649,18 @@ first mark below the top of the screen. **May make the session navigation
 look broken on the tablet.** Left unfixed (structure-only phase); R's judged
 checks (↓ once from the top, ↑ twice from past the marks) do not depend on
 it, so a fix changes only the report line.
+
+**Fixed in lane A:** `BlockList` also reports the block at the middle of the
+area below the header (`onMiddleBlockChange`), the point a centred jump puts
+its block on since 40, and `ReadMarkNav` counts "previous" and "next" from it
+(`ReaderHeader.tsx`), falling back to the top block only before it is known.
+The mark just centred is then neither, so ↓ moves on from it, and ↑ still
+skips it (strict `<`). A mark already on screen above the middle now counts as
+behind: from the very top of the book, ↓ goes to the first mark below the
+middle of the first screen, and one above it is reached with ↑. R judges it:
+"↓ ↓ ↓ from the top visits the read marks in order" in both layouts (on the
+old code 400, 400, 400 and ↓ still on), and the `readMarkDown` report line now
+reads `atMiddle` 500.
 
 ## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured, fixed in lane A)
 
@@ -837,3 +849,15 @@ leaves text unselectable on the next screen until a reload. Since lane A's 27
 such an unmount also loses the width reached (it is stored on release).
 Pre-existing; found by the review of lane A's 27. Left unfixed.
 
+## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading)
+
+`ReadMarkNav` (`ui/reader/ReaderHeader.tsx`) counts "previous" and "next" from
+the block at the middle of the area below the header (39) and centres the mark
+it jumps to. A mark in the first half-screen of the book cannot be centred:
+the jump is clamped at the top of the page and nothing moves, so the middle
+block stays after it and ↑ keeps offering the same mark, a tap that does
+nothing; the same with ↓ for a mark in the last half-screen. The mark is on
+screen all along. Before 39 the same happened from the top block (↓ to a mark
+near the top of the book stayed on it). Whether such a mark should count as
+reached, or the arrow be off, is a product choice. Found while fixing 39.
+Minor. Left unfixed.

@@ -89,6 +89,11 @@ interface BlockListProps {
   /** Search match to mark, in display-text offsets. */
   match: { blockId: string; range: [number, number] } | null;
   onVisibleBlockChange: (block: Block | null) => void;
+  /**
+   * The block at the middle of the area below the header, where a centred
+   * jump lands it (settleOn): the read-mark arrows count from here.
+   */
+  onMiddleBlockChange: (block: Block | null) => void;
   onVisibleRangeChange: (range: VisibleRange) => void;
   onMarkerClick: (marker: CardMarker, anchor: HTMLElement) => void;
   handleRef: Ref<BlockListHandle>;
@@ -121,6 +126,7 @@ export function BlockList({
   flashBlockId,
   match,
   onVisibleBlockChange,
+  onMiddleBlockChange,
   onVisibleRangeChange,
   onMarkerClick,
   handleRef,
@@ -293,10 +299,20 @@ export function BlockList({
   const onScreen = items.filter((item) => item.end > viewTop && item.start < viewBottom);
   const topIndex = onScreen[0]?.index;
   const bottomIndex = onScreen[onScreen.length - 1]?.index;
+  // The block at the middle of what the header leaves visible: where a
+  // centred jump puts its block. The read-mark arrows count from it, so a
+  // mark they have just centred is the one they move on from (FOUND_ISSUES
+  // 39); counted from the top block, it was still "next".
+  const viewMiddle = (viewTop - 2 + viewBottom) / 2;
+  const middleIndex = onScreen.find((item) => item.start <= viewMiddle && item.end > viewMiddle)?.index;
 
   useEffect(() => {
     onVisibleBlockChange(topIndex === undefined ? null : (blocks[topIndex] ?? null));
   }, [topIndex, blocks, onVisibleBlockChange]);
+
+  useEffect(() => {
+    onMiddleBlockChange(middleIndex === undefined ? null : (blocks[middleIndex] ?? null));
+  }, [middleIndex, blocks, onMiddleBlockChange]);
 
   useEffect(() => {
     if (topIndex === undefined || bottomIndex === undefined) return;
