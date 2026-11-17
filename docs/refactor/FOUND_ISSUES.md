@@ -505,7 +505,7 @@ disabled, though a cached gloss would work with neither:
 `translation/gloss.ts:97-100` returns the cache before checking the network
 (`:102-106`) or the key (`:108-110`). May be intended; unstated. Phase 5 plan, Design §9 H.
 
-## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading)
+## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading, fixed in lane A)
 
 The reader passes inline `onClose` arrows to its sheets
 (`ui/reader/ReaderSheets.tsx:177`, `:186`, `:256`, `:287`), new on every
@@ -516,6 +516,20 @@ render. `AnchoredPanel`'s effect depends on `onClose`
 with a sheet open a tap landing in that tick is not seen as an outside tap.
 Minor. Phase 5 keeps it exactly (its plan, Design §6.4). Phase 5 plan, Design
 §9 I.
+
+**Fixed in lane A:** `AnchoredPanel` holds the latest `onClose` in a ref,
+updated in a layout effect declared before the others, and its effects and
+`reposition` call `onCloseRef.current()` instead of listing `onClose`.
+`reposition` now depends on `[anchor, asSheet]` and the listener effect on
+`[anchor, reposition]`, so neither the document listeners nor 37's size
+observer are re-registered by a reader render. The call sites in
+`ReaderSheets.tsx` keep their inline arrows. None of the six users
+(`ShareChapter`, `QuranSheet`, `BiographySheet`, `HadithSheet`,
+`CardPopover`, `DictionarySheet`) has an effect on `onClose`; they pass it on
+or call it from a handler. The plan's Design §6.4 text records Phase 5 as it
+was approved and is left as it is. R's "an open popover keeps its outside-tap
+listener while the page scrolls" guards it: on the old code, eight 35 px
+scrolls (top block 11 → 12) added the pointerdown listener 4 times.
 
 ## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
 

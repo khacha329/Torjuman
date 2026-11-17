@@ -56,13 +56,27 @@ export function AnchoredPanel({
   // is a sheet, so is this. See src/ui/useLayoutMode.ts.
   const asSheet = useLayoutMode() === 'sheet' || preferSheet;
 
+  // The latest `onClose`, read by the effects and callbacks below instead of
+  // listing it as a dependency. Every caller passes an inline arrow, new on
+  // each reader render, and the reader renders on each change of the top
+  // block while scrolling. With `onClose` as a dependency, each render
+  // removed the document's pointerdown listener and added it back a tick
+  // later, so a tap in that tick was not seen as an outside tap, and it
+  // re-created `reposition` and so the size observer (FOUND_ISSUES 34). It is
+  // updated in a layout effect declared before the ones that read it, so the
+  // placement that runs on mount already sees the current one.
+  const onCloseRef = useRef(onClose);
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   /** Re-measure the anchor and place the popover beside it. */
   const reposition = useCallback(() => {
     if (asSheet) return;
 
     // The anchor lives in a virtualized list and can be unmounted by scrolling.
     if (!anchor.isConnected) {
-      onClose();
+      onCloseRef.current();
       return;
     }
 
@@ -71,7 +85,7 @@ export function AnchoredPanel({
     // Closed only when the anchored text has actually left the viewport —
     // not merely because the reader scrolled.
     if (rect.bottom < 0 || rect.top > window.innerHeight) {
-      onClose();
+      onCloseRef.current();
       return;
     }
 
@@ -88,7 +102,7 @@ export function AnchoredPanel({
         : Math.max(MARGIN, rect.top - 8 - panelHeight);
 
     setPosition({ left, top });
-  }, [anchor, asSheet, onClose]);
+  }, [anchor, asSheet]);
 
   useLayoutEffect(() => {
     reposition();
@@ -126,11 +140,11 @@ export function AnchoredPanel({
     const onPointerDown = (event: PointerEvent) => {
       if (panelRef.current?.contains(event.target as Node)) return;
       if (anchor.contains(event.target as Node)) return;
-      onClose();
+      onCloseRef.current();
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
 
     // Capture phase, because scroll does not bubble.
@@ -147,7 +161,7 @@ export function AnchoredPanel({
       document.removeEventListener('pointerdown', onPointerDown);
       clearTimeout(timer);
     };
-  }, [anchor, onClose, reposition]);
+  }, [anchor, reposition]);
 
   const header = (
     <div className="no-select flex shrink-0 items-baseline gap-2 border-b border-rule bg-white px-3 py-2">

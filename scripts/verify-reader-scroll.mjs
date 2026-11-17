@@ -24,7 +24,9 @@
 //     margin marker opening its card in the panel; a card in the panel
 //     bringing its block to the middle; the read-mark ↑ ↓; double-tap
 //     opening the dictionary; the restored position applied once; a second
-//     book opened by its URL at its own position (FOUND_ISSUES 31); the
+//     book opened by its URL at its own position (FOUND_ISSUES 31); an open
+//     popover's outside-tap listener kept while the page scrolls
+//     (FOUND_ISSUES 34); the
 //     divider dragged with a mouse; the divider dragged with a finger
 //     (reported, not judged: FOUND_ISSUES 27)
 //   - portrait: the cards sheet's handle; the handle's count of every card
@@ -479,6 +481,10 @@ const CARD_BLOCK = 1000;
 const NOTE_BLOCK = 200;
 /** Where the verse is put before its popover is opened to follow a scroll: high enough that the popover fits below it. */
 const POPOVER_ANCHOR_Y = 120;
+/** The verse's place, and the small scrolls, for the outside-tap listener check: the verse stays on screen. */
+const LISTENER_ANCHOR_Y = 450;
+const LISTENER_SCROLL_STEPS = 8;
+const LISTENER_SCROLL_PX = 35;
 /** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
 const GROWTH_DELAY_MS = 2500;
 const LOW_ANCHOR_Y = 380;
@@ -864,6 +870,49 @@ async function landscapeControls(browser, base, profile) {
       'a popover that grows after opening is placed again, wholly on screen',
       held === 1 && grown.height > loading.height + 100 && grown.top >= 0 && grown.bottom <= grown.viewport,
       `loading ${JSON.stringify(loading)}, grown ${JSON.stringify(grown)}, translation requests held ${held}`,
+    );
+  });
+
+  // An open popover keeps its one outside-tap listener while the reader
+  // renders under it (FOUND_ISSUES 34). Scrolling changes the top block, and
+  // each change renders the reader; its sheets' `onClose`s are inline arrows,
+  // new on every render. When AnchoredPanel's effects depended on `onClose`,
+  // each render took the document's pointerdown listener away and added it
+  // back a tick later, and a tap in that tick was not seen as an outside tap.
+  // Counted rather than tapped: the tick is too short to hit on purpose.
+  await scenario(browser, base, profile, 'an open popover keeps its outside-tap listener while the page scrolls', async (page) => {
+    await page.evaluate(() => {
+      window.__pointerdownAdds = 0;
+      const add = document.addEventListener.bind(document);
+      document.addEventListener = (type, listener, options) => {
+        if (type === 'pointerdown') window.__pointerdownAdds++;
+        return add(type, listener, options);
+      };
+    });
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: LISTENER_ANCHOR_Y });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
+    await settle(page, 500);
+    const topBefore = await topBlock(page);
+    const addsBefore = await page.evaluate(() => window.__pointerdownAdds);
+    for (let step = 0; step < LISTENER_SCROLL_STEPS; step++) {
+      await page.evaluate((px) => window.scrollBy(0, px), LISTENER_SCROLL_PX);
+      await settle(page, 150);
+    }
+    const topAfter = await topBlock(page);
+    const added = (await page.evaluate(() => window.__pointerdownAdds)) - addsBefore;
+    const open = (await dialog.count()) === 1;
+    check(
+      'an open popover does not re-register its outside-tap listener as the reader renders',
+      open && topAfter !== topBefore && added === 0,
+      `top block ${topBefore} → ${topAfter}, pointerdown listeners added while scrolling ${added}, still open ${open}`,
     );
   });
 
