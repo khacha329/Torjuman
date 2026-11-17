@@ -5,7 +5,6 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
-import { TranslationError } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
@@ -16,7 +15,7 @@ import {
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
-import { passageFor, translationRequestFor } from './translationSteps';
+import { failedCard, loadingCard, passageFor, translationRequestFor } from './translationSteps';
 
 // Orchestrates one translation: pick the provider the profile pins → cache
 // check → provider call → scripture retrieval → persist.
@@ -214,29 +213,16 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
       const { selected, before, after, known } = passageFor(blocks, entities, anchor);
 
-      const card: TranslationCard = {
-        id: newId('card'),
-        kind: 'translation',
+      const card: TranslationCard = loadingCard({
         bookId,
-        startBlockId: anchor.startBlockId,
-        startOffset: anchor.startOffset,
-        endBlockId: anchor.endBlockId,
-        endOffset: anchor.endOffset,
-        sourceText: anchor.sourceText,
-        segments: [],
-        profileId: activeProfile.id,
-        promptVersion: activeProfile.version,
+        anchor,
+        activeProfile,
         glossaryHash,
-        providerId: useProviderId,
-        model: useModel,
-        createdAt: Date.now(),
-        // New cards open expanded — the user just asked for this translation,
-        // so hiding it would be wrong.
-        collapsed: false,
+        useProviderId,
+        useModel,
         cacheKey,
-        status: 'loading',
-        usedExternalLookup: digDeeper || activeProfile.allowExternalLookup,
-      };
+        digDeeper,
+      });
 
       // Held in memory only while in flight — a card left mid-request by a
       // closed tab should not come back as a permanently spinning row.
@@ -319,21 +305,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         return finished;
       } catch (caught) {
-        const error =
-          caught instanceof TranslationError
-            ? caught
-            : new TranslationError(
-                'api',
-                caught instanceof Error ? caught.message : String(caught),
-              );
-
-        const failed: TranslationCard = {
-          ...card,
-          status: 'error',
-          error: error.message,
-          errorKind: error.kind,
-          rawResponse: error.raw ?? undefined,
-        };
+        const failed = failedCard(card, caught);
         await storage.putCard(failed);
         upsert(failed);
         return failed;

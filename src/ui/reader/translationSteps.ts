@@ -1,15 +1,26 @@
-import type { Block, Entity, GlossaryEntry, TranslationProfile } from '../../types';
+import type {
+  Block,
+  Entity,
+  GlossaryEntry,
+  ProviderId,
+  TranslationCard,
+  TranslationProfile,
+} from '../../types';
+import { newId } from '../../lib/id';
 import { knownReferencesIn } from '../../quran/entityService';
-import type { TranslationRequest } from '../../translation/TranslationProvider';
+import { TranslationError, type TranslationRequest } from '../../translation/TranslationProvider';
 import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
 import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
 
-// The steps of one translation that only compute a value: the passage around
-// the selection, and the request handed to the provider. Pure — no storage, no
-// state, no clock — so `translate` in useTranslator.ts keeps every side effect,
-// every `await` and both cache keys in its own order, and calls these where
-// their text was. Moved verbatim from useTranslator.ts in restructure Phase 5
-// step 5i1 (docs/refactor/plans/phase5-big-ui-files.md, Design §7).
+// The steps of one translation that only compute a value: the passage
+// around the selection, the request handed to the provider, and the loading
+// and failed cards. No storage, no React state, no `await`. The loading
+// card's `newId('card')` and `Date.now()` are inside its literal, as they
+// were, so they run when the card is built. `translate` in useTranslator.ts
+// keeps every side effect, every `await` and its cache key in its own order
+// (`isStale` keeps the other), and calls these where their text was. Moved
+// verbatim from useTranslator.ts in restructure Phase 5 steps 5i1 and 5i2
+// (docs/refactor/plans/phase5-big-ui-files.md, Design §7).
 
 export function passageFor(
   blocks: Block[],
@@ -65,4 +76,70 @@ export function translationRequestFor({
     knownQuranRefs: known.quran,
     allowExternalLookup: digDeeper || activeProfile.allowExternalLookup,
   };
+}
+
+export function loadingCard({
+  bookId,
+  anchor,
+  activeProfile,
+  glossaryHash,
+  useProviderId,
+  useModel,
+  cacheKey,
+  digDeeper,
+}: {
+  bookId: string;
+  anchor: Pick<
+    SelectionAnchor,
+    'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
+  >;
+  activeProfile: TranslationProfile;
+  glossaryHash: string;
+  useProviderId: ProviderId;
+  useModel: string;
+  cacheKey: string;
+  digDeeper: boolean;
+}): TranslationCard {
+  return {
+    id: newId('card'),
+    kind: 'translation',
+    bookId,
+    startBlockId: anchor.startBlockId,
+    startOffset: anchor.startOffset,
+    endBlockId: anchor.endBlockId,
+    endOffset: anchor.endOffset,
+    sourceText: anchor.sourceText,
+    segments: [],
+    profileId: activeProfile.id,
+    promptVersion: activeProfile.version,
+    glossaryHash,
+    providerId: useProviderId,
+    model: useModel,
+    createdAt: Date.now(),
+    // New cards open expanded — the user just asked for this translation,
+    // so hiding it would be wrong.
+    collapsed: false,
+    cacheKey,
+    status: 'loading',
+    usedExternalLookup: digDeeper || activeProfile.allowExternalLookup,
+  };
+}
+
+export function failedCard(card: TranslationCard, caught: unknown): TranslationCard {
+  const error =
+    caught instanceof TranslationError
+      ? caught
+      : new TranslationError(
+          'api',
+          caught instanceof Error ? caught.message : String(caught),
+        );
+
+  const failed: TranslationCard = {
+    ...card,
+    status: 'error',
+    error: error.message,
+    errorKind: error.kind,
+    rawResponse: error.raw ?? undefined,
+  };
+  return failed;
 }

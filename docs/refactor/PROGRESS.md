@@ -2345,7 +2345,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5h2. `CommentaryBars` → `ui/reader/CommentaryBars.tsx` | T B L R S U P pass; review PASS WITH NOTES | `1a3e6a6` |
 | 5h3. `ReaderSheets` with `blockElementFor` → `ui/reader/ReaderSheets.tsx` | T B L R S U P pass; review PASS WITH NOTES | `dbfa2c4` |
 | 5h4. `ReaderCardPanel` → `ui/reader/ReaderCardPanel.tsx`; the screen's header; 5h3's header wording | T B L R S U P pass; review PASS WITH NOTES | `eec59a5` |
-| 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review pending | this commit |
+| 5i1. `passageFor`, `translationRequestFor` → `ui/reader/translationSteps.ts`; 5h4's review notes (a PROGRESS word, the screen header's Q10) | T B L R S U P Q pass; review PASS WITH NOTES | `8be21cd` |
+| 5i2. `loadingCard`, `failedCard` → `translationSteps.ts`; its header; 5i1's review notes | T B L R S U P Q pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3905,8 +3906,9 @@ holds)
   "20-line" above; n2 the screen header's "(Design §6.3, Q10)", one token
   on `ReaderScreen.tsx:74`, the line left long rather than rewrapped so no
   screen line moves.
-- **For 5j and 5i2–5i3:** `useTranslator.ts`'s `:9-19` up 1; `:20-214`
-  unchanged; `:215-223` now the call at `:215` (the text at
+- **For 5j and 5i2–5i3:** `useTranslator.ts`'s `:9-18` up 1; old `:19`
+  (the selection import) becomes `:18-19`; from `:20` nothing moves,
+  through `:214`; `:215-223` now the call at `:215` (the text at
   `translationSteps.ts:19-27`); `:224-274` up 8; `:275-290` now the call
   at `:267-277` (the literal at `translationSteps.ts:52-67`); past `:290`
   up 13. FOUND_ISSUES: 26's `:195-205` and `:207-213` unchanged, its
@@ -3928,6 +3930,118 @@ holds)
   `translate`, `cache-hit`, `retranslate`, `external-lookup`, `error`,
   `block`, `batch` and `transliteration` scenarios included; **Q** PASS,
   identical to `docs/refactor/phase3/requests.json`.
+- **Review of 5i1 (`8be21cd`): PASS WITH NOTES; "ready for 5i2".** The
+  reviewer's own word diff matched the entry's; all three callees
+  (`blocksInRange`, `contextAround`, `knownReferencesIn`) pure; the
+  argument evaluation order unchanged; both `cacheKeyFor` calls untouched.
+  The object parameter and the `Pick` types allowed under (f), (i) and (k);
+  the 90-character `ReaderScreen.tsx:74` accepted (n4). Notes: (n1) the new
+  header said `translate` keeps "both cache keys in its own order", but
+  only one `cacheKeyFor` call is in `translate`, the other in `isStale`:
+  fixed in 5i2's header; (n2) its "Pure — no storage, no state, no clock"
+  becomes untrue at 5i2 (`loadingCard` carries `newId` and `Date.now`):
+  amended in 5i2, the step that makes it untrue (Q13); (n3) the "For 5j"
+  line's "`:9-19` up 1" corrected above to "`:9-18` up 1; old `:19` … from
+  `:20` nothing moves". For 5j's Corrections list (optional): (k)'s wording
+  could add "an object parameter when names share a type".
+
+**Step 5i2, measured 2026-11-17**
+- Two more runs of `translate` (adaptation (k), Design §7) moved into
+  `ui/reader/translationSteps.ts`: the loading card literal
+  (`useTranslator.ts:217-239` at `8be21cd`, the plan's 225-247), its
+  `newId('card')` and `Date.now()` inside it at the same places; and, in
+  the `catch`, the two statements that build the failed card (`:322-336`,
+  the plan's 335-349: `const error = …` and `const failed: TranslationCard
+  = { … }`), contiguous, `error` read only by the `failed` literal and by
+  nothing after it. The `await storage.putCard(failed)`, `upsert(failed)`
+  and `return failed` after them stay in `translate`, so the value and the
+  side effects separate without a reorder. No free name in either run is
+  reassigned (`card`, `caught`, the consts and the destructured
+  parameters).
+- Signatures: `loadingCard({ bookId, anchor, activeProfile, glossaryHash,
+  useProviderId, useModel, cacheKey, digDeeper }): TranslationCard`, one
+  object parameter (`bookId`, `glossaryHash`, `useModel` and `cacheKey`
+  are all `string`), the literal's eight free names in order of first use,
+  typed `string`, `Pick<SelectionAnchor, 'startBlockId' | 'startOffset' |
+  'endBlockId' | 'endOffset' | 'sourceText'>` (the five fields it reads,
+  `TranslateRequest['anchor']`'s shape, restated since `TranslateRequest`
+  cannot be imported back), `TranslationProfile`, `string`, `ProviderId`,
+  `string`, `string`, `boolean`; `failedCard(card: TranslationCard,
+  caught: unknown): TranslationCard`, positional as the plan names it (the
+  two types differ; `caught` is `unknown` as the `catch` binding is).
+- Word diff (`git diff --no-index --word-diff`, indentation aside): the
+  loading card's 23 lines identical, its comment included, but
+  `[-const card: TranslationCard =-]{+return+} {` on the first line — the
+  declaration stays at the call site, the literal moved; the failed card's
+  15 lines identical, then one added `{+return failed;+}`.
+- Call sites (h): `const card: TranslationCard = loadingCard({ bookId,
+  anchor, activeProfile, glossaryHash, useProviderId, useModel, cacheKey,
+  digDeeper });` at `:216`, the declaration and its type as written;
+  `const failed = failedCard(card, caught);` at `:308`, the first line of
+  the `catch`, so `putCard`, `upsert` and `return` read `failed` as
+  written. `TranslationError` leaves `useTranslator.ts`'s imports (it was
+  used only there); `newId` stays (`addGlossaryTerm`).
+- Evaluation order of `newId('card')` and `Date.now()`: before, the
+  literal was the initializer of `const card` straight after the
+  `passageFor` call, its properties evaluated in order — `newId` first,
+  then plain reads, then `Date.now()`, then plain reads — and then
+  `upsert(card)`. Now the argument object is built first from eight
+  `const`s and parameters (plain local reads, no getters, no calls), then
+  `loadingCard` runs the same literal in the same order and returns. So
+  between the `passageFor` call and `upsert(card)` the only effects are
+  still `newId` (its counter, `Date.now` and `Math.random`) and then
+  `Date.now()`, in that order, at the same moment relative to every other
+  statement in `translate`. `failedCard` constructs a `TranslationError`
+  when `caught` is not one, as before, before the `putCard`.
+- FOUND_ISSUES 41 and 42 preserved exactly: the failed card is still
+  `{ ...card, … }`, so it keeps the loading card's `cacheKey`, and is still
+  written with `putCard` in `translate` (41); `retranslate` and
+  `translate`'s key check are untouched (42). P's `error`,
+  `error-cached`, `batch-again` and `retranslate-no-key` scenarios record
+  both, identical below. No `await`, setter or storage call moved; both
+  `cacheKeyFor` calls, `translate`'s deps array, `SessionStats` and
+  `EMPTY_STATS` untouched, so no cache key changes (trap 5).
+- The header (5i1's review notes n1, n2, Q13 in the step that makes it
+  untrue): "Pure — no storage, no state, no clock" and "both cache keys"
+  replaced by: no storage, no React state, no `await`; the loading card's
+  `newId('card')` and `Date.now()` inside its literal, run when the card
+  is built; `translate` keeps its cache key (`isStale` keeps the other);
+  moved in steps 5i1 and 5i2. Nine lines.
+- Imports: `translationSteps.ts` adds `ProviderId`, `TranslationCard` to
+  its `import type` from `types` (now multi-line), `newId` (`lib/id`), and
+  `TranslationError` as a value beside `type TranslationRequest` from
+  `translation/TranslationProvider`. `useTranslator.ts` drops
+  `TranslationError` and imports `failedCard`, `loadingCard`. No cycle.
+  `useTranslator.ts` is 425 lines (453); `translationSteps.ts` 145 (68).
+- **For 5j and 5i3**, `useTranslator.ts` from `8be21cd`: `:9-216` up 1
+  (old `:8`, `TranslationError`'s import, gone); `:217-239` now the call at
+  `:216-225`; `:240-321` up 14; `:322-336` now the call at `:308`; past
+  `:336` up 28. 5i3's ranges: the updaters `:241-248` and `:295-304`,
+  `withoutStream`'s `:315-319`. `translationSteps.ts` moved by its longer
+  imports and header: `passageFor`'s body now `:30-38`, the request
+  literal `:63-78`, the loading card `:103-125`, the failed card
+  `:129-143`. FOUND_ISSUES against the plan's base: 26's `:195-205` now
+  `:194-204`, `:207-213` now `:206-212`, `:215-223` and `:277-288` now
+  `translationSteps.ts:30-38` and `:65-76`; 41's `:343-350` now
+  `translationSteps.ts:137-143` with its `putCard` at `:309`, its `:244`
+  now `translationSteps.ts:122`, its `:207-212` now `:206-211`; 42's
+  `:378-394` now `:337-353`, `:383-384` now `:342-343`, `:185-192` now
+  `:184-191`; 43's `:246` now `translationSteps.ts:124`; 43's `:330` now
+  `:303`; `:32`, `:62`, `:66-68`, `:88-94` unchanged.
+- **T** exit 0. **B L R S U P Q**, on the tree just before the commit:
+  **B** exit 0, main chunk 793,801 B (+250 B), only `index.js` differs
+  (`compare-bundles` against post-5i1; minified names), CSS byte-identical
+  (`cmp`); **L** 193 files, 134 edges, 0 directory and 0 file-level
+  cycles, rules hold; **R** first and alone 55/55, every `ok` line
+  identical to 5i1's run but the portrait restore (700 here, 699 there,
+  the known noise), and every report line but the landscape timing:
+  240,000 px in 33.3 s (33.4), 1,905 nodes, 0 long tasks / 175,800 px in
+  24.4 s, 1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254; **P**
+  PASS, identical — P pins `Date.now` and `Math.random`, so the card ids
+  (`newId` embeds the clock, its counter and a random draw) and
+  `createdAt` values it records also show the calls happen in the same order and number; its `error`,
+  `error-cached`, `batch-again` and `retranslate-no-key` scenarios
+  included; **Q** PASS, identical to `docs/refactor/phase3/requests.json`.
 
 ## Open
 
