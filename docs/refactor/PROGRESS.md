@@ -2331,7 +2331,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5d8. `BackupSection` → its file | T B L R S U D pass; review PASS WITH NOTES | `219754f` |
 | 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `ad81ec7` |
 | 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review PASS | `bdd5a5c` |
-| 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review pending | this commit |
+| 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review PASS | `aa423d9` |
+| 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -2997,6 +2998,43 @@ holds)
   33.3 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.6 s, 1,904 nodes,
   0 long tasks); **S** 30/30; **U** 254/254, `reader-quran-compiled` at
   both sizes among them.
+- **Review of 5e3 (`aa423d9`): PASS; "ready for 5e4".** Byte-identical
+  but for `export`; the `compiled` divider heads only `CompileTab` and went
+  with it; no cycle. The correction to Design §10 confirmed:
+  `quran/quranIndex.ts:427` stays true through 5e3 (the line it describes,
+  what "the sheet shows", is `QuranSheet`'s) and becomes untrue at 5e4.
+
+**Step 5e4, measured 2026-11-17**
+- `QuranSheet` (`EntitySheet.tsx:73-270` at `aa423d9`: the `Qurʾān`
+  divider and the function), `TabId` (`:50`) and the verse-sheet design
+  comment (`:35-48`, the plan's `:51-64`) moved verbatim, in their order,
+  into the new `ui/reader/QuranSheet.tsx`; only `QuranSheet` is exported.
+  A five-line header. The split comment, adaptation (l): `:33` ("The sheet
+  that opens when a verse or ḥadīth is tapped.", the plan's `:49`) stays
+  above the dispatcher, a blank line between as before; the `//` line
+  joining the two halves (`:34`, the plan's `:50`), which belongs to
+  neither, is dropped at the seam. Byte diff: the design comment, `TabId`,
+  `:33` and the dispatcher (`:51-71`) identical; `QuranSheet`'s block
+  identical but for the `export`.
+- `QuranSheet.tsx` imports every line `EntitySheet` had but `Book` and
+  `HadithSheet` (filtered copies, in order), `CompileTab` and `type
+  QuranSheetData` among them, and nothing from `EntitySheet.tsx`, so no
+  cycle. `EntitySheet` keeps only `Book`/`Entity` and `HadithSheet` and
+  imports `QuranSheet`. **`EntitySheet.tsx` is 29 lines** — its imports,
+  `:49`'s line and the dispatch — against Design §4's "about 55": the
+  estimate counted the old import block, which went with the sheets.
+- **Made untrue here, for 5j (Q13):** `quran/quranIndex.ts:427`
+  ("`data.verse?.english || data.bundledEnglish` in EntitySheet"); the
+  line it describes is now `QuranSheet.tsx:208`.
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,214 B (unchanged), only `index.js` differs
+  (`compare-bundles` against post-5e3: the module's place), CSS
+  byte-identical (`cmp`); **L** 181 files, 134 edges, 0 directory and 0
+  file-level cycles, rules hold; **R** first and alone 55/55 (240,000 px in
+  33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s, 1,904 nodes,
+  0 long tasks); **S** 30/30; **U** 254/254, `reader-quran`,
+  `reader-quran-similar` and `reader-quran-compiled` at both sizes among
+  them.
 
 ## Open
 
