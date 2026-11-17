@@ -30,9 +30,13 @@ export function retryAfterSeconds(header: string | null | undefined): number | n
  * reads this one before `retry-after`; the app read only the latter, so with
  * `retry-after-ms` alone the wait the SDK knew was reported as null
  * (FOUND_ISSUES 15.4).
+ *
+ * Read the way the SDK reads it (client.mjs `retryRequest`): `parseFloat`, and
+ * a value of 0 or none counts as absent, so the caller falls through to
+ * `retry-after` as the SDK does.
  */
 export function retryAfterMsSeconds(header: string | null | undefined): number | null {
-  if (header === null || header === undefined || header.trim() === '') return null;
-  const ms = Number(header);
-  return Number.isFinite(ms) ? Math.max(0, ms / 1000) : null;
+  if (!header) return null;
+  const ms = parseFloat(header);
+  return Number.isFinite(ms) && ms > 0 ? ms / 1000 : null;
 }

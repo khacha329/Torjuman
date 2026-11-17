@@ -1452,9 +1452,10 @@ await scenario(
 );
 
 // (3i) compile's Gemini call with a 200 whose body is not the JSON it expects:
-// empty, and an HTML page (a captive portal, say). response.json() rejects
-// with V8's SyntaxError, which compileWithGemini does not catch, so the
-// message recorded is V8's own (Node 22 here and in the deploy workflow).
+// empty, and an HTML page (a captive portal, say). Until FOUND_ISSUES 15.1
+// response.json() rejected with V8's SyntaxError, which compileWithGemini did
+// not catch, so the message recorded was V8's own; since, the body is read as
+// text and a failed parse is an `api` TranslationError with the body as raw.
 await scenario(
   'compile.gemini.200-empty-body',
   [{ status: 200, headers: { 'content-type': 'application/json' }, body: '' }],
