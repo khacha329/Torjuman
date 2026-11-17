@@ -28,11 +28,11 @@ import { Button, Spinner } from '../kit';
 import type { QuranSheetData } from './quranSheetData';
 import { CompileTab } from './CompileTab';
 
-// The verse sheet, which EntitySheet opens for a tapped āyah: one tab per
-// installed QUL resource, and the Compiled tab when Settings turns it on.
-// `TabId` is its own. Moved verbatim, with the design comment below, from
-// EntitySheet.tsx in restructure Phase 5 step 5e4
-// (docs/refactor/plans/phase5-big-ui-files.md).
+// The verse sheet, which EntitySheet opens for a tapped āyah: the Translation
+// tab, one more per installed QUL resource that has something for the āyah,
+// and the Compiled tab when Settings turns it on. `TabId` is its own. Moved
+// verbatim, with the design comment below, from EntitySheet.tsx in
+// restructure Phase 5 step 5e4 (docs/refactor/plans/phase5-big-ui-files.md).
 
 // ---------------------------------------------------------------------------
 // A verse sheet is a tabbed reference view

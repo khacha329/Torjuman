@@ -2332,7 +2332,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5e1. `HadithSheet` with `Diagnostic` → `ui/reader/HadithSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `ad81ec7` |
 | 5e2. `QuranSheetData` → `ui/reader/quranSheetData.ts`, type only | T B (identical JS) L R S U pass; review PASS | `bdd5a5c` |
 | 5e3. `CompileTab` → `ui/reader/CompileTab.tsx` | T B L R S U pass; review PASS | `aa423d9` |
-| 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review pending | this commit |
+| 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `539de97` |
+| 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3035,6 +3036,57 @@ holds)
   0 long tasks); **S** 30/30; **U** 254/254, `reader-quran`,
   `reader-quran-similar` and `reader-quran-compiled` at both sizes among
   them.
+- **Review of 5e4 (`539de97`): PASS WITH NOTES; "ready for 5f1".** The
+  three moved pieces byte-identical (only `export` added); dropping the
+  bare `//` joiner at the split's seam accepted; `QuranSheet.tsx` imports
+  nothing from `EntitySheet.tsx`; `EntitySheet.tsx` is the dispatcher
+  Design §4 describes. One wording note, applied in 5f1's commit (comment
+  only): the header now says the sheet has "the Translation tab, one more
+  per installed QUL resource that has something for the āyah, and the
+  Compiled tab when Settings turns it on".
+
+**Step 5f1, measured 2026-11-17**
+- `TYPE_CLASS` (`BlockList.tsx:63-72` at `539de97`) and `TYPE_CHROME` with
+  its doc comment ("Keep in step with TYPE_CLASS", `:74-91`) moved
+  verbatim, in their order, into the new `ui/reader/blockLayout.ts`,
+  `export` added; `diff` identical but for the `export`. The margin-layout
+  comment (`:55-61`) stays: it describes `BlockRow`'s gutters.
+- The text-height estimate, adaptation (j): its doc comment (`:266-272`)
+  and the three statements of `estimateTextHeight`'s body (`:275-277`)
+  moved into `export function textHeightFor(block, columnWidth, fontSize,
+  lineHeight): number` — the three names the body closed over, all numbers
+  (the 0.43 em, `Math.max(8, …)`, `Math.max(1, …)`) as they were. Only the
+  indentation changed (comment 2 → 0 spaces, statements 6 → 2): with it
+  stripped, `diff` is identical. In `BlockList` the `useCallback` stays, its
+  first line, deps line `[columnWidth, fontSize, lineHeight],` and close
+  character for character today's, its body `(block: Block) =>
+  textHeightFor(block, columnWidth, fontSize, lineHeight)`. `estimateSize`'s
+  inline `useCallback` and `intrinsicHeight` are untouched; no memo or
+  callback added. `settleOn` is 5f2's.
+- Imports: `blockLayout.ts` imports `type { Block, BlockType }`;
+  `BlockList` drops `BlockType` and imports `TYPE_CHROME`, `TYPE_CLASS`
+  and `textHeightFor`. Outside the moved text, `BlockList.tsx` is the old
+  file but for those two import lines and the callback's body (`diff`).
+  It is 688 lines (728 before). `blockLayout.ts` has a seven-line
+  header saying the three are together because of trap 7.
+- **Made untrue here, for 5j (Q13, Design §10):** CLAUDE.md trap 7
+  ("`TYPE_CHROME` in `BlockList.tsx`") and its map; `.claude/agents/
+  torjuman-reader.md:19-23` (the estimates "+ `TYPE_CHROME[type]`" under
+  `BlockList.tsx`). Also line references that shift up here: FOUND_ISSUES
+  `BlockList.tsx` ~134 (`pageIndexOf`, now 105), `:285` (now 245),
+  `:314-334` and `:328` (`settleOn`, now 274-294 and 288), `:360-369` (now
+  320-329), `:559` (now 519).
+- **T** exit 0. **B L R S U**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,249 B (+35 B, the new function and its call),
+  only `index.js` differs (`compare-bundles` against post-5e4; the first
+  difference is a minified name), CSS byte-identical (`cmp`), so moving the
+  class strings to a `.ts` file changed no Tailwind output; **L** 182
+  files, 134 edges, 0 directory and 0 file-level cycles, rules hold; **R**
+  first and alone 55/55 (240,000 px in 33.4 s, 1,905 nodes, 0 long tasks /
+  175,800 px in 24.5 s, 1,904 nodes, 0 long tasks), and every one of its
+  `ok` lines, measured positions included (jump to ص 120 top 66 / 109,
+  contents entry top 66 / 109, restore 700 → 95), identical to 5e4's run;
+  **S** 30/30; **U** 254/254.
 
 ## Open
 
