@@ -94,8 +94,8 @@
 // which OfflineProvider maps itself, and the bundled English refused, a plain
 // Error, the one route found to `translate`'s non-TranslationError mapping);
 // `addGlossaryTerm` (a window.prompt); the portrait sheet (S and R cover how
-// the reader opens it after a translation). And three of the steps Phase 5
-// step 5i3 moved, which no scenario can show, so 5i3's reviewer checked them
+// the reader opens it after a translation). And four things in the three
+// updaters Phase 5 step 5i3 moved, which no scenario can show, so 5i3's reviewer checked them
 // by reading: the offline branch's stats updater (`withOfflineRequest`,
 // useTranslator.ts:67-76 — both offline scenarios fail before it, and
 // translateProse always loads the model); the streaming entry's removal in

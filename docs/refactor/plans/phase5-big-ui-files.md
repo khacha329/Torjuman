@@ -1166,5 +1166,25 @@ The text above is left as approved; each step's PROGRESS entry has the detail.
 8. **Sizes against the estimates.** `EntitySheet.tsx` is 29 lines, not
    Design §4's "about 55" (the estimate counted the old import block, which
    went with the sheets); `SettingsScreen.tsx` 62 (about 70); `BlockList.tsx`
-   377 (about 370); `ReaderScreen.tsx` 854, at the top of Design §6's "about
+   378 (about 370; 377 before 5j's one added comment line); `ReaderScreen.tsx` 854, at the top of Design §6's "about
    750-850" and over the owner's "about 800" (Q11), its reason at its top.
+9. **Departures the step reviews accepted, recorded in PROGRESS.** Each is
+   written in full in its step's PROGRESS entry and, for the checks, in the
+   script's own header; listed here so this section names them all.
+   - 5a (`verify-markup.mjs`): the verse capture uses Ibrāhīm 2, not 14:7
+     (the bundled matching-ayah resource has no entry for 14:7, so its
+     sheet would have had no Similar tab); `reader-collapsed` and
+     `reader-sheet-open` take their cards from `seedCards`; the verse
+     sheet's Tafsīr, Topics and Surah tabs are not reachable (no such QUL
+     file is committed), so they are not captured.
+   - 5b (`verify-reader-scroll.mjs`), items (1)–(5) of its entry: the drag
+     direction, the read-mark sequence, "middle" meaning the middle of the
+     area below the header, one browser context per scenario, and the
+     planned breakage for "position, once", which changes nothing
+     observable. Item (6) is 7 above.
+   - 5c (`verify-translate.mjs`), items (1)–(4) of its entry: what is
+     masked in the record, the scenarios added beyond the plan's list and
+     the Claude group, where breakage 9 is made, and the Commands row in
+     CLAUDE.md.
+   - 5e4: the bare `//` line that joined the two halves of EntitySheet's
+     design comment was dropped at the split's seam (adaptation (l)).
