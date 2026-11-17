@@ -2335,7 +2335,8 @@ Plan: [`plans/phase5-big-ui-files.md`](plans/phase5-big-ui-files.md);
 | 5e4. `QuranSheet`, `TabId` and the verse-sheet comment → `ui/reader/QuranSheet.tsx` | T B L R S U pass; review PASS WITH NOTES | `539de97` |
 | 5f1. `TYPE_CLASS`, `TYPE_CHROME`, `textHeightFor` → `ui/reader/blockLayout.ts`; QuranSheet's header reworded (5e4's review note) | T B L R S U pass; review PASS WITH NOTES | `2d72185` |
 | 5f2. `settleOn`'s body → `blockLayout.ts`; 5f1's review notes (header wording, a line reference) | T B L R S U pass; review PASS | `24629fb` |
-| 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review pending | this commit |
+| 5f3. `BlockRow`, `MarginTarget`, `CardMarkerDot` → `ui/reader/BlockRow.tsx` | T B L R S U pass; review PASS | `5561473` |
+| 5g1. `useWordLookup` → `ui/reader/useWordLookup.ts` | T B L R S U P pass; review pending | this commit |
 
 **Step 5a, measured 2026-11-16** (no `src/` change; `git diff --quiet -- src`
 holds)
@@ -3196,6 +3197,60 @@ holds)
   1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-page`,
   `reader-page-cards` (the `CardMarkerDot`s) and `reader-margin-menu` at
   both sizes among them.
+- **Review of 5f3 (`5561473`): PASS; "ready for 5g1".** The three
+  components byte-identical (only `BlockRow` exported); no key, wrapper or
+  memo change at the call site; the margin-layout comment kept in
+  `BlockList.tsx`, as the plan says; the 699/700 restore accepted as noise.
+
+**Step 5g1, measured 2026-11-17**
+- The word-lookup region (`ReaderScreen.tsx:200-254` at `5561473`, as
+  Design §6.1 lists it: the dictionary comment, the `dictionary`, `lookup`
+  and `gloss` states, `requestGloss` (`[storage]`), the `loadDictionary`
+  effect (`[storage]`) and `lookUpWord` (`[dictionary]`)) moved as one
+  contiguous block into `export function useWordLookup({ storage })` in the
+  new `ui/reader/useWordLookup.ts`. `cmp`: the 55 lines identical, at the
+  same indentation. Adaptations: (f) one parameter field, `storage`; (i)
+  its type `ReturnType<typeof useApp>['storage']`; (g) one `return {
+  dictionary, lookup, setLookup, gloss, setGloss, requestGloss, lookUpWord
+  }` — Design §6.1's seven, `setDictionary` staying the hook's own; (h) the
+  call, `const { dictionary, lookup, setLookup, gloss, setGloss,
+  requestGloss, lookUpWord } = useWordLookup({ storage });`, stands where
+  the region's first line was, between the margin-menu state and
+  `allCards`. Hook order and effect order are unchanged: the three
+  `useState`s, two `useCallback`s and the one effect are called in the
+  same sequence at the same point, and `loadDictionary(storage)` is still
+  the screen's first own effect after the domain hooks; the gloss's
+  `glossWord(storage, …)` still runs only on a request. No deps changed,
+  nothing returned is wrapped anew. FOUND_ISSUES 33 (`meaningAvailable`)
+  and 38 are untouched.
+- Imports: `useWordLookup.ts` takes `useCallback`/`useEffect`/`useState`,
+  `useApp` (type only, for the parameter's type), `secrets`, `Block`,
+  `GlossState`, `glossWord`/`GLOSS_PROVIDER_ID`, `ANTHROPIC_GLOSS_MODEL`
+  and the `dictionaryService` line whole, in the source's order, the
+  type-only ones as `import type` (`verbatimModuleSyntax`, as at 5e2).
+  `ReaderScreen` drops `GlossState`, `glossWord`, `ANTHROPIC_GLOSS_MODEL`
+  and the `dictionaryService` import, keeps `secrets` and
+  `GLOSS_PROVIDER_ID` (the rail's `meaningAvailable`), and imports
+  `useWordLookup`. A four-line header. `ReaderScreen.tsx` is 1,291 lines
+  (1,349).
+- **For 5j:** every FOUND_ISSUES reference into `ReaderScreen.tsx` past
+  `:254` now sits 58 lines higher (26's `:1102-1115`, 27's `:649-666`,
+  28's `:1025`, 30's `:389-400`, 33's `:1043` → 985, 34's `:1089`, 39's
+  `:1240-1275`), and 31's `:124` 5 lines higher; 5g2–5h4 move them again,
+  so 5j recomputes them from the final file.
+- **T** exit 0. **B L R S U P**, on the tree just before the commit: **B**
+  exit 0, main chunk 790,460 B (+193 B, the hook's function and returned
+  object), only `index.js` differs (`compare-bundles` against post-5f3),
+  CSS byte-identical (`cmp`); **L** 184 files, 134 edges, 0 directory and
+  0 file-level cycles, rules hold; **R** first and alone 55/55, every `ok`
+  line identical to 5f2's run (against 5f3's, only the portrait restore,
+  back to "after 699"), every report line identical but the timings:
+  240,000 px in 33.4 s, 1,905 nodes, 0 long tasks / 175,800 px in 24.5 s,
+  1,904 nodes, 0 long tasks; **S** 30/30; **U** 254/254, `reader-meaning`,
+  `reader-meaning-cached` and `reader-rail` at both sizes among them;
+  **P** PASS, identical to `phase5/translate.json` (6 groups, 23
+  scenarios, 18 requests). P sends no gloss request; the gloss is U's
+  `reader-meaning*`.
 
 ## Open
 
