@@ -17,7 +17,7 @@ import { renderSystem, renderUser } from '../prompt';
 import { parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
 import { delay } from '../../lib/delay';
-import { geminiModelUrl, postGemini } from '../gemini';
+import { geminiHttpError, geminiModelUrl, postGemini, readRetryAfter } from '../gemini';
 
 // Google Generative Language API.
 //
@@ -244,46 +244,4 @@ export class GeminiProvider implements TranslationProvider {
       raw: text,
     };
   }
-}
-
-function readRetryAfter(response: Response): number | null {
-  const header = response.headers.get('retry-after');
-  if (!header) return null;
-  const seconds = Number(header);
-  return Number.isFinite(seconds) ? seconds : null;
-}
-
-async function geminiHttpError(response: Response): Promise<TranslationError> {
-  let message = `HTTP ${response.status}`;
-  let status = '';
-  try {
-    const payload = (await response.json()) as {
-      error?: { message?: string; status?: string };
-    };
-    message = payload.error?.message ?? message;
-    status = payload.error?.status ?? '';
-  } catch {
-    // Keep the status-code message.
-  }
-
-  if (
-    response.status === 401 ||
-    response.status === 403 ||
-    status === 'PERMISSION_DENIED' ||
-    /api[_ ]?key/i.test(message)
-  ) {
-    return new TranslationError(
-      'auth',
-      'Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.',
-    );
-  }
-
-  if (response.status === 400 && /not found|not supported/i.test(message)) {
-    return new TranslationError(
-      'api',
-      `Gemini does not offer this model to your key: ${message}. Pick a different model in Settings.`,
-    );
-  }
-
-  return new TranslationError('api', `Gemini API error: ${message}`);
 }

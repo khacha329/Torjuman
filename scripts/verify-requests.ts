@@ -60,7 +60,8 @@
 //     Only anthropic.translate.429-retry-after-http-date-only reaches that
 //     branch: the older anthropic.translate.429-retry-after-http-date also
 //     sends retry-after-ms, which the SDK reads first, so there the date is
-//     seen only by the app's Number(), which makes it NaN.
+//     seen only by the app, whose Number() made it NaN until FOUND_ISSUES 11
+//     (retryAfterSeconds reads the date, against this same Date.now).
 //   * Number.prototype.toLocaleString and String.prototype.localeCompare
 //     default to 'en-US' when called without a locale: the truncation messages
 //     format the budget with toLocaleString(). localeCompare stays pinned
@@ -811,9 +812,9 @@ await scenario(
   times(3, () => anthropicError(429, { 'retry-after-ms': '7000', 'retry-after': '7' })),
   translateAnthropic(translationRequest()),
 );
-// retry-after-ms wins in the SDK, so the HTTP date here reaches only the app's
-// Number() (NaN); ...-http-date-only, further down, exercises the SDK's
-// Date.parse branch.
+// retry-after-ms wins in the SDK, so the HTTP date here reaches only the app
+// (NaN by Number() before FOUND_ISSUES 11, a date since); ...-http-date-only,
+// further down, exercises the SDK's Date.parse branch.
 await scenario(
   'anthropic.translate.429-retry-after-http-date',
   times(3, () => anthropicError(429, { 'retry-after-ms': '1000', 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
@@ -1233,8 +1234,10 @@ const gemini429 = (retryAfter?: string): Canned => ({
 await scenario('gemini.translate.429-four-times-no-retry-after', times(4, () => gemini429()), translateGemini(geminiRequest()));
 await scenario(
   'gemini.translate.429-http-date-none-3-then-200',
-  // An HTTP-date retry-after is NaN to readRetryAfter (Number()), so it backs
-  // off as if none were sent: 2000, then 4000, then the 3 s asked for.
+  // An HTTP-date retry-after was NaN to the old readRetryAfter (Number()), so
+  // it backed off as if none were sent. Since FOUND_ISSUES 11 the date is
+  // read (retryAfterSeconds, Date.now pinned): 30 s, then 4000 ms, then the
+  // 3 s asked for. Still four requests.
   [gemini429('Mon, 16 Nov 2026 12:00:30 GMT'), gemini429(), gemini429('3'), geminiOk()],
   translateGemini(geminiRequest()),
 );
@@ -1272,8 +1275,9 @@ await scenario(
 // The SDK's HTTP-date branch (client.mjs retryRequest: Date.parse(header) -
 // Date.now(), 30 000 ms with Date.now pinned). The older http-date scenario
 // above also sends retry-after-ms, which the SDK reads first, so its Date.parse
-// never runs; this one sends the date alone. The app's own reading, Number()
-// of the header, is NaN in both.
+// never runs; this one sends the date alone. The app's own reading was
+// Number() of the header, NaN in both; since FOUND_ISSUES 11 it reads the date
+// (retryAfterSeconds), so both report 30 s.
 await scenario(
   'anthropic.translate.429-retry-after-http-date-only',
   times(3, () => anthropicError(429, { 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),

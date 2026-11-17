@@ -11,7 +11,7 @@ import {
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { addUsage, anthropicCallError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
+import { addUsage, toTranslationError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -313,6 +313,6 @@ export async function explainPhrase(options: {
       costUsd: null,
     };
   } catch (error) {
-    throw anthropicCallError(error);
+    throw toTranslationError(error);
   }
 }

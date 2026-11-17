@@ -1,11 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TranslationUsage } from '../types';
 import { TranslationError } from './TranslationProvider';
+import { retryAfterSeconds } from './retryAfter';
 
 // What every Claude call in the app shares, so the SDK is used the same way
 // everywhere: the client, the web-search tool, the text of a reply, the
-// running token total, and the two error mappings — the short one for Explain,
-// gloss and compile, the fuller one for translation and the key check. It sits
+// running token total, and the error mapping every call uses. It sits
 // in the translation core rather than under providers/ because Explain and
 // gloss (here in translation/) and QUL compile use it as well as the provider,
 // and the translation core may not import its providers
@@ -65,38 +65,16 @@ export function addUsage(total: TranslationUsage, usage: Anthropic.Usage): void 
 }
 
 /**
- * The short error mapping Explain, gloss and compile use: a rejected key, a
- * rate limit, no connection, and anything else as an API error with the
- * SDK's message. It returns the error so a caller writes
- * `throw anthropicCallError(error)`. Moved verbatim from explain.ts in step 3c;
- * gloss.ts had the same lines, and compile.ts the same without the first one,
- * which its `try` could never need. Translation and the key check use the
- * fuller mapping below (`toTranslationError`, moved here from
- * providers/AnthropicProvider.ts in step 3e), whose messages and retry-after
- * differ (FOUND_ISSUES 11).
- */
-export function anthropicCallError(error: unknown): TranslationError {
-  if (error instanceof TranslationError) return error;
-  if (error instanceof Anthropic.AuthenticationError) {
-    return new TranslationError('auth', 'Your Anthropic API key was rejected.');
-  }
-  if (error instanceof Anthropic.RateLimitError) {
-    return new TranslationError('rate-limit', 'Rate limited. Wait a moment and try again.');
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return new TranslationError('network', 'Could not reach api.anthropic.com.');
-  }
-  return new TranslationError(
-    'api',
-    error instanceof Error ? error.message : String(error),
-  );
-}
-
-/**
- * Translation and the key check: the fuller mapping, with its own messages, a
- * separate 403, and the 429's retry-after. Moved verbatim from
- * providers/AnthropicProvider.ts in restructure Phase 3 step 3e; not merged
- * with the short one above, whose messages differ (FOUND_ISSUES 11).
+ * The one error mapping every Claude call uses: translation, the key check,
+ * Explain, gloss and QUL compile. A rejected key, a key without access to the
+ * model (403), a rate limit with its retry-after, no connection, a rejected
+ * request, and any other API error with its status. It returns the error so a
+ * caller writes `throw toTranslationError(error)`.
+ *
+ * Until FOUND_ISSUES 11 there were two: this one, moved from
+ * providers/AnthropicProvider.ts in restructure Phase 3 step 3e, and a shorter
+ * one for Explain, gloss and compile that turned a 403 into `api` and dropped
+ * the 429's retry-after. Their messages were the only reason to keep both.
  */
 export function toTranslationError(error: unknown): TranslationError {
   if (error instanceof TranslationError) return error;
@@ -114,11 +92,10 @@ export function toTranslationError(error: unknown): TranslationError {
     );
   }
   if (error instanceof Anthropic.RateLimitError) {
-    const header = error.headers?.get?.('retry-after');
     return new TranslationError(
       'rate-limit',
       'Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.',
-      { retryAfterSeconds: header ? Number(header) : null },
+      { retryAfterSeconds: retryAfterSeconds(error.headers?.get?.('retry-after')) },
     );
   }
   if (error instanceof Anthropic.APIConnectionError) {
