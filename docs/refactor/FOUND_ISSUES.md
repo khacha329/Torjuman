@@ -529,7 +529,9 @@ observer are re-registered by a reader render. The call sites in
 or call it from a handler. The plan's Design §6.4 text records Phase 5 as it
 was approved and is left as it is. R's "an open popover keeps its outside-tap
 listener while the page scrolls" guards it: on the old code, eight 35 px
-scrolls (top block 11 → 12) added the pointerdown listener 4 times.
+scrolls (top block 11 → 12) added the pointerdown listener 4 times. It also
+requires the popover's own registration on opening, and then taps the text
+outside the popover and expects it to close (the first outside tap in R or S).
 
 ## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
 
@@ -755,3 +757,26 @@ measure its real height (before, it placed itself at its 138 px loading height
 and ran off the bottom instead). The placement rule itself is unchanged by
 37. A product choice (cover the anchor, run off the screen, or shrink the
 panel to the larger side). Left unfixed.
+
+## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading)
+
+The pattern of 34, in `ui/reader/MarginMenu.tsx:29-43`: its effect depends on
+`[onClose]`, which `ui/reader/ReaderSheets.tsx:241` passes as an inline arrow
+(`() => setMarginMenu(null)`), new on every reader render; the effect adds its
+document `pointerdown` listener after a `setTimeout(…, 0)` and removes it in
+its cleanup. So with the margin menu open, each reader render takes the
+listener away and adds it back a tick later, and a tap in that tick is not
+seen as an outside tap. MarginMenu is not `AnchoredPanel`, so 34's fix does not
+reach it. Found by the review of 34. Minor. Left unfixed.
+
+## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading)
+
+Since 34, `AnchoredPanel` places an open popover again only on a scroll, a
+window resize, a change of its own size (37), or a new anchor or sheet mode —
+no longer as a side effect of every reader render, which re-created
+`reposition` and re-ran its layout effect. The one case none of these covers
+is the anchor moving because layout above it changes inside the viewport with
+no scroll and no change in the panel's size (a block above it growing or
+shrinking, say). No concrete trigger was found: the virtualizer's own
+corrections move the page by scrolling, which is seen. A possibility, not a
+measured bug. Found by the review of 34. Left unfixed.

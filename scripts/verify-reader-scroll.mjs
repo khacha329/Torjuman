@@ -896,12 +896,16 @@ async function landscapeControls(browser, base, profile) {
       window.scrollBy(0, element.getBoundingClientRect().top - y);
     }, { id: blockId(VERSE_BLOCK), y: LISTENER_ANCHOR_Y });
     await settle(page, 500);
+    const addsBeforeOpening = await page.evaluate(() => window.__pointerdownAdds);
     await verse.click();
     const dialog = page.locator('[role="dialog"]');
     await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
     await settle(page, 500);
     const topBefore = await topBlock(page);
     const addsBefore = await page.evaluate(() => window.__pointerdownAdds);
+    // The popover's own registration, so a listener never added at all
+    // cannot pass as "none re-added".
+    const addedOnOpening = addsBefore - addsBeforeOpening;
     for (let step = 0; step < LISTENER_SCROLL_STEPS; step++) {
       await page.evaluate((px) => window.scrollBy(0, px), LISTENER_SCROLL_PX);
       await settle(page, 150);
@@ -911,8 +915,36 @@ async function landscapeControls(browser, base, profile) {
     const open = (await dialog.count()) === 1;
     check(
       'an open popover does not re-register its outside-tap listener as the reader renders',
-      open && topAfter !== topBefore && added === 0,
-      `top block ${topBefore} → ${topAfter}, pointerdown listeners added while scrolling ${added}, still open ${open}`,
+      open && topAfter !== topBefore && addedOnOpening >= 1 && added === 0,
+      `top block ${topBefore} → ${topAfter}, pointerdown listeners added on opening ${addedOnOpening}, while scrolling ${added}, still open ${open}`,
+    );
+    // Then the symptom itself: a tap on the text, clear of the popover and of
+    // its verse, closes it. No other R or S scenario taps outside an open
+    // popover.
+    const target = await page.evaluate((anchorId) => {
+      const panel = document.querySelector('[role="dialog"]').getBoundingClientRect();
+      const anchor = document.querySelector(`[data-block-id="${anchorId}"] [data-entity-id]`)?.getBoundingClientRect();
+      const headerBottom = document.querySelector('header').getBoundingClientRect().bottom;
+      const away = (x, y, r) => !r || x < r.left - 20 || x > r.right + 20 || y < r.top - 20 || y > r.bottom + 20;
+      // A point on a block's text, 20 px clear of the popover and the verse.
+      for (let y = Math.ceil(headerBottom) + 20; y < window.innerHeight - 10; y += 10) {
+        for (let x = 20; x < window.innerWidth; x += 20) {
+          if (!away(x, y, panel) || !away(x, y, anchor)) continue;
+          const block = document.elementFromPoint(x, y)?.closest('[data-block-id]');
+          if (block && block.getAttribute('data-block-id') !== anchorId) {
+            return { x, y, block: block.getAttribute('data-block-id') };
+          }
+        }
+      }
+      return null;
+    }, blockId(VERSE_BLOCK));
+    if (target) await page.touchscreen.tap(target.x, target.y);
+    await settle(page, 400);
+    const closed = (await dialog.count()) === 0;
+    check(
+      '  and a tap on the text outside it then closes it',
+      target !== null && closed,
+      `tapped ${target ? `${target.block} at ${target.x},${target.y}` : 'nothing (no block clear of the popover)'}, closed ${closed}`,
     );
   });
 

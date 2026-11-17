@@ -58,13 +58,16 @@ export function AnchoredPanel({
 
   // The latest `onClose`, read by the effects and callbacks below instead of
   // listing it as a dependency. Every caller passes an inline arrow, new on
-  // each reader render, and the reader renders on each change of the top
-  // block while scrolling. With `onClose` as a dependency, each render
-  // removed the document's pointerdown listener and added it back a tick
-  // later, so a tap in that tick was not seen as an outside tap, and it
-  // re-created `reposition` and so the size observer (FOUND_ISSUES 34). It is
-  // updated in a layout effect declared before the ones that read it, so the
-  // placement that runs on mount already sees the current one.
+  // each reader render, and the reader renders repeatedly while scrolling,
+  // for example on each change of the top block. With `onClose` as a
+  // dependency, each render removed the document's pointerdown listener and
+  // added it back a tick later, so a tap in that tick was not seen as an
+  // outside tap, and it re-created `reposition` and so the size observer
+  // (FOUND_ISSUES 34). On mount the ref already holds the current `onClose`.
+  // It is updated in a layout effect declared before the ones that read it,
+  // so that on an update where `reposition` changes too (`asSheet` flipping,
+  // or a new anchor), the placement that update runs calls the new
+  // `onClose`, not the previous render's.
   const onCloseRef = useRef(onClose);
   useLayoutEffect(() => {
     onCloseRef.current = onClose;
