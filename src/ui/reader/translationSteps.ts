@@ -37,6 +37,11 @@ import { blocksInRange, contextAround, type SelectionAnchor } from './selection'
  * instead, so it can never be served as, or served instead of, that block's own
  * translation (FOUND_ISSUES 26). `cacheKeyFor` itself is unchanged, so every
  * existing card keeps its key.
+ *
+ * The block id stays in a standalone key on purpose: the cache index covers
+ * every book (`getCardByCacheKey`), and block ids carry their book's id, so
+ * the prefix keeps a hit inside its own book. The cost is that the same entry
+ * looked up from two different visible blocks is translated twice.
  */
 export function cacheAnchorFor(
   anchor: Pick<
@@ -57,13 +62,14 @@ export function cacheAnchorFor(
   return { startBlockId: id, startOffset: 0, endBlockId: id, endOffset: anchor.sourceText.length };
 }
 
-/** A standalone text's passage: nothing around it, nothing known in it. */
-export const STANDALONE_PASSAGE = {
-  selected: [] as Block[],
-  before: [] as Block[],
-  after: [] as Block[],
-  known: { quran: [] as string[], hadith: [] as string[] },
-};
+/**
+ * A standalone text's passage: nothing around it, nothing known in it. A
+ * function, so every call gets its own empty arrays and nothing downstream can
+ * change a shared object.
+ */
+export function standalonePassage(): ReturnType<typeof passageFor> {
+  return { selected: [], before: [], after: [], known: { quran: [], hadith: [] } };
+}
 
 export function passageFor(
   blocks: Block[],

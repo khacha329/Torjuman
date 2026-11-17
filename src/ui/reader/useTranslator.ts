@@ -21,7 +21,7 @@ import {
   failedCard,
   loadingCard,
   passageFor,
-  STANDALONE_PASSAGE,
+  standalonePassage,
   translationRequestFor,
   withoutStream,
 } from './translationSteps';
@@ -318,7 +318,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // is not its context, and that block's types, ḥadīth numbers and verses
       // are not its own (FOUND_ISSUES 26).
       const { selected, before, after, known } = standalone
-        ? STANDALONE_PASSAGE
+        ? standalonePassage()
         : passageFor(blocks, entities, anchor);
 
       const card: TranslationCard = loadingCard({
