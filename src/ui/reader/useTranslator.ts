@@ -145,16 +145,29 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // ḥadīth that touch the selection only, read together. Every ḥadīth in
       // the book was read, one after another, before each translation:
       // thousands of sequential reads on a large collection (FOUND_ISSUES 35).
-      // segmentSelection looks up only the entities overlapping the selected
-      // blocks, so the cache it gets is the same for those.
+      // segmentSelection looks a reference up only for an entity touching a
+      // selected block, and any such ḥadīth overlaps the selection's block
+      // range, so every ḥadīth it can look up is read here. (It also calls the
+      // lookup for narrator and person entities, whose references are names
+      // and never match a ḥadīth row.) An entity end whose block is not in
+      // `blocks`, or a reversed one, counts as unbounded, so malformed data
+      // reads too much rather than too little.
       const orderOf = new Map(blocks.map((block) => [block.id, block.order]));
       const firstOrder = orderOf.get(card.startBlockId) ?? 0;
       const lastOrder = orderOf.get(card.endBlockId) ?? 0;
       const references = new Set<string>();
       for (const entity of entities) {
         if (entity.type !== 'hadith' || !entity.reference) continue;
-        const entityFirst = orderOf.get(entity.startBlockId) ?? 0;
-        const entityLast = orderOf.get(entity.endBlockId) ?? 0;
+        const startOrder = orderOf.get(entity.startBlockId);
+        const endOrder = orderOf.get(entity.endBlockId);
+        const entityFirst =
+          startOrder === undefined || endOrder === undefined
+            ? -Infinity
+            : Math.min(startOrder, endOrder);
+        const entityLast =
+          startOrder === undefined || endOrder === undefined
+            ? Infinity
+            : Math.max(startOrder, endOrder);
         if (entityLast < firstOrder || entityFirst > lastOrder) continue;
         references.add(entity.reference);
       }
