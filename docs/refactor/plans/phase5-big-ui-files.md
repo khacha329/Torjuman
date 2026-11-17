@@ -423,7 +423,7 @@ forced; `TRANSLITERATION_INSTRUCTION` dropped; stats not incremented;
 clock: `timeout 1200 npm run verify:reader`; then S, U and P. A hang is
 killed and R re-run once alone; both runs are recorded. A second hang stops
 the step until the cause is found — two in a row are not a flake. R's script
-is not changed for this (Q2).
+is not changed for this (Q2; but see the amendment to Q2 at the end).
 
 ### 2. Allowed adaptations
 
