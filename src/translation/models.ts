@@ -122,9 +122,6 @@ export function outputConfigFor(model: string): { effort: Effort } | undefined {
   return effort ? { effort } : undefined;
 }
 
-/** Anthropic API version header value. */
-export const ANTHROPIC_VERSION = '2023-06-01';
-
 // ------------------------------------------------------------------- Gemini
 
 export const GEMINI_MODELS: ModelOption[] = [

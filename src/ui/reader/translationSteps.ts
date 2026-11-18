@@ -7,6 +7,7 @@ import type {
   TranslationProfile,
 } from '../../types';
 import { newId } from '../../lib/id';
+import { sha256 } from '../../lib/hash';
 import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError, type TranslationRequest } from '../../translation/TranslationProvider';
 import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
@@ -26,6 +27,49 @@ import { blocksInRange, contextAround, type SelectionAnchor } from './selection'
 // restructure Phase 5 steps 5i1, 5i2 and 5i3
 // (docs/refactor/plans/phase5-big-ui-files.md, Design §7 and the amendment
 // to Q12).
+
+/**
+ * The block ids a translation's cache key is built from.
+ *
+ * A selection is keyed by where it sits, as always. A standalone text — the
+ * dictionary's "Translate this entry" — is anchored on the visible block only
+ * so its card has a place in the panel; its key carries a hash of the text
+ * instead, so it can never be served as, or served instead of, that block's own
+ * translation (FOUND_ISSUES 26). `cacheKeyFor` itself is unchanged, so every
+ * existing card keeps its key.
+ *
+ * The block id stays in a standalone key on purpose: the cache index covers
+ * every book (`getCardByCacheKey`), and block ids carry their book's id, so
+ * the prefix keeps a hit inside its own book. The cost is that the same entry
+ * looked up from two different visible blocks is translated twice.
+ */
+export function cacheAnchorFor(
+  anchor: Pick<
+    SelectionAnchor,
+    'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
+  >,
+  standalone: boolean,
+): Pick<SelectionAnchor, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset'> {
+  if (!standalone) {
+    return {
+      startBlockId: anchor.startBlockId,
+      startOffset: anchor.startOffset,
+      endBlockId: anchor.endBlockId,
+      endOffset: anchor.endOffset,
+    };
+  }
+  const id = `${anchor.startBlockId}#entry:${sha256(anchor.sourceText).slice(0, 16)}`;
+  return { startBlockId: id, startOffset: 0, endBlockId: id, endOffset: anchor.sourceText.length };
+}
+
+/**
+ * A standalone text's passage: nothing around it, nothing known in it. A
+ * function, so every call gets its own empty arrays and nothing downstream can
+ * change a shared object.
+ */
+export function standalonePassage(): ReturnType<typeof passageFor> {
+  return { selected: [], before: [], after: [], known: { quran: [], hadith: [] } };
+}
 
 export function passageFor(
   blocks: Block[],
@@ -53,7 +97,6 @@ export function translationRequestFor({
   glossary,
   useModel,
   known,
-  digDeeper,
 }: {
   anchor: Pick<SelectionAnchor, 'sourceText'>;
   before: Block[];
@@ -63,7 +106,6 @@ export function translationRequestFor({
   glossary: GlossaryEntry[];
   useModel: string;
   known: ReturnType<typeof passageFor>['known'];
-  digDeeper: boolean;
 }): TranslationRequest {
   return {
     targetText: anchor.sourceText,
@@ -79,7 +121,7 @@ export function translationRequestFor({
       .map((block) => block.hadithNumber)
       .filter((value): value is string => Boolean(value)),
     knownQuranRefs: known.quran,
-    allowExternalLookup: digDeeper || activeProfile.allowExternalLookup,
+    allowExternalLookup: activeProfile.allowExternalLookup,
   };
 }
 
@@ -91,7 +133,7 @@ export function loadingCard({
   useProviderId,
   useModel,
   cacheKey,
-  digDeeper,
+  standalone,
 }: {
   bookId: string;
   anchor: Pick<
@@ -103,7 +145,7 @@ export function loadingCard({
   useProviderId: ProviderId;
   useModel: string;
   cacheKey: string;
-  digDeeper: boolean;
+  standalone: boolean;
 }): TranslationCard {
   return {
     id: newId('card'),
@@ -126,7 +168,11 @@ export function loadingCard({
     collapsed: false,
     cacheKey,
     status: 'loading',
-    usedExternalLookup: digDeeper || activeProfile.allowExternalLookup,
+    // Set by the finished card from what the provider reports. It was the
+    // profile's setting, whatever the provider, so a Gemini card claimed a
+    // search that never ran (FOUND_ISSUES 43).
+    usedExternalLookup: false,
+    ...(standalone ? { standalone: true } : {}),
   };
 }
 

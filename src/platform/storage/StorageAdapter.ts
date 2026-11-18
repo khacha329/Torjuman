@@ -154,6 +154,7 @@ export interface StorageAdapter {
   // Cards
   putCard(card: TranslationCard): Promise<void>;
   listCards(bookId: string): Promise<TranslationCard[]>;
+  /** A finished (`complete`) card under this key; a failed or loading one is never a hit. */
   getCardByCacheKey(cacheKey: string): Promise<TranslationCard | undefined>;
   deleteCard(id: string): Promise<void>;
 

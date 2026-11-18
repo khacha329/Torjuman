@@ -65,7 +65,20 @@ export async function getCardByCacheKey(
   handle: () => IDBPDatabase<Schema>,
   cacheKey: string,
 ): Promise<TranslationCard | undefined> {
-  return handle().getFromIndex('cards', 'byCacheKey', cacheKey);
+  // Only a finished card is a cache hit (FOUND_ISSUES 41). A failed card is
+  // stored under the key it was asked with, so serving it would show the same
+  // error again with no request, and a transient failure would stick until the
+  // card's own Retry. Several rows can share one key (a failed card and the
+  // later success), so the index is walked rather than reading its first row.
+  let cursor = await handle()
+    .transaction('cards')
+    .store.index('byCacheKey')
+    .openCursor(cacheKey);
+  while (cursor) {
+    if (cursor.value.status === 'complete') return cursor.value;
+    cursor = await cursor.continue();
+  }
+  return undefined;
 }
 
 export async function deleteCard(handle: () => IDBPDatabase<Schema>, id: string): Promise<void> {

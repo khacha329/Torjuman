@@ -1,12 +1,11 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { secrets } from '../../services/secrets';
 import type { Block, Entity, TocNode, TranslationCard } from '../../types';
 import type { useMarks } from './useMarks';
 import type { useExplanations } from './useExplanations';
 import { MarginMenu } from './MarginMenu';
 import { DictionarySheet } from './DictionarySheet';
 import { BiographySheet } from './BiographySheet';
-import { GLOSS_PROVIDER_ID } from '../../translation/gloss';
+import { useMeaningAvailable } from './useMeaningAvailable';
 import {
   entityContext,
   entityText,
@@ -76,6 +75,7 @@ export function ReaderSheets({
     active: boolean;
     singleWord: boolean;
     shortSelection: boolean;
+    text: string;
     centerY: number | null;
   };
   translator: ReturnType<typeof useTranslator>;
@@ -118,6 +118,7 @@ export function ReaderSheets({
   setShowToc: Dispatch<SetStateAction<boolean>>;
   jumpToPage: ReturnType<typeof useReaderNavigation>['jumpToPage'];
 }) {
+  const meaningAvailable = useMeaningAvailable(selection.text, selection.singleWord);
   return (
     <>
       {selection.active && (
@@ -128,7 +129,7 @@ export function ReaderSheets({
           busy={translator.busy}
           dictionaryAvailable={dictionary !== null}
           biographyAvailable={biographyAvailable}
-          meaningAvailable={navigator.onLine || secrets.getProviderKey(GLOSS_PROVIDER_ID) !== ''}
+          meaningAvailable={meaningAvailable}
           onBiography={() =>
             withSelection((anchor) => {
               const element = blockElementFor(anchor.startBlockId);
@@ -199,6 +200,9 @@ export function ReaderSheets({
                 endOffset: block.text.length,
                 sourceText: text,
               },
+              // The block only gives the card a place; the entry is keyed and
+              // sent as its own text (FOUND_ISSUES 26).
+              standalone: true,
             });
           }}
         />

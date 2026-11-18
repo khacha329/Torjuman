@@ -51,7 +51,9 @@ interface Piece {
 }
 
 /**
- * Cut the selected text at every entity boundary it contains.
+ * Cut the selected text at the boundaries of the verses and ḥadīth it
+ * contains, resolved or not (FOUND_ISSUES 68). Marked names (`narrator`,
+ * `person`) cut nothing (FOUND_ISSUES 61).
  *
  * Offsets are block-relative, so the selection is walked block by block and the
  * entity ranges intersecting it are projected onto the selected substring.
@@ -87,7 +89,22 @@ export function segmentSelection(options: {
     // Entities overlapping this block's share of the selection.
     const covering: Piece[] = [];
     for (const entity of entities) {
-      if (entity.matchQuality === 'unresolved') continue;
+      // An unresolved entity is cut out like any other. The detector marks a
+      // ḥadīth `unresolved` when its matn carries no number: it is still a
+      // ḥadīth, only one with nothing to look up, so it is emitted with the
+      // no-offline-source note. Until FOUND_ISSUES 68 every unresolved entity
+      // was skipped here, which left an unnumbered matn in the prose, where
+      // the on-device model translated it. (No detector marks a verse
+      // `unresolved` — an unmatched verse is left unmarked — but one would be
+      // emitted with QURAN_UNRESOLVED_NOTE, not handed to the model.)
+      //
+      // Only verses and ḥadīth are cut out of the prose. A marked name
+      // ('narrator', 'person') is a reading aid, not a passage, and stays in
+      // the prose around it. Until FOUND_ISSUES 61 it was emitted as a ḥadīth:
+      // on device a name in the selection was cut from the prose, shown
+      // untranslated with the no-offline-source note, and, inside a ḥadīth,
+      // shown twice.
+      if (entity.type !== 'quran' && entity.type !== 'hadith') continue;
 
       const entityStart = entity.startBlockId === block.id ? entity.startOffset : 0;
       const entityEnd = entity.endBlockId === block.id ? entity.endOffset : block.text.length;
@@ -105,16 +122,34 @@ export function segmentSelection(options: {
       }
     }
 
-    covering.sort((a, b) => a.start - b.start);
+    // At one start, the longer piece first, so a verse quoted inside a ḥadīth
+    // that begins at the same offset is inside the ḥadīth, not before it. On
+    // an exact tie, the ḥadīth first: otherwise the order the entities came in
+    // decides, and the detector stores a block's verses before its ḥadīth, so
+    // the verse would be emitted and the ḥadīth skipped as lying inside it —
+    // its segment, note and any verified English missing from the card
+    // (FOUND_ISSUES 72; the skip is 61's).
+    const rank = (piece: Piece) => (piece.entity?.type === 'hadith' ? 0 : 1);
+    covering.sort((a, b) => a.start - b.start || b.end - a.end || rank(a) - rank(b));
 
-    // Walk the block's share, emitting prose between entities.
+    // Walk the block's share, emitting prose between entities. A piece that
+    // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
+    // skipped, and one that runs past it emits only the part not yet shown.
+    // (Until FOUND_ISSUES 61 each piece was sliced from its own start after
+    // `cursor` had moved past it, so overlapping text appeared twice.) Neither
+    // changes what reaches the model: prose is only ever the gap before a
+    // piece and the tail after the last, and only `pushProse` adds to `prose`.
+    // A skipped verse is still read inside the ḥadīth's Arabic, without its
+    // own bundled English; see FOUND_ISSUES 61.
     let cursor = from;
     for (const piece of covering) {
-      if (piece.start > cursor) {
-        pushProse(block.text.slice(cursor, piece.start));
+      if (piece.end <= cursor) continue;
+      const start = Math.max(piece.start, cursor);
+      if (start > cursor) {
+        pushProse(block.text.slice(cursor, start));
       }
-      pushEntity(piece.entity!, block.text.slice(piece.start, piece.end));
-      cursor = Math.max(cursor, piece.end);
+      pushEntity(piece.entity!, block.text.slice(start, piece.end));
+      cursor = piece.end;
     }
     if (cursor < to) pushProse(block.text.slice(cursor, to));
   }

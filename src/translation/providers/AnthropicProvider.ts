@@ -18,7 +18,15 @@ import {
   SUPERSEDED_ANTHROPIC_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { addUsage, anthropicClient, textOf, toTranslationError, WEB_SEARCH_TOOL } from '../anthropic';
+import {
+  addUsage,
+  anthropicClient,
+  joinNotes,
+  textOf,
+  toTranslationError,
+  WEB_SEARCH_TOOL,
+  withRaw,
+} from '../anthropic';
 import { coerceSegments, parseSegments } from '../parseSegments';
 import {
   answerWithTool,
@@ -61,8 +69,17 @@ export class AnthropicProvider implements TranslationProvider {
     } catch (error) {
       if (error instanceof Anthropic.AuthenticationError) return false;
       if (error instanceof Anthropic.PermissionDeniedError) return false;
-      // A rate limit or a 400 still proves the key authenticated.
-      if (error instanceof Anthropic.APIError && error.status !== 401 && error.status !== 403) {
+      // A rate limit or a 400 still proves the key authenticated. An error
+      // with no status proves nothing: the SDK's APIConnectionError is an
+      // APIError without one, so with no network the key used to test as good
+      // (FOUND_ISSUES 12). It is thrown instead, and the key screens show
+      // "Could not reach Claude: …" rather than a verdict on the key.
+      if (
+        error instanceof Anthropic.APIError &&
+        error.status !== undefined &&
+        error.status !== 401 &&
+        error.status !== 403
+      ) {
         return true;
       }
       throw toTranslationError(error);
@@ -83,11 +100,16 @@ export class AnthropicProvider implements TranslationProvider {
     // model calling the search tool at all; tool_choice auto would now allow
     // one pass, but merging them is a separate change from the model upgrade.
     let research: string | null = null;
+    let searched = false;
     if (request.allowExternalLookup) {
-      research = await this.research(client, request, usage, onChunk);
+      ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
     }
 
-    return this.structure(client, request, usage, research, onChunk);
+    const result = await this.structure(client, request, usage, research, onChunk);
+    // Reported only when a search ran: the research pass may answer without
+    // calling the tool, and the card's "web search" must not claim one
+    // (FOUND_ISSUES 43).
+    return searched ? { ...result, searched: true } : result;
   }
 
   /** Pass 1: web search enabled, tool_choice auto, free-form prose. Not parsed. */
@@ -96,7 +118,8 @@ export class AnthropicProvider implements TranslationProvider {
     request: TranslationRequest,
     usage: TranslationUsage,
     onChunk?: (partial: string) => void,
-  ): Promise<string> {
+  ): Promise<{ notes: string; searched: boolean }> {
+    let searched = false;
     const messages: Anthropic.MessageParam[] = [
       {
         role: 'user',
@@ -127,20 +150,36 @@ export class AnthropicProvider implements TranslationProvider {
       });
 
       let turnText = '';
+      // A reply with search results holds several text blocks. The notes join
+      // them with a newline (textOf); live progress ran them together
+      // ("…first.Passage …") until FOUND_ISSUES 15.3.
+      stream.on('streamEvent', (event) => {
+        if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'text' &&
+          turnText !== ''
+        ) {
+          turnText += '\n';
+        }
+      });
       stream.on('text', (delta) => {
         turnText += delta;
-        onChunk?.(`Researching…\n\n${notes}${turnText}`);
+        onChunk?.(`Researching…\n\n${joinNotes(notes, turnText)}`);
       });
 
       let message: Anthropic.Message;
       try {
         message = await stream.finalMessage();
       } catch (error) {
-        throw toTranslationError(error);
+        // An error after the reply has started (an overload mid-stream) keeps
+        // what was written so far as raw: the tokens are billed all the same,
+        // and a paid response is never discarded (FOUND_ISSUES 15.2).
+        throw withRaw(toTranslationError(error), joinNotes(notes, turnText));
       }
 
       addUsage(usage, message.usage);
-      notes += textOf(message);
+      notes = joinNotes(notes, textOf(message));
+      if (message.content.some((block) => block.type === 'server_tool_use')) searched = true;
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -149,7 +188,7 @@ export class AnthropicProvider implements TranslationProvider {
       break;
     }
 
-    return notes;
+    return { notes, searched };
   }
 
   /** Pass 2 (or the only pass): strict tool, no search, structured out. */
@@ -205,7 +244,9 @@ export class AnthropicProvider implements TranslationProvider {
       try {
         message = await stream.finalMessage();
       } catch (error) {
-        throw toTranslationError(error);
+        // As in the research pass (FOUND_ISSUES 15.2): the research notes and
+        // the tool arguments streamed so far are kept as raw.
+        throw withRaw(toTranslationError(error), joinNotes(research ?? '', partial));
       }
 
       addUsage(usage, message.usage);

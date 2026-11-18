@@ -5,7 +5,7 @@ import { normalize } from '../lib/arabic';
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { anthropicCallError, anthropicClient, textOf } from './anthropic';
+import { toTranslationError, anthropicClient, textOf } from './anthropic';
 import { GLOSS_MAX_TOKENS, GLOSS_OUTPUT_CONFIG } from './models';
 
 // "What does this word mean here, in English?"
@@ -164,6 +164,6 @@ export async function glossWord(
     await storage.putWordGloss(gloss);
     return gloss;
   } catch (error) {
-    throw anthropicCallError(error);
+    throw toTranslationError(error);
   }
 }

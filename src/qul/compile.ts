@@ -1,7 +1,7 @@
 import { sha256 } from '../lib/hash';
 import { TranslationError } from '../translation/TranslationProvider';
-import { anthropicCallError, anthropicClient, textOf } from '../translation/anthropic';
-import { geminiModelUrl, postGemini } from '../translation/gemini';
+import { toTranslationError, anthropicClient, textOf } from '../translation/anthropic';
+import { geminiHttpError, geminiModelUrl, postGemini, readRetryAfter } from '../translation/gemini';
 import type { CloudProviderId, TranslationUsage } from '../types';
 
 // The compiled view — the one part of the QUL feature that generates.
@@ -180,7 +180,7 @@ async function compileWithAnthropic(
       costUsd: null,
     };
   } catch (error) {
-    throw anthropicCallError(error);
+    throw toTranslationError(error);
   }
 }
 
@@ -202,17 +202,19 @@ async function compileWithGemini(
     throw new TranslationError('network', 'Could not reach the Gemini API.');
   }
 
-  if (response.status === 401 || response.status === 403) {
-    throw new TranslationError('auth', 'Your Gemini API key was rejected.');
-  }
+  // Compile does not retry a 429 (one request, as before), but it now reports
+  // the wait Gemini asked for, and reads the error body like translation does
+  // so a bad key reported as a 400 comes out as `auth` (FOUND_ISSUES 11).
   if (response.status === 429) {
-    throw new TranslationError('rate-limit', 'Gemini rate limit reached. Try again shortly.');
+    throw new TranslationError('rate-limit', 'Gemini rate limit reached. Try again shortly.', {
+      retryAfterSeconds: readRetryAfter(response),
+    });
   }
   if (!response.ok) {
-    throw new TranslationError('api', `Gemini API error: HTTP ${response.status}`);
+    throw await geminiHttpError(response);
   }
 
-  const payload = (await response.json()) as {
+  let payload: {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
     usageMetadata?: {
       promptTokenCount?: number;
@@ -220,6 +222,32 @@ async function compileWithGemini(
       cachedContentTokenCount?: number;
     };
   };
+  let body: string;
+  try {
+    body = await response.text();
+  } catch (caught) {
+    // A connection that drops while the body is read rejects with a
+    // TypeError, which escaped unmapped (FOUND_ISSUES 14.1).
+    if (caught instanceof TypeError) {
+      throw new TranslationError(
+        'network',
+        'The connection to the Gemini API dropped mid-reply. Check the network connection.',
+      );
+    }
+    throw caught;
+  }
+  try {
+    payload = JSON.parse(body) as typeof payload;
+  } catch {
+    // A 200 that is not JSON — an empty body, or a captive portal's HTML page —
+    // escaped as a raw SyntaxError (FOUND_ISSUES 15.1). The body is kept as
+    // raw, so what arrived can be seen.
+    throw new TranslationError(
+      'api',
+      'Gemini returned a reply that is not JSON. A network login page can cause this; check the connection.',
+      { raw: body || null },
+    );
+  }
 
   const text = (payload.candidates ?? [])
     .flatMap((candidate) => candidate.content?.parts ?? [])

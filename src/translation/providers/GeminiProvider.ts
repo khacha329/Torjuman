@@ -17,7 +17,7 @@ import { renderSystem, renderUser } from '../prompt';
 import { parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
 import { delay } from '../../lib/delay';
-import { geminiModelUrl, postGemini } from '../gemini';
+import { geminiHttpError, geminiModelUrl, postGemini, readRetryAfter } from '../gemini';
 
 // Google Generative Language API.
 //
@@ -49,6 +49,8 @@ interface GeminiChunk {
     finishReason?: string;
   }[];
   usageMetadata?: GeminiUsageMetadata;
+  /** Set, with no candidates, when Gemini refuses the prompt itself. */
+  promptFeedback?: { blockReason?: string };
 }
 
 export class GeminiProvider implements TranslationProvider {
@@ -91,6 +93,7 @@ export class GeminiProvider implements TranslationProvider {
 
     let text = '';
     let finishReason: string | undefined;
+    let blockReason: string | undefined;
     let budget = maxTokensFor(request.targetText);
     let truncationRetried = false;
     const usage: TranslationUsage = {
@@ -156,7 +159,20 @@ export class GeminiProvider implements TranslationProvider {
       let buffer = '';
 
       while (true) {
-        const { done, value } = await reader.read();
+        let read: ReadableStreamReadResult<Uint8Array>;
+        try {
+          read = await reader.read();
+        } catch {
+          // A connection that drops after the headers rejects the read with a
+          // TypeError, which escaped unmapped (FOUND_ISSUES 14.1). What
+          // arrived before the drop is kept as raw.
+          throw new TranslationError(
+            'network',
+            'The connection to the Gemini API dropped mid-reply. Check the network connection.',
+            { raw: text || null },
+          );
+        }
+        const { done, value } = read;
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -185,6 +201,9 @@ export class GeminiProvider implements TranslationProvider {
               }
             }
             if (candidate.finishReason) finishReason = candidate.finishReason;
+          }
+          if (chunk.promptFeedback?.blockReason) {
+            blockReason = chunk.promptFeedback.blockReason;
           }
 
           if (chunk.usageMetadata) {
@@ -220,6 +239,16 @@ export class GeminiProvider implements TranslationProvider {
       );
     }
 
+    // A blocked prompt has no candidates, only promptFeedback.blockReason; it
+    // was reported as an empty parse failure (FOUND_ISSUES 14.4).
+    if (blockReason) {
+      throw new TranslationError(
+        'refusal',
+        `Gemini declined to translate this passage (${blockReason}).`,
+        { raw: text || null },
+      );
+    }
+
     if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') {
       throw new TranslationError('refusal', 'Gemini declined to translate this passage.', {
         raw: text,
@@ -244,46 +273,4 @@ export class GeminiProvider implements TranslationProvider {
       raw: text,
     };
   }
-}
-
-function readRetryAfter(response: Response): number | null {
-  const header = response.headers.get('retry-after');
-  if (!header) return null;
-  const seconds = Number(header);
-  return Number.isFinite(seconds) ? seconds : null;
-}
-
-async function geminiHttpError(response: Response): Promise<TranslationError> {
-  let message = `HTTP ${response.status}`;
-  let status = '';
-  try {
-    const payload = (await response.json()) as {
-      error?: { message?: string; status?: string };
-    };
-    message = payload.error?.message ?? message;
-    status = payload.error?.status ?? '';
-  } catch {
-    // Keep the status-code message.
-  }
-
-  if (
-    response.status === 401 ||
-    response.status === 403 ||
-    status === 'PERMISSION_DENIED' ||
-    /api[_ ]?key/i.test(message)
-  ) {
-    return new TranslationError(
-      'auth',
-      'Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.',
-    );
-  }
-
-  if (response.status === 400 && /not found|not supported/i.test(message)) {
-    return new TranslationError(
-      'api',
-      `Gemini does not offer this model to your key: ${message}. Pick a different model in Settings.`,
-    );
-  }
-
-  return new TranslationError('api', `Gemini API error: ${message}`);
 }

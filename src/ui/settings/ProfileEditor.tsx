@@ -119,8 +119,8 @@ export function ProfileEditor() {
           <span>
             Allow external lookup on every request
             <span className="block text-xs text-muted">
-              Off by default. It adds latency, cost, and unverified-source risk — the
-              per-card "Dig deeper" button turns it on for a single request instead.
+              Off by default. It adds latency, cost, and unverified-source risk —
+              Explain, on a selection, researches the meaning of one phrase instead.
             </span>
           </span>
         </label>

@@ -11,7 +11,14 @@ import {
 import { parseJsonObject } from './parseSegments';
 import { answerWithTool } from './schema';
 import { TranslationError } from './TranslationProvider';
-import { addUsage, anthropicCallError, anthropicClient, textOf, WEB_SEARCH_TOOL } from './anthropic';
+import {
+  addUsage,
+  anthropicClient,
+  joinNotes,
+  textOf,
+  toTranslationError,
+  WEB_SEARCH_TOOL,
+} from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
 //
@@ -231,14 +238,25 @@ export async function explainPhrase(options: {
       });
 
       let turnText = '';
+      // Text blocks are joined with a newline, as textOf joins them in the
+      // notes; progress ran them together until FOUND_ISSUES 15.3.
+      stream.on('streamEvent', (event) => {
+        if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'text' &&
+          turnText !== ''
+        ) {
+          turnText += '\n';
+        }
+      });
       stream.on('text', (delta) => {
         turnText += delta;
-        options.onProgress?.(notes + turnText);
+        options.onProgress?.(joinNotes(notes, turnText));
       });
 
       const message = await stream.finalMessage();
       addUsage(usage, message.usage);
-      notes += textOf(message);
+      notes = joinNotes(notes, textOf(message));
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -313,6 +331,6 @@ export async function explainPhrase(options: {
       costUsd: null,
     };
   } catch (error) {
-    throw anthropicCallError(error);
+    throw toTranslationError(error);
   }
 }

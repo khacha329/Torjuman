@@ -38,3 +38,66 @@ Numbers are `FOUND_ISSUES.md` section numbers.
 
 - **5** (a detached and miscounted comment about the API keys) and **17**
   (RESTRUCTURE §4 T-e on `ShareStorageAdapter`): fixed in lane D.
+
+## Delegated to lane B, 2026-11-17
+
+The owner delegated these to lane B, within limits: a paid response is never
+discarded, scripture is never model-generated, no API key in any error
+message, no new dependency, and no change to the number of requests sent
+(the SDK's retries and Gemini's `MAX_RETRIES` stay). Each is the smallest fix
+lane B found.
+
+- **11. Error handling differs between the Claude call sites.** One Anthropic
+  mapping (`toTranslationError`) for translate, the key check, Explain, gloss
+  and compile; `anthropicCallError` removed. A date-form `retry-after` is read
+  as a date (`translation/retryAfter.ts`), on the Claude and Gemini paths.
+  Compile's Gemini branch maps errors with the provider's
+  `geminiHttpError` (moved to `translation/gemini.ts`) and reports a 429's
+  wait, but still does not retry. `ANTHROPIC_VERSION` removed.
+- **12. A network failure passes the Claude key check.** A status-less
+  `APIError` throws the mapped network error ("Could not reach Claude: …")
+  instead of returning `true`.
+- **14. Five error paths.** All five fixed: a body drop is kind `network` at
+  every Gemini and Anthropic site; a stream error event reads its own message;
+  Gemini's `blockReason` is a refusal; research turns are joined by a blank
+  line.
+- **15. Four more error paths.** All four fixed: compile's non-JSON 200 is a
+  `TranslationError` with the body as raw; in translate, a stream error
+  after earlier paid output keeps that output (research notes, streamed tool
+  JSON) as raw (Explain does not yet: FOUND_ISSUES 54); progress joins text
+  blocks with a newline; `retry-after-ms` is read before `retry-after`, as
+  the SDK reads it.
+- **11, after review.** A `retry-after` date already past is no usable wait
+  (null), so Gemini keeps its backoff; the shared Claude 429 message says
+  "try again", since Explain, gloss and compile show it too.
+- **26. "Translate this entry".** The card stays on the visible block for
+  display, but is marked `standalone`. Its cache key uses the block id plus a
+  hash of the entry text (`cacheKeyFor` itself unchanged), and its request is
+  the entry alone: no context, block types, ḥadīth numbers or verses. On the
+  on-device provider it is refused with a notice, since that path cuts text
+  from the book's blocks.
+- **29. `busy`.** A count of translations in flight; busy while above zero.
+- **35. Offline ḥadīth reads.** Only the ḥadīth whose blocks overlap the
+  selection, read with one `Promise.all`.
+- **43. "web search" on a Gemini card.** Label only. The Claude provider
+  reports whether its research pass used the search tool, and the card
+  records that. The label also requires a Claude card, for cards stored
+  before. Gemini gains no search.
+- **61. The offline translator fix.** LANES.md's "fix to the offline
+  translator" is FOUND_ISSUES 61 (numbered 52 on lane B's branch when the
+  owner confirmed it: "52 is it"), by the owner's word (2026-11-17). Only
+  verses and ḥadīth are cut out of the prose on the on-device path; a marked
+  name (`narrator`, `person`) stays in the prose around it. A piece inside
+  one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
+  runs past it emits only the part not yet shown, so no text of the book is
+  sliced twice. (A clipped verse is still shown as its whole muṣḥaf text, so
+  that edge case can show the overlap twice: FOUND_ISSUES 61.) Pieces are
+  ordered by start, then the longer first, then a ḥadīth before a verse, so
+  an exact tie cannot drop the ḥadīth (FOUND_ISSUES 72). What reaches
+  the model is still only prose.
+- **68. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
+  word (2026-11-18). `segmentSelection` no longer skips `unresolved`
+  entities: an unnumbered matn is emitted as a ḥadīth, in Arabic with the
+  no-offline-source note, and nothing is looked up for it. No detector
+  marks a verse `unresolved`; one would get the existing
+  unresolved-verse note, not the model.

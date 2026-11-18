@@ -279,7 +279,7 @@
         },
         {
           "id": "retranslate",
-          "through": "the card's Retranslate ▾ → Same provider and model: the old card deleted, a forced request",
+          "through": "the card's Retranslate ▾ → Same provider and model: a forced request; the old card kept until the new one is stored, then deleted (FOUND_ISSUES 42)",
           "requests": [
             {
               "method": "POST",
@@ -434,7 +434,7 @@
         },
         {
           "id": "retranslate-with",
-          "through": "Retranslate ▾ → Gemini Flash Lite 3.5: the override's model in the URL and on the card",
+          "through": "Retranslate ▾ → Gemini Flash Lite 3.5: the override's model in the URL and on the card; the old card deleted once the new one is stored",
           "requests": [
             {
               "method": "POST",
@@ -2423,7 +2423,408 @@
         },
         {
           "id": "error-cached",
-          "through": "block 4 (the HTTP 400 one) selected again → Translate: the failed card is served from the cache, no request",
+          "through": "block 4 (the HTTP 400 one) selected again → Translate: a failed card is not a cache hit (FOUND_ISSUES 41), so a request, answered: a complete card beside the failed one",
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+              "headers": {
+                "accept": "*/*",
+                "accept-language": "en-US",
+                "content-type": "application/json",
+                "origin": "(the preview server)",
+                "referer": "(the preview server)/",
+                "sec-ch-ua": "(the machine and browser build, masked)",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "(the machine and browser build, masked)",
+                "user-agent": "(the machine and browser build, masked)",
+                "x-goog-api-key": "(the fake key: asserted here, and nowhere else)"
+              },
+              "body": {
+                "systemInstruction": {
+                  "parts": [
+                    {
+                      "text": "You are translating classical Islamic Arabic scholarship into English for a\nstudy circle. The audience is non-native English speakers. Your translations\nwill be used to prepare lessons, so accuracy of meaning is the highest priority\nand plain, clear English is the second.\n\nBreak the passage into segments, one per distinct piece of material.\n\nRULES\n\n1. QURʾĀNIC VERSES\n   Never translate a Qurʾānic verse yourself. Identify it and emit a segment\n   with type \"quran\" and the reference as \"surah:ayah\". The application will\n   retrieve the authoritative text. Always present Arabic and English together.\n\n2. ḤADĪTH\n   Never translate a hadith matn yourself. Identify it and emit a segment with\n   type \"hadith\" and any reference information you can determine (collection\n   and number). The application will retrieve the authoritative translation.\n   Always present Arabic and English together. Preserve the isnād and the\n   takhrīj (متفق عليه، رواه مسلم، etc.) exactly.\n\n3. POETRY\n   Translate the verse if it renders well in English while preserving the\n   meaning. If it does not translate cleanly, provide a faithful prose SUMMARY\n   of the poem's meaning instead, and set note to indicate it was summarized\n   rather than translated. Never silently omit a poem.\n\n4. GENERAL PROSE\n   Preserve the meaning precisely. Render into simple, clear English suited to\n   non-native speakers. Do not paraphrase loosely, do not modernize the\n   argument, and do not add interpretation the text does not contain.\n   Preserve footnotes, narrator chains, and volume/page citations exactly.\n\n5. ARABIC TERMS\n   Iconic Arabic Islamic terms and formulae stay in ARABIC SCRIPT with a brief\n   English gloss immediately following in parentheses. Examples:\n   رحمه الله (may Allah have mercy on him), سبحانه وتعالى (glorified and\n   exalted is He), عبادة (worship). Follow the provided glossary exactly where\n   a term appears in it. Where you encounter a term you think belongs in the\n   glossary but is not there, list it in uncertainTerms.\n\n6. UNCERTAINTY\n   If a passage is genuinely ambiguous, translate it as faithfully as you can\n   and note the ambiguity in the note field. Do not resolve ambiguity by\n   guessing.\n\nGLOSSARY\nRender these terms exactly as given wherever they appear:\n\nتجريبي = for testing"
+                    }
+                  ]
+                },
+                "contents": [
+                  {
+                    "role": "user",
+                    "parts": [
+                      {
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                      }
+                    ]
+                  }
+                ],
+                "generationConfig": {
+                  "responseMimeType": "application/json",
+                  "responseSchema": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "quran",
+                            "hadith",
+                            "poetry",
+                            "prose"
+                          ],
+                          "description": "What kind of material this segment is."
+                        },
+                        "arabic": {
+                          "type": "string",
+                          "description": "The Arabic of this segment."
+                        },
+                        "english": {
+                          "type": "string",
+                          "description": "The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source."
+                        },
+                        "reference": {
+                          "type": "string",
+                          "description": "For quran, \"surah:ayah\". For hadith, the collection and number."
+                        },
+                        "note": {
+                          "type": "string",
+                          "description": "Ambiguity, or a note that a poem was summarised."
+                        },
+                        "uncertainTerms": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Arabic terms that look like glossary candidates but are not in it."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "arabic",
+                        "english"
+                      ]
+                    }
+                  },
+                  "maxOutputTokens": 2048
+                }
+              }
+            }
+          ],
+          "states": [],
+          "cards": [
+            {
+              "id": "card_mwkgq3mo00313b9",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:0",
+              "startOffset": 7,
+              "endBlockId": "shamela-616161:p1:2",
+              "endOffset": 42,
+              "sourceText": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+                  "english": "A third placeholder translation: the first test sentence, not from a real book.",
+                  "source": "model"
+                },
+                {
+                  "type": "quran",
+                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+                  "english": "",
+                  "reference": "14:2",
+                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
+                },
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول",
+                  "english": "The third: an explanation of what came before",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.5-flash-lite",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "6e34948d5637c0805f1a35ee45951bf991c692d22252fcb247e3846a5eac1928",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 120,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgrdxc001c7d",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:0",
+              "startOffset": 7,
+              "endBlockId": "shamela-616161:p1:2",
+              "endOffset": 42,
+              "sourceText": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+                  "english": "A fourth placeholder translation: the first test sentence, not from a real book.",
+                  "source": "model"
+                },
+                {
+                  "type": "quran",
+                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+                  "english": "",
+                  "reference": "14:2",
+                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
+                },
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول",
+                  "english": "The third: an explanation of what came before",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "3575237a713fcff4f82475d95d7bd0ba8a37f0d8612ada414cb3825c05acd1ce",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 120,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgrdxc0021cc8",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:1",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:1",
+              "endOffset": 111,
+              "sourceText": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+              "segments": [
+                {
+                  "type": "quran",
+                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+                  "english": "",
+                  "reference": "14:2",
+                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "3c68d2b3be2864b114cb7b5d5b9ca48620754410313e6f0d7dc198beb931c032",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 700,
+                "outputTokens": 90,
+                "cacheReadTokens": 512,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgrdxc00313b9",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
+              "status": "error",
+              "usedExternalLookup": false,
+              "error": "Gemini API error: Request contains an invalid argument.",
+              "errorKind": "api"
+            },
+            {
+              "id": "card_mwkgrdxc00496c",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:8",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:8",
+              "endOffset": 60,
+              "sourceText": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
+              "segments": [],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "617893c265324031f15401e5fd22f77405ed62b6030954161829cb8918b200bc",
+              "status": "error",
+              "usedExternalLookup": false,
+              "error": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
+              "errorKind": "auth"
+            },
+            {
+              "id": "card_mwkgrdxc005ihv",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:9",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:9",
+              "endOffset": 48,
+              "sourceText": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
+              "segments": [],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "64ee753443d98494f80bd5399bb152a50d5901b3cf08ecea31144d6c86554e25",
+              "status": "error",
+              "usedExternalLookup": false,
+              "error": "The answer was cut off at the 4,096-token limit, even after retrying with a larger budget. Try translating a shorter passage.",
+              "errorKind": "truncated",
+              "rawResponse": "[{\"type\":\"prose\",\"arabic\":\"الفقرة العاشر"
+            },
+            {
+              "id": "card_mwkgrdxc006jmg",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:10",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:10",
+              "endOffset": 55,
+              "sourceText": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
+              "segments": [],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "8455db8ced6116cb7e2efa94c3f937370913a217a2b33f3d7892b5314a08ba19",
+              "status": "error",
+              "usedExternalLookup": false,
+              "error": "Could not reach the Gemini API. Check the network connection.",
+              "errorKind": "network"
+            },
+            {
+              "id": "card_mwkgrdxc0071146",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "The fourth: translated after the failure",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 60,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            }
+          ],
+          "screen": {
+            "bars": [],
+            "session": "This session\n3 translations\nGemini: 3 requests (free tier)\n512 tokens from cache",
+            "panel": [
+              {
+                "id": "card_mwkgq3mo00313b9",
+                "text": "▾\nGemini · Flash Lite 3.5\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA third placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nThe profile or glossary has changed since this was translated. It is left as it is — retranslate when you want it refreshed.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc001c7d",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc0021cc8",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc00313b9",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc0071146",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc00496c",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nAPI key rejected\n\nYour Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.\n\nOpen Settings and check the key for Gemini.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc005ihv",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nThe answer was cut off\n\nThe answer was cut off at the 4,096-token limit, even after retrying with a larger budget. Try translating a shorter passage.\n\nRetry\nWhat the model did return — kept so this response is not wasted\n[{\"type\":\"prose\",\"arabic\":\"الفقرة العاشر\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc006jmg",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nNetwork problem\n\nCould not reach the Gemini API. Check the network connection.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+              }
+            ],
+            "rail": null
+          }
+        },
+        {
+          "id": "retranslate-no-key",
+          "through": "the verse block's card → Retranslate ▾ → a Claude model, with no Claude key: the notice, and the card is kept (FOUND_ISSUES 42)",
           "requests": [],
           "states": [],
           "cards": [
@@ -2657,11 +3058,50 @@
               "usedExternalLookup": false,
               "error": "Could not reach the Gemini API. Check the network connection.",
               "errorKind": "network"
+            },
+            {
+              "id": "card_mwkgrdxc0071146",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "The fourth: translated after the failure",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 60,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
             }
           ],
           "screen": {
-            "bars": [],
-            "session": "This session\n2 translations\nGemini: 2 requests (free tier)\n512 tokens from cache",
+            "bars": [
+              "No Claude API key is set. Add one in Settings before translating.\nDismiss"
+            ],
+            "session": "This session\n3 translations\nGemini: 3 requests (free tier)\n512 tokens from cache",
             "panel": [
               {
                 "id": "card_mwkgq3mo00313b9",
@@ -2680,238 +3120,8 @@
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
               },
               {
-                "id": "card_mwkgrdxc00496c",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nAPI key rejected\n\nYour Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.\n\nOpen Settings and check the key for Gemini.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
-              },
-              {
-                "id": "card_mwkgrdxc005ihv",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nThe answer was cut off\n\nThe answer was cut off at the 4,096-token limit, even after retrying with a larger budget. Try translating a shorter passage.\n\nRetry\nWhat the model did return — kept so this response is not wasted\n[{\"type\":\"prose\",\"arabic\":\"الفقرة العاشر\nRetranslate ▾\nCopy English\nDelete"
-              },
-              {
-                "id": "card_mwkgrdxc006jmg",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nNetwork problem\n\nCould not reach the Gemini API. Check the network connection.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
-              }
-            ],
-            "rail": null
-          }
-        },
-        {
-          "id": "retranslate-no-key",
-          "through": "the verse block's card → Retranslate ▾ → a Claude model, with no Claude key: the card is deleted first, then the notice",
-          "requests": [],
-          "states": [],
-          "cards": [
-            {
-              "id": "card_mwkgq3mo00313b9",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p1:0",
-              "startOffset": 7,
-              "endBlockId": "shamela-616161:p1:2",
-              "endOffset": 42,
-              "sourceText": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول",
-              "segments": [
-                {
-                  "type": "prose",
-                  "arabic": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
-                  "english": "A third placeholder translation: the first test sentence, not from a real book.",
-                  "source": "model"
-                },
-                {
-                  "type": "quran",
-                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
-                  "english": "",
-                  "reference": "14:2",
-                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
-                },
-                {
-                  "type": "prose",
-                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول",
-                  "english": "The third: an explanation of what came before",
-                  "source": "model"
-                }
-              ],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "e3b0c44298fc1c14",
-              "providerId": "gemini",
-              "model": "gemini-3.5-flash-lite",
-              "createdAt": 1794906060000,
-              "collapsed": false,
-              "cacheKey": "6e34948d5637c0805f1a35ee45951bf991c692d22252fcb247e3846a5eac1928",
-              "status": "complete",
-              "usedExternalLookup": false,
-              "usage": {
-                "inputTokens": 640,
-                "outputTokens": 120,
-                "cacheReadTokens": 0,
-                "cacheWriteTokens": 0
-              },
-              "costUsd": null,
-              "coverage": 1,
-              "reachedEnd": true
-            },
-            {
-              "id": "card_mwkgrdxc001c7d",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p1:0",
-              "startOffset": 7,
-              "endBlockId": "shamela-616161:p1:2",
-              "endOffset": 42,
-              "sourceText": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول",
-              "segments": [
-                {
-                  "type": "prose",
-                  "arabic": "الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
-                  "english": "A fourth placeholder translation: the first test sentence, not from a real book.",
-                  "source": "model"
-                },
-                {
-                  "type": "quran",
-                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
-                  "english": "",
-                  "reference": "14:2",
-                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
-                },
-                {
-                  "type": "prose",
-                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول",
-                  "english": "The third: an explanation of what came before",
-                  "source": "model"
-                }
-              ],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "98e8699cecb263bd",
-              "providerId": "gemini",
-              "model": "gemini-3.7-flash",
-              "createdAt": 1794906120000,
-              "collapsed": false,
-              "cacheKey": "3575237a713fcff4f82475d95d7bd0ba8a37f0d8612ada414cb3825c05acd1ce",
-              "status": "complete",
-              "usedExternalLookup": false,
-              "usage": {
-                "inputTokens": 640,
-                "outputTokens": 120,
-                "cacheReadTokens": 0,
-                "cacheWriteTokens": 0
-              },
-              "costUsd": null,
-              "coverage": 1,
-              "reachedEnd": true
-            },
-            {
-              "id": "card_mwkgrdxc00313b9",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p1:3",
-              "startOffset": 0,
-              "endBlockId": "shamela-616161:p1:3",
-              "endOffset": 60,
-              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
-              "segments": [],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "98e8699cecb263bd",
-              "providerId": "gemini",
-              "model": "gemini-3.7-flash",
-              "createdAt": 1794906120000,
-              "collapsed": false,
-              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
-              "status": "error",
-              "usedExternalLookup": false,
-              "error": "Gemini API error: Request contains an invalid argument.",
-              "errorKind": "api"
-            },
-            {
-              "id": "card_mwkgrdxc00496c",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p3:8",
-              "startOffset": 0,
-              "endBlockId": "shamela-616161:p3:8",
-              "endOffset": 60,
-              "sourceText": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
-              "segments": [],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "98e8699cecb263bd",
-              "providerId": "gemini",
-              "model": "gemini-3.7-flash",
-              "createdAt": 1794906120000,
-              "collapsed": false,
-              "cacheKey": "617893c265324031f15401e5fd22f77405ed62b6030954161829cb8918b200bc",
-              "status": "error",
-              "usedExternalLookup": false,
-              "error": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
-              "errorKind": "auth"
-            },
-            {
-              "id": "card_mwkgrdxc005ihv",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p3:9",
-              "startOffset": 0,
-              "endBlockId": "shamela-616161:p3:9",
-              "endOffset": 48,
-              "sourceText": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
-              "segments": [],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "98e8699cecb263bd",
-              "providerId": "gemini",
-              "model": "gemini-3.7-flash",
-              "createdAt": 1794906120000,
-              "collapsed": false,
-              "cacheKey": "64ee753443d98494f80bd5399bb152a50d5901b3cf08ecea31144d6c86554e25",
-              "status": "error",
-              "usedExternalLookup": false,
-              "error": "The answer was cut off at the 4,096-token limit, even after retrying with a larger budget. Try translating a shorter passage.",
-              "errorKind": "truncated",
-              "rawResponse": "[{\"type\":\"prose\",\"arabic\":\"الفقرة العاشر"
-            },
-            {
-              "id": "card_mwkgrdxc006jmg",
-              "kind": "translation",
-              "bookId": "shamela-616161",
-              "startBlockId": "shamela-616161:p3:10",
-              "startOffset": 0,
-              "endBlockId": "shamela-616161:p3:10",
-              "endOffset": 55,
-              "sourceText": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
-              "segments": [],
-              "profileId": "profile-study-circle",
-              "promptVersion": 1,
-              "glossaryHash": "98e8699cecb263bd",
-              "providerId": "gemini",
-              "model": "gemini-3.7-flash",
-              "createdAt": 1794906120000,
-              "collapsed": false,
-              "cacheKey": "8455db8ced6116cb7e2efa94c3f937370913a217a2b33f3d7892b5314a08ba19",
-              "status": "error",
-              "usedExternalLookup": false,
-              "error": "Could not reach the Gemini API. Check the network connection.",
-              "errorKind": "network"
-            }
-          ],
-          "screen": {
-            "bars": [
-              "No Claude API key is set. Add one in Settings before translating.\nDismiss"
-            ],
-            "session": "This session\n2 translations\nGemini: 2 requests (free tier)\n512 tokens from cache",
-            "panel": [
-              {
-                "id": "card_mwkgq3mo00313b9",
-                "text": "▾\nGemini · Flash Lite 3.5\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA third placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nThe profile or glossary has changed since this was translated. It is left as it is — retranslate when you want it refreshed.\n\nRetranslate ▾\nCopy English\nDelete"
-              },
-              {
-                "id": "card_mwkgrdxc001c7d",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
-              },
-              {
-                "id": "card_mwkgrdxc00313b9",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+                "id": "card_mwkgrdxc0071146",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc00496c",
@@ -3196,7 +3406,7 @@
                 "No Claude API key is set. Add one in Settings before translating.\nDismiss",
                 "Translate this ḥadīth's commentary? 3 blocks, 197 characters of Arabic. Roughly 2,451 tokens in and 132 out on gemini-3.7-flash — unknown for this model. Blocks already translated are served from the cache and cost nothing.\n\nTranslate all\nCancel"
               ],
-              "session": "This session\n2 translations\nGemini: 2 requests (free tier)\n512 tokens from cache",
+              "session": "This session\n3 translations\nGemini: 3 requests (free tier)\n512 tokens from cache",
               "panel": [
                 {
                   "id": "card_mwkgq3mo00313b9",
@@ -3207,8 +3417,16 @@
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
+                  "id": "card_mwkgrdxc0021cc8",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
                   "id": "card_mwkgrdxc00313b9",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
+                  "id": "card_mwkgrdxc0071146",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc00496c",
@@ -3230,7 +3448,7 @@
               "bars": [
                 "Translating 1 of 3…\n\nStop"
               ],
-              "session": "This session\n2 translations\nGemini: 2 requests (free tier)\n512 tokens from cache",
+              "session": "This session\n3 translations\nGemini: 3 requests (free tier)\n512 tokens from cache",
               "panel": [
                 {
                   "id": "card_mwkgq3mo00313b9",
@@ -3241,11 +3459,19 @@
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
+                  "id": "card_mwkgrdxc0021cc8",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
                   "id": "card_mwkgrdxc00313b9",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc0071146",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
+                  "id": "card_mwkgrdxc008w5t",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nTranslating…\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
@@ -3268,7 +3494,7 @@
               "bars": [
                 "Translating 2 of 3…\n\nStop"
               ],
-              "session": "This session\n3 translations\nGemini: 3 requests (free tier)\n512 tokens from cache",
+              "session": "This session\n4 translations\nGemini: 4 requests (free tier)\n512 tokens from cache",
               "panel": [
                 {
                   "id": "card_mwkgq3mo00313b9",
@@ -3279,15 +3505,23 @@
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
+                  "id": "card_mwkgrdxc0021cc8",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
                   "id": "card_mwkgrdxc00313b9",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc0071146",
-                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc008w5t",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
+                  "id": "card_mwkgrdxc009tv0",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nTranslating…\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
@@ -3310,7 +3544,7 @@
               "bars": [
                 "Translating 3 of 3…\n\nStop"
               ],
-              "session": "This session\n4 translations\nGemini: 4 requests (free tier)\n512 tokens from cache",
+              "session": "This session\n5 translations\nGemini: 5 requests (free tier)\n512 tokens from cache",
               "panel": [
                 {
                   "id": "card_mwkgq3mo00313b9",
@@ -3321,19 +3555,27 @@
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
+                  "id": "card_mwkgrdxc0021cc8",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
                   "id": "card_mwkgrdxc00313b9",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc0071146",
-                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc008w5t",
-                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
                   "id": "card_mwkgrdxc009tv0",
+                  "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+                },
+                {
+                  "id": "card_mwkgrdxc00a1cu0",
                   "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nTranslating…\nRetranslate ▾\nCopy English\nDelete"
                 },
                 {
@@ -3454,6 +3696,44 @@
               "reachedEnd": true
             },
             {
+              "id": "card_mwkgrdxc0021cc8",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:1",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:1",
+              "endOffset": 111,
+              "sourceText": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+              "segments": [
+                {
+                  "type": "quran",
+                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+                  "english": "",
+                  "reference": "14:2",
+                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "3c68d2b3be2864b114cb7b5d5b9ca48620754410313e6f0d7dc198beb931c032",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 700,
+                "outputTokens": 90,
+                "cacheReadTokens": 512,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
               "id": "card_mwkgrdxc00313b9",
               "kind": "translation",
               "bookId": "shamela-616161",
@@ -3550,6 +3830,43 @@
               "id": "card_mwkgrdxc0071146",
               "kind": "translation",
               "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "The fourth: translated after the failure",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 60,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgrdxc008w5t",
+              "kind": "translation",
+              "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:4",
               "startOffset": 0,
               "endBlockId": "shamela-616161:p2:4",
@@ -3585,7 +3902,7 @@
               "reachedEnd": true
             },
             {
-              "id": "card_mwkgrdxc008w5t",
+              "id": "card_mwkgrdxc009tv0",
               "kind": "translation",
               "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:5",
@@ -3622,7 +3939,7 @@
               "reachedEnd": true
             },
             {
-              "id": "card_mwkgrdxc009tv0",
+              "id": "card_mwkgrdxc00a1cu0",
               "kind": "translation",
               "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:6",
@@ -3649,7 +3966,7 @@
             "bars": [
               "Finished — 2 of 3 blocks translated, 1 did not complete.\n\nDismiss"
             ],
-            "session": "This session\n4 translations\nGemini: 4 requests (free tier)\n512 tokens from cache",
+            "session": "This session\n5 translations\nGemini: 5 requests (free tier)\n512 tokens from cache",
             "panel": [
               {
                 "id": "card_mwkgq3mo00313b9",
@@ -3660,19 +3977,27 @@
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
+                "id": "card_mwkgrdxc0021cc8",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
                 "id": "card_mwkgrdxc00313b9",
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc0071146",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc008w5t",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc009tv0",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc00a1cu0",
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nTranslation failed\n\nGemini API error: Internal error encountered.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
               },
               {
@@ -3693,8 +4018,94 @@
         },
         {
           "id": "batch-again",
-          "through": "Translate all… → Translate all again: every block served from the cache (the failed card too), no request",
-          "requests": [],
+          "through": "Translate all… → Translate all again: the two complete blocks from the cache; the HTTP 500 block requested again (FOUND_ISSUES 41) and answered",
+          "requests": [
+            {
+              "method": "POST",
+              "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+              "headers": {
+                "accept": "*/*",
+                "accept-language": "en-US",
+                "content-type": "application/json",
+                "origin": "(the preview server)",
+                "referer": "(the preview server)/",
+                "sec-ch-ua": "(the machine and browser build, masked)",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "(the machine and browser build, masked)",
+                "user-agent": "(the machine and browser build, masked)",
+                "x-goog-api-key": "(the fake key: asserted here, and nowhere else)"
+              },
+              "body": {
+                "systemInstruction": {
+                  "parts": [
+                    {
+                      "text": "You are translating classical Islamic Arabic scholarship into English for a\nstudy circle. The audience is non-native English speakers. Your translations\nwill be used to prepare lessons, so accuracy of meaning is the highest priority\nand plain, clear English is the second.\n\nBreak the passage into segments, one per distinct piece of material.\n\nRULES\n\n1. QURʾĀNIC VERSES\n   Never translate a Qurʾānic verse yourself. Identify it and emit a segment\n   with type \"quran\" and the reference as \"surah:ayah\". The application will\n   retrieve the authoritative text. Always present Arabic and English together.\n\n2. ḤADĪTH\n   Never translate a hadith matn yourself. Identify it and emit a segment with\n   type \"hadith\" and any reference information you can determine (collection\n   and number). The application will retrieve the authoritative translation.\n   Always present Arabic and English together. Preserve the isnād and the\n   takhrīj (متفق عليه، رواه مسلم، etc.) exactly.\n\n3. POETRY\n   Translate the verse if it renders well in English while preserving the\n   meaning. If it does not translate cleanly, provide a faithful prose SUMMARY\n   of the poem's meaning instead, and set note to indicate it was summarized\n   rather than translated. Never silently omit a poem.\n\n4. GENERAL PROSE\n   Preserve the meaning precisely. Render into simple, clear English suited to\n   non-native speakers. Do not paraphrase loosely, do not modernize the\n   argument, and do not add interpretation the text does not contain.\n   Preserve footnotes, narrator chains, and volume/page citations exactly.\n\n5. ARABIC TERMS\n   Iconic Arabic Islamic terms and formulae stay in ARABIC SCRIPT with a brief\n   English gloss immediately following in parentheses. Examples:\n   رحمه الله (may Allah have mercy on him), سبحانه وتعالى (glorified and\n   exalted is He), عبادة (worship). Follow the provided glossary exactly where\n   a term appears in it. Where you encounter a term you think belongs in the\n   glossary but is not there, list it in uncertainTerms.\n\n6. UNCERTAINTY\n   If a passage is genuinely ambiguous, translate it as faithfully as you can\n   and note the ambiguity in the note field. Do not resolve ambiguity by\n   guessing.\n\nGLOSSARY\nRender these terms exactly as given wherever they appear:\n\nتجريبي = for testing"
+                    }
+                  ]
+                },
+                "contents": [
+                  {
+                    "role": "user",
+                    "parts": [
+                      {
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: commentary.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nهذا متن ثان تجريبي، وليس من كتاب حقيقي.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                      }
+                    ]
+                  }
+                ],
+                "generationConfig": {
+                  "responseMimeType": "application/json",
+                  "responseSchema": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "quran",
+                            "hadith",
+                            "poetry",
+                            "prose"
+                          ],
+                          "description": "What kind of material this segment is."
+                        },
+                        "arabic": {
+                          "type": "string",
+                          "description": "The Arabic of this segment."
+                        },
+                        "english": {
+                          "type": "string",
+                          "description": "The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source."
+                        },
+                        "reference": {
+                          "type": "string",
+                          "description": "For quran, \"surah:ayah\". For hadith, the collection and number."
+                        },
+                        "note": {
+                          "type": "string",
+                          "description": "Ambiguity, or a note that a poem was summarised."
+                        },
+                        "uncertainTerms": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Arabic terms that look like glossary candidates but are not in it."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "arabic",
+                        "english"
+                      ]
+                    }
+                  },
+                  "maxOutputTokens": 2048
+                }
+              }
+            }
+          ],
           "states": [],
           "cards": [
             {
@@ -3798,6 +4209,44 @@
               "reachedEnd": true
             },
             {
+              "id": "card_mwkgrdxc0021cc8",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:1",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:1",
+              "endOffset": 111,
+              "sourceText": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+              "segments": [
+                {
+                  "type": "quran",
+                  "arabic": "ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ",
+                  "english": "",
+                  "reference": "14:2",
+                  "note": "Translation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "3c68d2b3be2864b114cb7b5d5b9ca48620754410313e6f0d7dc198beb931c032",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 700,
+                "outputTokens": 90,
+                "cacheReadTokens": 512,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
               "id": "card_mwkgrdxc00313b9",
               "kind": "translation",
               "bookId": "shamela-616161",
@@ -3894,6 +4343,43 @@
               "id": "card_mwkgrdxc0071146",
               "kind": "translation",
               "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "The fourth: translated after the failure",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "6abcaabeac59c9381c6ace91c5d5ee1e3129288e1f5c535aafcc7a9ad250c085",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 640,
+                "outputTokens": 60,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgrdxc008w5t",
+              "kind": "translation",
+              "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:4",
               "startOffset": 0,
               "endBlockId": "shamela-616161:p2:4",
@@ -3929,7 +4415,7 @@
               "reachedEnd": true
             },
             {
-              "id": "card_mwkgrdxc008w5t",
+              "id": "card_mwkgrdxc009tv0",
               "kind": "translation",
               "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:5",
@@ -3966,7 +4452,7 @@
               "reachedEnd": true
             },
             {
-              "id": "card_mwkgrdxc009tv0",
+              "id": "card_mwkgrdxc00a1cu0",
               "kind": "translation",
               "bookId": "shamela-616161",
               "startBlockId": "shamela-616161:p2:6",
@@ -3987,13 +4473,50 @@
               "usedExternalLookup": false,
               "error": "Gemini API error: Internal error encountered.",
               "errorKind": "api"
+            },
+            {
+              "id": "card_mwkgrdxc00b164r",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p2:6",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p2:6",
+              "endOffset": 54,
+              "sourceText": "شرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "شرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.",
+                  "english": "The second commentary: translated after the failure.",
+                  "source": "model"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "98e8699cecb263bd",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906120000,
+              "collapsed": false,
+              "cacheKey": "0ccbf4122c9294f9fd597b61eadc6090e0279ef5c1d90855f3548d2cfc952105",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 630,
+                "outputTokens": 80,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
             }
           ],
           "screen": {
             "bars": [
-              "Finished — 2 of 3 blocks translated, 1 did not complete.\n\nDismiss"
+              "Finished — 3 of 3 blocks translated.\n\nDismiss"
             ],
-            "session": "This session\n4 translations\nGemini: 4 requests (free tier)\n512 tokens from cache",
+            "session": "This session\n6 translations\nGemini: 6 requests (free tier)\n512 tokens from cache",
             "panel": [
               {
                 "id": "card_mwkgq3mo00313b9",
@@ -4004,20 +4527,32 @@
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي. ٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ الفقرة الثالثة: وفيه بيان لما سبق من القول\n\nالأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA fourth placeholder translation: the first test sentence, not from a real book.\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول\n\nThe third: an explanation of what came before\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
+                "id": "card_mwkgrdxc0021cc8",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\ncached ×512\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nQurʾān\n14:2\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nTranslation unavailable\n\nTranslation unavailable — the verse could not be retrieved, so no English rendering is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
                 "id": "card_mwkgrdxc00313b9",
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nTranslation failed\n\nGemini API error: Request contains an invalid argument.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc0071146",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nThe fourth: translated after the failure\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc008w5t",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nThis translation is incomplete. About 59% of the passage came back. Translate a shorter selection, or use Translate all on a ḥadīth, which goes block by block.\n\nḤadīth\nRiyad as-Salihin 1\n\n«هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي»\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc009tv0",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n\nThe first commentary: a test sentence, not from a real book.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc00a1cu0",
                 "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nTranslation failed\n\nGemini API error: Internal error encountered.\n\nRetry\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgrdxc00b164r",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nThe second commentary: translated after the failure.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgrdxc00496c",
@@ -4095,7 +4630,7 @@
       "scenarios": [
         {
           "id": "external-lookup",
-          "through": "block 3 → Translate on a Gemini profile with allowExternalLookup: GeminiProvider sends no flag (its request is the plain one), so what this pins is the card's usedExternalLookup and its \"web search\" label, both from the profile (FOUND_ISSUES 43); the request's flag is seen in the Claude group",
+          "through": "block 3 → Translate on a Gemini profile with allowExternalLookup: GeminiProvider sends no flag (its request is the plain one), so what this pins is the card: no search ran, so usedExternalLookup is false and it shows no \"web search\" label (FOUND_ISSUES 43; until then both came from the profile); the request's flag and a card that did search are seen in the Claude group",
           "requests": [
             {
               "method": "POST",
@@ -4211,7 +4746,7 @@
               "collapsed": false,
               "cacheKey": "74a65d08143e64d4030bc07d9491fd63abcf03ca74ab18b142c0a665930810cc",
               "status": "complete",
-              "usedExternalLookup": true,
+              "usedExternalLookup": false,
               "usage": {
                 "inputTokens": 650,
                 "outputTokens": 60,
@@ -4229,7 +4764,7 @@
             "panel": [
               {
                 "id": "card_mwkgq3mo001c7d",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n· web search\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nThe third: with external lookup allowed\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nThe third: with external lookup allowed\n\nRetranslate ▾\nCopy English\nDelete"
               }
             ],
             "rail": null

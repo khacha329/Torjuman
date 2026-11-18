@@ -17,9 +17,11 @@ import {
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
 import {
+  cacheAnchorFor,
   failedCard,
   loadingCard,
   passageFor,
+  standalonePassage,
   translationRequestFor,
   withoutStream,
 } from './translationSteps';
@@ -35,12 +37,25 @@ export interface TranslateRequest {
     SelectionAnchor,
     'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
   >;
-  digDeeper?: boolean;
   /** Re-run even if a cached card already covers this exact range. */
   force?: boolean;
   /** "Retranslate with…" — run this one on a different provider/model. */
   providerId?: ProviderId;
   model?: string;
+  /**
+   * Retranslate: the card this one replaces. It is removed only once the new
+   * card is stored complete, so a refusal or a failure never costs the old
+   * card (FOUND_ISSUES 42; a paid response is never discarded). On a failure
+   * the old card stays whatever its status: a failed card can hold paid output
+   * in `rawResponse` (a truncated or unparsed reply).
+   */
+  replaces?: TranslationCard;
+  /**
+   * Translate `anchor.sourceText` as a text of its own, not as the passage the
+   * anchor points at: the dictionary's "Translate this entry" (FOUND_ISSUES
+   * 26). See `cacheAnchorFor` and `TranslationCard.standalone`.
+   */
+  standalone?: boolean;
 }
 
 /** Running totals for the reader's status line. */
@@ -97,7 +112,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
   const [cards, setCards] = useState<TranslationCard[]>([]);
   const [streaming, setStreaming] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
+  // How many translations are in flight, not one flag: with a manual
+  // Translate during a batch, or a retranslate during either, the first to
+  // finish cleared the flag and the rail's Translate and Explain came back
+  // while the other was still running (FOUND_ISSUES 29).
+  const [inFlight, setInFlight] = useState(0);
+  const busy = inFlight > 0;
   const [notice, setNotice] = useState<string | null>(null);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
 
@@ -121,13 +141,43 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     async (card: TranslationCard, modelId: string): Promise<TranslationCard> => {
       const [quran, english] = await Promise.all([loadQuranIndex(), loadQuranEnglish()]);
 
-      // Verified hadith translations already cached locally, if any.
-      const cache = new Map<string, { arabic: string; english: string }>();
+      // Verified hadith translations already cached locally, if any — for the
+      // ḥadīth that touch the selection only, read together. Every ḥadīth in
+      // the book was read, one after another, before each translation:
+      // thousands of sequential reads on a large collection (FOUND_ISSUES 35).
+      // segmentSelection looks a reference up only for an entity touching a
+      // selected block, and any such ḥadīth overlaps the selection's block
+      // range, so every ḥadīth it can look up is read here. (Since
+      // FOUND_ISSUES 61 it looks up nothing for narrator and person entities.)
+      // An entity end whose block is not in `blocks`, or a reversed one,
+      // counts as unbounded, so malformed data reads too much rather than too
+      // little.
+      const orderOf = new Map(blocks.map((block) => [block.id, block.order]));
+      const firstOrder = orderOf.get(card.startBlockId) ?? 0;
+      const lastOrder = orderOf.get(card.endBlockId) ?? 0;
+      const references = new Set<string>();
       for (const entity of entities) {
         if (entity.type !== 'hadith' || !entity.reference) continue;
-        const record = await storage.getHadith(entity.reference);
+        const startOrder = orderOf.get(entity.startBlockId);
+        const endOrder = orderOf.get(entity.endBlockId);
+        const entityFirst =
+          startOrder === undefined || endOrder === undefined
+            ? -Infinity
+            : Math.min(startOrder, endOrder);
+        const entityLast =
+          startOrder === undefined || endOrder === undefined
+            ? Infinity
+            : Math.max(startOrder, endOrder);
+        if (entityLast < firstOrder || entityFirst > lastOrder) continue;
+        references.add(entity.reference);
+      }
+      const records = await Promise.all(
+        [...references].map(async (reference) => [reference, await storage.getHadith(reference)] as const),
+      );
+      const cache = new Map<string, { arabic: string; english: string }>();
+      for (const [reference, record] of records) {
         if (record?.english) {
-          cache.set(entity.reference, { arabic: record.arabic, english: record.english });
+          cache.set(reference, { arabic: record.arabic, english: record.english });
         }
       }
 
@@ -179,10 +229,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     (card: TranslationCard) =>
       card.cacheKey !==
       cacheKeyFor({
-        startBlockId: card.startBlockId,
-        startOffset: card.startOffset,
-        endBlockId: card.endBlockId,
-        endOffset: card.endOffset,
+        ...cacheAnchorFor(card, card.standalone === true),
         profileId: activeProfile.id,
         profileVersion: activeProfile.version,
         glossaryHash,
@@ -205,19 +252,52 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     });
   }, []);
 
+  /**
+   * Remove the card a retranslation replaced, after its successor is stored.
+   *
+   * It never throws. It runs inside `translate`'s `try`, after the new card is
+   * stored complete, and a rejected delete reaching the `catch` would write a
+   * failed card over that complete one (same id). A delete that fails leaves
+   * both cards, which loses nothing, and says so.
+   */
+  const dropReplaced = useCallback(
+    async (replaced: TranslationCard | undefined) => {
+      if (!replaced) return;
+      try {
+        await storage.deleteCard(replaced.id);
+        setCards((previous) => previous.filter((existing) => existing.id !== replaced.id));
+      } catch {
+        setNotice('The new translation is saved, but the old card could not be removed.');
+      }
+    },
+    [storage],
+  );
+
   const translate = useCallback(
     async ({
       anchor,
-      digDeeper = false,
       force = false,
       providerId,
       model,
+      replaces,
+      standalone = false,
     }: TranslateRequest) => {
       // The profile pins provider and model; an explicit override is only for
       // the card-level "retranslate with…" action.
       const useProviderId = providerId ?? activeProfile.providerId;
       const useModel = model ?? activeProfile.model;
       const offline = useProviderId === 'offline';
+
+      // The on-device path cuts a passage out of the stored blocks by its
+      // anchor (segmentSelection), so it cannot translate a text that is not
+      // in the book. Refused rather than translating the visible block in
+      // its place (FOUND_ISSUES 26).
+      if (offline && standalone) {
+        setNotice(
+          'A dictionary entry is translated by a cloud provider. Choose Claude or Gemini in the profile to translate it.',
+        );
+        return null;
+      }
 
       let apiKey = '';
       if (!offline) {
@@ -231,10 +311,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       }
 
       const cacheKey = cacheKeyFor({
-        startBlockId: anchor.startBlockId,
-        startOffset: anchor.startOffset,
-        endBlockId: anchor.endBlockId,
-        endOffset: anchor.endOffset,
+        ...cacheAnchorFor(anchor, standalone),
         profileId: activeProfile.id,
         profileVersion: activeProfile.version,
         glossaryHash,
@@ -250,7 +327,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         }
       }
 
-      const { selected, before, after, known } = passageFor(blocks, entities, anchor);
+      // A standalone text is sent alone: the visible block it is anchored on
+      // is not its context, and that block's types, ḥadīth numbers and verses
+      // are not its own (FOUND_ISSUES 26).
+      const { selected, before, after, known } = standalone
+        ? standalonePassage()
+        : passageFor(blocks, entities, anchor);
 
       const card: TranslationCard = loadingCard({
         bookId,
@@ -260,13 +342,13 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         useProviderId,
         useModel,
         cacheKey,
-        digDeeper,
+        standalone,
       });
 
       // Held in memory only while in flight — a card left mid-request by a
       // closed tab should not come back as a permanently spinning row.
       upsert(card);
-      setBusy(true);
+      setInFlight((count) => count + 1);
       setNotice(null);
       // Also held app-wide, so the service-worker update prompt waits: a reload
       // mid-request loses the passage and the tokens already spent on it.
@@ -277,6 +359,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           const finished = await runOffline(card, useModel);
           await storage.putCard(finished);
           upsert(finished);
+          await dropReplaced(replaces);
           setStats((previous) => withOfflineRequest(previous));
           return finished;
         }
@@ -291,7 +374,6 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             glossary,
             useModel,
             known,
-            digDeeper,
           }),
           apiKey,
           (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
@@ -305,6 +387,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         const finished: TranslationCard = {
           ...card,
           status: 'complete',
+          usedExternalLookup: result.searched === true,
           usage: result.usage,
           costUsd: result.costUsd,
           coverage: coverage.ratio,
@@ -323,6 +406,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         await storage.putCard(finished);
         upsert(finished);
+        await dropReplaced(replaces);
 
         setStats((previous) => withCloudRequest(previous, useProviderId, result));
 
@@ -334,7 +418,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         return failed;
       } finally {
         endActivity();
-        setBusy(false);
+        setInFlight((count) => count - 1);
         setStreaming((previous) => withoutStream(previous, card));
       }
     },
@@ -350,25 +434,28 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       settings.quranTranslationName,
       storage,
       upsert,
+      dropReplaced,
     ],
   );
 
+  // The old card is no longer deleted first: `translate` checks the key and
+  // every other precondition, and removes the old card only after the new one
+  // is stored (`replaces`). Deleting it up front lost a paid Claude card when
+  // the chosen provider had no key (FOUND_ISSUES 42).
   const retranslate = useCallback(
     async (
       card: TranslationCard,
-      options: { digDeeper?: boolean; providerId?: ProviderId; model?: string } = {},
-    ) => {
-      await storage.deleteCard(card.id);
-      setCards((previous) => previous.filter((existing) => existing.id !== card.id));
-      return translate({
+      options: { providerId?: ProviderId; model?: string } = {},
+    ) =>
+      translate({
         anchor: card,
-        digDeeper: options.digDeeper,
         providerId: options.providerId,
         model: options.model,
         force: true,
-      });
-    },
-    [storage, translate],
+        replaces: card,
+        standalone: card.standalone === true,
+      }),
+    [translate],
   );
 
   const remove = useCallback(

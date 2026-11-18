@@ -1829,6 +1829,271 @@ expect(
   );
 }
 
+// FOUND_ISSUES 61: a marked name is not scripture. A narrator inside the
+// ḥadīth and a person in the commentary were each emitted as a 'hadith'
+// segment: the person's name was cut from the prose and shown untranslated,
+// and the narrator's text appeared twice (once inside the ḥadīth, once on its
+// own). A verse quoted inside the ḥadīth is likewise not shown a second time.
+{
+  const person = 'ابن عثيمين';
+  const narrator = 'عمر بن الخطاب';
+  const verse = 'إنما الأعمال بالنيات';
+  const hadith = `عن ${narrator} قال ${verse} وإنما لكل امرئ ما نوى`;
+  const text = `قال الشيخ ${person} في شرحه ${hadith}`;
+  const at = (part: string) => text.indexOf(part);
+
+  const block = {
+    id: 'y:p1:0',
+    bookId: 'y',
+    pageId: 'y:p1',
+    order: 0,
+    type: 'sharh' as const,
+    text,
+    normalized: normalize(text),
+    contentHash: '',
+    hadithNumber: null,
+    tocNodeId: null,
+    spans: [],
+    anchor: null,
+  };
+  const entity = (id: string, type: string, part: string, reference: string) => ({
+    id,
+    bookId: 'y',
+    startBlockId: 'y:p1:0',
+    startOffset: at(part),
+    endBlockId: 'y:p1:0',
+    endOffset: at(part) + part.length,
+    type,
+    reference,
+    matchQuality: 'exact' as const,
+    detectedAt: 0,
+  });
+
+  const segmented = segmentSelection({
+    blocks: [block] as never,
+    entities: [
+      entity('e-person', 'person', person, normalize(person)),
+      entity('e-hadith', 'hadith', hadith, 'riyadussalihin:1'),
+      entity('e-narrator', 'narrator', narrator, normalize(narrator)),
+      entity('e-verse', 'quran', verse, '1:1'),
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: text.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+
+  check(
+    'a marked name splits nothing: prose, then the one ḥadīth',
+    segmented.segments.map((s) => s.type),
+    ['prose', 'hadith'],
+  );
+  expect(
+    'the person in the commentary reaches the model with the text around it',
+    segmented.prose.length === 1 && segmented.prose[0].text.includes(person),
+    '',
+  );
+  check(
+    'the segments together are the selection, once',
+    segmented.segments.map((s) => s.arabic).join(''),
+    text,
+  );
+  expect(
+    'and the ḥadīth, its narrator and the verse inside it still never reach the model',
+    !segmented.prose.some(
+      (span) => span.text.includes(narrator) || span.text.includes(verse) || span.text.includes(hadith),
+    ),
+    '',
+  );
+
+  // The same-start tie-break: a verse that opens the ḥadīth, listed first, is
+  // inside the ḥadīth, not a piece before it (the longer piece goes first).
+  const opening = `${verse} وإنما لكل امرئ ما نوى`;
+  const openingText = `قال الشيخ ${opening}`;
+  const openingAt = openingText.indexOf(opening);
+  const tied = segmentSelection({
+    blocks: [{ ...block, text: openingText, normalized: normalize(openingText) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: openingAt, endOffset: openingAt + verse.length },
+      { ...entity('e-hadith', 'hadith', opening, 'riyadussalihin:1'), startOffset: openingAt, endOffset: openingAt + opening.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: openingText.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse opening a ḥadīth is inside it', tied.segments.map((s) => s.type), ['prose', 'hadith']);
+  check('and nothing is shown twice', tied.segments.map((s) => s.arabic).join(''), openingText);
+
+  // An exact tie (FOUND_ISSUES 72): a verse and a ḥadīth over the same span,
+  // the verse listed first, as the detector stores them. The ḥadīth wins, so
+  // its segment and note are not lost to the verse.
+  const exactText = `قال الشيخ ${verse}`;
+  const exactAt = exactText.indexOf(verse);
+  const exact = segmentSelection({
+    blocks: [{ ...block, text: exactText, normalized: normalize(exactText) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: exactAt, endOffset: exactText.length },
+      { ...entity('e-hadith', 'hadith', verse, 'riyadussalihin:1'), startOffset: exactAt, endOffset: exactText.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: exactText.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse and a ḥadīth over the same span: the ḥadīth is kept', exact.segments.map((s) => s.type), ['prose', 'hadith']);
+  check('with its note', exact.segments[1]?.note, HADITH_NO_OFFLINE_SOURCE);
+
+  // A partial overlap: a verse that starts in the commentary and runs into the
+  // ḥadīth. The ḥadīth is emitted from where the verse ends, not from its own
+  // start, so the shared words are not shown twice — and neither part is prose.
+  const straddle = `قال الشيخ ${verse} وإنما لكل امرئ ما نوى`;
+  const verseAt = straddle.indexOf(verse);
+  const hadithAt = straddle.indexOf('بالنيات');
+  const clipped = segmentSelection({
+    blocks: [{ ...block, text: straddle, normalized: normalize(straddle) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: verseAt, endOffset: verseAt + verse.length },
+      { ...entity('e-hadith', 'hadith', verse, 'riyadussalihin:1'), startOffset: hadithAt, endOffset: straddle.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: straddle.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse running into a ḥadīth: prose, verse, the rest of the ḥadīth', clipped.segments.map((s) => s.type), ['prose', 'quran', 'hadith']);
+  check('the overlap is shown once', clipped.segments.map((s) => s.arabic).join(''), straddle);
+  expect(
+    'and the prose is only the commentary before the verse',
+    clipped.prose.length === 1 && clipped.prose[0].text.trim() === 'قال الشيخ',
+    '',
+  );
+}
+
+// FOUND_ISSUES 68: a matn with no number is marked `unresolved` by the
+// detector (checked above, "a matn with no number cannot be identified"), and
+// every unresolved entity was skipped here, so the whole matn went into the
+// prose and the on-device model translated it. It is a ḥadīth all the same:
+// Arabic plus the note, and never looked up, since it has no reference.
+{
+  const commentary = 'قال الشارح رحمه الله';
+  const matn = 'من حسن إسلام المرء تركه ما لا يعنيه';
+  const blocks = [
+    {
+      id: 'z:p1:0',
+      bookId: 'z',
+      pageId: 'z:p1',
+      order: 0,
+      type: 'sharh' as const,
+      text: commentary,
+      normalized: normalize(commentary),
+      contentHash: '',
+      hadithNumber: null,
+      tocNodeId: null,
+      spans: [],
+      anchor: null,
+    },
+    {
+      id: 'z:p1:1',
+      bookId: 'z',
+      pageId: 'z:p1',
+      order: 1,
+      type: 'hadith_matn' as const,
+      text: matn,
+      normalized: normalize(matn),
+      contentHash: '',
+      hadithNumber: null,
+      tocNodeId: null,
+      spans: [],
+      anchor: null,
+    },
+  ];
+  const looked: string[] = [];
+  const unnumbered = segmentSelection({
+    blocks: blocks as never,
+    entities: [
+      {
+        id: 'e-unnumbered',
+        bookId: 'z',
+        startBlockId: 'z:p1:1',
+        startOffset: 0,
+        endBlockId: 'z:p1:1',
+        endOffset: matn.length,
+        type: 'hadith',
+        reference: '',
+        matchQuality: 'unresolved',
+        detectedAt: 0,
+      },
+    ] as never,
+    startBlockId: 'z:p1:0',
+    startOffset: 0,
+    endBlockId: 'z:p1:1',
+    endOffset: matn.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: (reference: string) => {
+      looked.push(reference);
+      return null;
+    },
+  });
+
+  check('an unnumbered matn is still a ḥadīth: prose, then the ḥadīth', unnumbered.segments.map((s) => s.type), ['prose', 'hadith']);
+  expect(
+    'AN UNNUMBERED ḤADĪTH NEVER REACHES THE MODEL',
+    !unnumbered.prose.some((span) => matn.split(' ').some((word) => word.length > 3 && span.text.includes(word))),
+    '',
+  );
+  check('only the commentary is offered', unnumbered.prose.map((span) => span.text), [commentary]);
+  // `?.` so that a regression (one segment, not two) fails these checks one by
+  // one instead of throwing and ending the run.
+  const unnumberedHadith = unnumbered.segments[1];
+  check('it keeps its Arabic', unnumberedHadith?.arabic, matn);
+  check('and carries the no-offline-source note', unnumberedHadith?.note, HADITH_NO_OFFLINE_SOURCE);
+  check('with no English, source or reference', [unnumberedHadith?.english, unnumberedHadith?.source, unnumberedHadith?.reference], ['', undefined, undefined]);
+  check('and nothing is looked up for it', looked, []);
+
+  // A selection that starts partway into the matn: the part selected is still
+  // ḥadīth, and nothing at all is offered to the model.
+  const midway = segmentSelection({
+    blocks: blocks as never,
+    entities: [
+      {
+        id: 'e-unnumbered',
+        bookId: 'z',
+        startBlockId: 'z:p1:1',
+        startOffset: 0,
+        endBlockId: 'z:p1:1',
+        endOffset: matn.length,
+        type: 'hadith',
+        reference: '',
+        matchQuality: 'unresolved',
+        detectedAt: 0,
+      },
+    ] as never,
+    startBlockId: 'z:p1:1',
+    startOffset: matn.indexOf('إسلام'),
+    endBlockId: 'z:p1:1',
+    endOffset: matn.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a selection starting inside an unnumbered matn is all ḥadīth', midway.segments.map((s) => s.type), ['hadith']);
+  check('and offers the model nothing', midway.prose.length, 0);
+}
+
 console.log('\n=== Offline: sentence splitting and glossary placeholders ===');
 
 check(

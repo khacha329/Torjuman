@@ -36,8 +36,10 @@
 //     exactly as passed to fetch (never re-serialized: JSON key order is what
 //     "byte-identical" means), and the names of any other init fields.
 //   * A canned response can also drop the connection part-way through its
-//     body (`dropAfterBytes`), the realistic way to reach the error mappings'
-//     last, not-an-API-error branch: see the scenarios added after the 3a
+//     body (`dropAfterBytes`), the realistic way to reach the Anthropic
+//     mapping's not-an-API-error branches (since FOUND_ISSUES 14, the
+//     dropped-reply branch just before the last) and the body-read catches of
+//     Gemini translate and compile: see the scenarios added after the 3a
 //     review, near the end of the call-site scenarios.
 //   * Every `ANTHROPIC_*` environment variable is deleted before anything
 //     runs. The SDK reads ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN,
@@ -59,15 +61,18 @@
 //     reading of an HTTP-date retry-after (Date.parse(header) - Date.now()).
 //     Only anthropic.translate.429-retry-after-http-date-only reaches that
 //     branch: the older anthropic.translate.429-retry-after-http-date also
-//     sends retry-after-ms, which the SDK reads first, so there the date is
-//     seen only by the app's Number(), which makes it NaN.
+//     sends retry-after-ms, which the SDK reads first. There the app's
+//     Number() made the date NaN until FOUND_ISSUES 11; since 15.4 the app
+//     reads retry-after-ms first too (1 s), so the date is read by neither.
+//     The -only scenario's date is read by both (30 s, this Date.now).
 //   * Number.prototype.toLocaleString and String.prototype.localeCompare
 //     default to 'en-US' when called without a locale: the truncation messages
-//     format the budget with toLocaleString(), and glossaryHashOf sorts with
-//     localeCompare. Pinned in-process rather than by running under
-//     LANG=C.UTF-8, because an environment prefix in an npm script does not
-//     work in every shell, and on some systems Node takes its default locale
-//     from the OS rather than LANG.
+//     format the budget with toLocaleString(). localeCompare stays pinned
+//     in case a call site reaches one; glossaryHashOf, which once sorted with
+//     it, sorts by code point since FOUND_ISSUES 13. Pinned in-process
+//     rather than by running under LANG=C.UTF-8, because an environment
+//     prefix in an npm script does not work in every shell, and on some
+//     systems Node takes its default locale from the OS rather than LANG.
 //   * navigator.onLine (Node's navigator has none): true, false in one gloss
 //     scenario. localStorage: a Map, emptied before the secrets section.
 //
@@ -810,9 +815,10 @@ await scenario(
   times(3, () => anthropicError(429, { 'retry-after-ms': '7000', 'retry-after': '7' })),
   translateAnthropic(translationRequest()),
 );
-// retry-after-ms wins in the SDK, so the HTTP date here reaches only the app's
-// Number() (NaN); ...-http-date-only, further down, exercises the SDK's
-// Date.parse branch.
+// retry-after-ms wins in the SDK and, since FOUND_ISSUES 15.4, in the app too
+// (1 s), so the HTTP date here is read by neither. Before 15.4 the app read
+// the date (NaN by Number() until FOUND_ISSUES 11, a date after it).
+// ...-http-date-only, further down, exercises the date on both sides.
 await scenario(
   'anthropic.translate.429-retry-after-http-date',
   times(3, () => anthropicError(429, { 'retry-after-ms': '1000', 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
@@ -1193,11 +1199,12 @@ await scenario(
 // the headers is the realistic input. For a streamed call (translate,
 // Explain) MessageStream wraps the body's TypeError in a plain AnthropicError
 // (lib/MessageStream.mjs, _MessageStream_handleError), which is no APIError
-// subclass, so it lands in the last branch with kind 'api'. For
-// messages.create (validateKey, gloss, compile) response.json() rejects with
-// the TypeError itself, a genuinely non-SDK error; in validateKey that is the
-// `throw toTranslationError(error)` line. Gemini translate and compile do not
-// catch a body read error at all: the TypeError leaves them unmapped.
+// subclass, with the TypeError as its cause. For messages.create
+// (validateKey, gloss, compile) response.json() rejects with the TypeError
+// itself; in validateKey that is the `throw toTranslationError(error)` line.
+// Both landed in the last branch as kind 'api', and Gemini translate and
+// compile did not catch a body read error at all. Since FOUND_ISSUES 14 every
+// one of them is kind 'network'.
 const dropped = (canned: Canned, bytes: number): Canned => ({ ...(canned as Extract<Canned, { status: number }>), dropAfterBytes: bytes });
 await scenario('anthropic.translate.body-drop', [dropped(emitTool(SONNET), 900)], translateAnthropic(translationRequest()));
 await scenario(
@@ -1232,8 +1239,10 @@ const gemini429 = (retryAfter?: string): Canned => ({
 await scenario('gemini.translate.429-four-times-no-retry-after', times(4, () => gemini429()), translateGemini(geminiRequest()));
 await scenario(
   'gemini.translate.429-http-date-none-3-then-200',
-  // An HTTP-date retry-after is NaN to readRetryAfter (Number()), so it backs
-  // off as if none were sent: 2000, then 4000, then the 3 s asked for.
+  // An HTTP-date retry-after was NaN to the old readRetryAfter (Number()), so
+  // it backed off as if none were sent. Since FOUND_ISSUES 11 the date is
+  // read (retryAfterSeconds, Date.now pinned): 30 s, then 4000 ms, then the
+  // 3 s asked for. Still four requests.
   [gemini429('Mon, 16 Nov 2026 12:00:30 GMT'), gemini429(), gemini429('3'), geminiOk()],
   translateGemini(geminiRequest()),
 );
@@ -1245,8 +1254,9 @@ await scenario(
 );
 await scenario(
   'gemini.translate.prompt-blocked',
-  // A blocked prompt: no candidates, only promptFeedback.blockReason, which
-  // GeminiProvider does not read, so it ends as an empty parse failure.
+  // A blocked prompt: no candidates, only promptFeedback.blockReason. Until
+  // FOUND_ISSUES 14.4 GeminiProvider did not read it, so it ended as an empty
+  // parse failure; it is a refusal naming the reason since.
   [
     {
       status: 200,
@@ -1271,8 +1281,10 @@ await scenario(
 // The SDK's HTTP-date branch (client.mjs retryRequest: Date.parse(header) -
 // Date.now(), 30 000 ms with Date.now pinned). The older http-date scenario
 // above also sends retry-after-ms, which the SDK reads first, so its Date.parse
-// never runs; this one sends the date alone. The app's own reading, Number()
-// of the header, is NaN in both.
+// never runs; this one sends the date alone. The app's own reading was
+// Number() of the header, NaN in both. Since FOUND_ISSUES 11 it reads the
+// date, so this one reports 30 s; since 15.4 it reads retry-after-ms first, so
+// the older one reports 1 s.
 await scenario(
   'anthropic.translate.429-retry-after-http-date-only',
   times(3, () => anthropicError(429, { 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
@@ -1284,10 +1296,10 @@ await scenario(
 // Like the group above, these run after every earlier scenario, so nothing
 // those record (message ids included) moves.
 
-// (3e) A 429 whose retry-after the app cannot read: retry-after-ms alone (the
-// SDK waits its 250 ms; the app's `header ? Number(header) : null` takes the
-// null branch), and no retry header at all (the SDK's own jittered backoff,
-// Math.random pinned; the same null branch).
+// (3e) A 429 whose retry-after the app could not read: retry-after-ms alone
+// (the SDK waits its 250 ms; the app read only retry-after, so it reported
+// null until FOUND_ISSUES 15.4, and reports 0.25 s since), and no retry header
+// at all (the SDK's own jittered backoff, Math.random pinned; still null).
 await scenario(
   'anthropic.translate.429-retry-after-ms-only',
   times(3, () => anthropicError(429, RETRY_MS)),
@@ -1444,9 +1456,10 @@ await scenario(
 );
 
 // (3i) compile's Gemini call with a 200 whose body is not the JSON it expects:
-// empty, and an HTML page (a captive portal, say). response.json() rejects
-// with V8's SyntaxError, which compileWithGemini does not catch, so the
-// message recorded is V8's own (Node 22 here and in the deploy workflow).
+// empty, and an HTML page (a captive portal, say). Until FOUND_ISSUES 15.1
+// response.json() rejected with V8's SyntaxError, which compileWithGemini did
+// not catch, so the message recorded was V8's own; since, the body is read as
+// text and a failed parse is an `api` TranslationError with the body as raw.
 await scenario(
   'compile.gemini.200-empty-body',
   [{ status: 200, headers: { 'content-type': 'application/json' }, body: '' }],

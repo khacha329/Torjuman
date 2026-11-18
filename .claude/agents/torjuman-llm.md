@@ -26,14 +26,17 @@ and the code disagree, say so — do not silently pick one.
   Each provider object describes itself (`availableModels`, `knownModels`,
   `defaultModel`, `keyHelpUrl`, `keyPlaceholder`, `isFree`, `fitFor`).
 - `translation/anthropic.ts` — the one Anthropic SDK client
-  (`anthropicClient`), `WEB_SEARCH_TOOL`, `textOf`, `addUsage`, and the two
-  error mappings (`anthropicCallError` for Explain, gloss and compile;
-  `toTranslationError` for translation and the key check; FOUND_ISSUES 11).
+  (`anthropicClient`), `WEB_SEARCH_TOOL`, `textOf`, `addUsage`, and the one
+  error mapping every Claude call uses (`toTranslationError`; until
+  FOUND_ISSUES 11 Explain, gloss and compile had a shorter one).
   Only it and `providers/AnthropicProvider.ts` (whose key check tests the
   SDK's error classes) import the SDK as a value — check Q fails if any
   other file does.
 - `translation/gemini.ts` — `geminiModelUrl` and `postGemini`, the one
-  Gemini model POST (key in the header, never the URL).
+  Gemini model POST (key in the header, never the URL), and the error
+  reading both Gemini call sites share (`geminiHttpError`, `readRetryAfter`).
+- `translation/retryAfter.ts` — reads either `retry-after` form, and
+  `retry-after-ms`.
 - `translation/models.ts` — the only place model IDs, prices
   (`PRICES`, `cacheReadMultiplier`, `longContext`), output ceilings,
   `outputConfigFor` (effort), `successorModel`, `explainStructureMaxTokens` and
