@@ -913,3 +913,19 @@ piece was sliced from its own start, so the tied ḥadīth was still emitted
 (the verse showing twice is 60's, older). The skip 52 added is what drops
 it. **Fixed in lane B** (commit "52." after the re-record): on an exact tie
 the ḥadīth goes first; checked by V.
+
+The commonest tie, which the paragraph above does not list: in one block, a
+selection lying wholly inside a verse quoted inside a matn clips both pieces
+to the selection. Between 36b6a8d and the fix the card showed the verse (its
+whole muṣḥaf text and bundled English) and dropped the ḥadīth; it now shows a
+ḥadīth segment (the selected Arabic with the no-offline-source note, or the
+whole verified ḥadīth if cached) and no verse English, as DECISIONS 52 says
+for a verse inside a ḥadīth.
+
+## 64. On device, part of a verified ḥadīth shows the whole of it (2026-11-18, by reading)
+
+Found by the re-review of lane B's fix to 63. `pushEntity` in
+`translation/offline/segmentSelection.ts` emits `verified?.arabic ||
+sourceText`, so a selection covering only part of a ḥadīth whose verified
+translation is cached shows the whole verified Arabic and English, not the
+selected slice. Not measured; pre-existing. Left unfixed.
