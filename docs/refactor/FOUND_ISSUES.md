@@ -851,9 +851,10 @@ Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
 an offline card. Pre-existing. Left unfixed. (Since 59, a verse that starts
-inside an unnumbered matn no longer shows twice this way: its first block's
-part lies inside the ḥadīth and is skipped, and the whole verse follows once
-— the 52 edge case, as for a numbered matn.)
+inside an unnumbered matn is no longer emitted as two verse segments: its
+first block's part lies inside the ḥadīth and is skipped, and the whole verse
+follows once — the 52 edge case, as for a numbered matn, so that first part
+is still read twice, once in the ḥadīth's Arabic. The exception is 63.)
 
 ## 61. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
 
@@ -883,3 +884,20 @@ into `prose`, where the model translates it. Not measured. Pre-existing; not
 caused by lane B. A fix could cut by `block.type === 'hadith_matn'` as well
 as by entity, or refuse an on-device translation until the entities are in.
 Left unfixed.
+
+## 63. A verse and a ḥadīth with the same span: the verse can win (2026-11-18, by reading)
+
+Found by the re-review of lane B's records for 59 and 60. In
+`translation/offline/segmentSelection.ts` the sort
+`a.start - b.start || b.end - a.end` leaves a tie on both start and end to
+the input order. That happens when a verse starts in a matn block and runs
+into the next, and either the selection starts inside the verse or the
+verse's start is the block's offset 0: both pieces are then the block's
+share to its end. `detectEntities` pushes a block's verses before its
+ḥadīth, and ids are time plus counter, so the verse comes first in stored
+order. It is then emitted with its whole `textUthmani`, the ḥadīth piece is
+skipped, and the verse is emitted again in the next block: the verse shows
+twice and the ḥadīth segment, with its no-offline-source note, is missing
+from the card. Nothing goes to `prose`, so the invariant holds. Not
+measured; pre-existing. A fix would break the tie ḥadīth first. Left
+unfixed.
