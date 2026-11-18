@@ -835,12 +835,23 @@ lane B. The owner asked for it to be fixed in lane B (2026-11-18): an
 unresolved ḥadīth is now cut out of the prose like a resolved one, with the
 no-offline-source note.
 
+Consequences of the fix the owner should know (from its reviews):
+on-device cards made before it, over an unnumbered matn, keep a prose
+segment holding the model's English for that ḥadīth. Their cache key is
+unchanged (correctly: trap 5), so nothing marks them stale; they stay, in
+backups and shares too, until retranslated. And a verse quoted inside an
+unnumbered matn is now read in the ḥadīth's Arabic without its own bundled
+English, as a numbered matn's already was (52). Also fixed by it: books
+whose entities were detected under 810b059, which marked even a numbered
+matn in an unmapped book `unresolved`.
+
 ## 60. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
 
 Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
-an offline card. Pre-existing. Left unfixed.
+an offline card. Pre-existing. Left unfixed. Since 59 it also applies to a
+verse that starts inside an unnumbered matn and runs into the next block.
 
 ## 61. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
 
@@ -852,3 +863,17 @@ twothree four" in the probe). Pre-existing; since 52 it is more common,
 because a marked name at a block edge no longer cuts the prose there. A fix
 would join with a newline or a space, which `splitSentences` already treats
 as a boundary. Left unfixed.
+
+## 62. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
+
+Found by the review of lane B's fix to 59. **A risk to the ḥadīth
+invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
+entity marks it, and the reader's `entities` start as `[]`
+(`ui/reader/ReaderScreen.tsx` ~126) and are filled by an asynchronous load
+(~302–312, `void load.then(...)`, no rejection handler). An on-device
+translation run before the load finishes, after `ensureEntities` rejects, or
+on a shared chapter that carries no entities, puts every `hadith_matn` block
+into `prose`, where the model translates it. Not measured. Pre-existing; not
+caused by lane B. A fix could cut by `block.type === 'hadith_matn'` as well
+as by entity, or refuse an on-device translation until the entities are in.
+Left unfixed.

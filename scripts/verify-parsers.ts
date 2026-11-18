@@ -2034,11 +2034,42 @@ expect(
     '',
   );
   check('only the commentary is offered', unnumbered.prose.map((span) => span.text), [commentary]);
+  // `?.` so that a regression (one segment, not two) fails these checks one by
+  // one instead of throwing and ending the run.
   const unnumberedHadith = unnumbered.segments[1];
-  check('it keeps its Arabic', unnumberedHadith.arabic, matn);
-  check('and carries the no-offline-source note', unnumberedHadith.note, HADITH_NO_OFFLINE_SOURCE);
-  check('with no English, source or reference', [unnumberedHadith.english, unnumberedHadith.source, unnumberedHadith.reference], ['', undefined, undefined]);
+  check('it keeps its Arabic', unnumberedHadith?.arabic, matn);
+  check('and carries the no-offline-source note', unnumberedHadith?.note, HADITH_NO_OFFLINE_SOURCE);
+  check('with no English, source or reference', [unnumberedHadith?.english, unnumberedHadith?.source, unnumberedHadith?.reference], ['', undefined, undefined]);
   check('and nothing is looked up for it', looked, []);
+
+  // A selection that starts partway into the matn: the part selected is still
+  // ḥadīth, and nothing at all is offered to the model.
+  const midway = segmentSelection({
+    blocks: blocks as never,
+    entities: [
+      {
+        id: 'e-unnumbered',
+        bookId: 'z',
+        startBlockId: 'z:p1:1',
+        startOffset: 0,
+        endBlockId: 'z:p1:1',
+        endOffset: matn.length,
+        type: 'hadith',
+        reference: '',
+        matchQuality: 'unresolved',
+        detectedAt: 0,
+      },
+    ] as never,
+    startBlockId: 'z:p1:1',
+    startOffset: matn.indexOf('إسلام'),
+    endBlockId: 'z:p1:1',
+    endOffset: matn.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a selection starting inside an unnumbered matn is all ḥadīth', midway.segments.map((s) => s.type), ['hadith']);
+  check('and offers the model nothing', midway.prose.length, 0);
 }
 
 console.log('\n=== Offline: sentence splitting and glossary placeholders ===');
