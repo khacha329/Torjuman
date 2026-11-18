@@ -64,7 +64,7 @@ lane B found.
 - **15. Four more error paths.** All four fixed: compile's non-JSON 200 is a
   `TranslationError` with the body as raw; in translate, a stream error
   after earlier paid output keeps that output (research notes, streamed tool
-  JSON) as raw (Explain does not yet: FOUND_ISSUES 45); progress joins text
+  JSON) as raw (Explain does not yet: FOUND_ISSUES 54); progress joins text
   blocks with a newline; `retry-after-ms` is read before `retry-after`, as
   the SDK reads it.
 - **11, after review.** A `retry-after` date already past is no usable wait
@@ -83,18 +83,19 @@ lane B found.
   reports whether its research pass used the search tool, and the card
   records that. The label also requires a Claude card, for cards stored
   before. Gemini gains no search.
-- **52. The offline translator fix.** LANES.md's "fix to the offline
-  translator" is FOUND_ISSUES 52, by the owner's word (2026-11-17). Only
+- **61. The offline translator fix.** LANES.md's "fix to the offline
+  translator" is FOUND_ISSUES 61 (numbered 52 on lane B's branch when the
+  owner confirmed it: "52 is it"), by the owner's word (2026-11-17). Only
   verses and ḥadīth are cut out of the prose on the on-device path; a marked
   name (`narrator`, `person`) stays in the prose around it. A piece inside
   one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
   runs past it emits only the part not yet shown, so no text of the book is
   sliced twice. (A clipped verse is still shown as its whole muṣḥaf text, so
-  that edge case can show the overlap twice: FOUND_ISSUES 52.) Pieces are
+  that edge case can show the overlap twice: FOUND_ISSUES 61.) Pieces are
   ordered by start, then the longer first, then a ḥadīth before a verse, so
-  an exact tie cannot drop the ḥadīth (FOUND_ISSUES 63). What reaches
+  an exact tie cannot drop the ḥadīth (FOUND_ISSUES 72). What reaches
   the model is still only prose.
-- **59. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
+- **68. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
   word (2026-11-18). `segmentSelection` no longer skips `unresolved`
   entities: an unnumbered matn is emitted as a ḥadīth, in Arabic with the
   no-offline-source note, and nothing is looked up for it. No detector

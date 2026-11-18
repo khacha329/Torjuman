@@ -52,8 +52,8 @@ interface Piece {
 
 /**
  * Cut the selected text at the boundaries of the verses and ḥadīth it
- * contains, resolved or not (FOUND_ISSUES 59). Marked names (`narrator`,
- * `person`) cut nothing (FOUND_ISSUES 52).
+ * contains, resolved or not (FOUND_ISSUES 68). Marked names (`narrator`,
+ * `person`) cut nothing (FOUND_ISSUES 61).
  *
  * Offsets are block-relative, so the selection is walked block by block and the
  * entity ranges intersecting it are projected onto the selected substring.
@@ -92,7 +92,7 @@ export function segmentSelection(options: {
       // An unresolved entity is cut out like any other. The detector marks a
       // ḥadīth `unresolved` when its matn carries no number: it is still a
       // ḥadīth, only one with nothing to look up, so it is emitted with the
-      // no-offline-source note. Until FOUND_ISSUES 59 every unresolved entity
+      // no-offline-source note. Until FOUND_ISSUES 68 every unresolved entity
       // was skipped here, which left an unnumbered matn in the prose, where
       // the on-device model translated it. (No detector marks a verse
       // `unresolved` — an unmatched verse is left unmarked — but one would be
@@ -100,7 +100,7 @@ export function segmentSelection(options: {
       //
       // Only verses and ḥadīth are cut out of the prose. A marked name
       // ('narrator', 'person') is a reading aid, not a passage, and stays in
-      // the prose around it. Until FOUND_ISSUES 52 it was emitted as a ḥadīth:
+      // the prose around it. Until FOUND_ISSUES 61 it was emitted as a ḥadīth:
       // on device a name in the selection was cut from the prose, shown
       // untranslated with the no-offline-source note, and, inside a ḥadīth,
       // shown twice.
@@ -128,19 +128,19 @@ export function segmentSelection(options: {
     // decides, and the detector stores a block's verses before its ḥadīth, so
     // the verse would be emitted and the ḥadīth skipped as lying inside it —
     // its segment, note and any verified English missing from the card
-    // (FOUND_ISSUES 63; the skip is 52's).
+    // (FOUND_ISSUES 72; the skip is 61's).
     const rank = (piece: Piece) => (piece.entity?.type === 'hadith' ? 0 : 1);
     covering.sort((a, b) => a.start - b.start || b.end - a.end || rank(a) - rank(b));
 
     // Walk the block's share, emitting prose between entities. A piece that
     // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
     // skipped, and one that runs past it emits only the part not yet shown.
-    // (Until FOUND_ISSUES 52 each piece was sliced from its own start after
+    // (Until FOUND_ISSUES 61 each piece was sliced from its own start after
     // `cursor` had moved past it, so overlapping text appeared twice.) Neither
     // changes what reaches the model: prose is only ever the gap before a
     // piece and the tail after the last, and only `pushProse` adds to `prose`.
     // A skipped verse is still read inside the ḥadīth's Arabic, without its
-    // own bundled English; see FOUND_ISSUES 52.
+    // own bundled English; see FOUND_ISSUES 61.
     let cursor = from;
     for (const piece of covering) {
       if (piece.end <= cursor) continue;

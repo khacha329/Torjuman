@@ -1829,7 +1829,7 @@ expect(
   );
 }
 
-// FOUND_ISSUES 52: a marked name is not scripture. A narrator inside the
+// FOUND_ISSUES 61: a marked name is not scripture. A narrator inside the
 // ḥadīth and a person in the commentary were each emitted as a 'hadith'
 // segment: the person's name was cut from the prose and shown untranslated,
 // and the narrator's text appeared twice (once inside the ḥadīth, once on its
@@ -1931,7 +1931,7 @@ expect(
   check('a verse opening a ḥadīth is inside it', tied.segments.map((s) => s.type), ['prose', 'hadith']);
   check('and nothing is shown twice', tied.segments.map((s) => s.arabic).join(''), openingText);
 
-  // An exact tie (FOUND_ISSUES 63): a verse and a ḥadīth over the same span,
+  // An exact tie (FOUND_ISSUES 72): a verse and a ḥadīth over the same span,
   // the verse listed first, as the detector stores them. The ḥadīth wins, so
   // its segment and note are not lost to the verse.
   const exactText = `قال الشيخ ${verse}`;
@@ -1982,7 +1982,7 @@ expect(
   );
 }
 
-// FOUND_ISSUES 59: a matn with no number is marked `unresolved` by the
+// FOUND_ISSUES 68: a matn with no number is marked `unresolved` by the
 // detector (checked above, "a matn with no number cannot be identified"), and
 // every unresolved entity was skipped here, so the whole matn went into the
 // prose and the on-device model translated it. It is a ḥadīth all the same:

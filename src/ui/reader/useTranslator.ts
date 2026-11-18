@@ -148,7 +148,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // segmentSelection looks a reference up only for an entity touching a
       // selected block, and any such ḥadīth overlaps the selection's block
       // range, so every ḥadīth it can look up is read here. (Since
-      // FOUND_ISSUES 52 it looks up nothing for narrator and person entities.)
+      // FOUND_ISSUES 61 it looks up nothing for narrator and person entities.)
       // An entity end whose block is not in `blocks`, or a reversed one,
       // counts as unbounded, so malformed data reads too much rather than too
       // little.

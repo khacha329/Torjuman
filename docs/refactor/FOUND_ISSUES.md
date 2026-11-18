@@ -266,7 +266,7 @@ scenario in `docs/refactor/phase3/requests.json`. Left as is:
 
 ## 15. Four more error paths (2026-11-16, measured)
 
-**Fixed in lane B** (commits "15." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; 15.2 for translate only, Explain is 45).
+**Fixed in lane B** (commits "15." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; 15.2 for translate only, Explain is 54).
 
 Exposed by check Q's second-round scenarios, recorded in
 `docs/refactor/phase3/requests.json` except where marked. Left as is:
@@ -408,7 +408,7 @@ Cosmetic.
 
 ## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
 
-**Fixed in lane B** (commits "26." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; older cards: 44).
+**Fixed in lane B** (commits "26." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; older cards: 53).
 
 Found by the Phase 5 survey. The dictionary sheet's "Translate this entry"
 (`ui/reader/DictionarySheet.tsx:79`) hands the entry's text (`:42`) to
@@ -675,7 +675,14 @@ web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
 
-## 44. Dictionary-entry cards made before the fix to 26 keep the block's key (2026-11-17, by reading)
+Lane B's entries were numbered 44–64 on its branch; on the owner's word
+(2026-11-18) they were renumbered 53–73, after lane A's 44–52, so the two
+lanes can merge. Each old number is the new one less 9. Commit subjects
+keep the old numbers: "52." is 61, "59." is 68, and the fix to 72 went in
+as "52.". An issue's number in a lane B commit subject from 44 up is the
+old one.
+
+## 53. Dictionary-entry cards made before the fix to 26 keep the block's key (2026-11-17, by reading)
 
 Found by the review of lane B. A "Translate this entry" card stored before
 FOUND_ISSUES 26 was fixed has no `standalone` flag and holds the visible
@@ -688,14 +695,14 @@ card is stored under the block's key again. Left unfixed; a fix would need a
 way to tell an old entry card from a block card (its `sourceText` differs
 from the block's text).
 
-## 45. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
+## 54. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
 
 Found by the review of lane B. FOUND_ISSUES 15.2 was fixed for translate
 (`withRaw` in `providers/AnthropicProvider.ts`); `translation/explain.ts`
 still throws the mapped error without the notes written so far. Its scope
 named translate only. Left unfixed.
 
-## 46. A failure after a paid reply in translate keeps no raw text (2026-11-17, by reading)
+## 55. A failure after a paid reply in translate keeps no raw text (2026-11-17, by reading)
 
 Found by the review of lane B. In `ui/reader/useTranslator.ts`, if
 `enrichSegments` or `storage.putCard(finished)` throws after the provider has
@@ -703,7 +710,7 @@ returned, the error is not a `TranslationError`, so `failedCard` sets no
 `rawResponse` and the paid reply is not kept on the failed card. Left
 unfixed.
 
-## 47. README still names the per-card "dig deeper" toggle (2026-11-17, by reading)
+## 56. README still names the per-card "dig deeper" toggle (2026-11-17, by reading)
 
 Found by the review of lane B: README.md ~1108 says "beyond the per-card 'dig
 deeper' toggle", stale since Explain replaced it (FOUND_ISSUES 36). The name
@@ -714,7 +721,7 @@ as two passes"), the comment in `translation/providers/AnthropicProvider.ts`
 (which should keep their names; renaming means a re-record for no behaviour
 change). Lane D material. Left unfixed.
 
-## 48. Consequences of 41 and 42 as decided (2026-11-17, by reading)
+## 57. Consequences of 41 and 42 as decided (2026-11-17, by reading)
 
 Found by the review of lane B, for the owner to know; each follows from
 DECISIONS 41 and 42, none is a defect of the fix:
@@ -726,7 +733,7 @@ DECISIONS 41 and 42, none is a defect of the fix:
 3. Two retranslations of one card started while the first is in flight both
    survive.
 
-## 49. The Claude key check passes on a server error (2026-11-17, by reading)
+## 58. The Claude key check passes on a server error (2026-11-17, by reading)
 
 Found by the review of lane B. `AnthropicProvider.validateKey` still returns
 `true` for any 5xx (500, 529 overloaded) through the branch whose comment
@@ -734,7 +741,7 @@ says a rate limit or a 400 still proves the key authenticated, which does
 not obviously hold for a server error. Check Q has no
 `anthropic.validateKey.500` scenario. Outside 12 as decided. Left unfixed.
 
-## 50. Two error messages repeat themselves (2026-11-17, by reading)
+## 59. Two error messages repeat themselves (2026-11-17, by reading)
 
 Found by the review of lane B. Cosmetic: the key screens read "Could not
 reach Claude: Could not reach api.anthropic.com. …" (the screen's prefix
@@ -742,16 +749,16 @@ plus the mapped message; Gemini reads the same way), and an Anthropic 500 in
 Explain, gloss and compile reads "Anthropic API error 500: 500 {…}" (the
 status in the prefix and again in the SDK's message). Left unfixed.
 
-## 51. `useSharh` keeps one busy flag (2026-11-17, by reading)
+## 60. `useSharh` keeps one busy flag (2026-11-17, by reading)
 
 Found by the review of lane B. `ui/reader/useSharh.ts` has the single-flag
 pattern FOUND_ISSUES 29 fixed in `useTranslator`; its busy bar is in
 `CommentaryBars.tsx`. If two sharḥ lookups can run at once, the first to
 finish hides the bar (inferred, not checked). Left unfixed.
 
-## 52. On device, a marked name in the selection is treated as a ḥadīth (2026-11-17, by reading)
+## 61. On device, a marked name in the selection is treated as a ḥadīth (2026-11-17, by reading)
 
-**Fixed in lane B** (commit "52." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
+**Fixed in lane B** (commit "52." (lane B's old number for 61) on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
 
 Found by the review of lane B. `translation/offline/segmentSelection.ts`
 `pushEntity` emits every entity that is not a verse as a `hadith` segment,
@@ -770,7 +777,7 @@ the whole `textUthmani` or verified Arabic, so in that edge case the overlap
 can still show twice. Offline cards made before the fix keep their old
 segments until retranslated.
 
-## 53. The online signal is never corrected by request outcomes (2026-11-17, by reading)
+## 62. The online signal is never corrected by request outcomes (2026-11-17, by reading)
 
 Found by the review of lane B. `app/useOnline.ts` exports
 `reportNetworkFailure` and `reportNetworkSuccess`, and its header says the
@@ -780,7 +787,7 @@ FOUND_ISSUES 33: `glossWord`'s "No API key is set" branch is now reachable
 only if the key is removed while the rail is open; it stays as a guard.
 Left unfixed.
 
-## 54. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
+## 63. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
 
 Found by the review of lane B, beside 15.2. In
 `translation/providers/AnthropicProvider.ts` `structure`:
@@ -796,20 +803,20 @@ Found by the review of lane B, beside 15.2. In
 
 Left unfixed.
 
-## 55. A failure after research loses the research pass's cost (2026-11-17, by reading)
+## 64. A failure after research loses the research pass's cost (2026-11-17, by reading)
 
 Found by the review of lane B. When the structuring pass fails after a
 research pass, the error carries no usage, so the research pass's tokens and
 cost reach neither the failed card nor the session totals. Left unfixed.
 
-## 56. Two finished cards under one key: the oldest id wins (2026-11-17, by reading)
+## 65. Two finished cards under one key: the oldest id wins (2026-11-17, by reading)
 
 Found by the review of lane B. Since 41, `getCardByCacheKey` walks
 `byCacheKey` and returns the first complete row, which is the lowest primary
 key, not necessarily the newest card. Two complete cards under one key
-happen through 48.2, 48.3 or a failed `dropReplaced`. Left unfixed.
+happen through 57.2, 57.3 or a failed `dropReplaced`. Left unfixed.
 
-## 57. The "web search" badge names a provider (2026-11-17, by reading)
+## 66. The "web search" badge names a provider (2026-11-17, by reading)
 
 Found by the review of lane B. FOUND_ISSUES 43's fix shows the badge only
 when `card.providerId === 'anthropic'` (`ui/reader/TranslationCardView.tsx`),
@@ -817,18 +824,18 @@ for cards stored before the fix. That is a new place in the UI that names a
 provider, not in the Phase 3 plan's Design §5 list. Left as it is unless the
 owner wants a provider capability instead.
 
-## 58. Gemini's 429 wait has no cap (2026-11-17, by reading)
+## 67. Gemini's 429 wait has no cap (2026-11-17, by reading)
 
 Found by the review of lane B. Gemini translate waits whatever `retry-after`
 asks, number or (since 11) date, before its next attempt, with no upper
 bound, so a far-future value holds the card spinning. Request count is
 unaffected. Left unfixed.
 
-## 59. An unresolved ḥadīth reaches the on-device model (2026-11-17, by reading)
+## 68. An unresolved ḥadīth reaches the on-device model (2026-11-17, by reading)
 
-**Fixed in lane B** (commit "59." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
+**Fixed in lane B** (commit "59." (lane B's old number for 68) on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
 
-Found by the review of lane B's fix to 52. **Against the ḥadīth invariant.**
+Found by the review of lane B's fix to 61. **Against the ḥadīth invariant.**
 `translation/offline/segmentSelection.ts` skips every entity whose
 `matchQuality` is `'unresolved'`, and `quran/detectEntities.ts` (~311)
 marks the ḥadīth entity of a `hadith_matn` block with no `hadithNumber` as
@@ -848,28 +855,28 @@ segment holding the model's English for that ḥadīth. Their cache key is
 unchanged (correctly: trap 5), so nothing marks them stale; they stay, in
 backups and shares too, until retranslated. And a verse quoted inside an
 unnumbered matn is now read in the ḥadīth's Arabic without its own bundled
-English, as a numbered matn's already was (52). Also fixed by it: books
+English, as a numbered matn's already was (61). Also fixed by it: books
 whose entities were detected under 810b059, which marked even a numbered
 matn in an unmapped book `unresolved`.
 
-## 60. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
+## 69. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
 
-Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
+Found by the review of lane B's fix to 61. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
-an offline card. Pre-existing. Left unfixed. (Since 59, a verse that starts
+an offline card. Pre-existing. Left unfixed. (Since 68, a verse that starts
 inside an unnumbered matn is no longer emitted as two verse segments: its
 first block's part lies inside the ḥadīth and is skipped, and the whole verse
-follows once — the 52 edge case, as for a numbered matn, so that first part
-is still read twice, once in the ḥadīth's Arabic. The exception is 63.)
+follows once — the 61 edge case, as for a numbered matn, so that first part
+is still read twice, once in the ḥadīth's Arabic. The exception is 72.)
 
-## 61. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
+## 70. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
 
-Found by the `torjuman-llm` review of lane B's fix to 52. `pushProse` in
+Found by the `torjuman-llm` review of lane B's fix to 61. `pushProse` in
 `translation/offline/segmentSelection.ts` merges a prose span into the one
 before it with `previous.arabic += text`, so the last word of one block and
 the first word of the next reach the on-device model glued together ("one
-twothree four" in the probe). Pre-existing; since 52 it is more common,
+twothree four" in the probe). Pre-existing; since 61 it is more common,
 because a marked name at a block edge no longer cuts the prose there. A fix
 would join with a newline, which `splitSentences` already treats as a
 boundary (a space would only keep the words apart). But the merge exists so
@@ -878,9 +885,9 @@ it fires only across blocks: a newline would split every sentence that runs
 over a page break, a space would not. The fixer should weigh that. Left
 unfixed.
 
-## 62. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
+## 71. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
 
-Found by the review of lane B's fix to 59. **A risk to the ḥadīth
+Found by the review of lane B's fix to 68. **A risk to the ḥadīth
 invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
 entity marks it, and the reader's `entities` start as `[]`
 (`ui/reader/ReaderScreen.tsx` ~126) and are filled by an asynchronous load
@@ -892,9 +899,9 @@ caused by lane B. A fix could cut by `block.type === 'hadith_matn'` as well
 as by entity, or refuse an on-device translation until the entities are in.
 Left unfixed.
 
-## 63. A verse and a ḥadīth with the same span: the verse can win (2026-11-18, by reading; fixed in lane B)
+## 72. A verse and a ḥadīth with the same span: the verse can win (2026-11-18, by reading; fixed in lane B)
 
-Found by the re-review of lane B's records for 59 and 60. In
+Found by the re-review of lane B's records for 68 and 69. In
 `translation/offline/segmentSelection.ts` the sort
 `a.start - b.start || b.end - a.end` leaves a tie on both start and end to
 the input order. That happens when a verse starts in a matn block and runs
@@ -908,10 +915,10 @@ twice and the ḥadīth segment, with its no-offline-source note, is missing
 from the card. Nothing goes to `prose`, so the invariant holds. Not
 measured.
 
-Partly caused by lane B, as the whole-branch review found: before 52 each
+Partly caused by lane B, as the whole-branch review found: before 61 each
 piece was sliced from its own start, so the tied ḥadīth was still emitted
-(the verse showing twice is 60's, older). The skip 52 added is what drops
-it. **Fixed in lane B** (commit "52." after the re-record): on an exact tie
+(the verse showing twice is 69's, older). The skip 61 added is what drops
+it. **Fixed in lane B** (commit "52." (lane B's old number for 61) after the re-record): on an exact tie
 the ḥadīth goes first; checked by V.
 
 The commonest tie, which the paragraph above does not list: in one block, a
@@ -919,12 +926,12 @@ selection lying wholly inside a verse quoted inside a matn clips both pieces
 to the selection. Between 36b6a8d and the fix the card showed the verse (its
 whole muṣḥaf text and bundled English) and dropped the ḥadīth; it now shows a
 ḥadīth segment (the selected Arabic with the no-offline-source note, or the
-whole verified ḥadīth if cached) and no verse English, as DECISIONS 52 says
+whole verified ḥadīth if cached) and no verse English, as DECISIONS 61 says
 for a verse inside a ḥadīth.
 
-## 64. On device, part of a verified ḥadīth shows the whole of it (2026-11-18, by reading)
+## 73. On device, part of a verified ḥadīth shows the whole of it (2026-11-18, by reading)
 
-Found by the re-review of lane B's fix to 63. `pushEntity` in
+Found by the re-review of lane B's fix to 72. `pushEntity` in
 `translation/offline/segmentSelection.ts` emits `verified?.arabic ||
 sourceText`, so a selection covering only part of a ḥadīth whose verified
 translation is cached shows the whole verified Arabic and English, not the
