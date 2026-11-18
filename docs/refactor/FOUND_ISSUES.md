@@ -224,6 +224,13 @@ check". Found by the `torjuman-llm` plan read before Phase 3 step 3a.
 
 **Fixed in lane B** (commits "13." on `claude/lane-b-translation`, per DECISIONS 13).
 
+A consequence the owner will see, found by the whole-branch review: where
+the glossary's code-point order differs from its old `en-US` order (likely
+for Arabic: إ and أ against ا, and the ḥarakāt), the glossary hash changes,
+so every card made with that glossary shows the amber "changed since this
+was translated" note once after the update, until retranslated. The cards
+themselves are unchanged. Not measured on the owner's glossary.
+
 `glossaryHashOf` (`translation/prompt.ts` ~20) sorts glossary entries with
 `localeCompare`, whose order depends on the browser's locale. Two devices with
 different locales could compute different glossary hashes, and so different
