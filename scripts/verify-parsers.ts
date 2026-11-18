@@ -1931,6 +1931,28 @@ expect(
   check('a verse opening a ḥadīth is inside it', tied.segments.map((s) => s.type), ['prose', 'hadith']);
   check('and nothing is shown twice', tied.segments.map((s) => s.arabic).join(''), openingText);
 
+  // An exact tie (FOUND_ISSUES 63): a verse and a ḥadīth over the same span,
+  // the verse listed first, as the detector stores them. The ḥadīth wins, so
+  // its segment and note are not lost to the verse.
+  const exactText = `قال الشيخ ${verse}`;
+  const exactAt = exactText.indexOf(verse);
+  const exact = segmentSelection({
+    blocks: [{ ...block, text: exactText, normalized: normalize(exactText) }] as never,
+    entities: [
+      { ...entity('e-verse', 'quran', verse, '1:1'), startOffset: exactAt, endOffset: exactText.length },
+      { ...entity('e-hadith', 'hadith', verse, 'riyadussalihin:1'), startOffset: exactAt, endOffset: exactText.length },
+    ] as never,
+    startBlockId: 'y:p1:0',
+    startOffset: 0,
+    endBlockId: 'y:p1:0',
+    endOffset: exactText.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: () => null,
+  });
+  check('a verse and a ḥadīth over the same span: the ḥadīth is kept', exact.segments.map((s) => s.type), ['prose', 'hadith']);
+  check('with its note', exact.segments[1]?.note, HADITH_NO_OFFLINE_SOURCE);
+
   // A partial overlap: a verse that starts in the commentary and runs into the
   // ḥadīth. The ḥadīth is emitted from where the verse ends, not from its own
   // start, so the shared words are not shown twice — and neither part is prose.

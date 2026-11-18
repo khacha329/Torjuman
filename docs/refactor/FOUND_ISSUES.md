@@ -885,7 +885,7 @@ caused by lane B. A fix could cut by `block.type === 'hadith_matn'` as well
 as by entity, or refuse an on-device translation until the entities are in.
 Left unfixed.
 
-## 63. A verse and a ḥadīth with the same span: the verse can win (2026-11-18, by reading)
+## 63. A verse and a ḥadīth with the same span: the verse can win (2026-11-18, by reading; fixed in lane B)
 
 Found by the re-review of lane B's records for 59 and 60. In
 `translation/offline/segmentSelection.ts` the sort
@@ -899,5 +899,10 @@ order. It is then emitted with its whole `textUthmani`, the ḥadīth piece is
 skipped, and the verse is emitted again in the next block: the verse shows
 twice and the ḥadīth segment, with its no-offline-source note, is missing
 from the card. Nothing goes to `prose`, so the invariant holds. Not
-measured; pre-existing. A fix would break the tie ḥadīth first. Left
-unfixed.
+measured.
+
+Partly caused by lane B, as the whole-branch review found: before 52 each
+piece was sliced from its own start, so the tied ḥadīth was still emitted
+(the verse showing twice is 60's, older). The skip 52 added is what drops
+it. **Fixed in lane B** (commit "52." after the re-record): on an exact tie
+the ḥadīth goes first; checked by V.

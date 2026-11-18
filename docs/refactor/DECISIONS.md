@@ -90,7 +90,9 @@ lane B found.
   one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
   runs past it emits only the part not yet shown, so no text of the book is
   sliced twice. (A clipped verse is still shown as its whole muṣḥaf text, so
-  that edge case can show the overlap twice: FOUND_ISSUES 52.) What reaches
+  that edge case can show the overlap twice: FOUND_ISSUES 52.) Pieces are
+  ordered by start, then the longer first, then a ḥadīth before a verse, so
+  an exact tie cannot drop the ḥadīth (FOUND_ISSUES 63). What reaches
   the model is still only prose.
 - **59. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
   word (2026-11-18). `segmentSelection` no longer skips `unresolved`

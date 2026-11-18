@@ -123,8 +123,14 @@ export function segmentSelection(options: {
     }
 
     // At one start, the longer piece first, so a verse quoted inside a ḥadīth
-    // that begins at the same offset is inside the ḥadīth, not before it.
-    covering.sort((a, b) => a.start - b.start || b.end - a.end);
+    // that begins at the same offset is inside the ḥadīth, not before it. On
+    // an exact tie, the ḥadīth first: otherwise the order the entities came in
+    // decides, and the detector stores a block's verses before its ḥadīth, so
+    // the verse would be emitted and the ḥadīth skipped as lying inside it —
+    // its segment, note and any verified English missing from the card
+    // (FOUND_ISSUES 63; the skip is 52's).
+    const rank = (piece: Piece) => (piece.entity?.type === 'hadith' ? 0 : 1);
+    covering.sort((a, b) => a.start - b.start || b.end - a.end || rank(a) - rank(b));
 
     // Walk the block's share, emitting prose between entities. A piece that
     // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
