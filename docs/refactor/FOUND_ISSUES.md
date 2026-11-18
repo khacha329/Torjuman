@@ -861,8 +861,8 @@ before it with `previous.arabic += text`, so the last word of one block and
 the first word of the next reach the on-device model glued together ("one
 twothree four" in the probe). Pre-existing; since 52 it is more common,
 because a marked name at a block edge no longer cuts the prose there. A fix
-would join with a newline or a space, which `splitSentences` already treats
-as a boundary. Left unfixed.
+would join with a newline, which `splitSentences` already treats as a
+boundary (a space would only keep the words apart). Left unfixed.
 
 ## 62. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
 
