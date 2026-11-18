@@ -850,8 +850,10 @@ matn in an unmapped book `unresolved`.
 Found by the review of lane B's fix to 52. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
-an offline card. Pre-existing. Left unfixed. Since 59 it also applies to a
-verse that starts inside an unnumbered matn and runs into the next block.
+an offline card. Pre-existing. Left unfixed. (Since 59, a verse that starts
+inside an unnumbered matn no longer shows twice this way: its first block's
+part lies inside the ḥadīth and is skipped, and the whole verse follows once
+— the 52 edge case, as for a numbered matn.)
 
 ## 61. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
 
@@ -862,7 +864,11 @@ the first word of the next reach the on-device model glued together ("one
 twothree four" in the probe). Pre-existing; since 52 it is more common,
 because a marked name at a block edge no longer cuts the prose there. A fix
 would join with a newline, which `splitSentences` already treats as a
-boundary (a space would only keep the words apart). Left unfixed.
+boundary (a space would only keep the words apart). But the merge exists so
+a sentence broken only by whitespace is not translated as two fragments, and
+it fires only across blocks: a newline would split every sentence that runs
+over a page break, a space would not. The fixer should weigh that. Left
+unfixed.
 
 ## 62. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
 
