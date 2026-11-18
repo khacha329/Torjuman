@@ -859,7 +859,7 @@ async function mainGroup(scenario, { page, nextLoad }) {
   });
 
   let retranslated = null;
-  await scenario('retranslate', 'the card\'s Retranslate ▾ → Same provider and model: the old card deleted, a forced request', async (p) => {
+  await scenario('retranslate', 'the card\'s Retranslate ▾ → Same provider and model: a forced request; the old card kept until the new one is stored, then deleted (FOUND_ISSUES 42)', async (p) => {
     const before = await cardsOf(page);
     const menu = await retranslateMenu(page, first);
     await menu.getByRole('button', { name: 'Same provider and model' }).click();
@@ -869,7 +869,7 @@ async function mainGroup(scenario, { page, nextLoad }) {
     retranslated = newCards(before, after)[0]?.id ?? null;
   });
 
-  await scenario('retranslate-with', 'Retranslate ▾ → Gemini Flash Lite 3.5: the override\'s model in the URL and on the card', async (p) => {
+  await scenario('retranslate-with', 'Retranslate ▾ → Gemini Flash Lite 3.5: the override\'s model in the URL and on the card; the old card deleted once the new one is stored', async (p) => {
     const before = await cardsOf(page);
     const menu = await retranslateMenu(page, retranslated);
     await menu.getByRole('button', { name: /^Flash Lite 3\.5/ }).click();
@@ -929,13 +929,21 @@ async function mainGroup(scenario, { page, nextLoad }) {
       geminiStream([{ text: partial, finishReason: 'MAX_TOKENS', usage: { prompt: 600, candidates: 4096 } }])]);
   await failing('error-network', 'block 11 → Translate, the connection dropped: errorKind network', 10, [DROP]);
 
-  await scenario('error-cached', 'block 4 (the HTTP 400 one) selected again → Translate: the failed card is served from the cache, no request', async (p) => {
+  // Until FOUND_ISSUES 41 a failed card was a cache hit, so selecting its
+  // passage again showed the failure and sent nothing. Only a complete card is
+  // a hit now: the selection is requested again, and the failed card stays.
+  await scenario('error-cached', 'block 4 (the HTTP 400 one) selected again → Translate: a failed card is not a cache hit (FOUND_ISSUES 41), so a request, answered: a complete card beside the failed one', async (p) => {
+    const before = await cardsOf(page);
     await select(page, ...wholeBlock(3));
     await railTranslate(page).click();
-    await p.noRequest('a cached failed card');
+    const held = await p.request('the translation again');
+    await held.respond(blockAnswer(3, 'The fourth: translated after the failure', { prompt: 640, candidates: 60 }));
+    await untilCards(page, 'the complete card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
   });
 
-  await scenario('retranslate-no-key', 'the verse block\'s card → Retranslate ▾ → a Claude model, with no Claude key: the card is deleted first, then the notice', async (p) => {
+  // Until FOUND_ISSUES 42 the card was deleted before the request; with no
+  // Claude key no request goes, so the card is kept and only the notice shows.
+  await scenario('retranslate-no-key', 'the verse block\'s card → Retranslate ▾ → a Claude model, with no Claude key: the notice, and the card is kept (FOUND_ISSUES 42)', async (p) => {
     const menu = await retranslateMenu(page, blockCard);
     const claude = menu.locator('div.mt-1', { has: page.locator('p', { hasText: /^Claude/ }) }).getByRole('button').first();
     await claude.click();
@@ -961,13 +969,17 @@ async function mainGroup(scenario, { page, nextLoad }) {
     await within(20_000, 'the batch finishing', page.getByText(/^Finished — /).waitFor());
   });
 
-  await scenario('batch-again', 'Translate all… → Translate all again: every block served from the cache (the failed card too), no request', async (p) => {
+  // Until FOUND_ISSUES 41 the failed card was served from the cache here too,
+  // so the batch sent nothing. Now the two complete blocks come from the cache
+  // and only the HTTP 500 block (block 7) is requested again.
+  await scenario('batch-again', 'Translate all… → Translate all again: the two complete blocks from the cache; the HTTP 500 block requested again (FOUND_ISSUES 41) and answered', async (p) => {
     await page.getByRole('button', { name: 'Dismiss' }).last().click().catch(() => {});
     await proposeBatch(page);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Translate all', exact: true }).click();
+    const held = await p.request('block 7, the failed one');
+    await held.respond(answer([prose(TEXTS[6], 'The second commentary: translated after the failure.')], { prompt: 630, candidates: 80, cached: 0 }));
     await within(20_000, 'the batch finishing', page.getByText(/^Finished — /).waitFor());
-    await p.noRequest('a batch from the cache');
   });
 }
 
@@ -1066,7 +1078,7 @@ try {
   groups.push(await group(browser, base, 'without a key', { keys: [] }, noKeyGroup));
   groups.push(await group(browser, base, 'a profile with external lookup', {
     profile: { id: 'profile-p-check-external', name: 'P: external lookup', allowExternalLookup: true },
-  }, singleBlockGroup('external-lookup', 'block 3 → Translate on a Gemini profile with allowExternalLookup: GeminiProvider sends no flag (its request is the plain one), so what this pins is the card\'s usedExternalLookup and its "web search" label, both from the profile (FOUND_ISSUES 43); the request\'s flag is seen in the Claude group', 'The third: with external lookup allowed')));
+  }, singleBlockGroup('external-lookup', 'block 3 → Translate on a Gemini profile with allowExternalLookup: GeminiProvider sends no flag (its request is the plain one), so what this pins is the card: no search ran, so usedExternalLookup is false and it shows no "web search" label (FOUND_ISSUES 43; until then both came from the profile); the request\'s flag and a card that did search are seen in the Claude group', 'The third: with external lookup allowed')));
   groups.push(await group(browser, base, 'a profile with transliteration', {
     profile: { id: 'profile-p-check-translit', name: 'P: transliteration', useTransliteration: true },
   }, singleBlockGroup('transliteration', 'block 3 → Translate on a profile with useTransliteration: TRANSLITERATION_INSTRUCTION in the system prompt', 'The third: with transliteration')));

@@ -113,10 +113,13 @@
 //     diagnostics block alone;
 //   - reader-biography: the narrator tapped — BiographySheet with no
 //     biographical work imported;
-//   - reader-rail: one word selected — SelectionRail (no dictionary, so its
-//     action is disabled); reader-meaning: then Meaning with no key — the gloss
-//     error in DictionarySheet; reader-meaning-cached: the seeded word
-//     selected, Meaning — the gloss ready state;
+//   - reader-rail: one word selected, no key — SelectionRail (no dictionary,
+//     so its action is disabled; since FOUND_ISSUES 33 Meaning is disabled
+//     too, the word not being cached); reader-meaning: a fake Claude key and
+//     the gloss answered 401 — the gloss error in DictionarySheet (before 33,
+//     Meaning with no key); reader-rail-offline-cached (added with 33): the
+//     seeded word selected offline with no key — Meaning offered from the
+//     cache; reader-meaning-cached: then Meaning — the gloss ready state;
 //   - reader-margin-menu: a 600 ms press on the matn's margin — MarginMenu
 //     with Translate all…; reader-batch-proposal: then Translate all… — the
 //     proposal bar (three blocks, cost unknown for the default Gemini model),
@@ -481,6 +484,18 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
     }
     // Held: never answered, so the screen stays in its in-progress state.
     if (network.holdProxy && url.origin === PROXY) return undefined;
+    // Claude's word gloss answered with a canned 401, so reader-meaning shows
+    // the gloss error from a fixed answer rather than the browser's own
+    // message for an aborted request (FOUND_ISSUES 33: without a key, Meaning
+    // is no longer offered for a word that is not cached, so the old
+    // "No API key" capture cannot be reached).
+    if (network.glossAuthError && url.hostname === 'api.anthropic.com') {
+      return route.fulfill({
+        status: 401,
+        headers: { 'content-type': 'application/json', 'request-id': 'req_u_gloss' },
+        body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }),
+      });
+    }
     if (MODEL_HOST.test(url.hostname)) {
       if (network.modelDownload) {
         // Answering config.json alone is not enough to reach the progress bar
@@ -519,6 +534,11 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
       localStorage.setItem('shamela-reader.onboarded', '1');
       localStorage.setItem('shamela-reader.catalogOffered', '1');
     });
+  }
+  // A fake Claude key, for the gloss error only (reader-meaning). No capture
+  // that shows a key field opens on such a page.
+  if (network.glossAuthError) {
+    await page.evaluate(() => localStorage.setItem('shamela-reader.anthropic-api-key', 'sk-ant-u-check-not-a-real-key'));
   }
   if (cards && reader) throw new Error('newPage: cards and reader are separate seeds');
   const readerSeed = seed && reader ? seedReader(reader === true ? {} : reader) : null;
@@ -1038,21 +1058,33 @@ async function readerCaptures(fresh, profile, dir) {
   await captureDialog(page, 'reader-biography');
   await page.context().close();
 
-  // SelectionRail for one word (no dictionary: its action is disabled), then
-  // Meaning with no key: the gloss error in DictionarySheet.
+  // SelectionRail for one word with no key (no dictionary: its action is
+  // disabled; the word is not cached, so since FOUND_ISSUES 33 Meaning is
+  // disabled too, with its reason).
   page = await open();
   await select(page, 0, ...word(UNCACHED_WORD));
   await untilRail(page);
   await capture(page, dir, 'reader-rail', rail(page));
+  await page.context().close();
+
+  // Meaning with a (fake) Claude key, the gloss answered 401: the gloss error
+  // in DictionarySheet. Before 33 this was reached with no key at all.
+  page = await open({ reader: true, network: { glossAuthError: true } });
+  await select(page, 0, ...word(UNCACHED_WORD));
+  await untilRail(page);
   await rail(page).getByRole('button', { name: /^Meaning/ }).click();
-  await dialog(page).getByText('No API key is set. Add one in Settings.').waitFor();
+  await dialog(page).getByText('Your Anthropic API key was rejected', { exact: false }).waitFor();
   await captureDialog(page, 'reader-meaning');
   await page.context().close();
 
-  // The gloss ready state, from the seeded wordGlosses row.
+  // The gloss ready state, from the seeded wordGlosses row — with no key and
+  // the browser offline, so the rail shows Meaning offered from the cache
+  // alone (FOUND_ISSUES 33), then the gloss.
   page = await open();
+  await page.context().setOffline(true);
   await select(page, 0, ...word(CACHED_WORD));
   await untilRail(page);
+  await capture(page, dir, 'reader-rail-offline-cached', rail(page));
   await rail(page).getByRole('button', { name: /^Meaning/ }).click();
   await dialog(page).getByText('a placeholder gloss for the check').waitFor();
   await captureDialog(page, 'reader-meaning-cached');

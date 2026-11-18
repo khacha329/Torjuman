@@ -221,7 +221,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nLooking up the example.The example is synthetic.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nLooking up the example.\\n\\nThe example is synthetic.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -257,7 +257,8 @@
             "cacheWriteTokens": 1200
           },
           "costUsd": 0.00792,
-          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}",
+          "searched": true
         }
       },
       "progress": {
@@ -762,7 +763,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
           "retryAfterSeconds": 7,
           "raw": null
         }
@@ -860,8 +861,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
-          "retryAfterSeconds": "NaN",
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 1,
           "raw": null
         }
       },
@@ -1440,7 +1441,14 @@
         875
       ],
       "outcome": {
-        "result": true
+        "error": {
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "network",
+          "message": "Could not reach api.anthropic.com. Check the network connection.",
+          "retryAfterSeconds": null,
+          "raw": null
+        }
       },
       "progress": {
         "count": 0,
@@ -2364,7 +2372,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nThe phrase is a synthetic example.The phrase is a synthetic example.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nThe phrase is a synthetic example.\\n\\nThe phrase is a synthetic example.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -2403,7 +2411,7 @@
       },
       "progress": {
         "count": 4,
-        "last": "The phrase is a synthetic example.The phrase is a synthetic example."
+        "last": "The phrase is a synthetic example.\n\nThe phrase is a synthetic example."
       }
     },
     {
@@ -2601,7 +2609,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "auth",
-          "message": "Your Anthropic API key was rejected.",
+          "message": "Your Anthropic API key was rejected. Check it in Settings — this is a key problem, not a usage limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -2645,8 +2653,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "403 {\"type\":\"error\",\"error\":{\"type\":\"permission_error\",\"message\":\"Synthetic 403 for check Q.\"}}",
+          "kind": "auth",
+          "message": "That Anthropic key is valid but not permitted to use this model. Check the key’s workspace and model access.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -2744,8 +2752,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Rate limited. Wait a moment and try again.",
-          "retryAfterSeconds": null,
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 0.25,
           "raw": null
         }
       },
@@ -2842,7 +2850,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "api",
-          "message": "500 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Synthetic 500 for check Q.\"}}",
+          "message": "Anthropic API error 500: 500 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Synthetic 500 for check Q.\"}}",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -2940,7 +2948,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "network",
-          "message": "Could not reach api.anthropic.com.",
+          "message": "Could not reach api.anthropic.com. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3237,7 +3245,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "auth",
-          "message": "Your Anthropic API key was rejected.",
+          "message": "Your Anthropic API key was rejected. Check it in Settings — this is a key problem, not a usage limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3286,8 +3294,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "403 {\"type\":\"error\",\"error\":{\"type\":\"permission_error\",\"message\":\"Synthetic 403 for check Q.\"}}",
+          "kind": "auth",
+          "message": "That Anthropic key is valid but not permitted to use this model. Check the key’s workspace and model access.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3388,8 +3396,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Rate limited. Wait a moment and try again.",
-          "retryAfterSeconds": null,
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 0.25,
           "raw": null
         }
       },
@@ -3489,7 +3497,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "network",
-          "message": "Could not reach api.anthropic.com.",
+          "message": "Could not reach api.anthropic.com. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3585,7 +3593,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "auth",
-          "message": "Your Anthropic API key was rejected.",
+          "message": "Your Anthropic API key was rejected. Check it in Settings — this is a key problem, not a usage limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3628,8 +3636,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "403 {\"type\":\"error\",\"error\":{\"type\":\"permission_error\",\"message\":\"Synthetic 403 for check Q.\"}}",
+          "kind": "auth",
+          "message": "That Anthropic key is valid but not permitted to use this model. Check the key’s workspace and model access.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3724,8 +3732,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Rate limited. Wait a moment and try again.",
-          "retryAfterSeconds": null,
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 0.25,
           "raw": null
         }
       },
@@ -3819,7 +3827,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "network",
-          "message": "Could not reach api.anthropic.com.",
+          "message": "Could not reach api.anthropic.com. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3881,7 +3889,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "auth",
-          "message": "Your Gemini API key was rejected.",
+          "message": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3911,7 +3919,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "auth",
-          "message": "Your Gemini API key was rejected.",
+          "message": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -3971,7 +3979,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "api",
-          "message": "Gemini API error: HTTP 500",
+          "message": "Gemini API error: Internal error.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -4114,7 +4122,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.\\n\\nTurn 2: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -4150,7 +4158,8 @@
             "cacheWriteTokens": 8225
           },
           "costUsd": 0.0573532,
-          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}",
+          "searched": true
         }
       },
       "progress": {
@@ -4463,7 +4472,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nTurn 1: searching.\\n\\nTurn 2: searching.\\n\\nTurn 3: searching.\\n\\nTurn 4: searching.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -4499,7 +4508,8 @@
             "cacheWriteTokens": 10079
           },
           "costUsd": 0.0823044,
-          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}",
+          "searched": true
         }
       },
       "progress": {
@@ -4630,7 +4640,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nTurn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":\"You are helping someone prepare a study circle on classical Islamic\\nArabic scholarship. He reads Arabic fluently and already understands the words\\nof the phrase he is asking about. His question is what the phrase means as a\\nCONCEPT — how the scholars use it, what it covers, where they draw its limits.\\n\\nAnswer that question, not the translation.\\n\\nRULES\\n\\n1. Passages from the user's own library are supplied below. They are the better\\n   source: cite them in preference to anything from the web.\\n2. Every claim from the web must carry its link. Make no uncited assertions.\\n3. Web excerpts are one or two sentences, enough to show relevance. Never\\n   reproduce a section of an article, and never assemble a paraphrase dense\\n   enough to substitute for reading the source.\\n4. Prefer scholarly and institutional sources. Treat forum and Q&A material as\\n   weak, and say so if you rely on it.\\n5. Plain, clear English suited to a non-native speaker. Keep Arabic technical\\n   terms in Arabic script with a brief gloss.\\n6. If the sources do not settle the question, say so rather than filling the\\n   gap.\\n\\nGive your answer by calling the emit_explanation tool, exactly once. Do not write the answer as text.\",\"messages\":[{\"role\":\"user\",\"content\":\"<phrase>\\nمثال قصير\\n</phrase>\\n\\n<surrounding_text>\\nوهذا مثال قصير كتب للتجربة فقط.\\n</surrounding_text>\\n\\n<library_passages>\\n<passage id=\\\"L0\\\" book=\\\"كتاب تجريبي\\\">\\nنص مكتبي قصير للتجربة.\\n</passage>\\n\\n<passage id=\\\"L1\\\" book=\\\"كتاب آخر\\\">\\nنص ثان للتجربة.\\n</passage>\\n</library_passages>\\n\\nExplain what this phrase means as a concept. Search the web only for what the library passages do not settle.\\n\\n<research_notes>\\nTurn 1: searching.\\n\\nTurn 2: searching.\\n\\nTurn 3: searching.\\n\\nTurn 4: searching.\\n</research_notes>\\n\\nNow return the structured explanation.\"}],\"tools\":[{\"name\":\"emit_explanation\",\"description\":\"Return the explanation and the sources it rests on.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"explanation\":{\"type\":\"string\",\"description\":\"What the phrase means as a concept, in plain English for a non-native speaker. Grounded in the supplied sources.\"},\"localSourceIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IDs of the supplied library passages actually relied on.\"},\"webSources\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"url\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"siteName\":{\"type\":\"string\"},\"excerpt\":{\"type\":\"string\",\"description\":\"One or two sentences showing relevance. Never a reproduction of the article.\"}},\"required\":[\"url\",\"title\",\"excerpt\"],\"additionalProperties\":false}}},\"required\":[\"explanation\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -4669,7 +4679,7 @@
       },
       "progress": {
         "count": 8,
-        "last": "Turn 1: searching.Turn 2: searching.Turn 3: searching.Turn 4: searching."
+        "last": "Turn 1: searching.\n\nTurn 2: searching.\n\nTurn 3: searching.\n\nTurn 4: searching."
       }
     },
     {
@@ -4706,10 +4716,10 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "network error",
+          "kind": "network",
+          "message": "The connection to api.anthropic.com dropped mid-reply. Check the network connection.",
           "retryAfterSeconds": null,
-          "raw": null
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a "
         }
       },
       "progress": {
@@ -4797,7 +4807,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "api",
-          "message": "Anthropic API error undefined: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}",
+          "message": "Anthropic reported an error mid-reply: Overloaded (overloaded_error).",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -4840,8 +4850,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "network error",
+          "kind": "network",
+          "message": "The connection to api.anthropic.com dropped mid-reply. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -4885,8 +4895,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "network error",
+          "kind": "network",
+          "message": "The connection to api.anthropic.com dropped mid-reply. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -4929,8 +4939,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "network error",
+          "kind": "network",
+          "message": "The connection to api.anthropic.com dropped mid-reply. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -4979,8 +4989,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "network error",
+          "kind": "network",
+          "message": "The connection to api.anthropic.com dropped mid-reply. Check the network connection.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -5007,9 +5017,12 @@
       "waits": [],
       "outcome": {
         "error": {
-          "class": "TypeError",
-          "name": "TypeError",
-          "message": "network error"
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "network",
+          "message": "The connection to the Gemini API dropped mid-reply. Check the network connection.",
+          "retryAfterSeconds": null,
+          "raw": null
         }
       },
       "progress": {
@@ -5034,9 +5047,12 @@
       "waits": [],
       "outcome": {
         "error": {
-          "class": "TypeError",
-          "name": "TypeError",
-          "message": "network error"
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "network",
+          "message": "The connection to the Gemini API dropped mid-reply. Check the network connection.",
+          "retryAfterSeconds": null,
+          "raw": null
         }
       },
       "progress": {
@@ -5153,7 +5169,7 @@
         }
       ],
       "waits": [
-        2000,
+        30000,
         4000,
         3000
       ],
@@ -5273,10 +5289,10 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "parse",
-          "message": "Gemini returned no structured output: No JSON array found in the response.",
+          "kind": "refusal",
+          "message": "Gemini declined to translate this passage (PROHIBITED_CONTENT).",
           "retryAfterSeconds": null,
-          "raw": ""
+          "raw": null
         }
       },
       "progress": {
@@ -5303,8 +5319,8 @@
         "error": {
           "class": "TranslationError",
           "name": "TranslationError",
-          "kind": "api",
-          "message": "Gemini API error: HTTP 400",
+          "kind": "auth",
+          "message": "Your Gemini API key was rejected. Check it in Settings — this is a key problem, not a rate limit.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -5402,8 +5418,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
-          "retryAfterSeconds": "NaN",
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 30,
           "raw": null
         }
       },
@@ -5500,8 +5516,8 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
-          "retryAfterSeconds": null,
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
+          "retryAfterSeconds": 0.25,
           "raw": null
         }
       },
@@ -5598,7 +5614,7 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "rate-limit",
-          "message": "Anthropic is rate-limiting this key. Wait a moment and retranslate — your key is fine.",
+          "message": "Anthropic is rate-limiting this key. Wait a moment and try again — your key is fine.",
           "retryAfterSeconds": null,
           "raw": null
         }
@@ -5643,9 +5659,9 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "api",
-          "message": "Anthropic API error undefined: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}",
+          "message": "Anthropic reported an error mid-reply: Overloaded (overloaded_error).",
           "retryAfterSeconds": null,
-          "raw": null
+          "raw": "Looking up the example in the sources"
         }
       },
       "progress": {
@@ -5688,9 +5704,9 @@
           "class": "TranslationError",
           "name": "TranslationError",
           "kind": "api",
-          "message": "Anthropic API error undefined: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}",
+          "message": "Anthropic reported an error mid-reply: Overloaded (overloaded_error).",
           "retryAfterSeconds": null,
-          "raw": null
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\""
         }
       },
       "progress": {
@@ -5771,7 +5787,7 @@
             "x-stainless-runtime-version": "(platform, masked)",
             "x-stainless-timeout": "600"
           },
-          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nSearching for the term.\\nThe first result says \\nthe example is synthetic.One more note: \\nnothing else to add.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
+          "body": "{\"model\":\"claude-sonnet-5-5\",\"max_tokens\":2048,\"system\":[{\"type\":\"text\",\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\\n\\nGive your answer by calling the emit_translation tool, exactly once. Do not write the answer as text.\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\n\\nوهذا مثال قصير كتب للتجربة فقط.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\\n\\n<research_notes>\\nSearching for the term.\\nThe first result says \\nthe example is synthetic.\\n\\nOne more note: \\nnothing else to add.\\n</research_notes>\\n\\nNow produce the translation, using the notes above where they help.\"}],\"tools\":[{\"name\":\"emit_translation\",\"description\":\"Return the translated segments.\",\"strict\":true,\"input_schema\":{\"type\":\"object\",\"properties\":{\"segments\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"arabic\":{\"type\":\"string\",\"description\":\"The Arabic of this segment.\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"arabic\",\"english\"],\"additionalProperties\":false}}},\"required\":[\"segments\"],\"additionalProperties\":false}}],\"tool_choice\":{\"type\":\"auto\"},\"stream\":true}",
           "otherInit": [
             "signal"
           ]
@@ -5807,7 +5823,8 @@
             "cacheWriteTokens": 1200
           },
           "costUsd": 0.00792,
-          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}",
+          "searched": true
         }
       },
       "progress": {
@@ -5969,7 +5986,7 @@
       },
       "progress": {
         "count": 6,
-        "last": "Looking in the library first.Passage L0 settles the meaning."
+        "last": "Looking in the library first.\nPassage L0 \nsettles the meaning."
       }
     },
     {
@@ -6310,7 +6327,8 @@
             "cacheWriteTokens": 3203
           },
           "costUsd": 0.0324043,
-          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}"
+          "raw": "{\"segments\":[{\"type\":\"prose\",\"arabic\":\"وهذا مثال قصير\",\"english\":\"And this is a short example\"},{\"type\":\"prose\",\"arabic\":\"كتب للتجربة فقط.\",\"english\":\"written only for the trial.\",\"note\":\"synthetic\"}]}",
+          "searched": true
         }
       },
       "progress": {
@@ -6515,9 +6533,12 @@
       "waits": [],
       "outcome": {
         "error": {
-          "class": "SyntaxError",
-          "name": "SyntaxError",
-          "message": "(masked: the JavaScript engine's JSON parser wording)"
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "Gemini returned a reply that is not JSON. A network login page can cause this; check the connection.",
+          "retryAfterSeconds": null,
+          "raw": null
         }
       },
       "progress": {
@@ -6542,9 +6563,12 @@
       "waits": [],
       "outcome": {
         "error": {
-          "class": "SyntaxError",
-          "name": "SyntaxError",
-          "message": "(masked: the JavaScript engine's JSON parser wording)"
+          "class": "TranslationError",
+          "name": "TranslationError",
+          "kind": "api",
+          "message": "Gemini returned a reply that is not JSON. A network login page can cause this; check the connection.",
+          "retryAfterSeconds": null,
+          "raw": "<html>Synthetic portal page</html>"
         }
       },
       "progress": {
