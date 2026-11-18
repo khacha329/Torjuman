@@ -186,7 +186,7 @@ Not duplicates: the nine red error boxes, which all differ.
 
 ## 11. Error handling differs between the Claude call sites (2026-11-16, measured)
 
-**Fixed in lane B** (commits starting "11." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B").
+**Fixed in lane B** (commits starting "11." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"), except the closing paragraph on inline call parameters, which is still open.
 
 Found by the Phase 3 plan survey. Left as is (owner's answer to Phase 3 Q4:
 unifying them is a behaviour change for its own PR):
