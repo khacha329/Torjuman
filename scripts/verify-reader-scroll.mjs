@@ -22,12 +22,19 @@
 //
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
-//     bringing its block to the middle; the read-mark ↑ ↓; double-tap
-//     opening the dictionary; the restored position applied once; the
-//     divider dragged with a mouse; the divider dragged with a finger
-//     (reported, not judged: FOUND_ISSUES 27)
-//   - portrait: the cards sheet's handle; a marker opening a popover; the
-//     read-mark ↑ ↓; double-tap
+//     bringing its block to the middle; the read-mark ↑ ↓ and ↓ in turn
+//     (FOUND_ISSUES 39); a centred jump at the middle below the header,
+//     settled in a few passes (FOUND_ISSUES 40); double-tap opening the
+//     dictionary; the restored position applied once; a second book opened
+//     by its URL at its own position (FOUND_ISSUES 31); an open popover's
+//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); the
+//     divider dragged with a mouse; a divider drag ended by pointercancel
+//     (FOUND_ISSUES 27); the divider dragged with a finger (its width
+//     reported, its end judged)
+//   - portrait: the cards sheet's handle; the handle's count of every card
+//     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
+//     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
+//     double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
 // out of `npm run verify` because jsdom has no layout. SCREENSHOT_DIR, if set,
@@ -292,11 +299,25 @@ async function runChecks(page, layout) {
     if ((await verse.count()) === 0) {
       check('the verse is detected, so its popover can be tested', false, 'no entity marked');
     } else {
+      // The verse is put high on the screen and the popover's content waited
+      // for, so the popover is measured at its final size and fits below the
+      // verse both before and after the 60 px scroll. Before FOUND_ISSUES 37
+      // was fixed it kept the place chosen for its short loading state, which
+      // this check then measured; once it places itself again as it grows,
+      // a verse lower down could find it clamped above (top 12) before the
+      // scroll and below after it, depending on whether the translation had
+      // arrived — a race in the check, not a fault in following the anchor.
       await verse.scrollIntoViewIfNeeded();
+      await page.evaluate(({ id, y }) => {
+        const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+        window.scrollBy(0, element.getBoundingClientRect().top - y);
+      }, { id: blockId(VERSE_BLOCK), y: POPOVER_ANCHOR_Y });
       await settle(page, 300);
       await verse.click();
       const close = page.getByRole('button', { name: 'Close', exact: true });
       await close.waitFor({ timeout: 5000 });
+      await page.locator('[role="dialog"]').getByText('(bundled)').waitFor({ timeout: 10_000 });
+      await settle(page, 300);
       const panelTop = () =>
         page.evaluate(() => {
           const button = Array.from(document.querySelectorAll('button[aria-label="Close"]')).pop();
@@ -459,6 +480,25 @@ async function screenshotSelection(page, screenshot) {
 /** Two translation cards: one for the marker scenarios, one far down for the card tap. */
 const MARKER_BLOCK = 300;
 const CARD_BLOCK = 1000;
+/** A block given a note by the one scenario that counts the sheet handle's cards. */
+const NOTE_BLOCK = 200;
+/** Where the verse is put before its popover is opened to follow a scroll: high enough that the popover fits below it. */
+const POPOVER_ANCHOR_Y = 120;
+/** A centred jump's tolerance, and the most jump writes it may take to settle in each layout (FOUND_ISSUES 40). */
+const CENTRED_TOLERANCE_PX = 4;
+const CENTRED_MAX_JUMPS_LANDSCAPE = 2;
+const CENTRED_MAX_JUMPS_PORTRAIT = 4;
+/** The verse's place, and the small scrolls, for the outside-tap listener check: the verse stays on screen. */
+const LISTENER_ANCHOR_Y = 450;
+const LISTENER_SCROLL_STEPS = 8;
+const LISTENER_SCROLL_PX = 35;
+/** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
+const GROWTH_DELAY_MS = 2500;
+const LOW_ANCHOR_Y = 380;
+/** A second book, opened by a hash change from the first, and its saved position. */
+const SECOND_BOOK = 'shamela-515153';
+const SECOND_BLOCKS = 400;
+const SECOND_POSITION = 300;
 /** Three read marks, for the header's ↑ ↓. */
 const READ_MARKS = [400, 450, 500];
 /** A ج/ص page past the last read mark (block 545 opens it). */
@@ -502,7 +542,12 @@ async function seedControls(page) {
     cards: [card('marker', MARKER_BLOCK), card('far', CARD_BLOCK)],
     marks: READ_MARKS.map(read),
   };
-  await within(60_000, 'seeding the controls rows', page.evaluate(async (rows) => {
+  await putRows(page, 'seeding the controls rows', rows);
+}
+
+/** Write synthetic rows ({ store: [row, …] }) straight into the app's database. */
+async function putRows(page, label, rows) {
+  await within(60_000, label, page.evaluate(async (rows) => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('shamela-reader');
       request.onsuccess = () => resolve(request.result);
@@ -563,11 +608,10 @@ async function flashed(page, index) {
 
 /**
  * The block at the middle of the screen below the header, and whether it is
- * `index`. Judged this way, and not by how far the block's middle is from
- * the screen's, because a centred jump lands one header height below the
- * screen's middle today (the virtualizer centres in the screen and adds its
- * scrollPaddingStart; settleOn tests against the screen's middle: FOUND_ISSUES
- * 40). A jump off by one block puts another block there; a fix of 40 would not.
+ * `index`: a jump off by one block puts another block there. A centred jump
+ * lands its block's middle on that point (FOUND_ISSUES 40, fixed in lane A;
+ * before, it landed half a header lower), and `centredJump` judges how close
+ * it lands; this judges only which block is there.
  */
 async function atMiddle(page, index) {
   return page.evaluate((target) => {
@@ -582,6 +626,86 @@ async function atMiddle(page, index) {
     }
     return { ...found, middle: Math.round(middle), ok: found?.block === target };
   }, index);
+}
+
+/**
+ * A centred jump (FOUND_ISSUES 40): the read-mark ↓ from the top of the book
+ * centres the first mark. Its block's middle must land within a few px of the
+ * middle of the area below the header — the place `atMiddle` judges — and the
+ * jump must settle in a few passes. They are counted as the jump writes the
+ * page gets from the tap until a second after it: the `window.scrollTo` calls
+ * that carry a `behavior`, which are the virtualizer's scrollToIndex and
+ * scrollToOffset (one per settleOn pass) and its reconciling pass; its
+ * adjustments for blocks measured for the first time pass no behavior and
+ * are not counted. Before the fix every centred jump ran all eight of
+ * settleOn's passes: 8 writes in landscape, 10 in portrait.
+ *
+ * The bound is per layout (`maxJumps`), from what the fix measured. Landscape
+ * takes 2: the first pass lands a few px off, from estimated heights next to
+ * the target, and the second on it. Portrait takes 4: three passes and one
+ * reconciling re-write of the same offset. Its taller visible area holds a
+ * block between the header and the target that is first measured after the
+ * second pass and shrinks about 55 px; the virtualizer compensates only for
+ * blocks above the top of the window, so the target moves and needs a third
+ * pass.
+ */
+async function centredJump(page, maxJumps) {
+  await page.evaluate(() => {
+    window.__jumps = 0;
+    const scrollTo = window.scrollTo.bind(window);
+    window.scrollTo = (...args) => {
+      const options = args[0];
+      if (options && typeof options === 'object' && options.behavior !== undefined) window.__jumps++;
+      return scrollTo(...args);
+    };
+  });
+  await page.getByTitle('Next passage marked to read').click();
+  await settle(page, 1000);
+  const jumps = await page.evaluate(() => window.__jumps);
+  // The virtual item, margins and all — what settleOn centres.
+  const found = await page.evaluate((index) => {
+    const element = document.querySelector(`[data-index="${index}"]`);
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, headerBottom: document.querySelector('header').getBoundingClientRect().bottom, viewport: window.innerHeight };
+  }, READ_MARKS[0]);
+  const middle = found && Math.round((found.top + found.bottom) / 2);
+  const visibleMiddle = found && Math.round((found.headerBottom + found.viewport) / 2);
+  const off = found ? middle - visibleMiddle : null;
+  check(
+    `a centred jump (↓ to block ${READ_MARKS[0]}) puts its block's middle at the middle of the area below the header`,
+    off !== null && Math.abs(off) <= CENTRED_TOLERANCE_PX,
+    `block middle ${middle}, middle below the header ${visibleMiddle}, off by ${off}`,
+  );
+  check(
+    `  and settles in at most ${maxJumps} jump writes`,
+    jumps <= maxJumps,
+    `${jumps} jump writes`,
+  );
+}
+
+/**
+ * ↓ ↓ ↓ from the top of the book visits the three read marks in order
+ * (FOUND_ISSUES 39). ReadMarkNav used to find "next" from the block at the
+ * top of the screen; a mark it had just centred sits below that block, so the
+ * second ↓ found the same mark and the page stayed where it was. It now
+ * counts from the block at the middle of the area below the header, where a
+ * centred jump lands.
+ */
+async function readMarkSequence(page) {
+  const next = page.getByTitle('Next passage marked to read');
+  const visited = [];
+  for (let step = 0; step < READ_MARKS.length; step++) {
+    await next.click();
+    await settle(page, 900);
+    visited.push((await atMiddle(page, READ_MARKS[step])).block ?? null);
+  }
+  const disabled = await next.isDisabled();
+  check(
+    `↓ ↓ ↓ from the top visits the read marks in order (${READ_MARKS.join(', ')}), and ↓ is then off`,
+    visited.join() === READ_MARKS.join() && disabled,
+    `at the middle after each ↓: ${visited.join(', ')}; ↓ disabled after: ${disabled}`,
+  );
 }
 
 /** The jump to ج/ص page `printed`, as the header's Go does it. */
@@ -653,9 +777,10 @@ async function readMarkJumps(page) {
   const middle = await atMiddle(page, READ_MARKS[1]);
   check(`  and ↑ again the one before it (block ${READ_MARKS[1]})`, middle.ok, JSON.stringify(middle));
 
-  // ↓ from a mark that ↑ centred: reported, not judged. ReadMarkNav finds
-  // "next" from the block at the top of the screen, and a centred mark is not
-  // at the top, so this can land on the same mark again (FOUND_ISSUES 39).
+  // ↓ from a mark that ↑ centred: reported. Until FOUND_ISSUES 39 was fixed
+  // ReadMarkNav found "next" from the block at the top of the screen, and a
+  // centred mark is below it, so this landed on the same mark again (450);
+  // it now goes on to 500. `readMarkSequence` judges ↓ in turn from the top.
   await next.click();
   await settle(page, 900);
   const landed = (await atMiddle(page, READ_MARKS[2])).block ?? null;
@@ -771,6 +896,8 @@ async function landscapeControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_LANDSCAPE));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 
   await scenario(browser, base, profile, 'the reading position is restored once', async (page) => {
@@ -794,8 +921,168 @@ async function landscapeControls(browser, base, profile) {
     );
   });
 
-  // The pointer drag is the one scenario that writes the panel's width; it
-  // runs last of the judged ones (the plan's 5b), then the finger's report.
+  // A popover whose content arrives after it opens is placed again at its
+  // final size (FOUND_ISSUES 37). The bundled translation is held back, so the
+  // Qurʾān popover first places itself in its short loading state, below a
+  // verse low on the screen; when the translation arrives it is several times
+  // taller and no longer fits below. Nothing renders the reader in between —
+  // no scroll, no resize, no tap — so only the popover's own size change can
+  // place it again, not the reader re-rendering it.
+  await scenario(browser, base, profile, 'a popover is placed again when its content grows', async (page) => {
+    let held = 0;
+    await page.route('**/quran/english.json', async (route) => {
+      held++;
+      await new Promise((resolve) => setTimeout(resolve, GROWTH_DELAY_MS));
+      await route.continue();
+    });
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: LOW_ANCHOR_Y });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.waitFor({ timeout: 5000 });
+    await settle(page, 300);
+    const box = () => page.evaluate(() => {
+      const panel = document.querySelector('[role="dialog"]');
+      const rect = panel.getBoundingClientRect();
+      return { top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height), viewport: window.innerHeight };
+    });
+    const loading = await box();
+    await dialog.getByText('(bundled)').waitFor({ timeout: GROWTH_DELAY_MS + 10_000 });
+    await settle(page, 500);
+    const grown = await box();
+    check(
+      'a popover that grows after opening is placed again, wholly on screen',
+      held === 1 && grown.height > loading.height + 100 && grown.top >= 0 && grown.bottom <= grown.viewport,
+      `loading ${JSON.stringify(loading)}, grown ${JSON.stringify(grown)}, translation requests held ${held}`,
+    );
+  });
+
+  // An open popover keeps its one outside-tap listener while the reader
+  // renders under it (FOUND_ISSUES 34). Scrolling changes the top block, and
+  // each change renders the reader; its sheets' `onClose`s are inline arrows,
+  // new on every render. When AnchoredPanel's effects depended on `onClose`,
+  // each render took the document's pointerdown listener away and added it
+  // back a tick later, and a tap in that tick was not seen as an outside tap.
+  // Counted rather than tapped: the tick is too short to hit on purpose.
+  await scenario(browser, base, profile, 'an open popover keeps its outside-tap listener while the page scrolls', async (page) => {
+    await page.evaluate(() => {
+      window.__pointerdownAdds = 0;
+      const add = document.addEventListener.bind(document);
+      document.addEventListener = (type, listener, options) => {
+        if (type === 'pointerdown') window.__pointerdownAdds++;
+        return add(type, listener, options);
+      };
+    });
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: LISTENER_ANCHOR_Y });
+    await settle(page, 500);
+    const addsBeforeOpening = await page.evaluate(() => window.__pointerdownAdds);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
+    await settle(page, 500);
+    const topBefore = await topBlock(page);
+    const addsBefore = await page.evaluate(() => window.__pointerdownAdds);
+    // The popover's own registration, so a listener never added at all
+    // cannot pass as "none re-added".
+    const addedOnOpening = addsBefore - addsBeforeOpening;
+    for (let step = 0; step < LISTENER_SCROLL_STEPS; step++) {
+      await page.evaluate((px) => window.scrollBy(0, px), LISTENER_SCROLL_PX);
+      await settle(page, 150);
+    }
+    const topAfter = await topBlock(page);
+    const added = (await page.evaluate(() => window.__pointerdownAdds)) - addsBefore;
+    const open = (await dialog.count()) === 1;
+    check(
+      'an open popover does not re-register its outside-tap listener as the reader renders',
+      open && topAfter !== topBefore && addedOnOpening >= 1 && added === 0,
+      `top block ${topBefore} → ${topAfter}, pointerdown listeners added on opening ${addedOnOpening}, while scrolling ${added}, still open ${open}`,
+    );
+    // Then a tap on the text, clear of the popover and of its verse, must
+    // close it: an outside tap still works after the scrolls. This does not
+    // catch 34's fault — the old code's gap was one tick after each render,
+    // and a tap here lands well after it (on the old code it closes too); the
+    // registration count above is the guard. No other R or S scenario taps
+    // outside an open popover.
+    const target = await page.evaluate((anchorId) => {
+      const panel = document.querySelector('[role="dialog"]').getBoundingClientRect();
+      const anchor = document.querySelector(`[data-block-id="${anchorId}"] [data-entity-id]`)?.getBoundingClientRect();
+      const headerBottom = document.querySelector('header').getBoundingClientRect().bottom;
+      const away = (x, y, r) => !r || x < r.left - 20 || x > r.right + 20 || y < r.top - 20 || y > r.bottom + 20;
+      // A point on a block's plain text, 20 px clear of the popover and the
+      // verse, and not on any entity (a tap there would open another sheet,
+      // not be a plain outside tap).
+      for (let y = Math.ceil(headerBottom) + 20; y < window.innerHeight - 10; y += 10) {
+        for (let x = 20; x < window.innerWidth; x += 20) {
+          if (!away(x, y, panel) || !away(x, y, anchor)) continue;
+          const hit = document.elementFromPoint(x, y);
+          if (hit?.closest('[data-entity-id]')) continue;
+          const block = hit?.closest('[data-block-id]');
+          if (block && block.getAttribute('data-block-id') !== anchorId) {
+            return { x, y, block: block.getAttribute('data-block-id') };
+          }
+        }
+      }
+      return null;
+    }, blockId(VERSE_BLOCK));
+    if (target) await page.touchscreen.tap(target.x, target.y);
+    await settle(page, 400);
+    const closed = (await dialog.count()) === 0;
+    check(
+      '  and a tap on the text outside it then closes it',
+      target !== null && closed,
+      `tapped ${target ? `${target.block} at ${target.x},${target.y}` : 'nothing (no block clear of the popover)'}, closed ${closed}`,
+    );
+  });
+
+  // A hash change straight from one book to another (FOUND_ISSUES 31): the
+  // second book opens at its own saved position, not at the top. Reachable
+  // only by editing the URL — the Library is otherwise between two books —
+  // but a reader screen reused across books also restored nothing and could
+  // save the first book's place under the second's id.
+  await scenario(browser, base, profile, 'a second book opened by its URL restores its own position', async (page) => {
+    const id = (index) => `${SECOND_BOOK}:p${Math.floor(index / PER_PAGE) + 1}:${index}`;
+    const pages = Math.ceil(SECOND_BLOCKS / PER_PAGE);
+    await putRows(page, 'seeding the second book', {
+      books: [{
+        id: SECOND_BOOK, shamelaId: 515153, title: 'كتاب ثان', author: '', publisher: '', edition: '',
+        volumeCount: 1, category: '', structureProfile: 'generic', importedAt: 2, importStatus: 'complete',
+        totalPages: pages, fetchedPages: pages, volumeStarts: [1], hadithCollection: null,
+      }],
+      pages: Array.from({ length: pages }, (_, i) => ({
+        id: `${SECOND_BOOK}:p${i + 1}`, bookId: SECOND_BOOK, pageIndex: i + 1, volume: 1, printPage: i + 1, rawHtml: '', fetchedAt: 1,
+      })),
+      blocks: Array.from({ length: SECOND_BLOCKS }, (_, i) => ({
+        id: id(i), bookId: SECOND_BOOK, pageId: `${SECOND_BOOK}:p${Math.floor(i / PER_PAGE) + 1}`, order: i, type: 'body',
+        text: textOf(i), normalized: textOf(i), contentHash: `s${i}`, hadithNumber: null, tocNodeId: null, spans: [], anchor: null,
+      })),
+      positions: [{ bookId: SECOND_BOOK, blockOrder: SECOND_POSITION, updatedAt: 1 }],
+    });
+    await page.evaluate((book) => { location.hash = `#/read/${encodeURIComponent(book)}`; }, SECOND_BOOK);
+    await page.locator(`[data-block-id^="${SECOND_BOOK}:"]`).first().waitFor({ timeout: 10_000 });
+    await page.waitForFunction(() => window.scrollY > 1000, null, { timeout: 10_000 }).catch(() => {});
+    await settle(page, 900);
+    const top = await topBlock(page);
+    const firstBookLeft = await page.locator(`[data-block-id^="${BOOK}:"]`).count();
+    check(
+      'a hash change to another book opens it at its own saved position',
+      top !== null && Math.abs(top - SECOND_POSITION) <= 1 && firstBookLeft === 0,
+      `top block ${top}, saved ${SECOND_POSITION}, first book's blocks still mounted ${firstBookLeft}`,
+    );
+  });
+
+  // The divider drags are the scenarios that write the panel's width; they
+  // run last (the plan's 5b): the mouse drag, the drag ended by a
+  // pointercancel, then the finger's.
   await scenario(browser, base, profile, 'the divider, dragged with a mouse', async (page) => {
     const divider = page.getByRole('separator', { name: 'Resize card panel' });
     const drag = async (to) => {
@@ -835,14 +1122,65 @@ async function landscapeControls(browser, base, profile) {
     );
   });
 
-  // Reported, not judged (Phase 5 plan, Design §1.2): what Chromium's touch
-  // emulation does with the divider today. The divider has no touch-action
-  // and its window listeners ignore pointercancel (FOUND_ISSUES 27), so a
-  // finger drag may be taken by the browser; a mouse move afterwards shows
-  // whether the drag was left switched on. Only the tablet can say what a
-  // real finger does (the plan's M, item 3). Every later step must print the
-  // same line.
-  await scenario(browser, base, profile, 'the divider, dragged with a finger (reported)', async (page, context) => {
+  // A drag that ends in pointercancel (FOUND_ISSUES 27) — what a browser sends
+  // when it takes a finger drag for itself. The cancel is dispatched on the
+  // window by hand, so it comes at a known point of the drag on every run: it
+  // must stop the drag where it got to, store that width, and turn text
+  // selection back on, and the moves after it must not resize the panel.
+  // Until the drag ends nothing is stored: every pointermove used to write the
+  // whole settings row.
+  await scenario(browser, base, profile, 'a divider drag that ends in pointercancel', async (page) => {
+    const divider = page.getByRole('separator', { name: 'Resize card panel' });
+    const box = await divider.boundingBox();
+    const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
+    const start = (await panelState(page)).aside;
+    const storedAtStart = (await storedSettings(page))?.panelWidth ?? null;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 60, from.y, { steps: 4 });
+    await settle(page, 300);
+    const during = { aside: (await panelState(page)).aside, stored: (await storedSettings(page))?.panelWidth ?? null };
+    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 })));
+    await settle(page, 300);
+    const cancelled = {
+      aside: (await panelState(page)).aside,
+      stored: (await storedSettings(page))?.panelWidth ?? null,
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+    };
+    // The button is still down in Playwright's mouse: these are moves of a
+    // pointer the page has been told is cancelled.
+    await page.mouse.move(from.x + 120, from.y, { steps: 4 });
+    await settle(page, 300);
+    const afterMoves = (await panelState(page)).aside;
+    await page.mouse.up();
+    await settle(page, 300);
+    const detail = `panel ${start} → ${during.aside} during, ${cancelled.aside} at the cancel, ${afterMoves} after more moves; stored ${storedAtStart} → ${during.stored} during, ${cancelled.stored} at the cancel; user-select ${JSON.stringify(cancelled.userSelect)}`;
+    check(
+      'a divider drag stores its width only when it ends',
+      during.aside < start && during.stored === storedAtStart,
+      detail,
+    );
+    check(
+      '  a pointercancel ends it where it got to: the width stored, text selection back on',
+      cancelled.aside === during.aside && cancelled.stored === during.aside && cancelled.userSelect === '',
+      detail,
+    );
+    check(
+      '  and moves after the cancel leave the panel alone',
+      afterMoves === cancelled.aside,
+      detail,
+    );
+  });
+
+  // Reported (Phase 5 plan, Design §1.2): what Chromium's touch emulation
+  // does with the divider. Until FOUND_ISSUES 27 was fixed the divider had no
+  // touch-action and its window listeners ignored pointercancel, so the
+  // browser took the drag part way and left it switched on: the report read
+  // after 405, userSelect "none", and a stray mouse move resized the panel to
+  // 300. Now the line shows what the fixed divider does, and its tail is
+  // judged below. Only the tablet can say what a real finger does (the plan's
+  // M, item 3).
+  await scenario(browser, base, profile, 'the divider, dragged with a finger', async (page, context) => {
     const divider = page.getByRole('separator', { name: 'Resize card panel' });
     const box = await divider.boundingBox();
     const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
@@ -863,6 +1201,15 @@ async function landscapeControls(browser, base, profile) {
     await settle(page, 400);
     const afterStrayMove = (await panelState(page)).aside;
     console.log(`  report: ${JSON.stringify({ fingerDrag: { from: from.x, to: from.x + 120, before, after: after.aside, userSelect, storedWidth: stored, afterStrayMouseMove: afterStrayMove } })}`);
+    // Judged since FOUND_ISSUES 27 was fixed: however far the finger got, the
+    // drag is over once it ends — selection back on, and a stray mouse move
+    // does not resize the panel. How far a real finger gets is the tablet's
+    // to say.
+    check(
+      'after a finger drag on the divider, text selection is back on and a stray mouse move leaves the panel alone',
+      userSelect === '' && afterStrayMove === after.aside,
+      `user-select ${JSON.stringify(userSelect)}, panel ${after.aside} → ${afterStrayMove} after the stray move`,
+    );
   });
 }
 
@@ -903,6 +1250,25 @@ async function portraitControls(browser, base, profile) {
     );
   });
 
+  // The handle counts every card kind the sheet lists (FOUND_ISSUES 28), as
+  // the landscape edge tab does: the controls seed has two translation cards,
+  // and one note is added here, so a handle counting translations alone says 2.
+  await scenario(browser, base, profile, 'the sheet handle counts notes too', async (page) => {
+    await putRows(page, 'seeding a note', {
+      marks: [{
+        id: 'mark-note', bookId: BOOK, startBlockId: blockId(NOTE_BLOCK), startOffset: 0,
+        endBlockId: blockId(NOTE_BLOCK), endOffset: textOf(NOTE_BLOCK).length, kind: 'skip', scope: 'block',
+        note: 'A placeholder note, not from a real book.', createdAt: 1 + NOTE_BLOCK, collapsed: false,
+      }],
+    });
+    await page.reload();
+    await page.locator(`[data-block-id="${blockId(0)}"]`).waitFor();
+    await settle(page);
+    const handle = page.getByRole('button', { name: /^▲ Cards/ });
+    const text = (await handle.count()) === 1 ? (await handle.innerText()).trim() : null;
+    check('the sheet handle counts translations and notes alike', text === '▲ Cards (3)', `handle ${JSON.stringify(text)}`);
+  });
+
   await scenario(browser, base, profile, 'a margin marker opens a popover', async (page) => {
     await jumpToPrinted(page, pageOf(MARKER_BLOCK));
     await page.locator(`[data-index="${MARKER_BLOCK}"] button[aria-label="Open translation"]`).tap();
@@ -913,6 +1279,8 @@ async function portraitControls(browser, base, profile) {
   });
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
+  await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
+  await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_PORTRAIT));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }
 

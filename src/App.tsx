@@ -91,7 +91,13 @@ function Routes() {
     case 'catalog':
       return <CatalogScreen heading="Add from catalog" onDone={() => navigate({ name: 'library' })} />;
     case 'reader':
-      return <ReaderScreen bookId={route.bookId} />;
+      // Keyed by book, so a hash change straight from one book to another
+      // mounts a fresh reader instead of reusing this one. Reused, it kept
+      // per-book state it holds in refs and effects: the reading position had
+      // already been restored, so the second book opened at its top, and a
+      // card list still loading for the first could land in the second
+      // (FOUND_ISSUES 31). Going through the Library always remounted it.
+      return <ReaderScreen key={route.bookId} bookId={route.bookId} />;
     case 'settings':
       return <SettingsScreen />;
     case 'library':

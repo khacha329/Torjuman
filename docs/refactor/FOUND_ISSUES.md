@@ -410,7 +410,7 @@ model is told the entry is that block. **Could put a wrong
 translation in front of a lesson; left unfixed (structure-only phase).** Not
 pinned by any check, so a fix needs no re-baseline. Phase 5 plan, Design §9 A.
 
-## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading)
+## 27. The panel divider ignores `pointercancel` and has no `touch-action` (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/usePanelControls.ts:39-56`: the divider sets `dragging` on
 `pointerdown` (`ui/reader/ReaderScreen.tsx:726-729`) and the window listens for `pointermove` and
@@ -425,7 +425,23 @@ the panel on the tablet at all is not known: check R's touch report (Phase 5
 step 5b) shows what Chromium's emulation does, and the tablet run (M) is the
 answer. **May make a feature unusable on the tablet.** Phase 5 plan, Design §9 B.
 
-## 28. The sheet handle counts translations only (2026-11-16, by reading)
+**Fixed in lane A:** the divider has `touch-none` (`touch-action: none`, on
+the divider alone, so the page still pans elsewhere) and captures the pointer
+on `pointerdown`; the captured events still bubble to the window listeners.
+`usePanelControls` ends a drag on `pointercancel` exactly as on `pointerup`:
+`dragging` off, `user-select` restored. A cancelled drag keeps the width it got
+to, as a released one does. During the drag the width is the screen's own
+state (`dragWidth`, shown in place of `settings.panelWidth`); `updateSettings`
+runs once, when the drag ends, instead of on every `pointermove`. R judges it:
+"a divider drag that ends in pointercancel" (three checks: nothing stored
+during the drag; the cancel stores the width reached and restores
+`user-select`; later moves leave the panel alone) and the finger drag's tail
+(selection back on, a stray mouse move leaves the panel alone). On the old
+code all four failed (stored during the drag, `user-select` "none", a stray
+move to 300). Whether a real finger drag now resizes the panel is the tablet's
+to show (plan item M3).
+
+## 28. The sheet handle counts translations only (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/ReaderScreen.tsx:779`: the portrait sheet's handle says
 `▲ Cards (${translator.cards.length})`, while the collapsed edge tab in
@@ -433,6 +449,11 @@ landscape counts every card kind (`allCards.length`, `:763`), and the sheet,
 once open, lists notes, explanations and sharḥ cards too. A reader with only
 notes sees "Cards (0)" over a sheet that is not empty. Cosmetic. Phase 5 plan,
 Design §9 C.
+
+**Fixed in lane A:** the handle now counts `allCards.length`, the same memo
+(translations, notes, explanations, sharḥ) that the edge tab counts and the
+sheet lists. Its format is unchanged: it still shows "(0)" when there are no
+cards, where the edge tab drops the count.
 
 ## 29. `busy` is one flag for every translation (2026-11-16, by reading)
 
@@ -443,7 +464,7 @@ finish clears it, and the rail's Translate and Explain
 (`ui/reader/SelectionRail.tsx:128-139`, `disabled={busy}`) come back while the
 other is still running. Minor. Phase 5 plan, Design §9 D.
 
-## 30. A detached doc comment in the reader (2026-11-16, by reading)
+## 30. A detached doc comment in the reader (2026-11-16, by reading, fixed in lane A)
 
 `ui/reader/ReaderScreen.tsx:317-328` ("Track whether a selection exists…
 `selectionchange` on `document`, not `pointerup`…") describes the
@@ -451,7 +472,11 @@ other is still running. Minor. Phase 5 plan, Design §9 D.
 biography-availability effect (`:332-347`), whose own comment follows it
 (`:329-331`). Docs only. Phase 5 plan, Design §9 E.
 
-## 31. The reader is not keyed by book (2026-11-16, by reading)
+**Fixed in lane A:** the comment was moved, verbatim, from above the
+biography-availability effect to directly above the `selectionchange` effect
+it describes. No code changed.
+
+## 31. The reader is not keyed by book (2026-11-16, by reading, fixed in lane A)
 
 `App.tsx:94` renders `<ReaderScreen bookId={route.bookId} />` and
 `ui/share/ShareScreen.tsx:146` `<ReaderScreen bookId={…} />`, neither with a
@@ -462,6 +487,20 @@ at its saved position; and `useTranslator`'s `listCards` effect
 (`ui/reader/useTranslator.ts:104-106`) has no cancellation, so a slow first list
 can land after the second. Only reachable by editing the URL (the Library is
 always between two books). Phase 5 plan, Design §9 F.
+
+**Fixed in lane A:** both call sites pass `key` = the book id, so a hash
+change from one book to another mounts a fresh `ReaderScreen`. `restoredRef`
+starts false, and the second book opens at its saved position. The first
+screen's `listCards` resolves into an unmounted component, whose `setCards`
+React drops, so `useTranslator.ts` (lane B's) needed no cancellation; the
+same holds for `listMarks`, `listExplanationCards` and `listSharhCards`
+(`useMarks.ts:25`, `useExplanations.ts:36`, `useSharh.ts:23`), which could
+each have leaked the first book's list into the second. Keying
+also stops a third problem, found by reading: the debounced position save
+(`useReadingPosition.ts:41-51`) could write the first book's visible block
+order under the second book's id. A remount resets only what going through
+the Library already reset. R's "a second book opened by its URL restores its
+own position" guards it: on the old code the second book opened at block 0.
 
 ## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
 
@@ -482,7 +521,7 @@ disabled, though a cached gloss would work with neither:
 `translation/gloss.ts:97-100` returns the cache before checking the network
 (`:102-106`) or the key (`:108-110`). May be intended; unstated. Phase 5 plan, Design §9 H.
 
-## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading)
+## 34. Anchored panels re-register their outside tap on every reader render (2026-11-16, by reading, fixed in lane A)
 
 The reader passes inline `onClose` arrows to its sheets
 (`ui/reader/ReaderSheets.tsx:177`, `:186`, `:256`, `:287`), new on every
@@ -493,6 +532,22 @@ render. `AnchoredPanel`'s effect depends on `onClose`
 with a sheet open a tap landing in that tick is not seen as an outside tap.
 Minor. Phase 5 keeps it exactly (its plan, Design §6.4). Phase 5 plan, Design
 §9 I.
+
+**Fixed in lane A:** `AnchoredPanel` holds the latest `onClose` in a ref,
+updated in a layout effect declared before the others, and its effects and
+`reposition` call `onCloseRef.current()` instead of listing `onClose`.
+`reposition` now depends on `[anchor, asSheet]` and the listener effect on
+`[anchor, reposition]`, so neither the document listeners nor 37's size
+observer are re-registered by a reader render. The call sites in
+`ReaderSheets.tsx` keep their inline arrows. None of the six users
+(`ShareChapter`, `QuranSheet`, `BiographySheet`, `HadithSheet`,
+`CardPopover`, `DictionarySheet`) has an effect on `onClose`; they pass it on
+or call it from a handler. The plan's Design §6.4 text records Phase 5 as it
+was approved and is left as it is. R's "an open popover keeps its outside-tap
+listener while the page scrolls" guards it: on the old code, eight 35 px
+scrolls (top block 11 → 12) added the pointerdown listener 4 times. It also
+requires the popover's own registration on opening, and then taps the text
+outside the popover and expects it to close (the first outside tap in R or S).
 
 ## 35. Offline translation reads every ḥadīth's cache row, one at a time (2026-11-16, by reading)
 
@@ -510,7 +565,7 @@ Design §9 J.
 replaced by Explain (`ui/reader/TranslationCardView.tsx:229-232`). A dead
 option, kept by Phase 5. Phase 5 plan, Design §9 K.
 
-## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured)
+## 37. An anchored popover is not re-placed when its content grows (2026-11-16, measured, fixed in lane A)
 
 Found while baselining Phase 5 step 5a's U captures. `AnchoredPanel`
 (`ui/reader/AnchoredPanel.tsx:59-95`) places a popover in `reposition`, a
@@ -533,7 +588,23 @@ popover is re-placed. Check U now captures every sheet after a resize event so
 its pixels do not depend on the race. On the tablet in landscape a ḥadīth sheet
 can open partly off screen. Left unfixed (structure-only phase).
 
-## 38. The Qurʾān sheet's verse uses the device's font, not the bundled one (2026-11-16, measured in the container)
+**Fixed in lane A:** `AnchoredPanel` observes its own panel with a
+`ResizeObserver` and runs `reposition` whenever the panel's size changes,
+disconnecting in the effect's cleanup; the scroll and resize listeners stay.
+Placing moves only `top` and `left` (the width is fixed, the height is the
+content's), so the observer does not answer its own placement. A sheet
+(`asSheet`) is never placed, so it is not observed. R's "a popover is placed
+again when its content grows" guards it: the bundled translation is held back
+2.5 s, so the Qurʾān popover opens in its loading state below a verse low on
+the screen with no reader render after. On the old code it stayed at top 433
+as it grew from 138 to 297 px, ending at 730 on a 600 px screen. U's resize
+step before each dialog capture stays. R's older "a popover follows its anchor
+as the page scrolls" had measured that same stale placement (330 → 270, the
+grown popover's bottom at 627); with the fix it raced the translation's arrival
+(one run 12 → 270, see 47), so its setup now puts the verse at 120 px and waits
+for the popover's content before measuring. Its assertion is unchanged.
+
+## 38. The Qurʾān sheet's verse uses the device's font, not the bundled one (2026-11-16, measured in the container, fixed in lane A)
 
 `ArabicVerse` (`ui/reader/QuranTabs.tsx:23-34`) sets the class `arabic`,
 which gives leading and font features but no font family
@@ -548,7 +619,17 @@ covers them is unconfirmed. Found by Phase 5 step 5a's captures; left
 unfixed (structure-only phase). Check U's Qurʾān PNGs depend on the
 container's fonts, which is stable here.
 
-## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured)
+**Fixed in lane A:** `ArabicVerse` sets `fontFamily` from
+`settings.fontFamily` with Amiri behind it, the same stack as `BlockRow` and
+`DictionarySheet`, so it follows the reader-font setting. Measured with
+Chromium's `CSS.getPlatformFontsForNode`: Amiri and Scheherazade New each draw
+all 68 distinct non-ASCII characters of `public/quran/uthmani.json` (ٱ, the
+small high signs U+06D6–06ED, U+08F0–08F2 included) with no fallback; the old
+system stack fell back to DejaVu Sans and FreeSerif. U's Qurʾān captures no
+longer depend on the container's fonts for the Arabic (their English and
+labels still do).
+
+## 39. The read-mark ↓ does not move past a mark it has just centred (2026-11-17, measured, fixed in lane A)
 
 Found while building check R's read-mark scenario (Phase 5 step 5b).
 `ReadMarkNav` (`ui/reader/ReaderHeader.tsx:129-164`) picks "next" as the
@@ -569,7 +650,20 @@ look broken on the tablet.** Left unfixed (structure-only phase); R's judged
 checks (↓ once from the top, ↑ twice from past the marks) do not depend on
 it, so a fix changes only the report line.
 
-## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured)
+**Fixed in lane A:** `BlockList` also reports the block at the middle of the
+area below the header (`onMiddleBlockChange`), the point a centred jump puts
+its block on since 40, and `ReadMarkNav` counts "previous" and "next" from it
+(`ReaderHeader.tsx`), falling back to the top block only before it is known.
+The mark just centred is then neither, so ↓ moves on from it, and ↑ still
+skips it (strict `<`). A mark already on screen above the middle now counts as
+behind: from the very top of the book, ↓ goes to the first mark below the
+middle of the first screen, and one above it is behind (↑) and is
+already on screen; see 52. R judges it:
+"↓ ↓ ↓ from the top visits the read marks in order" in both layouts (on the
+old code 400, 400, 400 and ↓ still on), and the `readMarkDown` report line now
+reads `atMiddle` 500.
+
+## 40. A centred jump lands one header height low, and `settleOn` retries it eight times (2026-11-17, measured, fixed in lane A)
 
 Found while building check R's 5b scenarios. The virtualizer has
 `scrollPaddingStart: topInset` (`ui/reader/BlockList.tsx:243`); for
@@ -589,6 +683,29 @@ area (about 25 px in landscape, 46 px in portrait). Cosmetic and a little
 wasted work; left unfixed (structure-only phase). R's search and card checks
 use a tolerance and its read-mark checks judge which block is at the middle
 of the visible area, so a fix needs no re-baseline.
+
+**Fixed in lane A:** `settleOn` (`ui/reader/blockLayout.ts`) computes a
+centred landing itself: the block's top at
+`topInset + (innerHeight - topInset - height) / 2`, so its middle is at the
+middle of the area below the header, or at `topInset`, as a `start` jump, for
+a block taller than that area. (TanStack's centring had put such a block's top
+under the header, at `topInset + (innerHeight - height) / 2`: about 17 px under
+it for block 1100's 633 px on a 600 px screen, only its text reaching the
+header's edge.)
+The first pass aims from the virtualizer's held heights through
+`scrollToOffset` (`scrollToIndex` would have its reconciling pass re-aim at
+TanStack's own centre); later passes correct from where the block actually
+is, since a held height can still be an estimate. Its test uses the same
+place. A centred landing found on target is looked at once more two frames
+later, because a block still drawn at its content-visibility placeholder can
+have grown to its real height by the next check (block 1100, in the column the
+search panel narrows, measured 196 px at one check and 633 px at the next).
+`start` jumps are unchanged. R's "a centred jump lands at the middle below the
+header" guards it in both layouts: on the old code
+the block's middle was 24 and 46 px low and the jump made 8 and 10 jump
+writes; now 0–1 px, and 2 and 4. Portrait takes three passes, not two: its
+taller visible area brings more estimated blocks above the target into view
+and moves it once more.
 
 ## 41. A failed card is served from the translation cache (2026-11-17, measured)
 
@@ -641,3 +758,108 @@ scenario records exactly that (the request is the plain one, the card says
 web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
+
+## 44. The selection comment still names the bottom bar (2026-11-17, by reading)
+
+`ui/reader/ReaderScreen.tsx:338` ("Track whether a selection exists, so the
+bottom bar can show.") names the bottom bar of Amendment 10. README "Selection
+actions are a left rail" records that the bar was replaced by `SelectionRail`,
+a vertical rail on the left. The debounce paragraph's last sentence ("Nothing
+is resolved or stored — only whether a selection exists and whether it is one
+word.") is out of date too: `peekSelection` (`ui/reader/selection.ts:172-177`)
+also stores `shortSelection` and `centerY`. A fix corrects both sentences. The
+rest of the comment (why `selectionchange` and not `pointerup`, why debounced)
+still holds. Found while moving the comment for 30; the second sentence by the
+review of 30. Docs only. Left unfixed.
+
+## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
+
+`ui/reader/useBatchTranslate.ts:82-110` runs its loop to the end whatever
+happens to the screen that started it. Leaving the reader (through the
+Library, or by editing the URL to another book) unmounts the bar that shows
+its progress and holds its Stop, but not the loop: it goes on translating
+and saving cards for the first book, and it holds `beginActivity` until it
+ends, so the PWA's update prompt waits for it. Before lane A's fix for 31,
+editing the URL kept the reader mounted, so the bar stayed visible (in the
+wrong book); the Library path has always behaved this way. Found by the
+review of lane A's 31. Left unfixed.
+
+## 46. A Similar āyah's high marks touch the label above it (2026-11-17, measured in the container)
+
+Once the verse draws in the reader font (38), a stacked high mark on the
+first line of a `RelatedAyahView` (`ui/reader/QuranTabs.tsx`) reaches into its
+label line ("… words · N% coverage", `mb-1` above an `ArabicVerse` at 17 px
+with line height 2.1). In U's `reader-quran-similar` at 960×600, the pause
+mark ۗ (U+06D7) over 42:53's ٱلۡأَرۡضِ overlaps the "c" of "coverage", and 34:1's
+ۚ (U+06DA, after ٱلۡأٓخِرَةِ) touches the bottom of "53%". Overlap, not clipping: nothing is cut off. The
+Translation tab's single verse has the tab bar's padding above it and is
+clear. Before 38 these marks drew as empty boxes inside the line, so the collision
+was hidden. Cosmetic. Left unfixed.
+
+## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
+
+`AnchoredPanel`'s `reposition` (`ui/reader/AnchoredPanel.tsx`) puts the
+popover below its anchor if it fits, and otherwise at
+`Math.max(MARGIN, rect.top - 8 - panelHeight)`: when it fits on neither side,
+that clamps it to the top of the screen, over the anchored text. In R's
+landscape run, the Qurʾān popover (297 px) over a verse whose top was near
+277 px sat at top 12 to 309, covering the verse; a 60 px scroll then let it fit
+below and it jumped to 270. Found while fixing 37, which made the popover
+measure its real height (before, it placed itself at its 138 px loading height
+and ran off the bottom instead). The placement rule itself is unchanged by
+37. A product choice (cover the anchor, run off the screen, or shrink the
+panel to the larger side). Left unfixed.
+
+## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading)
+
+The pattern of 34, in `ui/reader/MarginMenu.tsx:29-43`: its effect depends on
+`[onClose]`, which `ui/reader/ReaderSheets.tsx:241` passes as an inline arrow
+(`() => setMarginMenu(null)`), new on every reader render; the effect adds its
+document `pointerdown` listener after a `setTimeout(…, 0)` and removes it in
+its cleanup. So with the margin menu open, each reader render takes the
+listener away and adds it back a tick later, and a tap in that tick is not
+seen as an outside tap. MarginMenu is not `AnchoredPanel`, so 34's fix does not
+reach it. Found by the review of 34. Minor. Left unfixed.
+
+## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading)
+
+Since 34, `AnchoredPanel` places an open popover again only on a scroll, a
+window resize, a change of its own size (37), or a new anchor or sheet mode —
+no longer as a side effect of every reader render, which re-created
+`reposition` and re-ran its layout effect. The one case none of these covers
+is the anchor moving because layout above it changes inside the viewport with
+no scroll and no change in the panel's size (a block above it growing or
+shrinking, say). No concrete trigger was found: the virtualizer's own
+corrections move the page by scrolling, which is seen. A possibility, not a
+measured bug. Found by the review of 34. Left unfixed.
+
+## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading)
+
+`ui/reader/usePanelControls.ts`: while the divider is dragged, any
+pointer's `pointermove` resizes the panel and any pointer's `pointerup` or
+`pointercancel` ends the drag, so a second finger landing elsewhere during a
+drag moves or ends it. Pre-existing; found by the review of lane A's 27.
+Left unfixed.
+
+## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading)
+
+The divider's `onPointerDown` sets `body` `user-select: none`, and only the
+drag's `pointerup` or `pointercancel` restores it; the window listeners'
+effect (`ui/reader/usePanelControls.ts`) removes the listeners on unmount but
+does not restore `user-select`. A navigation away while a drag is under way
+leaves text unselectable on the next screen until a reload. Since lane A's 27
+such an unmount also loses the width reached (it is stored on release).
+Pre-existing; found by the review of lane A's 27. Left unfixed.
+
+## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading)
+
+`ReadMarkNav` (`ui/reader/ReaderHeader.tsx`) counts "previous" and "next" from
+the block at the middle of the area below the header (39) and centres the mark
+it jumps to. A mark in the first half-screen of the book cannot be centred:
+the jump is clamped at the top of the page and nothing moves, so the middle
+block stays after it and ↑ keeps offering the same mark, a tap that does
+nothing; the same with ↓ for a mark in the last half-screen. The mark is on
+screen all along. Before 39 the same happened from the top block (↓ to a mark
+near the top of the book stayed on it). Whether such a mark should count as
+reached, or the arrow be off, is a product choice. Found while fixing 39.
+Minor. Left unfixed.

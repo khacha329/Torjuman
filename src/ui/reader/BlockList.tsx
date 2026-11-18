@@ -89,13 +89,19 @@ interface BlockListProps {
   /** Search match to mark, in display-text offsets. */
   match: { blockId: string; range: [number, number] } | null;
   onVisibleBlockChange: (block: Block | null) => void;
+  /**
+   * The block at the middle of the area below the header, where a centred
+   * jump lands it (settleOn): the read-mark arrows count from here.
+   */
+  onMiddleBlockChange: (block: Block | null) => void;
   onVisibleRangeChange: (range: VisibleRange) => void;
   onMarkerClick: (marker: CardMarker, anchor: HTMLElement) => void;
   handleRef: Ref<BlockListHandle>;
   /**
    * Height of the sticky header covering the top of the page. A jump lands
-   * just below it rather than under it, and a block hidden behind it does not
-   * count as the one being read.
+   * just below it rather than under it, a centred jump in the middle of what
+   * it leaves visible (settleOn, blockLayout.ts), and a block hidden behind it
+   * does not count as the one being read.
    */
   topInset: number;
 }
@@ -120,6 +126,7 @@ export function BlockList({
   flashBlockId,
   match,
   onVisibleBlockChange,
+  onMiddleBlockChange,
   onVisibleRangeChange,
   onMarkerClick,
   handleRef,
@@ -292,10 +299,20 @@ export function BlockList({
   const onScreen = items.filter((item) => item.end > viewTop && item.start < viewBottom);
   const topIndex = onScreen[0]?.index;
   const bottomIndex = onScreen[onScreen.length - 1]?.index;
+  // The block at the middle of what the header leaves visible: where a
+  // centred jump puts its block. The read-mark arrows count from it, so a
+  // mark they have just centred is the one they move on from (FOUND_ISSUES
+  // 39); counted from the top block, it was still "next".
+  const viewMiddle = (viewTop - 2 + viewBottom) / 2;
+  const middleIndex = onScreen.find((item) => item.start <= viewMiddle && item.end > viewMiddle)?.index;
 
   useEffect(() => {
     onVisibleBlockChange(topIndex === undefined ? null : (blocks[topIndex] ?? null));
   }, [topIndex, blocks, onVisibleBlockChange]);
+
+  useEffect(() => {
+    onMiddleBlockChange(middleIndex === undefined ? null : (blocks[middleIndex] ?? null));
+  }, [middleIndex, blocks, onMiddleBlockChange]);
 
   useEffect(() => {
     if (topIndex === undefined || bottomIndex === undefined) return;
@@ -303,10 +320,11 @@ export function BlockList({
   }, [topIndex, bottomIndex, onVisibleRangeChange]);
 
   // The handlers rows receive, held stable. BlockList renders on every scroll
-  // frame, and so does ReaderScreen whenever the top block changes; a row
-  // handed a new function each time could not skip rendering, and there are
-  // OVERSCAN of them either side of the screen. These always call the latest
-  // handler, so nothing is lost by keeping their identity fixed.
+  // frame, and so does ReaderScreen whenever the top or the middle block
+  // changes; a row handed a new function each time could not skip rendering,
+  // and there are OVERSCAN of them either side of the screen. These always
+  // call the latest handler, so nothing is lost by keeping their identity
+  // fixed.
   const latest = useRef({ onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer });
   latest.current = { onMarginTap, onMarginHold, onMarkerClick, handleBlockPointer };
   const stableMarginTap = useCallback((block: Block) => latest.current.onMarginTap?.(block), []);
