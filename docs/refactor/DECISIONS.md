@@ -88,8 +88,10 @@ lane B found.
   verses and ḥadīth are cut out of the prose on the on-device path; a marked
   name (`narrator`, `person`) stays in the prose around it. A piece inside
   one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
-  runs past it emits only the part not yet shown, so no text appears twice.
-  What reaches the model is still only prose.
+  runs past it emits only the part not yet shown, so no text of the book is
+  sliced twice. (A clipped verse is still shown as its whole muṣḥaf text, so
+  that edge case can show the overlap twice: FOUND_ISSUES 52.) What reaches
+  the model is still only prose.
 - **59. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
   word (2026-11-18). `segmentSelection` no longer skips `unresolved`
   entities: an unnumbered matn is emitted as a ḥadīth, in Arabic with the
