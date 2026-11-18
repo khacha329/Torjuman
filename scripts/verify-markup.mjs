@@ -140,9 +140,11 @@
 // settled the virtualizer still moved the matn's margin by 55 px between two
 // runs (the 5a review), which MarginMenu's place follows. Each sheet or
 // popover is captured after a resize event (`captureDialog`), because a
-// popover whose content arrives after it is first placed keeps its first place
-// until the reader renders again — a race (FOUND_ISSUES 37; the ḥadīth popover
-// came out at top 12 px or 275.8 px). And its screenshot is taken with
+// popover whose content arrived after it was first placed kept its first place
+// until the reader rendered again — a race (FOUND_ISSUES 37; the ḥadīth popover
+// came out at top 12 px or 275.8 px). Lane A fixed that in the app (the
+// popover places itself again when its size changes); the resize event stays,
+// as a step that costs nothing. And its screenshot is taken with
 // everything but the dialog made invisible (Playwright's `style` option; the
 // DOM is untouched), because its rounded corners showed the header and text
 // under it, a few levels apart between runs.
@@ -929,15 +931,17 @@ async function readerCaptures(fresh, profile, dir) {
   };
   /**
    * Capture the open sheet or popover once it has placed itself from its
-   * final height. AnchoredPanel places a popover when it mounts, from its
-   * height then, and again only on a scroll, a resize or a new `onClose` —
+   * final height. AnchoredPanel used to place a popover when it mounted, from
+   * its height then, and again only on a scroll, a resize or a new `onClose` —
    * which the reader passes inline, so on its next render (FOUND_ISSUES 34).
-   * A sheet whose lookups finish after the first placement keeps that place
-   * unless the reader happens to render again: found while proving 5a, the
+   * A sheet whose lookups finished after the first placement kept that place
+   * unless the reader happened to render again: found while proving 5a, the
    * ḥadīth popover came out at top 12 px on most runs and at 275.8 px on one,
    * running off the bottom of the screen with its diagnostics button out of
-   * reach (FOUND_ISSUES 37). A resize event, the window's size unchanged,
-   * makes it place itself from its final height on every run; the app's other
+   * reach (FOUND_ISSUES 37). Since lane A's fix for 37 the popover also places
+   * itself again whenever its own size changes, so the race is gone from the
+   * app. The resize event stays: the window's size unchanged, it makes the
+   * popover place itself from its final height once more, and the app's other
    * resize listeners (the layout mode, the rail) read the same size and so
    * change nothing.
    *

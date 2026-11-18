@@ -56,13 +56,30 @@ export function AnchoredPanel({
   // is a sheet, so is this. See src/ui/useLayoutMode.ts.
   const asSheet = useLayoutMode() === 'sheet' || preferSheet;
 
+  // The latest `onClose`, read by the effects and callbacks below instead of
+  // listing it as a dependency. Every caller passes an inline arrow, new on
+  // each reader render, and the reader renders repeatedly while scrolling,
+  // for example on each change of the top block. With `onClose` as a
+  // dependency, each render removed the document's pointerdown listener and
+  // added it back a tick later, so a tap in that tick was not seen as an
+  // outside tap, and it re-created `reposition` and so the size observer
+  // (FOUND_ISSUES 34). On mount the ref already holds the current `onClose`.
+  // It is updated in a layout effect declared before the ones that read it,
+  // so that on an update where `reposition` changes too (`asSheet` flipping,
+  // or a new anchor), the placement that update runs calls the new
+  // `onClose`, not the previous render's.
+  const onCloseRef = useRef(onClose);
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   /** Re-measure the anchor and place the popover beside it. */
   const reposition = useCallback(() => {
     if (asSheet) return;
 
     // The anchor lives in a virtualized list and can be unmounted by scrolling.
     if (!anchor.isConnected) {
-      onClose();
+      onCloseRef.current();
       return;
     }
 
@@ -71,7 +88,7 @@ export function AnchoredPanel({
     // Closed only when the anchored text has actually left the viewport —
     // not merely because the reader scrolled.
     if (rect.bottom < 0 || rect.top > window.innerHeight) {
-      onClose();
+      onCloseRef.current();
       return;
     }
 
@@ -88,11 +105,30 @@ export function AnchoredPanel({
         : Math.max(MARGIN, rect.top - 8 - panelHeight);
 
     setPosition({ left, top });
-  }, [anchor, asSheet, onClose]);
+  }, [anchor, asSheet]);
 
   useLayoutEffect(() => {
     reposition();
   }, [reposition]);
+
+  // Placed again whenever the panel's own size changes. The first placement
+  // measures the panel as it first renders, which for a sheet whose lookups
+  // fill in afterwards (the ḥadīth sheet's dorar, sunnah.com and commentaries;
+  // the Qurʾān sheet's bundled translation) is its short loading state: chosen
+  // to fit below the anchor, it then grew past the bottom of the screen. It was
+  // put right only by a window scroll or resize, or when something else
+  // re-rendered the reader and, by accident, re-ran the effect above
+  // (FOUND_ISSUES 37). Placing it moves its
+  // `top` and `left` and never its size (its width is fixed and its height is
+  // its content's), so the observer does not fire again in reply. A sheet is
+  // pinned to the bottom of the screen and is never placed.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (asSheet || !panel) return;
+    const observer = new ResizeObserver(() => reposition());
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [asSheet, reposition]);
 
   useEffect(() => {
     const onScroll = (event: Event) => {
@@ -107,11 +143,11 @@ export function AnchoredPanel({
     const onPointerDown = (event: PointerEvent) => {
       if (panelRef.current?.contains(event.target as Node)) return;
       if (anchor.contains(event.target as Node)) return;
-      onClose();
+      onCloseRef.current();
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
 
     // Capture phase, because scroll does not bubble.
@@ -128,7 +164,7 @@ export function AnchoredPanel({
       document.removeEventListener('pointerdown', onPointerDown);
       clearTimeout(timer);
     };
-  }, [anchor, onClose, reposition]);
+  }, [anchor, reposition]);
 
   const header = (
     <div className="no-select flex shrink-0 items-baseline gap-2 border-b border-rule bg-white px-3 py-2">

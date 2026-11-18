@@ -115,6 +115,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [biographyAvailable, setBiographyAvailable] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
+  const [middleBlock, setMiddleBlock] = useState<Block | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
@@ -320,18 +321,6 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   // ------------------------------------------------------------- selection
 
-  /**
-   * Track whether a selection exists, so the bottom bar can show.
-   *
-   * `selectionchange` on `document`, not `pointerup` on the reader: on Android
-   * the selection handles are native UI drawn above the WebView, so dragging
-   * them delivers no pointer event to the page at all. A pointerup handler
-   * fires only on some later, unrelated tap. selectionchange *is* delivered
-   * during handle drags, which makes it the only correct signal here.
-   *
-   * Debounced because it fires continuously during a drag. Nothing is resolved
-   * or stored — only whether a selection exists and whether it is one word.
-   */
   // Checked once per book rather than on every selection: the rail needs to
   // know whether to offer the action at all, and importing a biographical work
   // mid-read is not a thing that happens.
@@ -352,6 +341,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     };
   }, [storage]);
 
+  /**
+   * Track whether a selection exists, so the bottom bar can show.
+   *
+   * `selectionchange` on `document`, not `pointerup` on the reader: on Android
+   * the selection handles are native UI drawn above the WebView, so dragging
+   * them delivers no pointer event to the page at all. A pointerup handler
+   * fires only on some later, unrelated tap. selectionchange *is* delivered
+   * during handle drags, which makes it the only correct signal here.
+   *
+   * Debounced because it fires continuously during a drag. Nothing is resolved
+   * or stored — only whether a selection exists and whether it is one word.
+   */
   useEffect(() => {
     let timer: number;
 
@@ -530,7 +531,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  const { dragging } = usePanelControls({ settings, updateSettings });
+  const { dragging, dragWidth } = usePanelControls({ settings, updateSettings });
 
   const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
@@ -612,6 +613,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         jumpToPage={jumpToPage}
         marks={marks}
         visibleBlock={visibleBlock}
+        middleBlock={middleBlock}
         listRef={listRef}
         setShowToc={setShowToc}
         setShowSearch={setShowSearch}
@@ -706,6 +708,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               flashBlockId={flashBlockId}
               match={match}
               onVisibleBlockChange={setVisibleBlock}
+              onMiddleBlockChange={setMiddleBlock}
               onVisibleRangeChange={setVisibleRange}
               onMarkerClick={handleMarkerClick}
               handleRef={listRef}
@@ -731,11 +734,18 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         {panelVisible && (
           <>
             <div
-              onPointerDown={() => {
+              onPointerDown={(event) => {
                 dragging.current = true;
                 document.body.style.userSelect = 'none';
+                // Captured, so a drag that leaves the narrow divider keeps
+                // coming to it; the events still bubble to the window
+                // listeners in usePanelControls, which do the resizing.
+                event.currentTarget.setPointerCapture(event.pointerId);
               }}
-              className="sticky shrink-0 cursor-col-resize self-start bg-rule/60 transition hover:bg-accent/40"
+              // touch-none: without it the browser may take a finger drag on
+              // the divider as a pan and cancel it (FOUND_ISSUES 27). Only the
+              // divider, so the page still scrolls under a finger elsewhere.
+              className="sticky shrink-0 cursor-col-resize touch-none self-start bg-rule/60 transition hover:bg-accent/40"
               style={{ ...stickyColumn, width: DIVIDER_WIDTH }}
               role="separator"
               aria-label="Resize card panel"
@@ -746,7 +756,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               // text, and the cards must not scroll away with it. Clamped to
               // what this screen can spare; the saved width is untouched, so a
               // desktop's wide panel stays wide there.
-              style={{ ...stickyColumn, width: clampPanelWidth(settings.panelWidth, viewportWidth) }}
+              style={{ ...stickyColumn, width: clampPanelWidth(dragWidth ?? settings.panelWidth, viewportWidth) }}
             >
               {cardPanel}
             </aside>
@@ -784,7 +794,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
             onClick={() => setSheetOpen((open) => !open)}
             className="shrink-0 border-t border-rule bg-white py-2 text-sm text-muted"
           >
-            {sheetOpen ? '▼ Hide cards' : `▲ Cards (${translator.cards.length})`}
+            {sheetOpen ? '▼ Hide cards' : `▲ Cards (${allCards.length})`}
           </button>
           {sheetOpen && (
             <div className="h-[55vh] shrink-0 border-t border-rule bg-parchment">

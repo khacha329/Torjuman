@@ -26,6 +26,7 @@ export function ReaderHeader({
   jumpToPage,
   marks,
   visibleBlock,
+  middleBlock,
   listRef,
   setShowToc,
   setShowSearch,
@@ -44,6 +45,7 @@ export function ReaderHeader({
   jumpToPage: ReturnType<typeof useReaderNavigation>['jumpToPage'];
   marks: ReturnType<typeof useMarks>;
   visibleBlock: Block | null;
+  middleBlock: Block | null;
   listRef: RefObject<BlockListHandle | null>;
   setShowToc: Dispatch<SetStateAction<boolean>>;
   setShowSearch: Dispatch<SetStateAction<boolean>>;
@@ -94,7 +96,7 @@ export function ReaderHeader({
       {marks.readPositions.length > 0 && (
         <ReadMarkNav
           positions={marks.readPositions}
-          currentOrder={visibleBlock?.order ?? 0}
+          currentOrder={(middleBlock ?? visibleBlock)?.order ?? 0}
           onJump={(order) => listRef.current?.scrollToOrder(order, 'center')}
         />
       )}
@@ -125,6 +127,12 @@ export function ReaderHeader({
  *
  * Navigation only: it moves the scroll position and changes nothing about what
  * is displayed. Nothing is ever hidden or filtered.
+ *
+ * "Previous" and "next" are counted from `currentOrder`, the block at the
+ * middle of the area below the header — where the jump centres a mark — so
+ * the mark just reached is neither, and each arrow moves on from it. Counted
+ * from the top block, a mark ↓ had centred was still below it, and ↓ found
+ * it again (FOUND_ISSUES 39).
  */
 function ReadMarkNav({
   positions,
