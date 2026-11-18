@@ -815,9 +815,10 @@ await scenario(
   times(3, () => anthropicError(429, { 'retry-after-ms': '7000', 'retry-after': '7' })),
   translateAnthropic(translationRequest()),
 );
-// retry-after-ms wins in the SDK, so the HTTP date here reaches only the app
-// (NaN by Number() before FOUND_ISSUES 11, a date since); ...-http-date-only,
-// further down, exercises the SDK's Date.parse branch.
+// retry-after-ms wins in the SDK and, since FOUND_ISSUES 15.4, in the app too
+// (1 s), so the HTTP date here is read by neither. Before 15.4 the app read
+// the date (NaN by Number() until FOUND_ISSUES 11, a date after it).
+// ...-http-date-only, further down, exercises the date on both sides.
 await scenario(
   'anthropic.translate.429-retry-after-http-date',
   times(3, () => anthropicError(429, { 'retry-after-ms': '1000', 'retry-after': 'Mon, 16 Nov 2026 12:00:30 GMT' })),
