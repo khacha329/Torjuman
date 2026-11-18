@@ -90,3 +90,9 @@ lane B found.
   one already emitted (a verse quoted in a ḥadīth) is skipped, and one that
   runs past it emits only the part not yet shown, so no text appears twice.
   What reaches the model is still only prose.
+- **59. An unresolved ḥadīth on device.** Fixed in lane B at the owner's
+  word (2026-11-18). `segmentSelection` no longer skips `unresolved`
+  entities: an unnumbered matn is emitted as a ḥadīth, in Arabic with the
+  no-offline-source note, and nothing is looked up for it. No detector
+  marks a verse `unresolved`; one would get the existing
+  unresolved-verse note, not the model.

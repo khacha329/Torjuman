@@ -1960,6 +1960,87 @@ expect(
   );
 }
 
+// FOUND_ISSUES 59: a matn with no number is marked `unresolved` by the
+// detector (checked above, "a matn with no number cannot be identified"), and
+// every unresolved entity was skipped here, so the whole matn went into the
+// prose and the on-device model translated it. It is a ḥadīth all the same:
+// Arabic plus the note, and never looked up, since it has no reference.
+{
+  const commentary = 'قال الشارح رحمه الله';
+  const matn = 'من حسن إسلام المرء تركه ما لا يعنيه';
+  const blocks = [
+    {
+      id: 'z:p1:0',
+      bookId: 'z',
+      pageId: 'z:p1',
+      order: 0,
+      type: 'sharh' as const,
+      text: commentary,
+      normalized: normalize(commentary),
+      contentHash: '',
+      hadithNumber: null,
+      tocNodeId: null,
+      spans: [],
+      anchor: null,
+    },
+    {
+      id: 'z:p1:1',
+      bookId: 'z',
+      pageId: 'z:p1',
+      order: 1,
+      type: 'hadith_matn' as const,
+      text: matn,
+      normalized: normalize(matn),
+      contentHash: '',
+      hadithNumber: null,
+      tocNodeId: null,
+      spans: [],
+      anchor: null,
+    },
+  ];
+  const looked: string[] = [];
+  const unnumbered = segmentSelection({
+    blocks: blocks as never,
+    entities: [
+      {
+        id: 'e-unnumbered',
+        bookId: 'z',
+        startBlockId: 'z:p1:1',
+        startOffset: 0,
+        endBlockId: 'z:p1:1',
+        endOffset: matn.length,
+        type: 'hadith',
+        reference: '',
+        matchQuality: 'unresolved',
+        detectedAt: 0,
+      },
+    ] as never,
+    startBlockId: 'z:p1:0',
+    startOffset: 0,
+    endBlockId: 'z:p1:1',
+    endOffset: matn.length,
+    quran,
+    english: quranEnglish,
+    hadithLookup: (reference: string) => {
+      looked.push(reference);
+      return null;
+    },
+  });
+
+  check('an unnumbered matn is still a ḥadīth: prose, then the ḥadīth', unnumbered.segments.map((s) => s.type), ['prose', 'hadith']);
+  expect(
+    'AN UNNUMBERED ḤADĪTH NEVER REACHES THE MODEL',
+    !unnumbered.prose.some((span) => matn.split(' ').some((word) => word.length > 3 && span.text.includes(word))),
+    '',
+  );
+  check('only the commentary is offered', unnumbered.prose.map((span) => span.text), [commentary]);
+  const unnumberedHadith = unnumbered.segments[1];
+  check('it keeps its Arabic', unnumberedHadith.arabic, matn);
+  check('and carries the no-offline-source note', unnumberedHadith.note, HADITH_NO_OFFLINE_SOURCE);
+  check('with no English, source or reference', [unnumberedHadith.english, unnumberedHadith.source, unnumberedHadith.reference], ['', undefined, undefined]);
+  check('and nothing is looked up for it', looked, []);
+}
+
 console.log('\n=== Offline: sentence splitting and glossary placeholders ===');
 
 check(

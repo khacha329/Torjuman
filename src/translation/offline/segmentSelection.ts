@@ -51,9 +51,9 @@ interface Piece {
 }
 
 /**
- * Cut the selected text at the boundaries of the resolved verses and ḥadīth it
- * contains. Marked names (`narrator`, `person`) and unresolved entities cut
- * nothing (FOUND_ISSUES 52; for unresolved ḥadīth, see FOUND_ISSUES 59).
+ * Cut the selected text at the boundaries of the verses and ḥadīth it
+ * contains, resolved or not (FOUND_ISSUES 59). Marked names (`narrator`,
+ * `person`) cut nothing (FOUND_ISSUES 52).
  *
  * Offsets are block-relative, so the selection is walked block by block and the
  * entity ranges intersecting it are projected onto the selected substring.
@@ -89,7 +89,15 @@ export function segmentSelection(options: {
     // Entities overlapping this block's share of the selection.
     const covering: Piece[] = [];
     for (const entity of entities) {
-      if (entity.matchQuality === 'unresolved') continue;
+      // An unresolved entity is cut out like any other. The detector marks a
+      // ḥadīth `unresolved` when its matn carries no number: it is still a
+      // ḥadīth, only one with nothing to look up, so it is emitted with the
+      // no-offline-source note. Until FOUND_ISSUES 59 every unresolved entity
+      // was skipped here, which left an unnumbered matn in the prose, where
+      // the on-device model translated it. (No detector marks a verse
+      // `unresolved` — an unmatched verse is left unmarked — but one would be
+      // emitted with QURAN_UNRESOLVED_NOTE, not handed to the model.)
+      //
       // Only verses and ḥadīth are cut out of the prose. A marked name
       // ('narrator', 'person') is a reading aid, not a passage, and stays in
       // the prose around it. Until FOUND_ISSUES 52 it was emitted as a ḥadīth:

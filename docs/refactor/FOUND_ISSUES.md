@@ -819,6 +819,8 @@ unaffected. Left unfixed.
 
 ## 59. An unresolved ḥadīth reaches the on-device model (2026-11-17, by reading)
 
+**Fixed in lane B** (commit "59." on `claude/lane-b-translation`; DECISIONS, "Delegated to lane B"; checked by V).
+
 Found by the review of lane B's fix to 52. **Against the ḥadīth invariant.**
 `translation/offline/segmentSelection.ts` skips every entity whose
 `matchQuality` is `'unresolved'`, and `quran/detectEntities.ts` (~311)
@@ -829,8 +831,8 @@ them). So on device the whole text of an unnumbered matn goes into `prose`
 and reaches the model, against "A ḥadīth with no offline source must never
 reach the translation model" (README, "The invariant"; the header of
 `segmentSelection.ts`). Present since 810b059 (2026-08-27); not caused by
-lane B. Left unfixed, for the owner to decide: a fix would cut an
-unresolved ḥadīth out of the prose like a resolved one, with the
+lane B. The owner asked for it to be fixed in lane B (2026-11-18): an
+unresolved ḥadīth is now cut out of the prose like a resolved one, with the
 no-offline-source note.
 
 ## 60. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
