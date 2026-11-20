@@ -5835,7 +5835,7 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
 
 {
   console.log('\n=== hadith-json source ===');
-  const { readHadithJson, composeEnglish, chooseCandidate, HadithJsonFormatError } = await import(
+  const { readHadithJson, composeEnglish, chooseCandidate, HadithJsonFormatError, HADITH_JSON_COLLECTIONS } = await import(
     '../src/retrieval/hadithJson'
   );
 
@@ -5966,6 +5966,21 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('the unmatched one is listed by number with its first words',
       [result.unmatched[0].number, result.unmatched[0].firstWords],
       [3, 'كلام آخر لا علاقة له بشيء من هذه']);
+  }
+
+  // Every registered collection whose file is present reads cleanly with its
+  // exact count (a wrong `length` in the registry would refuse the real file).
+  for (const collection of HADITH_JSON_COLLECTIONS) {
+    const file = ['riyadussalihin', 'nawawi40'].includes(collection.slug)
+      ? collection.slug === 'nawawi40' ? 'nawawi40.json' : 'riyad_assalihin.json'
+      : `${collection.slug}.json`;
+    const path = join(process.cwd(), 'hadith-json', file);
+    if (!existsSync(path)) {
+      console.log(`  (${file} not present: ${collection.slug} not read)`);
+      continue;
+    }
+    const read = readHadithJson(JSON.parse(readFileSync(path, 'utf8')), file);
+    check(`${file} reads as ${collection.slug} with ${collection.length} ḥadīth`, [read.collection.slug, read.entries.length], [collection.slug, collection.length]);
   }
 
   // The real measurement, where the owner's data is present.

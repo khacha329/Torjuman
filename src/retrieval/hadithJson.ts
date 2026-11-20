@@ -55,6 +55,21 @@ export interface HadithJsonCollection {
   displayName: string;
   /** The count the file's metadata claims; a different count is refused. */
   length: number;
+  /**
+   * Whether the number the importer derives is one the owner would cite.
+   *
+   * True where it was checked against the book itself (Riyāḍ: the sharḥ's
+   * printed numbers match, 412 and 413 included). False where it is only the
+   * dataset's own running index: Bukhārī agrees with the standard numbering at
+   * the start («إنما الأعمال بالنيات» is 1, «بني الإسلام على خمس» is 8) but the
+   * file has 7,277 ḥadīth against the standard 7,563, and the phrase that closes
+   * the book lands near 6,167–6,438 where the standard numbers are 6,406–6,682;
+   * Muslim's matches neither the standard nor sunnah.com's (the five pillars,
+   * standard 16, are 110–112 here), and its introduction is listed last like
+   * Riyāḍ's. For those, text is the identification and the number must not be
+   * printed as a citation. Measured with `npm run measure:hadith-corpus`.
+   */
+  citableNumbers: boolean;
 }
 
 export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
@@ -64,6 +79,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     arabicTitle: 'رياض الصالحين',
     displayName: 'Riyāḍ aṣ-Ṣāliḥīn',
     length: 1896,
+    citableNumbers: true,
   },
   {
     slug: 'nawawi40',
@@ -71,6 +87,23 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     arabicTitle: 'الأربعون النووية',
     displayName: 'Nawawī’s Forty (with the two extra)',
     length: 42,
+    citableNumbers: true,
+  },
+  {
+    slug: 'bukhari',
+    titles: ['sahih al-bukhari'],
+    arabicTitle: 'صحيح البخاري',
+    displayName: 'Ṣaḥīḥ al-Bukhārī',
+    length: 7277,
+    citableNumbers: false,
+  },
+  {
+    slug: 'muslim',
+    titles: ['sahih muslim'],
+    arabicTitle: 'صحيح مسلم',
+    displayName: 'Ṣaḥīḥ Muslim',
+    length: 7459,
+    citableNumbers: false,
   },
 ];
 
