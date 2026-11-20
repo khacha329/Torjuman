@@ -1158,3 +1158,22 @@ Found by the re-review of lane B's fix to 72. `pushEntity` in
 sourceText`, so a selection covering only part of a ḥadīth whose verified
 translation is cached shows the whole verified Arabic and English, not the
 selected slice. Not measured; pre-existing. Left unfixed.
+
+## 74. `stripApparatus` cuts inside words (2026-11-20, by reading)
+
+Found by the review of 17ac63a (hadith text matching, step 0b).
+`TAKHRIJ` and `ISNAD_CLOSER` in `retrieval/sharh.ts` are not word-anchored:
+«رواه» and «أخرجه» match inside «ورواه», «فرواه», «وأخرجه» and «فأخرجه», and
+`أنه?\s+قال` can stop at the start of «قالوا». The cut leaves a one- or
+two-letter fragment («و», «ف», «وا») in the edge shingle, which then cannot
+hit; on a short survivor that alone fails `agreement`. It affects the sharḥ
+lookup and the hadith-json match alike. The step 0b report counts such misses
+as "over-stripped". Not measured; pre-existing. Left unfixed.
+
+## 75. `stripApparatus` never matches vowelled text (2026-11-20, by reading)
+
+Found by the same review. The regexes run on the raw block text, before
+`normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» with ḥarakāt never match,
+and a book printed vowelled keeps its takhrīj and isnād in the shingles.
+Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
+Left unfixed.

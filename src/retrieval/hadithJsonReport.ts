@@ -25,14 +25,19 @@ import { matnShingles, stripApparatus } from './sharh';
 // ---------------------------------------------------------------------------
 
 export type MissReason =
+  /** The dataset has no ḥadīth at this number (past its end, or a gap). */
+  | 'no-entry'
   /** Under four words even before stripping: never confirmable. */
   | 'too-short'
   /**
-   * Four words or more, but under four once `stripApparatus` has run: the
-   * stripper took the matn. This is the only way stripping can cause a miss —
-   * it cuts only at the edges (number, isnād, takhrīj), so whatever survives is
-   * a contiguous run of the book's text, and its shingles are as present in the
-   * dataset as the unstripped ones would be.
+   * The stripper (`stripApparatus`) is what failed it. Either it left under
+   * four words, or the UNSTRIPPED matn agrees with its own number or a
+   * neighbour in the window while the stripped one does not. The second
+   * happens two ways (review of 17ac63a): `agrees` is a ratio over at most ten
+   * evenly drawn runs, and runs from the isnād or a takhrīj-like phrase can be
+   * hits that the stripped text, resampled over fewer words, loses; and the
+   * regexes are not word-anchored, so «ورواه», «فأخرجه» or «قالوا» are cut
+   * mid-word and leave a fragment in an edge run (FOUND_ISSUES 74).
    */
   | 'over-stripped'
   /** Agrees with a dataset number outside the ±window. */
@@ -43,6 +48,7 @@ export type MissReason =
   | 'different-wording';
 
 export const MISS_REASON_LABELS: Record<MissReason, string> = {
+  'no-entry': 'no ḥadīth at that number',
   'too-short': 'too short to check',
   'over-stripped': 'over-stripped',
   drifted: 'number drifted',
@@ -60,7 +66,13 @@ export interface UnmatchedHadith {
   wordsAfter: number;
   /** The book matn's shingles against the dataset's ḥadīth at the same number. */
   own: Agreement;
-  /** The best-agreeing number anywhere in the collection, when one agrees. */
+  /**
+   * The longest run of consecutive words (stripped book matn, folded) that the
+   * dataset's ḥadīth at the same number also contains, in order. The plan's
+   * measure for step 2: whether a gap-tolerant run rule would have found it.
+   */
+  ownRunWords: number;
+  /** The best-agreeing number OUTSIDE the ±window, when one agrees. */
   bestElsewhere?: { number: number; offset: number; hits: number; tried: number };
 }
 
@@ -78,8 +90,9 @@ export interface DeviceMatchReport {
 
 const BOOK_NUMBER = /^\s*[٠-٩0-9]+\s*(?:\/\s*[٠-٩0-9]+\s*)?[-ـ–—]\s*/u;
 
-/** As `matnShingles`: a run is four words. */
+/** As `matnShingles`: a run is four words, ten runs drawn evenly. */
 const SHINGLE_WORDS = 4;
+const SHINGLE_COUNT = 10;
 
 export function firstWords(matn: string, count = 8): string {
   return matn.replace(BOOK_NUMBER, '').trim().split(/\s+/).slice(0, count).join(' ');
@@ -89,6 +102,19 @@ function words(text: string): string[] {
   return letterFold(text).split(' ').filter(Boolean);
 }
 
+/** `matnShingles`' sampling over words already chosen — here, unstripped. */
+function spreadShingles(list: string[]): string[] {
+  if (list.length < SHINGLE_WORDS) return [];
+  const last = list.length - SHINGLE_WORDS;
+  const wanted = Math.min(SHINGLE_COUNT, last + 1);
+  const out = new Set<string>();
+  for (let i = 0; i < wanted; i++) {
+    const at = wanted === 1 ? 0 : Math.round((i * last) / (wanted - 1));
+    out.add(list.slice(at, at + SHINGLE_WORDS).join(' '));
+  }
+  return [...out];
+}
+
 /** `agreement`, against an already folded and padded haystack. */
 function agreementOn(shingles: string[], haystack: string): Agreement {
   if (shingles.length === 0) return { hits: 0, tried: 0 };
@@ -96,8 +122,28 @@ function agreementOn(shingles: string[], haystack: string): Agreement {
 }
 
 /**
- * Why a numbered matn did not confirm, in the plan's order: too short,
- * over-stripped, drifted, partial, different wording.
+ * Longest common run of consecutive words. Two rolling rows: the book matn is
+ * a few hundred words at most and this runs only for misses.
+ */
+export function longestCommonRun(a: string[], b: string[]): number {
+  let best = 0;
+  let previous = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    const row = new Array<number>(b.length + 1).fill(0);
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        row[j] = previous[j - 1] + 1;
+        if (row[j] > best) best = row[j];
+      }
+    }
+    previous = row;
+  }
+  return best;
+}
+
+/**
+ * Why a numbered matn did not confirm, in the plan's order: no entry, too
+ * short, over-stripped, drifted, partial, different wording.
  *
  * `haystackOf` returns an entry's folded Arabic padded with spaces; the caller
  * caches it, because a drift check folds the whole collection once per miss.
@@ -120,13 +166,24 @@ export function classifyMiss(
     wordsBefore: before.length,
     wordsAfter: after.length,
     own,
+    ownRunWords: ownEntry ? longestCommonRun(after, haystackOf(ownEntry).trim().split(' ')) : 0,
   };
 
-  if (after.length < SHINGLE_WORDS) {
-    return { ...base, reason: before.length < SHINGLE_WORDS ? 'too-short' : 'over-stripped' };
+  if (!ownEntry) return { ...base, reason: 'no-entry' };
+  if (before.length < SHINGLE_WORDS) return { ...base, reason: 'too-short' };
+  if (after.length < SHINGLE_WORDS) return { ...base, reason: 'over-stripped' };
+
+  // The plan's test: does the matn agree if the apparatus is NOT stripped,
+  // against the same numbers chooseCandidate tries?
+  const raw = spreadShingles(before);
+  for (let offset = -NEIGHBOUR_WINDOW; offset <= NEIGHBOUR_WINDOW; offset++) {
+    const entry = entries.get(number + offset);
+    if (entry && agrees(agreementOn(raw, haystackOf(entry)))) {
+      return { ...base, reason: 'over-stripped' };
+    }
   }
 
-  // Shingled once, compared against every entry's cached fold.
+  // Outside the window only: a neighbour that agreed would already have matched.
   const shingles = matnShingles(unnumbered);
   let best: UnmatchedHadith['bestElsewhere'];
   for (const entry of entries.values()) {

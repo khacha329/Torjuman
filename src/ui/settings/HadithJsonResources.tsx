@@ -32,7 +32,7 @@ import { Button, Spinner, SettingsSection } from '../kit';
 function describeMiss(item: UnmatchedHadith): string {
   const parts = [
     MISS_REASON_LABELS[item.reason],
-    `own number ${item.own.hits}/${item.own.tried} shingles`,
+    `own number ${item.own.hits}/${item.own.tried} shingles, longest run ${item.ownRunWords} words`,
     `${item.wordsBefore} words, ${item.wordsAfter} after stripping`,
   ];
   if (item.bestElsewhere) {
@@ -106,6 +106,7 @@ export function HadithJsonResources() {
   const runReport = async () => {
     if (!chosen) return;
     setReport(null);
+    setCopied(null);
     setReporting({ done: 0, total: 0 });
     try {
       setReport(

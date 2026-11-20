@@ -30,7 +30,7 @@ export interface MatchRow extends NumberedHadith {
   offset?: number;
   hits: number;
   tried: number;
-  /** For a miss: the dataset number that agrees best over the whole collection. */
+  /** For a miss: the dataset number that agrees best OUTSIDE the ±10 window. */
   bestElsewhere?: { number: number; hits: number; tried: number };
   /** For a miss: why, as the on-device report classifies it (`classifyMiss`). */
   reason?: string;
