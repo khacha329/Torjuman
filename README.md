@@ -321,41 +321,87 @@ commentary is just rough, and the badge says so.
 
 ### Which ONNX weights actually run
 
-A session failed with `qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits` —
-`MatMulNBits` is the 4-bit operator, so a q4 artifact was being executed while
-the code requested q8. Nothing logged what was requested or what was fetched, so
-there was nothing to check except by guessing. Measured, rather than guessed:
+**What was wrong.** On the deployed site (desktop Chrome, clean caches) the
+`q8` model downloaded the right files and then failed session creation:
+
+    qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits
+    Missing required scale: model.shared.weight_merged_0_scale
+
+An earlier version of this section said q8 had been verified. It had not been,
+not in the runtime the app uses: "fp32, q8 and q4 all load and translate" was
+measured under **onnxruntime-node**, and the browser runs **onnxruntime-web**
+(WASM). The error comes out of the optimiser (`qdq_actions`) that runs when the
+session is created, and it goes away at a lower optimisation level (the table
+below), so the artifact is fine and the optimiser is what trips on it. Why the
+two runtimes differ there was not investigated. The `MatMulNBits` in the message
+had been read as "a q4 file was loaded"; q8 files were loaded, as the
+diagnostics now show.
+
+**Measured in a real browser** (Chromium 1243 under Playwright, onnxruntime-web
+from Transformers.js 4.2, `scripts/probe-offline.mjs`, fresh cache each time,
+`Xenova/opus-mt-ar-en`, device `wasm`):
+
+| dtype | graph optimisation | result |
+| --- | --- | --- |
+| q8 | runtime default (`all`) | **fails** — the error above |
+| q8 | `basic` | loads and translates |
+| q8 | `disabled` | loads and translates |
+
+`basic` is the smallest change that works, so the app pins
+`OFFLINE_GRAPH_OPTIMIZATION = 'basic'` (`session_options.graphOptimizationLevel`)
+and keeps q8, which is the small download.
+
+Timings, same Chromium on a desktop PC, five paragraphs of book 9260
+(`scripts/measure-offline.mjs`, which also writes the Arabic with each
+translation to the gitignored `.verify/offline-samples.md` — book text is never
+committed). A paragraph is one to a few model calls; the figures are means:
+
+| dtype / optimisation | first load (download + session) | cached load | per paragraph | per sentence |
+| --- | --- | --- | --- | --- |
+| q8 / `basic` | 17.1 s | 0.9 s | 2.3 s | 1.6 s |
+| fp32 (default) | 35.6 s | 2.6 s | 1.9 s | 1.3 s |
+
+These are a desktop on a fast link, not the tablet; the tablet's numbers are
+not measured. On the five samples q8 and fp32 gave similar English with small word-level differences; both are rough (the model renders some words wrongly), which is the model, not the precision.
+
+Other facts, still true:
 
 - **Neither repo publishes a `_q8` file.** The suffixes on offer are `(none)`,
   `_fp16`, `_int8`, `_uint8`, `_quantized`, `_q4`, `_q4f16`, `_bnb4`.
   Transformers.js maps the *dtype name* `q8` onto the **`_quantized` file**, so
   `q8` is correct — `int8` and `uint8` name different artifacts.
 - `q8` fetches `encoder_model_quantized.onnx` (49.4 MB) and
-  `decoder_model_merged_quantized.onnx` (56.4 MB). The advertised download size
-  was 75 MB and is now 112 MB, which is what it actually is.
+  `decoder_model_merged_quantized.onnx` (56.4 MB), plus a 6.4 MB tokenizer:
+  112 MB in all.
 - q4 is *larger* than q8 here — 135 MB + 140 MB — because these Marian exports
   are dominated by a shared embedding that block quantization does not shrink.
   It was never the cheaper option.
-- fp32, q8 and q4 all load and translate under **onnxruntime-node**. The q4
-  failure is specific to the **WASM backend**, inside graph optimization.
 
-So both the dtype and the device are pinned, and the dtype is given per session
-file (`encoder_model`, `decoder_model_merged`) rather than as a bare string —
-same result, but the resolution is stated rather than inferred, which is exactly
-what was missing. `auto` is avoided deliberately: it resolves per device, so the
-desktop and the tablet would silently run different weights.
+Both the dtype and the device are pinned, and the dtype is given per session
+file (`encoder_model`, `decoder_model_merged`) rather than as a bare string.
+`auto` is avoided deliberately: it resolves per device, so the desktop and the
+tablet would silently run different weights.
 
-Settings → Offline translation → **model diagnostics** now shows the active
-dtype and the file suffix it maps to, every ONNX URL fetched during a load, and
-every ONNX artifact sitting in Cache Storage — flagging any that does not match
-the active dtype. A cached artifact never reaches `fetch`, so network logging
-alone cannot see a stale file from an earlier build; there is a **Clear cached
-weights** action for exactly that, and a dtype picker for trying one without
-editing code.
+**One copy of the weights.** Transformers.js stores every file it loads in the
+Cache Storage cache `transformers-cache` and serves it from there, offline
+included. The service worker used to have a `runtimeCaching` rule for
+huggingface.co as well, which stored a second copy under `offline-models` and
+answered the library's requests before the page could see them. The rule is
+gone. A tablet that has the old cache has it deleted after the next successful
+model load, when the weights are certainly in `transformers-cache`.
+
+**Diagnostics** (Settings → Offline translation → model diagnostics, and the
+copyable build diagnostics) list every file the last load used and whether it
+came from the **network** or the **cache**. That comes from the library's own
+`env.fetch` hook plus its progress events, not from patching `globalThis.fetch`:
+Transformers.js keeps its own reference to `fetch`, so the patch never saw a
+request and the screen said "every artifact came from Cache Storage" on a first
+download. The same screen can load any dtype with any graph optimisation level
+for a probe, and **Clear cached weights** empties both caches.
 
 ### What the on-device model cannot do
 
-It is a dedicated NMT model (OPUS-MT, ~75 MB; NLLB-200 distilled, ~480 MB) run
+It is a dedicated NMT model (OPUS-MT, ~112 MB; NLLB-200 distilled, ~480 MB) run
 through Transformers.js — no native plugin, no Capacitor work. It beats a 1–3B
 general LLM at pure translation at a fraction of the size and avoids the
 instruction-following failures that make small LLMs unsafe here. No on-device

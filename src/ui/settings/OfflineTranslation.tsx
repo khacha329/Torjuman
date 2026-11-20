@@ -12,6 +12,7 @@ import {
   unloadOfflineModel,
   type DownloadProgress,
   type OfflineDtype,
+  type OfflineGraphOptimization,
   type OfflineLoadDiagnostics,
 } from '../../translation/offline/OfflineProvider';
 import { GEMINI_DEFAULT_MODEL } from '../../translation/models';
@@ -23,6 +24,7 @@ import { Button, Field, inputClass, ProgressBar, SettingsSection } from '../kit'
 // for. On-device is for reading along and getting the gist; cloud is for
 // passages that will be taught from.
 
+// `offline-models` is the service worker's old second copy; see OfflineProvider.
 const MODEL_CACHE_PREFIXES = ['transformers-cache', 'offline-models'];
 
 export function OfflineTranslation() {
@@ -38,6 +40,7 @@ export function OfflineTranslation() {
   const [cachedFiles, setCachedFiles] = useState<string[]>([]);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [probeDtype, setProbeDtype] = useState<OfflineDtype>('q8');
+  const [probeGraph, setProbeGraph] = useState<OfflineGraphOptimization | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     // Transformers.js keeps weights in Cache Storage, so what is present there
@@ -265,18 +268,17 @@ export function OfflineTranslation() {
                   {diagnostics.error && (
                     <li className="text-red-700">{diagnostics.error}</li>
                   )}
+                  <li>graph optimisation: {diagnostics.graphOptimization}</li>
                   <li className="mt-1 font-medium text-ink">
-                    ONNX files fetched ({diagnostics.onnxFetched.length})
+                    Files loaded ({diagnostics.files.length})
                   </li>
-                  {diagnostics.onnxFetched.length === 0 ? (
-                    <li>
-                      None — every artifact came from Cache Storage. Compare the cached
-                      list below against the expected suffix.
-                    </li>
+                  {diagnostics.files.length === 0 ? (
+                    <li>No file was reported.</li>
                   ) : (
-                    diagnostics.onnxFetched.map((url) => (
-                      <li key={url} className="break-all">
-                        {url.split('/').slice(-2).join('/')}
+                    diagnostics.files.map((entry) => (
+                      <li key={entry.file} className="break-all">
+                        <strong>{entry.source}</strong> · {entry.file}
+                        {entry.bytes > 0 && ` · ${(entry.bytes / 1048576).toFixed(1)} MB`}
                       </li>
                     ))
                   )}
@@ -330,8 +332,24 @@ export function OfflineTranslation() {
                   ))}
                 </select>
               </label>
+              <label className="block">
+                <span className="mb-1 block font-medium text-ink">Graph optimisation</span>
+                <select
+                  className={`${inputClass} w-32`}
+                  value={probeGraph ?? ''}
+                  onChange={(event) =>
+                    setProbeGraph((event.target.value || undefined) as OfflineGraphOptimization | undefined)
+                  }
+                >
+                  <option value="">default</option>
+                  <option value="disabled">disabled</option>
+                  <option value="basic">basic</option>
+                  <option value="extended">extended</option>
+                  <option value="all">all</option>
+                </select>
+              </label>
               <Button
-                disabled={busy !== null || !online}
+                disabled={busy !== null}
                 onClick={() => {
                   void (async () => {
                     setBusy('probe');
@@ -340,7 +358,7 @@ export function OfflineTranslation() {
                       const translator = await loadOfflineModel(
                         OFFLINE_MODELS[0].id,
                         setProgress,
-                        probeDtype,
+                        { dtype: probeDtype, graphOptimizationLevel: probeGraph },
                       );
                       const output = await translator('السلام عليكم');
                       setStatus(
