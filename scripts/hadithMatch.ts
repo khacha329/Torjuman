@@ -32,6 +32,8 @@ export interface MatchRow extends NumberedHadith {
   tried: number;
   /** For a miss: the dataset number that agrees best over the whole collection. */
   bestElsewhere?: { number: number; hits: number; tried: number };
+  /** For a miss: why, as the on-device report classifies it (`classifyMiss`). */
+  reason?: string;
 }
 
 export interface MatchReport {
@@ -99,9 +101,9 @@ export async function runMatch(
   hadith: NumberedHadith[],
   pagesRead: number,
 ): Promise<MatchReport> {
-  const { readHadithJson, chooseCandidate, agreement, agrees } = await import(
-    '../src/retrieval/hadithJson'
-  );
+  const { readHadithJson, chooseCandidate } = await import('../src/retrieval/hadithJson');
+  const { classifyMiss, MISS_REASON_LABELS } = await import('../src/retrieval/hadithJsonReport');
+  const { letterFold } = await import('../src/lib/arabic');
   const reading = readHadithJson(JSON.parse(readFileSync(datasetPath, 'utf8')), datasetPath);
   const byNumber = new Map(reading.entries.map((entry) => [entry.value.number, entry.value]));
 
@@ -116,20 +118,19 @@ export async function runMatch(
         tried: match.agreement.tried,
       } satisfies MatchRow;
     }
-    // A miss: where does it agree best, anywhere? Diagnostic only — the app
-    // never searches the whole collection, because a global search is how a
+    // A miss, classified by the same code the device report runs, so the two
+    // reports cannot disagree about why. Diagnostic only — the app never
+    // searches the whole collection, because a global search is how a
     // formulaic ḥadīth gets matched to its twin.
-    let best: MatchRow['bestElsewhere'];
-    for (const entry of byNumber.values()) {
-      const result = agreement(item.matn, entry.arabic);
-      if (!agrees(result)) continue;
-      if (!best || result.hits / result.tried > best.hits / best.tried) {
-        best = { number: entry.number, hits: result.hits, tried: result.tried };
-      }
-    }
-    const own = byNumber.get(item.number);
-    const ownResult = own ? agreement(item.matn, own.arabic) : { hits: 0, tried: 0 };
-    return { ...item, outcome: 'miss', hits: ownResult.hits, tried: ownResult.tried, bestElsewhere: best };
+    const miss = classifyMiss(item.matn, item.number, byNumber, (entry) => ` ${letterFold(entry.arabic)} `);
+    return {
+      ...item,
+      outcome: 'miss',
+      hits: miss.own.hits,
+      tried: miss.own.tried,
+      bestElsewhere: miss.bestElsewhere,
+      reason: MISS_REASON_LABELS[miss.reason],
+    } satisfies MatchRow;
   });
 
   return {
@@ -177,9 +178,9 @@ export function formatReport(report: MatchReport, title: string): string {
     for (const row of misses) {
       const elsewhere = row.bestElsewhere
         ? `agrees best with dataset ${row.bestElsewhere.number} (${row.bestElsewhere.hits}/${row.bestElsewhere.tried}) — outside the ±10 window`
-        : 'agrees with nothing in the collection';
+        : 'agrees with nothing outside the window';
       lines.push(
-        `    book ${row.number} (page ${row.pageIndex}, ${row.source}): own number ${row.hits}/${row.tried} shingles; ${elsewhere}`,
+        `    book ${row.number} (page ${row.pageIndex}, ${row.source}): ${row.reason}; own number ${row.hits}/${row.tried} shingles; ${elsewhere}`,
         `      ${row.matn.replace(/\s+/g, ' ').slice(0, 110)}`,
       );
     }

@@ -9,7 +9,10 @@ import {
 } from '../../retrieval/hadithJsonImport';
 import {
   matchBookAgainstCollection,
+  MISS_REASON_LABELS,
   type DeviceMatchReport,
+  type MissReason,
+  type UnmatchedHadith,
 } from '../../retrieval/hadithJsonReport';
 import { hadithCollectionFor } from '../../quran/detectEntities';
 import type { Book, QulResource } from '../../types';
@@ -25,6 +28,29 @@ import { Button, Spinner, SettingsSection } from '../kit';
 // Two steps, as the QUL import is: what was detected is shown first, with real
 // counts and a real excerpt, and only then is anything written.
 
+/** One line of facts behind a miss's reason, short enough for the tablet. */
+function describeMiss(item: UnmatchedHadith): string {
+  const parts = [
+    MISS_REASON_LABELS[item.reason],
+    `own number ${item.own.hits}/${item.own.tried} shingles`,
+    `${item.wordsBefore} words, ${item.wordsAfter} after stripping`,
+  ];
+  if (item.bestElsewhere) {
+    const { number, offset, hits, tried } = item.bestElsewhere;
+    parts.push(`agrees with ${number} (${offset > 0 ? '+' : ''}${offset}, ${hits}/${tried})`);
+  }
+  return parts.join(' · ');
+}
+
+/** The whole list as plain text, to paste into a conversation or a note. */
+function reportText(report: DeviceMatchReport): string {
+  return [
+    `${report.bookTitle} ↔ ${report.collection}: ${report.numbered} numbered, ` +
+      `${report.byNumber} by number, ${report.byNeighbour} via neighbour, ${report.unmatched.length} unmatched`,
+    ...report.unmatched.map((item) => `${item.number}\t${describeMiss(item)}\t${item.firstWords}`),
+  ].join('\n');
+}
+
 export function HadithJsonResources() {
   const { storage } = useApp();
   const [resources, setResources] = useState<QulResource[]>([]);
@@ -39,6 +65,18 @@ export function HadithJsonResources() {
   const [reportBookId, setReportBookId] = useState('');
   const [reporting, setReporting] = useState<{ done: number; total: number } | null>(null);
   const [report, setReport] = useState<DeviceMatchReport | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  // The clipboard API needs a secure context and can be refused; say so rather
+  // than pretend, and the list is still on screen to read.
+  const copyReport = async (current: DeviceMatchReport) => {
+    try {
+      await navigator.clipboard.writeText(reportText(current));
+      setCopied('Copied.');
+    } catch {
+      setCopied('This browser refused the clipboard; read the list above instead.');
+    }
+  };
 
   const refresh = useCallback(async () => {
     setResources(await listHadithJsonResources(storage));
@@ -277,16 +315,37 @@ export function HadithJsonResources() {
                 </p>
               )}
               {report.unmatched.length > 0 && (
-                <ul className="mt-2 max-h-64 divide-y divide-rule overflow-auto rounded border border-rule">
-                  {report.unmatched.map((item, index) => (
-                    <li key={`${item.number}-${index}`} className="flex gap-3 px-2 py-1">
-                      <span className="w-12 shrink-0 text-muted">{item.number}</span>
-                      <span dir="rtl" lang="ar" className="arabic min-w-0 flex-1">
-                        {item.firstWords}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {/* The tally is what decides the next step; the list is for
+                      checking a reason against the book. */}
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {(Object.keys(MISS_REASON_LABELS) as MissReason[])
+                      .map((reason) => [reason, report.unmatched.filter((u) => u.reason === reason).length] as const)
+                      .filter(([, count]) => count > 0)
+                      .map(([reason, count]) => (
+                        <span key={reason}>
+                          {MISS_REASON_LABELS[reason]}: {count}
+                        </span>
+                      ))}
+                  </p>
+                  <ul className="mt-2 max-h-72 divide-y divide-rule overflow-auto rounded border border-rule">
+                    {report.unmatched.map((item, index) => (
+                      <li key={`${item.number}-${index}`} className="px-2 py-1.5">
+                        <div className="flex gap-3">
+                          <span className="w-12 shrink-0 text-muted">{item.number}</span>
+                          <span dir="rtl" lang="ar" className="arabic min-w-0 flex-1">
+                            {item.firstWords}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 ps-15 text-[10px] text-muted">{describeMiss(item)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button onClick={() => void copyReport(report)}>Copy the list</Button>
+                    {copied && <span className="text-muted">{copied}</span>}
+                  </div>
+                </>
               )}
             </div>
           )}

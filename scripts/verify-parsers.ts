@@ -5994,6 +5994,31 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('report counts: number, neighbour, unmatched, unnumbered',
       [result.numbered, result.byNumber, result.byNeighbour, result.unmatched.length, result.unnumbered],
       [3, 1, 1, 1, 1]);
+    // Each reason a miss can get, against a small collection built to produce it.
+    const { classifyMiss } = await import('../src/retrieval/hadithJsonReport');
+    const { letterFold: fold } = await import('../src/lib/arabic');
+    const unrelated = 'كان رجل يبيع التمر في السوق فمر به قوم من الغرباء فسألوه عن الطريق إلى المدينة';
+    const halfOf = matns[2].split(' ').slice(0, 9).join(' ') + ' ' + unrelated;
+    const corpus = new Map(
+      [
+        [1, matns[1]],
+        [2, halfOf],
+        [3, unrelated],
+        [30, matns[0]],
+      ].map(([n, arabic]) => [
+        n as number,
+        { t: 'hadith-json' as const, number: n as number, idInBook: n as number, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: arabic as string },
+      ]),
+    );
+    const classify = (matn: string, n: number) =>
+      classifyMiss(matn, n, corpus, (entry) => ` ${fold(entry.arabic)} `);
+    check('miss reason: too short', classify('١- قال نعم', 1).reason, 'too-short');
+    check('miss reason: over-stripped (the stripper left under four words)', classify('١- قال أبو بكر رواه البخاري ومسلم في الصحيح', 1).reason, 'over-stripped');
+    const drifted = classify(matns[0], 1);
+    check('miss reason: drifted, with where it agrees', [drifted.reason, drifted.bestElsewhere?.number, drifted.bestElsewhere?.offset], ['drifted', 30, 29]);
+    check('miss reason: partial (own number agrees in part)', classify(matns[2], 2).reason, 'partial');
+    check('miss reason: different wording', classify('أقبل الناس على الصلاة في المسجد الكبير يوم الجمعة بعد الأذان مباشرة', 3).reason, 'different-wording');
+
     check('the unmatched one is listed by number with its first words',
       [result.unmatched[0].number, result.unmatched[0].firstWords],
       [3, 'كلام آخر لا علاقة له بشيء من هذه']);
