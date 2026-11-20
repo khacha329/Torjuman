@@ -66,20 +66,21 @@ export function offlineModelById(id: string) {
 // ---------------------------------------------------------------------------
 // Which weights are actually loaded
 //
-// This was opaque, and being opaque cost real time: a session failed with
+// A session once failed with
 //
 //   qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits
 //   Missing required scale: model.shared.weight_merged_0_scale
 //
-// `MatMulNBits` is the 4-bit operator, so a q4 artifact was being executed
-// while the code requested q8. Neither the request nor the fetch was visible
-// anywhere, so there was nothing to check except by guessing.
+// and it was first read as "a q4 file was executed while q8 was requested",
+// then "fixed" after a check under onnxruntime-node. Neither was right: the
+// diagnostics showed the q8 files were the ones loaded, and onnxruntime-node is
+// not the browser's runtime. Measured in Chromium (onnxruntime-web, WASM), q8
+// fails at the default graph optimisation level and loads and translates at
+// 'basic' and 'disabled'; see OFFLINE_GRAPH_OPTIMIZATION and the README.
 //
-// So the loader now records what it asked for, what the library resolved, and
-// every URL that was actually fetched — and, because a Cache Storage hit never
-// reaches `fetch` at all, the cache can be listed separately. A stale entry
-// from an earlier build is invisible to network logging and is exactly the kind
-// of thing that produces a q4 file when q8 was asked for.
+// So the loader records what it asked for and, from the library's own `env.fetch`
+// hook and progress events, every file it loaded and whether that came from the
+// network or the cache.
 // ---------------------------------------------------------------------------
 
 /**
@@ -100,6 +101,15 @@ export function offlineModelById(id: string) {
 export const OFFLINE_DTYPE = 'q8' as const;
 
 /**
+ * ONNX Runtime graph optimisation for the sessions. `undefined` would leave the
+ * runtime's default, `all`, under which q8 fails session creation in
+ * onnxruntime-web (the `qdq_actions` error). 'basic' is the least change that
+ * loads and translates in Chromium; measurements in the README ("Which ONNX
+ * weights actually run").
+ */
+export const OFFLINE_GRAPH_OPTIMIZATION: OfflineGraphOptimization | undefined = 'basic';
+
+/**
  * The dtype request, given per session file rather than as a bare string.
  *
  * A string applies to every session, which is the same result — but it leaves
@@ -110,7 +120,7 @@ export const OFFLINE_DTYPE = 'q8' as const;
  * instead of silently taking a per-device default.
  *
  * Both models are merged seq2seq exports, so these two are the whole set.
- * Measured: q8 fetches encoder_model_quantized.onnx (49.4 MB) and
+ * Measured in the browser: q8 loads encoder_model_quantized.onnx (49.4 MB) and
  * decoder_model_merged_quantized.onnx (56.4 MB).
  */
 export function dtypeSpecFor(dtype: OfflineDtype): Record<string, OfflineDtype> {
@@ -140,6 +150,25 @@ export const DTYPE_FILE_SUFFIX: Record<OfflineDtype, string> = {
   bnb4: '_bnb4',
 };
 
+/** Where one model file came from during a load. */
+export interface OfflineLoadedFile {
+  /** Path inside the repo, as Transformers.js names it (`onnx/encoder_model_quantized.onnx`). */
+  file: string;
+  /** `network` if the library asked for the file's URL through `env.fetch`; `cache` if not. */
+  source: 'network' | 'cache';
+  /** Bytes, from the library's own progress events; 0 if it reported none. */
+  bytes: number;
+}
+
+/** What a diagnostic load may vary. Anything left out takes the app's pinned value. */
+export interface OfflineLoadOptions {
+  dtype?: OfflineDtype;
+  /** ONNX Runtime's graph optimisation level; see OFFLINE_GRAPH_OPTIMIZATION. */
+  graphOptimizationLevel?: OfflineGraphOptimization;
+}
+
+export type OfflineGraphOptimization = 'disabled' | 'basic' | 'extended' | 'all';
+
 export interface OfflineLoadDiagnostics {
   modelId: string;
   repo: string;
@@ -147,11 +176,11 @@ export interface OfflineLoadDiagnostics {
   requestedDtype: string;
   /** The ONNX suffix that dtype maps onto. */
   expectedSuffix: string;
+  /** The graph optimisation level the session was created with. */
+  graphOptimization: string;
   device: string;
-  /** Every URL fetched during the load, in order. */
-  fetched: string[];
-  /** Just the .onnx ones, which is what the error is ever about. */
-  onnxFetched: string[];
+  /** Every file the library loaded, in the order it began, with where it came from. */
+  files: OfflineLoadedFile[];
   startedAt: number;
   durationMs: number | null;
   ok: boolean;
@@ -165,24 +194,29 @@ export function lastOfflineLoad(): OfflineLoadDiagnostics | null {
   return lastLoad;
 }
 
-const MODEL_CACHE_PREFIXES = ['transformers-cache', 'offline-models'];
+/**
+ * The one Cache Storage cache the weights live in: Transformers.js's own
+ * (`env.cacheKey`, `transformers-cache`). The service worker used to keep a
+ * second copy under `offline-models` (a runtimeCaching rule in vite.config.ts,
+ * now removed), which doubled the storage and answered requests before the
+ * library saw them. `LEGACY_MODEL_CACHE` is that old cache, still looked at so
+ * it can be reported and removed from a tablet that has one.
+ */
+const MODEL_CACHE = 'transformers-cache';
+const LEGACY_MODEL_CACHE = 'offline-models';
 
 /**
- * ONNX artifacts already in Cache Storage.
- *
- * A cached response never reaches `fetch`, so network logging cannot see it.
- * This is what makes a stale artifact from an earlier build visible — and it
- * is the first thing to check when the executed weights disagree with the
- * requested dtype.
+ * ONNX artifacts already in Cache Storage, from both caches so that a leftover
+ * second copy shows up as a second line rather than hiding.
  */
 export async function cachedModelFiles(): Promise<string[]> {
   const found: string[] = [];
   try {
     for (const name of await caches.keys()) {
-      if (!MODEL_CACHE_PREFIXES.some((prefix) => name.includes(prefix))) continue;
+      if (name !== MODEL_CACHE && name !== LEGACY_MODEL_CACHE) continue;
       const cache = await caches.open(name);
       for (const request of await cache.keys()) {
-        if (request.url.includes('.onnx')) found.push(request.url);
+        if (request.url.includes('.onnx')) found.push(`${name}: ${request.url}`);
       }
     }
   } catch {
@@ -191,11 +225,24 @@ export async function cachedModelFiles(): Promise<string[]> {
   return found.sort();
 }
 
-/** Remove every cached ONNX artifact, for both models. */
+/**
+ * Drop the service worker's old second copy of the weights. Called only after a
+ * load has succeeded, when the weights are certainly in `transformers-cache`,
+ * so it can never remove the only copy that works.
+ */
+export async function removeLegacyModelCache(): Promise<boolean> {
+  try {
+    return await caches.delete(LEGACY_MODEL_CACHE);
+  } catch {
+    return false;
+  }
+}
+
+/** Remove every cached model artifact, for both models. */
 export async function clearModelCache(): Promise<number> {
   let removed = 0;
   for (const name of await caches.keys()) {
-    if (!MODEL_CACHE_PREFIXES.some((prefix) => name.includes(prefix))) continue;
+    if (name !== MODEL_CACHE && name !== LEGACY_MODEL_CACHE) continue;
     const cache = await caches.open(name);
     for (const request of await cache.keys()) {
       if (await cache.delete(request)) removed++;
@@ -230,21 +277,25 @@ export async function loadOfflineModel(
   modelId: string,
   onProgress?: (progress: DownloadProgress) => void,
   /** Diagnostic only — the settings screen's "try another dtype" control. */
-  dtypeOverride?: OfflineDtype,
+  probe?: OfflineLoadOptions,
 ): Promise<Translator> {
-  if (pipelinePromise && loadedModelId === modelId && !dtypeOverride) return pipelinePromise;
+  const isProbe = probe !== undefined;
+  if (pipelinePromise && loadedModelId === modelId && !isProbe) return pipelinePromise;
 
   const model = offlineModelById(modelId);
   loadedModelId = modelId;
 
+  const dtype = probe?.dtype ?? OFFLINE_DTYPE;
+  const graphOptimization = probe?.graphOptimizationLevel ?? OFFLINE_GRAPH_OPTIMIZATION;
+
   const diagnostics: OfflineLoadDiagnostics = {
     modelId,
     repo: model.repo,
-    requestedDtype: dtypeOverride ?? OFFLINE_DTYPE,
-    expectedSuffix: DTYPE_FILE_SUFFIX[dtypeOverride ?? OFFLINE_DTYPE] ?? '(unknown)',
+    requestedDtype: dtype,
+    expectedSuffix: DTYPE_FILE_SUFFIX[dtype] ?? '(unknown)',
+    graphOptimization: graphOptimization ?? "(runtime default, 'all')",
     device: 'wasm',
-    fetched: [],
-    onnxFetched: [],
+    files: [],
     startedAt: Date.now(),
     durationMs: null,
     ok: false,
@@ -260,27 +311,41 @@ export async function loadOfflineModel(
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
-    // Record every URL the load actually requests. Wrapped only for the
-    // duration of the load and always restored, so nothing else in the app
-    // sees a patched fetch.
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      const url =
-        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      diagnostics.fetched.push(url);
-      if (url.includes('.onnx')) diagnostics.onnxFetched.push(url);
-      return originalFetch(input, init);
-    }) as typeof fetch;
+    // Where each file came from. A Cache Storage hit never reaches a fetch, so
+    // the library's own `env.fetch` — the hook it routes every network request
+    // through — sees exactly the files that went to the network. (Patching
+    // `globalThis.fetch` did not: Transformers.js bound its own reference to the
+    // original `fetch` when it was imported, so the patch saw nothing and the
+    // diagnostics claimed "every artifact came from Cache Storage" even on a
+    // first download.) Its progress events then name every file it loaded and
+    // how big each was; a file with an event and no request came from the cache.
+    const requested = new Set<string>();
+    const defaultFetch = env.fetch;
+    env.fetch = (input, init) => {
+      requested.add(typeof input === 'string' ? input : input.href);
+      return defaultFetch(input, init);
+    };
+
+    const sizes = new Map<string, number>();
+    const order: string[] = [];
+    const record = () => {
+      diagnostics.files = order.map((file) => ({
+        file,
+        source: [...requested].some((url) => url.endsWith(`/${file}`)) ? 'network' : 'cache',
+        bytes: sizes.get(file) ?? 0,
+      }));
+    };
 
     try {
       const translator = await pipeline('translation', model.repo, {
         // Pinned, never `auto`: `auto` resolves per-device, so the desktop and
         // the tablet would silently run different weights.
-        dtype: dtypeSpecFor(dtypeOverride ?? OFFLINE_DTYPE),
-        // Pinned too. The 4-bit artifacts load under onnxruntime-node but fail
-        // session creation on the WASM backend inside `MatMulNBits` graph
-        // optimisation, so which backend runs is not a detail to leave open.
+        dtype: dtypeSpecFor(dtype),
+        // Pinned too, so which backend runs is not left open.
         device: 'wasm',
+        ...(graphOptimization
+          ? { session_options: { graphOptimizationLevel: graphOptimization } }
+          : {}),
         progress_callback: (event: {
           status?: string;
           file?: string;
@@ -288,19 +353,25 @@ export async function loadOfflineModel(
           total?: number;
           progress?: number;
         }) => {
+          const file = event.file;
+          if (file && event.status === 'initiate' && !order.includes(file)) order.push(file);
+          if (file && event.total) sizes.set(file, event.total);
           if (event.status !== 'progress' || !onProgress) return;
           onProgress({
-            file: event.file ?? '',
+            file: file ?? '',
             loaded: event.loaded ?? 0,
             total: event.total ?? 0,
             percent: Math.round(event.progress ?? 0),
           });
         },
       });
-
+      record();
       return translator as unknown as Translator;
+    } catch (error) {
+      record();
+      throw error;
     } finally {
-      globalThis.fetch = originalFetch;
+      env.fetch = defaultFetch;
     }
   })();
 
@@ -308,6 +379,7 @@ export async function loadOfflineModel(
     const translator = await pipelinePromise;
     diagnostics.ok = true;
     diagnostics.durationMs = Date.now() - diagnostics.startedAt;
+    await removeLegacyModelCache();
     return translator;
   } catch (error) {
     pipelinePromise = null;
@@ -317,19 +389,19 @@ export async function loadOfflineModel(
     diagnostics.error = error instanceof Error ? error.message : String(error);
 
     // A session-creation failure is not a network failure, and calling it one
-    // sends the user to check their wifi. `MatMulNBits` in particular means a
-    // 4-bit artifact was executed — which, when the request was q8, means the
-    // file came from somewhere other than this request.
+    // sends the user to check their wifi.
     const isSessionError = /session|ERROR_CODE|MatMulNBits|qdq_actions/i.test(
       diagnostics.error,
     );
+    const fromNetwork = diagnostics.files.filter((file) => file.source === 'network').length;
 
     throw new TranslationError(
       isSessionError ? 'api' : 'network',
       isSessionError
-        ? `The model downloaded but the runtime could not create a session from it. ` +
-          `Requested ${diagnostics.requestedDtype} (${diagnostics.expectedSuffix}); ` +
-          `${diagnostics.onnxFetched.length} ONNX file(s) were fetched. ` +
+        ? `The model files loaded but the runtime could not create a session from them. ` +
+          `Requested ${diagnostics.requestedDtype} (${diagnostics.expectedSuffix}), ` +
+          `graph optimisation ${diagnostics.graphOptimization}; ` +
+          `${diagnostics.files.length} file(s) loaded, ${fromNetwork} from the network. ` +
           `See Settings → Offline translation → diagnostics. Underlying error: ${diagnostics.error}`
         : `The offline model could not be loaded: ${diagnostics.error}`,
     );

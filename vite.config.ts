@@ -203,18 +203,14 @@ export default defineConfig({
         // share_target below. Relative to the service worker, which lives at
         // `base`.
         importScripts: ['share-target.js'],
-        runtimeCaching: [
-          {
-            // Model weights are large and immutable; once fetched they stay.
-            urlPattern: /^https:\/\/(huggingface\.co|cdn-lfs[^/]*\.hf\.co)\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'offline-models',
-              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        // No runtimeCaching rule for the translation model's files. There was
+        // one (CacheFirst for huggingface.co into `offline-models`), and it kept
+        // a second copy of every weight file beside the one Transformers.js
+        // stores itself in `transformers-cache`, doubling the storage for a
+        // ~112 MB download. Worse, it answered the library's requests from a
+        // worker, so what the page saw was not what the network did. The library
+        // already caches and serves its own files, offline included; that is the
+        // only copy. See README, "Which ONNX weights actually run".
       },
       manifest: {
         name: 'Ḥāshiya — Shamela Reader',

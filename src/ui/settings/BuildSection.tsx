@@ -112,11 +112,19 @@ export function BuildSection() {
             `→ ${load.expectedSuffix} · ${load.ok ? 'ok' : `FAILED: ${load.error}`}`
           : 'never loaded'
       }`,
-      // The .onnx URLs actually fetched. This is the line that settled the q4
-      // question once before: what the config asks for and what the runtime
-      // pulls are separate facts, and only the second one explains a failure.
-      ...(load?.onnxFetched.length
-        ? [`  onnx fetched`, ...load.onnxFetched.map((url) => `    ${url}`)]
+      // Every file the last load used and whether it came from the network or
+      // the cache: what the config asks for and what the runtime pulls are
+      // separate facts, and only the second one explains a failure.
+      ...(load?.files.length
+        ? [
+            `  graph optimisation  ${load.graphOptimization}`,
+            `  files loaded`,
+            ...load.files.map(
+              (entry) =>
+                `    ${entry.source.padEnd(7)} ${entry.file}` +
+                (entry.bytes ? ` (${(entry.bytes / 1048576).toFixed(1)} MB)` : ''),
+            ),
+          ]
         : []),
       `  cached files (${modelFiles?.length ?? 0})`,
       ...((modelFiles ?? []).length === 0
