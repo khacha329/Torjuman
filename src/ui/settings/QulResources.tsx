@@ -18,7 +18,7 @@ import { Button, Spinner, SettingsSection } from '../kit';
 // Import is two steps on purpose. What was detected is shown first, with real
 // counts and a real excerpt from the file, and only then is anything written.
 
-const KIND_LABELS: Record<QulResource['kind'], string> = {
+const KIND_LABELS: Record<Exclude<QulResource['kind'], 'hadith-json'>, string> = {
   tafsir: 'Tafsīr',
   'ayah-matching': 'Ayah matching',
   topics: 'Topics',
@@ -34,7 +34,7 @@ const SEED_PHASES: Record<SeedProgress['phase'], string> = {
 
 export function QulResources() {
   const { storage, seeding, seedOutcome, settings, updateSettings } = useApp();
-  const [resources, setResources] = useState<QulResource[]>([]);
+  const [resources, setResources] = useState<(QulResource & { kind: keyof typeof KIND_LABELS })[]>([]);
   const [pending, setPending] = useState<QulInspection | null>(null);
   const [reading, setReading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -42,7 +42,14 @@ export function QulResources() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
-    setResources(await storage.listQulResources());
+    // The hadith-json collections share the store but have their own section
+    // (HadithJsonResources); they are not QUL's, and have no label here.
+    setResources(
+      (await storage.listQulResources()).filter(
+        (resource): resource is QulResource & { kind: keyof typeof KIND_LABELS } =>
+          resource.kind !== 'hadith-json',
+      ),
+    );
   }, [storage]);
 
   // Re-read when seeding finishes, so the bundled resources appear without the

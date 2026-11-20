@@ -4,6 +4,7 @@ import type { HadithRecord, HadithSourceId } from '../types';
 import { fetchHadith, parseHadithReference } from './sunnah';
 import { searchDorar, type DorarDiagnostics } from './dorar';
 import { narratorIn } from './narrator';
+import { findLocalHadith, HADITH_JSON_ATTRIBUTION, type LocalHadith } from './hadithJson';
 
 // The seam between the app and whichever service knows about a ḥadīth.
 //
@@ -73,6 +74,13 @@ export const HADITH_SOURCES: HadithSourceDescriptor[] = [
     needsKey: false,
     note: 'Arabic only — no English. Gives the narrator, the grading scholar and the grade, which sunnah.com’s API does not expose.',
   },
+  {
+    id: 'hadith-json',
+    displayName: 'hadith-json (local)',
+    providesEnglish: true,
+    needsKey: false,
+    note: `English from files you import in Settings — Riyāḍ aṣ-Ṣāliḥīn and Nawawī’s Forty, attributed “${HADITH_JSON_ATTRIBUTION}”. Works offline, needs no key, and is always tried first once imported; choosing it here only stops the sunnah.com key being spent on a ḥadīth it already covers.`,
+  },
 ];
 
 export function hadithSourceFor(id: HadithSourceId): HadithSourceDescriptor {
@@ -99,26 +107,44 @@ export async function lookupHadith(
 ): Promise<HadithLookupResult> {
   const cached = query.reference ? await storage.getHadith(query.reference) : undefined;
 
+  // The imported dataset, if any, confirmed against the book's own matn. It is
+  // applied to what is RETURNED and never to what is cached: the cache is read
+  // by backups and shared chapters, and this text is the user's private import,
+  // deletable in Settings. Writing it into `hadiths` would outlive that delete.
+  const local = query.reference
+    ? await findLocalHadith(storage, query.reference, query.arabicText)
+    : null;
+  const finish = (record: HadithRecord | null): HadithRecord | null =>
+    withLocalEnglish(record, local, query);
+
   // A cached record that already carries its gradings is finished. One without
   // them is worth topping up once there is a network again.
   if (cached?.gradings || (cached && !options.online)) {
-    return { record: cached, diagnostics: null };
+    return { record: finish(cached), diagnostics: null };
   }
-  if (!options.online) return { record: cached ?? null, diagnostics: null };
+  if (!options.online) return { record: finish(cached ?? null), diagnostics: null };
 
   const parsed = query.reference ? parseHadithReference(query.reference) : null;
 
   let record: HadithRecord | null = cached ?? null;
 
+  // A key is not spent on a ḥadīth the imported dataset already answers, unless
+  // sunnah.com was chosen as the preferred source.
   const wantSunnah = options.preferred === 'sunnah' || Boolean(options.sunnahApiKey);
-  if (!record?.english && wantSunnah && parsed && options.sunnahApiKey) {
+  if (
+    !record?.english &&
+    wantSunnah &&
+    parsed &&
+    options.sunnahApiKey &&
+    (!local || options.preferred === 'sunnah')
+  ) {
     record = (await fetchHadith(http, storage, parsed, options.sunnahApiKey)) ?? record;
   }
 
   // dorar is consulted for what it is for: grading and takhrīj. It is never
   // consulted for English, and cannot supply any — see the header.
   if (query.arabicText.trim() === '') {
-    return { record, diagnostics: null };
+    return { record: finish(record), diagnostics: null };
   }
 
   // The narrator comes from the surrounding passage where possible: the isnād
@@ -158,5 +184,34 @@ export async function lookupHadith(
 
   if (record.reference) await storage.putHadith(record);
 
-  return { record, diagnostics };
+  return { record: finish(record), diagnostics };
+}
+
+/**
+ * Lay the imported English over a record, unless a verified English is already
+ * there (sunnah.com's own, fetched with a key, wins over a scrape of it).
+ *
+ * The Arabic is never touched: the reader keeps the book's matn, and the
+ * dataset's Arabic exists only to have confirmed the match.
+ */
+function withLocalEnglish(
+  record: HadithRecord | null,
+  local: LocalHadith | null,
+  query: HadithQuery,
+): HadithRecord | null {
+  if (!local || record?.english) return record;
+  const parsed = query.reference ? parseHadithReference(query.reference) : null;
+  return {
+    reference: record?.reference ?? query.reference,
+    collection: record?.collection ?? parsed?.collection ?? local.collection,
+    number: record?.number ?? parsed?.number ?? String(local.entry.number),
+    arabic: record?.arabic ?? '',
+    english: local.english,
+    grade: record?.grade ?? null,
+    sourceUrl: `https://sunnah.com/${local.collection}:${local.entry.number}`,
+    fetchedAt: record?.fetchedAt ?? Date.now(),
+    sourceId: 'hadith-json',
+    gradings: record?.gradings,
+    narrator: record?.narrator,
+  };
 }

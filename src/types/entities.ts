@@ -80,7 +80,15 @@ export interface TranslatedSegment {
    * into `model`: those thirty formulae are rendered identically on every path,
    * at no cost, and the card should say so.
    */
-  source?: 'quran.com' | 'sunnah.com' | 'model' | 'offline' | 'takhrij-table' | 'dorar.net';
+  source?:
+    | 'quran.com'
+    | 'sunnah.com'
+    // The user's imported hadith-json English; shown as "sunnah.com (via hadith-json)".
+    | 'hadith-json'
+    | 'model'
+    | 'offline'
+    | 'takhrij-table'
+    | 'dorar.net';
   reference?: string; // "2:255" or "Riyad as-Salihin 1"
   note?: string; // e.g. "Poem summarized rather than translated"
   uncertainTerms?: string[];

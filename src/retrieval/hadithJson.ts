@@ -1,0 +1,372 @@
+import type { StorageAdapter } from '../platform/storage/StorageAdapter';
+import type { HadithJsonEntry, QulEntry, QulResource } from '../types';
+import { letterFold } from '../lib/arabic';
+import { matnShingles } from './sharh';
+
+// The hadith-json dataset (github.com/AhmedBaset/hadith-json, scraped from
+// sunnah.com) as a local ḥadīth source.
+//
+// ---------------------------------------------------------------------------
+// What it supplies, and what it does not
+//
+// The English — narrator line plus text — and nothing else. The Arabic in the
+// file is kept only to prove identity (below); the reader keeps seeing the
+// book's own matn. Gradings still come from dorar. The English counts as a
+// verified translation (it is sunnah.com's, attributed as such), so showing it
+// does not touch the rule that scripture is never machine-translated.
+//
+// It is personal data the user imports and it is never committed or bundled
+// (see .gitignore and docs/RESOURCES.md). The rows live in the QUL resource
+// store as kind 'hadith-json'; see types/qul.ts for why.
+//
+// ---------------------------------------------------------------------------
+// Numbers: trust the position, not `idInBook`
+//
+// The dataset's `idInBook` is not the number a book prints. In the Riyāḍ file
+// it is unique over 1–1896 but ordered by *file* position, and the file lists
+// «كتاب المقدمات» (chapter id 0, 679 ḥadīth, the real beginning of the book —
+// «إنما الأعمال بالنيات» is its first) after chapters 1–19, so `idInBook`
+// calls the intentions ḥadīth number 1218. Another export of the same data
+// restarts `idInBook` in each chapter. Both are handled by ignoring it: the
+// continuous number is the cumulative position over the chapters sorted by
+// chapter id, each chapter in `idInBook` order. `idInBook` is kept on the row
+// only so the import screen can say how many numbers it disagrees with.
+//
+// ---------------------------------------------------------------------------
+// And not even that, alone
+//
+// A number is only a candidate. The sharḥ's numbering is its own and has been
+// seen to drift from sunnah.com's, and showing the English of a different
+// ḥadīth under a matn is far worse than showing none. So the candidate is
+// confirmed by comparing the book's matn with the dataset's Arabic, with the
+// same four-word shingles the sharḥ lookup uses (`matnShingles`: apparatus
+// stripped, letters folded, drawn evenly across the matn). When the number
+// misses, the neighbouring numbers are tried by text. When nothing agrees, no
+// English is shown and the sheet says so.
+// ---------------------------------------------------------------------------
+
+export interface HadithJsonCollection {
+  /** The sunnah.com slug; also the prefix of the references the book detects. */
+  slug: string;
+  /** What the file's own metadata calls it, lower-cased, any of which matches. */
+  titles: string[];
+  /** Arabic title as the file prints it, matched after folding. */
+  arabicTitle: string;
+  displayName: string;
+  /** The count the file's metadata claims; a different count is refused. */
+  length: number;
+}
+
+export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
+  {
+    slug: 'riyadussalihin',
+    titles: ['riyad as-salihin', 'riyad us-salihin'],
+    arabicTitle: 'رياض الصالحين',
+    displayName: 'Riyāḍ aṣ-Ṣāliḥīn',
+    length: 1896,
+  },
+  {
+    slug: 'nawawi40',
+    titles: ['the forty hadith of imam nawawi', 'forty hadith of an-nawawi'],
+    arabicTitle: 'الأربعون النووية',
+    displayName: 'Nawawī’s Forty (with the two extra)',
+    length: 42,
+  },
+];
+
+export function hadithJsonCollection(slug: string): HadithJsonCollection | undefined {
+  return HADITH_JSON_COLLECTIONS.find((collection) => collection.slug === slug);
+}
+
+/** The attribution shown under the English. */
+export const HADITH_JSON_ATTRIBUTION = 'sunnah.com (via hadith-json)';
+
+// ------------------------------------------------------------------ reading
+
+export class HadithJsonFormatError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HadithJsonFormatError';
+  }
+}
+
+export interface HadithJsonDraftEntry {
+  key: string;
+  value: HadithJsonEntry;
+}
+
+export interface HadithJsonReading {
+  collection: HadithJsonCollection;
+  name: string;
+  entries: HadithJsonDraftEntry[];
+  /** Facts about what was read, so the user confirms against the real thing. */
+  details: string[];
+  sample: string;
+}
+
+interface RawHadith {
+  idInBook: number;
+  chapterId: number;
+  arabic: string;
+  english: { narrator: string; text: string };
+}
+
+interface RawBook {
+  metadata?: {
+    length?: number;
+    arabic?: { title?: string };
+    english?: { title?: string };
+  };
+  chapters?: { id: number; english?: string }[];
+  hadiths?: unknown;
+}
+
+function isRawHadith(value: unknown): value is RawHadith {
+  if (value === null || typeof value !== 'object') return false;
+  const row = value as Record<string, unknown>;
+  const english = row.english as Record<string, unknown> | null | undefined;
+  return (
+    typeof row.idInBook === 'number' &&
+    typeof row.chapterId === 'number' &&
+    typeof row.arabic === 'string' &&
+    english !== null &&
+    typeof english === 'object' &&
+    typeof english.narrator === 'string' &&
+    typeof english.text === 'string'
+  );
+}
+
+function detectCollection(book: RawBook, fileName: string): HadithJsonCollection {
+  const english = (book.metadata?.english?.title ?? '').toLowerCase().trim();
+  const arabic = letterFold(book.metadata?.arabic?.title ?? '');
+  const found = HADITH_JSON_COLLECTIONS.find(
+    (collection) =>
+      collection.titles.includes(english) || arabic === letterFold(collection.arabicTitle),
+  );
+  if (found) return found;
+
+  const named = [english, book.metadata?.arabic?.title, fileName].filter(Boolean).join(' / ');
+  throw new HadithJsonFormatError(
+    `This looks like a hadith-json file, but not one of the collections supported so far ` +
+      `(${HADITH_JSON_COLLECTIONS.map((collection) => collection.displayName).join(', ')}). ` +
+      `It calls itself: ${named || '(no title)'}.`,
+  );
+}
+
+/**
+ * Read one hadith-json file. Nothing is written; a file that is not what it
+ * claims to be is refused with the reason, because a collection that is silently
+ * short looks exactly like a complete one.
+ */
+export function readHadithJson(root: unknown, fileName: string): HadithJsonReading {
+  if (root === null || typeof root !== 'object' || Array.isArray(root)) {
+    throw new HadithJsonFormatError(
+      'That file is JSON, but not a hadith-json book. Expected an object with "metadata", "chapters" and "hadiths".',
+    );
+  }
+  const book = root as RawBook;
+  if (!Array.isArray(book.hadiths) || !book.metadata) {
+    throw new HadithJsonFormatError(
+      'That file is JSON, but not a hadith-json book. Expected an object with "metadata", "chapters" and "hadiths".',
+    );
+  }
+
+  const collection = detectCollection(book, fileName);
+  const rows = book.hadiths as unknown[];
+  const bad = rows.findIndex((row) => !isRawHadith(row));
+  if (bad !== -1) {
+    throw new HadithJsonFormatError(
+      `Hadith ${bad + 1} of ${rows.length} is missing a field (idInBook, chapterId, arabic, english.narrator or english.text).`,
+    );
+  }
+  const hadiths = rows as RawHadith[];
+
+  if (hadiths.length !== collection.length) {
+    throw new HadithJsonFormatError(
+      `${collection.displayName} has ${collection.length} ḥadīth in this dataset; the file has ${hadiths.length}. ` +
+        'Importing a partial collection would make the numbers after the gap point at the wrong ḥadīth, so it is refused.',
+    );
+  }
+
+  const chapterNames = new Map((book.chapters ?? []).map((chapter) => [chapter.id, chapter.english ?? '']));
+
+  // Chapter id, then idInBook within it. See the header for why not idInBook.
+  const ordered = [...hadiths].sort(
+    (a, b) => a.chapterId - b.chapterId || a.idInBook - b.idInBook,
+  );
+
+  const entries: HadithJsonDraftEntry[] = ordered.map((hadith, index) => {
+    const number = index + 1;
+    return {
+      key: `${collection.slug}:${number}`,
+      value: {
+        t: 'hadith-json',
+        number,
+        idInBook: hadith.idInBook,
+        chapterId: hadith.chapterId,
+        chapterEnglish: chapterNames.get(hadith.chapterId) ?? '',
+        narrator: hadith.english.narrator,
+        text: hadith.english.text,
+        arabic: hadith.arabic,
+      },
+    };
+  });
+
+  const disagree = entries.filter((entry) => entry.value.idInBook !== entry.value.number).length;
+  const chapters = new Set(hadiths.map((hadith) => hadith.chapterId)).size;
+  const empty = entries.filter((entry) => composeEnglish(entry.value) === '').length;
+
+  const details = [
+    `${entries.length} ḥadīth in ${chapters} chapter${chapters === 1 ? '' : 's'}, numbered 1–${entries.length} in book order`,
+    disagree === 0
+      ? 'The file’s own idInBook agrees with that numbering throughout.'
+      : `The file’s own idInBook disagrees with that numbering for ${disagree} of them — expected for this dataset, and the reason it is not used.`,
+  ];
+  if (empty > 0) details.push(`${empty} have no English text and will show none.`);
+
+  const first = entries[0].value;
+  return {
+    collection,
+    name: `${collection.displayName} — hadith-json`,
+    entries,
+    details,
+    sample: `${first.number}. ${composeEnglish(first)}`.slice(0, 240),
+  };
+}
+
+// ------------------------------------------------------------------ English
+
+/** Narrator line and text as one passage, with the dataset's stray whitespace and dots tidied. */
+export function composeEnglish(entry: Pick<HadithJsonEntry, 'narrator' | 'text'>): string {
+  const tidy = (input: string) =>
+    input
+      .replace(/\s+/g, ' ')
+      .replace(/\s+\.+$/, '')
+      .trim();
+  return [tidy(entry.narrator), tidy(entry.text)].filter(Boolean).join(' ');
+}
+
+// ----------------------------------------------------------------- matching
+
+/**
+ * The leading number as a book prints it: «٤-» or «١/٤١٢ ـ». `stripApparatus`
+ * knows only the first form, and the second would otherwise put digits into a
+ * shingle that the dataset's Arabic cannot contain.
+ */
+const BOOK_NUMBER = /^\s*[٠-٩0-9]+\s*(?:\/\s*[٠-٩0-9]+\s*)?[-ـ–—]\s*/u;
+
+/** Neighbouring numbers tried by text when the numbered one does not agree. */
+export const NEIGHBOUR_WINDOW = 10;
+
+/** Fraction of the book's shingles the candidate must contain. */
+export const MIN_AGREEMENT = 0.6;
+
+export interface Agreement {
+  hits: number;
+  tried: number;
+}
+
+/**
+ * How many of the book matn's shingles occur in the dataset's Arabic.
+ *
+ * `tried` is 0 when the matn is under four words once the apparatus is stripped;
+ * such a matn cannot be confirmed and is treated as not agreeing.
+ */
+export function agreement(bookMatn: string, datasetArabic: string): Agreement {
+  const shingles = matnShingles(bookMatn.replace(BOOK_NUMBER, ''));
+  if (shingles.length === 0) return { hits: 0, tried: 0 };
+  const haystack = ` ${letterFold(datasetArabic)} `;
+  const hits = shingles.filter((shingle) => haystack.includes(` ${shingle} `)).length;
+  return { hits, tried: shingles.length };
+}
+
+export function agrees(result: Agreement): boolean {
+  return result.tried > 0 && result.hits >= Math.min(2, result.tried) && result.hits / result.tried >= MIN_AGREEMENT;
+}
+
+export interface HadithMatch {
+  entry: HadithJsonEntry;
+  /** matched number minus the book's number; 0 when the number itself held. */
+  offset: number;
+  agreement: Agreement;
+}
+
+/**
+ * Pick the dataset's ḥadīth for a book's matn.
+ *
+ * The numbered candidate wins whenever it agrees. Otherwise the best-agreeing
+ * neighbour does, nearest first on a tie. `byNumber` is a lookup, not the whole
+ * list, so the caller decides whether that is a Map or a handful of IndexedDB
+ * reads.
+ */
+export function chooseCandidate(
+  number: number,
+  bookMatn: string,
+  byNumber: (n: number) => HadithJsonEntry | undefined,
+): HadithMatch | null {
+  const exact = byNumber(number);
+  if (exact) {
+    const result = agreement(bookMatn, exact.arabic);
+    if (agrees(result)) return { entry: exact, offset: 0, agreement: result };
+  }
+
+  let best: HadithMatch | null = null;
+  for (let distance = 1; distance <= NEIGHBOUR_WINDOW; distance++) {
+    for (const offset of [distance, -distance]) {
+      const entry = byNumber(number + offset);
+      if (!entry) continue;
+      const result = agreement(bookMatn, entry.arabic);
+      if (!agrees(result)) continue;
+      if (!best || result.hits / result.tried > best.agreement.hits / best.agreement.tried) {
+        best = { entry, offset, agreement: result };
+      }
+    }
+  }
+  return best;
+}
+
+// ------------------------------------------------------------------- lookup
+
+const REFERENCE = /^([a-z0-9]+):(\d+)$/;
+
+export interface LocalHadith extends HadithMatch {
+  collection: string;
+  resource: QulResource;
+  english: string;
+}
+
+/**
+ * The imported English for a reference such as "riyadussalihin:412", confirmed
+ * against the book's matn. Null when no collection is imported, the reference is
+ * not in one, or nothing in reach agrees with the text — all normal answers.
+ */
+export async function findLocalHadith(
+  storage: StorageAdapter,
+  reference: string,
+  bookMatn: string,
+): Promise<LocalHadith | null> {
+  const parsed = REFERENCE.exec(reference);
+  if (!parsed || !hadithJsonCollection(parsed[1])) return null;
+  const slug = parsed[1];
+  const number = Number(parsed[2]);
+
+  const resources = await storage.listQulResources();
+  const resource = resources.find((r) => r.kind === 'hadith-json' && r.collection === slug);
+  if (!resource) return null;
+
+  const keys: string[] = [];
+  for (let n = Math.max(1, number - NEIGHBOUR_WINDOW); n <= number + NEIGHBOUR_WINDOW; n++) {
+    keys.push(`${slug}:${n}`);
+  }
+  const rows: QulEntry[] = await storage.getQulEntries(resource.id, keys);
+  const entries = new Map<number, HadithJsonEntry>();
+  for (const row of rows) {
+    if (row.value.t === 'hadith-json') entries.set(row.value.number, row.value);
+  }
+
+  const match = chooseCandidate(number, bookMatn, (n) => entries.get(n));
+  if (!match) return null;
+  const english = composeEnglish(match.entry);
+  if (english === '') return null;
+  return { ...match, collection: slug, resource, english };
+}

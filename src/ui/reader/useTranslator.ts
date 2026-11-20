@@ -9,6 +9,7 @@ import type { TranslationResult } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
+import { findLocalHadith } from '../../retrieval/hadithJson';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
 import {
   applyProseTranslations,
@@ -155,7 +156,10 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       const orderOf = new Map(blocks.map((block) => [block.id, block.order]));
       const firstOrder = orderOf.get(card.startBlockId) ?? 0;
       const lastOrder = orderOf.get(card.endBlockId) ?? 0;
-      const references = new Set<string>();
+      const blockTexts = new Map(blocks.map((block) => [block.id, block.text]));
+      // reference -> the matn the book prints for it, for the imported dataset
+      // to be confirmed against.
+      const references = new Map<string, string>();
       for (const entity of entities) {
         if (entity.type !== 'hadith' || !entity.reference) continue;
         const startOrder = orderOf.get(entity.startBlockId);
@@ -169,15 +173,28 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             ? Infinity
             : Math.max(startOrder, endOrder);
         if (entityLast < firstOrder || entityFirst > lastOrder) continue;
-        references.add(entity.reference);
+        references.set(entity.reference, blockTexts.get(entity.startBlockId) ?? '');
       }
       const records = await Promise.all(
-        [...references].map(async (reference) => [reference, await storage.getHadith(reference)] as const),
+        [...references].map(async ([reference, matn]) => {
+          const record = await storage.getHadith(reference);
+          // A cached English (sunnah.com's own) wins; otherwise the imported
+          // hadith-json collection, if the match against the matn holds.
+          const local = record?.english ? null : await findLocalHadith(storage, reference, matn);
+          return [reference, record, local] as const;
+        }),
       );
-      const cache = new Map<string, { arabic: string; english: string }>();
-      for (const [reference, record] of records) {
+      const cache = new Map<
+        string,
+        { arabic: string; english: string; source?: 'sunnah.com' | 'hadith-json' }
+      >();
+      for (const [reference, record, local] of records) {
         if (record?.english) {
           cache.set(reference, { arabic: record.arabic, english: record.english });
+        } else if (local) {
+          // The book's own matn stays the Arabic; segmentSelection falls back to
+          // the selected text when this is empty.
+          cache.set(reference, { arabic: '', english: local.english, source: 'hadith-json' });
         }
       }
 

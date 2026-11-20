@@ -32,10 +32,17 @@ node_modules/
 # /qul/       resources downloaded from the Qurʾān Universal Library, under
 #             their own licence terms. NOT src/qul/, which is source code.
 #
-# `npm run verify` reads both and so only runs where they are present, which is
+# /hadith-json/  riyad_assalihin.json and nawawi40.json from the hadith-json
+#             dataset (github.com/AhmedBaset/hadith-json), whose text was scraped
+#             from sunnah.com. Personal use only: imported in Settings, stored on
+#             the device, never committed. How to distribute it legitimately is
+#             a later decision and nothing here builds one.
+#
+# `npm run verify` reads these and so only runs where they are present, which is
 # a local checkout. The deploy workflow runs `npm run build`.
 /fixtures/
 /qul/
+/hadith-json/
 
 # --- Bundled QUL resources: per resource, not per folder ----------------------
 # The licences differ per resource, so "QUL" is not one answer — and excluding

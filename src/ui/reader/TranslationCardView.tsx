@@ -6,6 +6,7 @@ import { allProviders, badgeFor, providerFor, findModelOption } from '../../tran
 import { Spinner } from '../kit';
 import { isIncomplete } from '../../translation/coverage';
 import { useReadOnly } from '../../app/readOnly';
+import { HADITH_JSON_ATTRIBUTION } from '../../retrieval/hadithJson';
 
 const SEGMENT_STYLE: Record<TranslatedSegment['type'], { label: string; frame: string }> = {
   quran: { label: 'Qurʾān', frame: 'border-l-2 border-verse/50 bg-verse/5' },
@@ -502,7 +503,7 @@ function SegmentView({ segment }: { segment: TranslatedSegment }) {
           {segment.reference && <span>{segment.reference}</span>}
           {segment.source && segment.source !== 'model' && (
             <span className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[10px] text-verse">
-              {segment.source}
+              {segment.source === 'hadith-json' ? HADITH_JSON_ATTRIBUTION : segment.source}
             </span>
           )}
         </div>

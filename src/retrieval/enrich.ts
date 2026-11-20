@@ -4,6 +4,7 @@ import type { TranslatedSegment } from '../types';
 import { renderTakhrij } from '../lib/takhrij';
 import { fetchVerse, type QuranLookupOptions } from './quran';
 import { fetchHadith, parseHadithReference } from './sunnah';
+import { findLocalHadith } from './hadithJson';
 
 // Replaces the model's placeholder for scripture with the authoritative text.
 //
@@ -102,6 +103,20 @@ async function enrichHadith(
     : null;
 
   if (!record || record.english === '') {
+    // The imported hadith-json collection, when there is one. The reference is
+    // the model's and so is only a candidate; `findLocalHadith` confirms it
+    // against the Arabic the segment carries before any English is returned.
+    const local = segment.reference
+      ? await findLocalHadith(deps.storage, segment.reference.trim(), segment.arabic)
+      : null;
+    if (local) {
+      return {
+        ...segment,
+        english: local.english,
+        source: 'hadith-json',
+        reference: `${local.collection}:${local.entry.number}`,
+      };
+    }
     return {
       ...segment,
       english: '',
