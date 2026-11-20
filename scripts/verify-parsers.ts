@@ -5929,6 +5929,37 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       { sunnahApiKey: '', preferred: 'sunnah', online: false },
     );
     check('a matn that agrees with no candidate gets no English', wrong.record, null);
+
+    // A collection whose numbers are not citable (Bukhārī, Muslim): the
+    // text-confirmed English is still given, but the dataset's position never
+    // becomes the reference, the number or a sunnah.com link.
+    const bukhariRows = rows.map((row) => ({ ...row, key: row.key.replace('riyadussalihin', 'bukhari') }));
+    const bukhari = {
+      ...fake,
+      async listQulResources() {
+        return [{ id: 'r', kind: 'hadith-json', collection: 'bukhari' }];
+      },
+      async getQulEntries(_id: string, keys: string[]) {
+        return bukhariRows.filter((row) => keys.includes(row.key));
+      },
+    };
+    // The model says 1; the text is the dataset's 3 (within the window).
+    const drifted = await lookup(
+      {} as never,
+      bukhari as never,
+      { reference: 'bukhari:1', arabicText: matns[2] },
+      { sunnahApiKey: '', preferred: 'sunnah', online: false },
+    );
+    check('non-citable collection: English still given', drifted.record?.english, 'Abu Huraira reported: English of 3');
+    check('  the number stays the reference’s, not the dataset’s', drifted.record?.number, '1');
+    check('  and no sunnah.com link is built from the dataset’s position', drifted.record?.sourceUrl, null);
+
+    const { enrichSegments } = await import('../src/retrieval/enrich');
+    const [segment] = await enrichSegments(
+      [{ type: 'hadith', arabic: matns[2], english: '', reference: 'bukhari:1' }] as never,
+      { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
+    );
+    check('  enrich keeps the model’s reference for it', [segment.english, segment.source, segment.reference], ['Abu Huraira reported: English of 3', 'hadith-json', 'bukhari:1']);
   }
 
   // The on-device report over stored blocks: matched by number, by neighbour,
@@ -5971,9 +6002,9 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   // Every registered collection whose file is present reads cleanly with its
   // exact count (a wrong `length` in the registry would refuse the real file).
   for (const collection of HADITH_JSON_COLLECTIONS) {
-    const file = ['riyadussalihin', 'nawawi40'].includes(collection.slug)
-      ? collection.slug === 'nawawi40' ? 'nawawi40.json' : 'riyad_assalihin.json'
-      : `${collection.slug}.json`;
+    // The repository's file names, which are not all the sunnah.com slug.
+    const FILE_FOR: Record<string, string> = { riyadussalihin: 'riyad_assalihin.json' };
+    const file = FILE_FOR[collection.slug] ?? `${collection.slug}.json`;
     const path = join(process.cwd(), 'hadith-json', file);
     if (!existsSync(path)) {
       console.log(`  (${file} not present: ${collection.slug} not read)`);

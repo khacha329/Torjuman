@@ -204,11 +204,15 @@ function withLocalEnglish(
   return {
     reference: record?.reference ?? query.reference,
     collection: record?.collection ?? parsed?.collection ?? local.collection,
-    number: record?.number ?? parsed?.number ?? String(local.entry.number),
+    number: record?.number ?? parsed?.number ?? (local.citable ? String(local.entry.number) : ''),
     arabic: record?.arabic ?? '',
     english: local.english,
     grade: record?.grade ?? null,
-    sourceUrl: `https://sunnah.com/${local.collection}:${local.entry.number}`,
+    // No link built from a number that is only the dataset's own position: on
+    // sunnah.com it would open a different ḥadīth (Bukhārī, Muslim).
+    sourceUrl: local.citable
+      ? `https://sunnah.com/${local.collection}:${local.entry.number}`
+      : (record?.sourceUrl ?? null),
     fetchedAt: record?.fetchedAt ?? Date.now(),
     sourceId: 'hadith-json',
     gradings: record?.gradings,

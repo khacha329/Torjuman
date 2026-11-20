@@ -766,18 +766,26 @@ number)
 | riyad_assalihin.json | 1,896 | 1.05 MB | 0.85 MB | 98,761 | 15.7% | 0.85 MB | 2.75 MB |
 | nawawi40.json | 42 | 0.04 MB | 0.02 MB | 2,567 | 5.7% | 0.02 MB | 0.09 MB |
 
-At about 2 KB a ḥadīth, the six canonical books would be nearer 70 MB than
-the 45 MB estimated above.
+At about 2 KB a ḥadīth (Bukhārī 2.2 KB, Muslim 1.9 KB), 30,000 ḥadīth for the
+six canonical books would be about 60 MB, not the 45 MB estimated above; the
+other four files are not downloaded, so their counts are still unmeasured.
 
 Numbering (Q6):
 - **Bukhārī:** `idInBook` is continuous and in chapter order, and the
   importer's number equals it. It matches the standard at the start
   («إنما الأعمال بالنيات» 1, «بني الإسلام على خمس» 8) but drifts: 7,277 ḥadīth
-  against the standard 7,563, and «كلمتان خفيفتان» lands at 6,167 and 6,438
-  where the standard has 6,406 and 6,682.
+  against the standard 7,563. The closing ḥadīth (standard 7563, «كلمتان
+  حبيبتان إلى الرحمن») is the file's last row, 7277, so it is 286 behind by the
+  end; the same ḥadīth's earlier occurrences (standard 6406 and 6682) are 6167
+  and 6438. The file's English carries the standard number in its
+  cross-references ("see Hadith 6682"), which a number map could use (Q6,
+  not built).
 - **Muslim:** chapter 0 (the introduction) is listed last, as in Riyāḍ. Neither
   `idInBook` nor the importer's number is the standard one («بني الإسلام على
   خمس», standard 16, is 110–112 by the importer and 19–21 by `idInBook`).
 - So both are registered with `citableNumbers: false`: text identifies the
   ḥadīth, and the number must not be shown as a citation. Riyāḍ and the Forty
-  keep `citableNumbers: true`.
+  keep `citableNumbers: true`. The existing consumers honour it already
+  (`enrich.ts` keeps the model's reference, `withLocalEnglish` builds no
+  sunnah.com link), so an imported Bukhārī or Muslim cannot put a dataset
+  position on a card before step 4.

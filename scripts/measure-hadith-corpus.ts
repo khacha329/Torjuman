@@ -82,7 +82,10 @@ function cumulative(rows: Row[]): Row[] {
 const ANCHORS: { label: string; folded: string; standard?: string }[] = [
   { label: '«إنما الأعمال بالنيات»', folded: 'انما الاعمال بالنيات', standard: 'Bukhārī 1, Muslim 1907' },
   { label: '«بني الإسلام على خمس»', folded: 'بني الاسلام علي خمس', standard: 'Bukhārī 8, Muslim 16' },
-  { label: '«كلمتان خفيفتان على اللسان»', folded: 'كلمتان خفيفتان علي اللسان', standard: 'Bukhārī 7563 (the last)' },
+  // The closing ḥadīth puts «حبيبتان إلى الرحمن» first, so the wording below
+  // finds only its two earlier occurrences; the next anchor finds 7563 itself.
+  { label: '«كلمتان خفيفتان على اللسان»', folded: 'كلمتان خفيفتان علي اللسان', standard: 'Bukhārī 6406, 6682' },
+  { label: '«كلمتان حبيبتان إلى الرحمن»', folded: 'كلمتان حبيبتان الي الرحمن', standard: 'Bukhārī 7563 (the last), also 6406, 6682' },
 ];
 
 for (const file of readdirSync(DATA).filter((f) => f.endsWith('.json')).sort()) {
@@ -116,6 +119,8 @@ for (const file of readdirSync(DATA).filter((f) => f.endsWith('.json')).sort()) 
   const sorted = [...wordCounts].sort((a, b) => a - b);
   const shared = [...postings.values()].filter((list) => list.length > 1).length;
   const capped = [...postings.values()].filter((list) => list.length > MAX_POSTINGS);
+  // (key, ḥadīth) pairs, not positions: a key repeated inside one ḥadīth counts
+  // once. So the drop share below is a lower bound and the index an upper bound.
   const droppedPostings = capped.reduce((total, list) => total + list.length, 0);
   const keptPositions = positions - droppedPostings;
   // Two parallel Uint32 arrays (key, packed number+word position): 8 bytes a
@@ -130,7 +135,7 @@ for (const file of readdirSync(DATA).filter((f) => f.endsWith('.json')).sort()) 
   );
   console.log(
     `  ${WINDOW}-word positions ${positions}; distinct ${postings.size}; in more than one ḥadīth ${shared}; ` +
-      `over the ${MAX_POSTINGS}-ḥadīth cap ${capped.length} (drops ${droppedPostings} positions, ${((100 * droppedPostings) / positions).toFixed(1)}%)`,
+      `over the ${MAX_POSTINGS}-ḥadīth cap ${capped.length} (drops ≥ ${droppedPostings} positions, ≥ ${((100 * droppedPostings) / positions).toFixed(1)}%)`,
   );
   console.log(
     `  index ≈ ${mb(indexBytes)} raw, ${mb((indexBytes * 4) / 3)} as base64; collection in IndexedDB ≈ ${mb(arabicBytes + englishBytes + (indexBytes * 4) / 3)}`,

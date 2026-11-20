@@ -62,8 +62,10 @@ export interface HadithJsonCollection {
    * printed numbers match, 412 and 413 included). False where it is only the
    * dataset's own running index: Bukhārī agrees with the standard numbering at
    * the start («إنما الأعمال بالنيات» is 1, «بني الإسلام على خمس» is 8) but the
-   * file has 7,277 ḥadīth against the standard 7,563, and the phrase that closes
-   * the book lands near 6,167–6,438 where the standard numbers are 6,406–6,682;
+   * file has 7,277 ḥadīth against the standard 7,563, so by the end it is 286
+   * behind: the closing ḥadīth («كلمتان حبيبتان إلى الرحمن», standard 7563) is
+   * the file's last row, 7277, and its two earlier occurrences (standard 6406
+   * and 6682) are 6167 and 6438;
    * Muslim's matches neither the standard nor sunnah.com's (the five pillars,
    * standard 16, are 110–112 here), and its introduction is listed last like
    * Riyāḍ's. For those, text is the identification and the number must not be
@@ -364,6 +366,13 @@ const REFERENCE = /^([a-z0-9]+):(\d+)$/;
 
 export interface LocalHadith extends HadithMatch {
   collection: string;
+  /**
+   * Whether `entry.number` may be shown as a citation or used in a sunnah.com
+   * link. False for Bukhārī and Muslim (see `citableNumbers`): their English is
+   * still text-confirmed and shown, but the number stays whatever the book or
+   * the model said it was.
+   */
+  citable: boolean;
   resource: QulResource;
   english: string;
 }
@@ -401,5 +410,6 @@ export async function findLocalHadith(
   if (!match) return null;
   const english = composeEnglish(match.entry);
   if (english === '') return null;
-  return { ...match, collection: slug, resource, english };
+  const citable = hadithJsonCollection(slug)?.citableNumbers ?? false;
+  return { ...match, collection: slug, citable, resource, english };
 }
