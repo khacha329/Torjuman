@@ -5,6 +5,7 @@ import { OfflineCapabilities } from './OfflineCapabilities';
 import { LinkButton, TopBar } from '../kit';
 import { EntitySection } from './EntitySection';
 import { GlossaryTable } from './GlossaryTable';
+import { HadithJsonResources } from './HadithJsonResources';
 import { HadithSourceSection } from './HadithSourceSection';
 import { ProfileEditor } from './ProfileEditor';
 import { QulResources } from './QulResources';
@@ -41,6 +42,7 @@ export function SettingsScreen() {
           <DisplaySection />
           <QuranSection />
           <HadithSourceSection />
+          <HadithJsonResources />
           <EntitySection />
           <ReferenceWorks />
           <QulResources />

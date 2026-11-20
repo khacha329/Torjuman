@@ -40,7 +40,7 @@ export interface HadithRecord {
   narrator?: string | null;
 }
 
-export type HadithSourceId = 'sunnah' | 'dorar';
+export type HadithSourceId = 'sunnah' | 'dorar' | 'hadith-json';
 
 export interface HadithAttribution {
   /** الراوي — the companion who narrated it. */

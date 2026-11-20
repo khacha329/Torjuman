@@ -10,7 +10,18 @@ import type { ProviderId, TranslationUsage } from './translation';
 // resolve through an entity's already-known reference with no search and no
 // inference — and why every lookup below is offline and deterministic.
 
-export type QulResourceKind = 'tafsir' | 'ayah-matching' | 'topics' | 'surah-info';
+export type QulResourceKind =
+  | 'tafsir'
+  | 'ayah-matching'
+  | 'topics'
+  | 'surah-info'
+  // Not from QUL and not Qurʾānic: the English of one ḥadīth collection from the
+  // hadith-json dataset, kept in this store because it is exactly the shape the
+  // store is for (a resource, its rows, one range delete) and because a new store
+  // would need a schema bump on every tablet for data that is only ever read by
+  // key. Its rows are keyed "collection:number", not by āyah, and the Qurʾān
+  // screens never ask for this kind. See retrieval/hadithJson.ts.
+  | 'hadith-json';
 
 export interface QulResource {
   id: string;
@@ -31,6 +42,8 @@ export interface QulResource {
    * silently replacing a resource someone imported deliberately.
    */
   seed?: { slug: string; version: number };
+  /** `hadith-json` only: the collection slug its rows are keyed under. */
+  collection?: string;
 }
 
 /**
@@ -61,7 +74,8 @@ export type QulEntryValue =
   | AyahMatches
   | TopicRecord
   | TopicsForAyah
-  | SurahInfo;
+  | SurahInfo
+  | HadithJsonEntry;
 
 /**
  * A passage of commentary, with every āyah it covers.
@@ -122,6 +136,26 @@ export interface SurahInfo {
   surahName: string;
   text: string;
   shortText: string;
+}
+
+/**
+ * One ḥadīth of the hadith-json dataset (scraped from sunnah.com).
+ *
+ * `arabic` is stored for one purpose only: confirming, at lookup time, that the
+ * ḥadīth numbered N in the dataset is the one the book prints under that number.
+ * It is never displayed — the reader sees the book's own matn.
+ */
+export interface HadithJsonEntry {
+  t: 'hadith-json';
+  /** The continuous number within the collection (1 … 1896 for Riyāḍ). */
+  number: number;
+  /** The dataset's own `idInBook`, kept to show where it and `number` part ways. */
+  idInBook: number;
+  chapterId: number;
+  chapterEnglish: string;
+  narrator: string;
+  text: string;
+  arabic: string;
 }
 
 /**

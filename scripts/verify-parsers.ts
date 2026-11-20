@@ -2771,6 +2771,10 @@ const { searchDorar } = await import('../src/retrieval/dorar');
     async putHadith(record: { reference: string }) {
       hadiths.set(record.reference, record);
     },
+    // No hadith-json collection imported: lookupHadith asks, and gets nothing.
+    async listQulResources() {
+      return [];
+    },
   };
 
   const bookPassage =
@@ -5825,6 +5829,156 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   fire();
   check('a collapsed selection clears the pins', pinnedBlockIds(), []);
   stop();
+}
+
+// ------------------------------------------------------- hadith-json source
+
+{
+  console.log('\n=== hadith-json source ===');
+  const { readHadithJson, composeEnglish, chooseCandidate, HadithJsonFormatError } = await import(
+    '../src/retrieval/hadithJson'
+  );
+
+  check(
+    'the Forty’s sharḥ maps to nawawi40',
+    hadithCollectionFor('كتاب شرح الأربعين النووية للعثيمين'),
+    'nawawi40',
+  );
+
+  // Synthetic file in the dataset's shape: chapter 0 listed LAST and idInBook
+  // already "continuous" in file order — the Riyāḍ file's actual defect.
+  const row = (idInBook: number, chapterId: number, arabic: string, text: string) => ({
+    idInBook,
+    chapterId,
+    arabic,
+    english: { narrator: 'N reported:', text },
+  });
+  const file = {
+    metadata: { length: 42, english: { title: 'The Forty Hadith of Imam Nawawi' }, arabic: { title: 'الأربعون النووية' } },
+    chapters: [{ id: 0, english: 'c' }],
+    hadiths: Array.from({ length: 42 }, (_, i) => row(42 - i, 0, `نص رقم ${i}`, `t${i}`)),
+  };
+  const reading = readHadithJson(file, 'x.json');
+  check('collection detected from the title', reading.collection.slug, 'nawawi40');
+  check('numbered 1–42 in idInBook order within the chapter', reading.entries[0].value.text, 't41');
+  check('keys carry the collection', reading.entries[41].key, 'nawawi40:42');
+
+  let refused = '';
+  try {
+    readHadithJson({ ...file, hadiths: file.hadiths.slice(1) }, 'x.json');
+  } catch (error) {
+    refused = error instanceof HadithJsonFormatError ? 'format error' : String(error);
+  }
+  check('a partial collection is refused', refused, 'format error');
+
+  check(
+    'English is narrator + text, whitespace and stray dot tidied',
+    composeEnglish({ narrator: 'A reported:', text: 'He said, "x".\n\n .' }),
+    'A reported: He said, "x".',
+  );
+
+  // The matching rule on real-shaped Arabic: the right number agrees, a wrong
+  // one is found among the neighbours, nothing else is accepted.
+  const matns = [
+    'وعن أبي هريرة رضي الله عنه قال قال رسول الله صلى الله عليه وسلم من سلك طريقا يلتمس فيه علما سهل الله له به طريقا إلى الجنة',
+    'وعن ابن عمر رضي الله عنهما قال قال رسول الله صلى الله عليه وسلم الحياء من الايمان ولا يأتي الا بخير وهو شعبة من شعب الايمان',
+    'وعن عمر رضي الله عنه قال سمعت رسول الله صلى الله عليه وسلم يقول انما الاعمال بالنيات وانما لكل امرئ ما نوى فمن كانت هجرته',
+  ];
+  const entries = new Map(
+    matns.map((arabic, i) => [i + 1, { t: 'hadith-json' as const, number: i + 1, idInBook: i + 1, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic }]),
+  );
+  check('the numbered candidate wins when it agrees', chooseCandidate(2, '٢- ' + matns[1], (n) => entries.get(n))?.offset, 0);
+  check('a drifted number is found among the neighbours', chooseCandidate(1, matns[2], (n) => entries.get(n))?.offset, 2);
+  check('a text that agrees with nothing is refused', chooseCandidate(1, 'كلام آخر لا علاقة له بشيء من هذه الأحاديث إطلاقا يا صاحبي', (n) => entries.get(n)), null);
+
+  // End to end through lookupHadith, offline: the imported English comes back
+  // under the book's own Arabic, attributed, and is NOT written to the cache.
+  {
+    const { lookupHadith: lookup } = await import('../src/retrieval/HadithSource');
+    const cached = new Map<string, unknown>();
+    const rows = [...entries.values()].map((value) => ({
+      id: `r|riyadussalihin:${value.number}`,
+      resourceId: 'r',
+      key: `riyadussalihin:${value.number}`,
+      value: { ...value, narrator: 'Abu Huraira reported:', text: 'English of ' + value.number },
+    }));
+    const fake = {
+      async getHadith(reference: string) { return cached.get(reference); },
+      async putHadith(record: { reference: string }) { cached.set(record.reference, record); },
+      async listQulResources() {
+        return [{ id: 'r', kind: 'hadith-json', collection: 'riyadussalihin' }];
+      },
+      async getQulEntries(_id: string, keys: string[]) {
+        return rows.filter((row) => keys.includes(row.key));
+      },
+    };
+    const found = await lookup(
+      {} as never,
+      fake as never,
+      { reference: 'riyadussalihin:2', arabicText: '٢- ' + matns[1] },
+      { sunnahApiKey: '', preferred: 'sunnah', online: false },
+    );
+    check('imported English is returned', found.record?.english, 'Abu Huraira reported: English of 2');
+    check('  attributed to the dataset', found.record?.sourceId, 'hadith-json');
+    check('  under the Arabic the book printed, not the dataset’s', found.record?.arabic, '');
+    check('  and never written to the ḥadīth cache', cached.size, 0);
+    const wrong = await lookup(
+      {} as never,
+      fake as never,
+      { reference: 'riyadussalihin:2', arabicText: 'كلام آخر لا علاقة له بشيء من هذه الأحاديث إطلاقا يا صاحبي' },
+      { sunnahApiKey: '', preferred: 'sunnah', online: false },
+    );
+    check('a matn that agrees with no candidate gets no English', wrong.record, null);
+  }
+
+  // The on-device report over stored blocks: matched by number, by neighbour,
+  // and the unmatched listed with their first words.
+  {
+    const { matchBookAgainstCollection } = await import('../src/retrieval/hadithJsonReport');
+    const rows = [...entries.values()].map((value) => ({
+      id: `r|riyadussalihin:${value.number}`,
+      resourceId: 'r',
+      key: `riyadussalihin:${value.number}`,
+      value,
+    }));
+    const block = (id: string, number: string | null, text: string) => ({ id, type: 'hadith_matn', hadithNumber: number, text });
+    const fake = {
+      async getQulEntries(_id: string, keys: string[]) {
+        return rows.filter((row) => keys.includes(row.key));
+      },
+      async listBlocks() {
+        return [
+          block('a', '2', '٢- ' + matns[1]),
+          block('b', '1', matns[2]),
+          block('c', '3', 'كلام آخر لا علاقة له بشيء من هذه الأحاديث إطلاقا يا صاحبي'),
+          block('d', null, matns[0]),
+        ];
+      },
+    };
+    const result = await matchBookAgainstCollection(
+      fake as never,
+      { id: 'b', title: 'T' } as never,
+      { id: 'r', collection: 'riyadussalihin', entryCount: 3 } as never,
+    );
+    check('report counts: number, neighbour, unmatched, unnumbered',
+      [result.numbered, result.byNumber, result.byNeighbour, result.unmatched.length, result.unnumbered],
+      [3, 1, 1, 1, 1]);
+    check('the unmatched one is listed by number with its first words',
+      [result.unmatched[0].number, result.unmatched[0].firstWords],
+      [3, 'كلام آخر لا علاقة له بشيء من هذه']);
+  }
+
+  // The real measurement, where the owner's data is present.
+  if (existsSync(join(process.cwd(), 'hadith-json', 'riyad_assalihin.json'))) {
+    const { collectNumberedHadith, runMatch, formatReport } = await import('./hadithMatch');
+    const found = await collectNumberedHadith(FIXTURES, 9260, 'page-9260-', 'nass-9260-1-50.json');
+    const report = await runMatch(join(process.cwd(), 'hadith-json', 'riyad_assalihin.json'), found.hadith, found.pagesRead);
+    console.log(formatReport(report, 'Match rate, book 9260 fixtures vs riyad_assalihin.json'));
+    expect('the fixtures hold numbered ḥadīth to measure', report.total > 0, `(${report.total})`);
+    check('every numbered ḥadīth in the fixtures matches', report.misses, 0);
+  } else {
+    console.log('  (hadith-json/ not present: the real-data match rate was not measured)');
+  }
 }
 
 // ------------------------------------------------------------------ done

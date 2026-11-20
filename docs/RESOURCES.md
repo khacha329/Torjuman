@@ -102,3 +102,7 @@ runs `npm run build`, which is the typecheck and bundle.
 
 If you have a clean checkout, `npm run verify` will fail on the missing
 fixtures. That is expected, and is not a broken build.
+
+## hadith-json (local ḥadīth English)
+
+`riyad_assalihin.json` and `nawawi40.json` from github.com/AhmedBaset/hadith-json, text scraped from sunnah.com. Personal use: kept in the gitignored `/hadith-json/`, imported in Settings, stored on the device (QUL resource store, kind `hadith-json`), never committed or bundled. A legitimate distribution method is a later decision. Numbering and matching rules: header of `src/retrieval/hadithJson.ts`; measurement: `npm run report:hadith-json`.

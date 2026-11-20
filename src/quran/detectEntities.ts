@@ -419,7 +419,17 @@ function extendToDelimiter(text: string, offset: number, side: 'open' | 'close')
 
 /** Which sunnah.com collection a book's hadith numbering follows. */
 export function hadithCollectionFor(title: string): string | null {
-  return normalize(title).includes(normalize('رياض الصالحين')) ? 'riyadussalihin' : null;
+  const folded = normalize(title);
+  if (folded.includes(normalize('رياض الصالحين'))) return 'riyadussalihin';
+  // The Forty, in either case: «شرح الأربعين النووية» and «الأربعون النووية».
+  // sunnah.com's own slug for it, and the one the hadith-json import keys under.
+  if (
+    folded.includes(normalize('الأربعين النووية')) ||
+    folded.includes(normalize('الأربعون النووية'))
+  ) {
+    return 'nawawi40';
+  }
+  return null;
 }
 
 /**

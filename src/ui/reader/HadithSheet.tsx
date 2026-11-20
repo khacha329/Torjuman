@@ -6,6 +6,7 @@ import { secrets } from '../../services/secrets';
 import { useOnline } from '../../app/useOnline';
 import { BidiText } from '../../components/BidiText';
 import { lookupHadith } from '../../retrieval/HadithSource';
+import { HADITH_JSON_ATTRIBUTION } from '../../retrieval/hadithJson';
 import type { DorarDiagnostics } from '../../retrieval/dorar';
 import type {
   Book,
@@ -255,7 +256,9 @@ export function HadithSheet({
           <p dir="ltr" className="ltr-isolate text-[14px] leading-relaxed">
             <BidiText>{record.english}</BidiText>
           </p>
-          <p className="mt-2 text-[10px] text-muted">sunnah.com</p>
+          <p className="mt-2 text-[10px] text-muted">
+            {record.sourceId === 'hadith-json' ? HADITH_JSON_ATTRIBUTION : 'sunnah.com'}
+          </p>
         </>
       )}
 
@@ -276,7 +279,7 @@ export function HadithSheet({
               >
                 add it in Settings
               </button>
-              .
+              , or import the hadith-json files there for Riyāḍ aṣ-Ṣāliḥīn and Nawawī’s Forty.
             </>
           )}
         </p>

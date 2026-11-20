@@ -68,7 +68,9 @@ export function segmentSelection(options: {
   quran: QuranIndex;
   english: QuranEnglish;
   /** Verified hadith translations already cached locally, keyed by reference. */
-  hadithLookup: (reference: string) => { arabic: string; english: string } | null;
+  hadithLookup: (
+    reference: string,
+  ) => { arabic: string; english: string; source?: 'sunnah.com' | 'hadith-json' } | null;
 }): SegmentedSelection {
   const { blocks, entities, quran, english } = options;
 
@@ -221,7 +223,7 @@ export function segmentSelection(options: {
       type: 'hadith',
       arabic: verified?.arabic || sourceText,
       english: verified?.english ?? '',
-      source: verified ? 'sunnah.com' : undefined,
+      source: verified ? (verified.source ?? 'sunnah.com') : undefined,
       reference: entity.reference || undefined,
       note: verified ? undefined : HADITH_NO_OFFLINE_SOURCE,
     });
