@@ -38,7 +38,18 @@ import {
 // handed over.
 // ---------------------------------------------------------------------------
 
-export const OFFLINE_MODELS: (ModelOption & { repo: string; approxMB: number })[] = [
+export interface OfflineModel extends ModelOption {
+  repo: string;
+  approxMB: number;
+  /**
+   * Passed with every call. A one-pair model (OPUS-MT ar→en) needs nothing; a
+   * many-language model (NLLB) must be told both sides, and Transformers.js
+   * throws `Target language code "undefined" is not valid` without them.
+   */
+  languages?: { src_lang: string; tgt_lang: string };
+}
+
+export const OFFLINE_MODELS: OfflineModel[] = [
   {
     id: 'opus-mt-ar-en',
     repo: 'Xenova/opus-mt-ar-en',
@@ -53,9 +64,18 @@ export const OFFLINE_MODELS: (ModelOption & { repo: string; approxMB: number })[
   {
     id: 'nllb-200-distilled-600M',
     repo: 'Xenova/nllb-200-distilled-600M',
-    approxMB: 480,
-    label: 'NLLB-200 distilled — better',
-    note: 'About 480 MB. Noticeably better Arabic, slower, and a large download.',
+    // Measured in Chromium (q8): encoder_model_quantized.onnx is 400 MB and
+    // decoder_model_merged_quantized.onnx 453 MB, plus a 17 MB tokenizer. The
+    // earlier 480 MB was a guess.
+    approxMB: 870,
+    // FLORES-200 codes: Modern Standard Arabic in Arabic script, English.
+    languages: { src_lang: 'arb_Arab', tgt_lang: 'eng_Latn' },
+    label: 'NLLB-200 distilled — larger',
+    // Measured on five paragraphs of book 9260 on a desktop: more fluent than
+    // OPUS-MT and closer to the register (Allah, the Straight Path), but it
+    // drops clauses and invents some, and it took ~10 s a sentence against
+    // OPUS-MT's ~1.5 s. "Better" was not something to promise.
+    note: 'About 870 MB. More fluent but can drop or invent phrases; several times slower.',
   },
 ];
 
@@ -434,7 +454,9 @@ export async function translateProse(
   spans: string[],
   options: OfflineTranslateOptions,
 ): Promise<string[]> {
-  const translator = await loadOfflineModel(options.modelId);
+  const loaded = await loadOfflineModel(options.modelId);
+  const languages = offlineModelById(options.modelId).languages ?? {};
+  const translator: Translator = (input, extra) => loaded(input, { ...languages, ...extra });
 
   const results: string[] = [];
   let done = 0;

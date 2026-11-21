@@ -15,7 +15,6 @@ import {
 } from '../../src/translation/offline/OfflineProvider';
 import { splitSentences } from '../../src/translation/offline/sentences';
 
-const MODEL = 'opus-mt-ar-en';
 
 export interface Sample {
   blockId: string;
@@ -49,29 +48,30 @@ function pickSamples(pages: Record<string, string>, want: number): Sample[] {
   return out;
 }
 
-async function measure(options: OfflineLoadOptions, texts: string[]) {
+async function measure(config: OfflineLoadOptions & { modelId: string }, texts: string[]) {
+  const { modelId, ...options } = config;
   unloadOfflineModel();
   const loadStart = performance.now();
-  const translator = await loadOfflineModel(MODEL, undefined, options);
+  await loadOfflineModel(modelId, undefined, options);
   const loadMs = performance.now() - loadStart;
   const load = lastOfflineLoad();
 
   // The first call pays for session warm-up; time it apart from the rest.
   const warmStart = performance.now();
-  await translator('السلام عليكم');
+  await translateProse(['السلام عليكم'], { modelId, glossary: [] });
   const warmMs = performance.now() - warmStart;
 
   const results: { translation: string; sentences: number; ms: number }[] = [];
   for (const text of texts) {
     const start = performance.now();
-    const [translation] = await translateProse([text], { modelId: MODEL, glossary: [] });
+    const [translation] = await translateProse([text], { modelId, glossary: [] });
     results.push({
       translation,
       sentences: splitSentences(text).length,
       ms: performance.now() - start,
     });
   }
-  return { options, loadMs, warmMs, load, results };
+  return { options: config, loadMs, warmMs, load, results };
 }
 
 (window as unknown as Record<string, unknown>).harness = {
