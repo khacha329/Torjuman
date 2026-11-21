@@ -298,8 +298,12 @@ type DisposableTranslator = Translator & { dispose?: () => Promise<void> };
  *
  * So a load that is replaced or unloaded is *retired*, and freed once nothing
  * uses it. `users` counts the translateProse runs holding it, so a model is
- * never disposed under a translation still running in the reader — Settings →
- * Delete, Clear cached weights, a probe or a model switch waits for it instead.
+ * never disposed under a translation still running in the reader: Settings →
+ * Delete, Clear cached weights, a probe or a model switch returns at once, and
+ * the model is freed when that translation ends. The raw translator that
+ * loadOfflineModel returns (the Settings probe calls it directly) is not
+ * counted; the probe runs on the Settings screen, where the reader is not
+ * mounted, so nothing else loads under it.
  */
 interface PipelineEntry {
   modelId: string;
