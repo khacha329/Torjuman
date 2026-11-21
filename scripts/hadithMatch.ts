@@ -30,7 +30,7 @@ export interface MatchRow extends NumberedHadith {
   offset?: number;
   hits: number;
   tried: number;
-  /** For a miss: the dataset number that agrees best OUTSIDE the ±10 window. */
+  /** For a miss: the dataset number that agrees best OUTSIDE the NEIGHBOUR_WINDOW. */
   bestElsewhere?: { number: number; hits: number; tried: number };
   /** For a miss: why, as the on-device report classifies it (`classifyMiss`). */
   reason?: string;
@@ -44,6 +44,8 @@ export interface MatchReport {
   misses: number;
   rows: MatchRow[];
   pagesRead: number;
+  /** `NEIGHBOUR_WINDOW` as the run used it, so the printout cannot go stale. */
+  window: number;
 }
 
 /** Every numbered ḥadīth block in a fixture set, each page counted once. */
@@ -101,7 +103,7 @@ export async function runMatch(
   hadith: NumberedHadith[],
   pagesRead: number,
 ): Promise<MatchReport> {
-  const { readHadithJson, chooseCandidate } = await import('../src/retrieval/hadithJson');
+  const { readHadithJson, chooseCandidate, NEIGHBOUR_WINDOW } = await import('../src/retrieval/hadithJson');
   const { classifyMiss, MISS_REASON_LABELS } = await import('../src/retrieval/hadithJsonReport');
   const { letterFold } = await import('../src/lib/arabic');
   const reading = readHadithJson(JSON.parse(readFileSync(datasetPath, 'utf8')), datasetPath);
@@ -141,6 +143,7 @@ export async function runMatch(
     misses: rows.filter((row) => row.outcome === 'miss').length,
     rows,
     pagesRead,
+    window: NEIGHBOUR_WINDOW,
   };
 }
 
@@ -177,7 +180,7 @@ export function formatReport(report: MatchReport, title: string): string {
     lines.push('', '  mismatches:');
     for (const row of misses) {
       const elsewhere = row.bestElsewhere
-        ? `agrees best with dataset ${row.bestElsewhere.number} (${row.bestElsewhere.hits}/${row.bestElsewhere.tried}) — outside the ±10 window`
+        ? `agrees best with dataset ${row.bestElsewhere.number} (${row.bestElsewhere.hits}/${row.bestElsewhere.tried}) — outside the ±${report.window} window`
         : 'agrees with nothing outside the window';
       lines.push(
         `    book ${row.number} (page ${row.pageIndex}, ${row.source}): ${row.reason}; own number ${row.hits}/${row.tried} shingles; ${elsewhere}`,
