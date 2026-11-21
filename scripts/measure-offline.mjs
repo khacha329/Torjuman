@@ -49,7 +49,7 @@ for (const file of readdirSync(fixtureDir)) {
   }
 }
 
-// --models a,b picks which offline models to run; each runs as q8 / basic, the
+// --models a,b picks which offline models to run (default opus-mt-ar-en); each runs as q8 / basic, the
 // app's pinned setting. --default-graph adds a q8 run at 'all', the runtime's
 // own default, to see whether a model has OPUS-MT's session failure. (It has to
 // be named: leaving it out takes the app's pinned 'basic'.)
@@ -58,6 +58,9 @@ const models = modelArg === -1 ? ['opus-mt-ar-en'] : process.argv[modelArg + 1].
 const configs = models.flatMap((modelId) => [
   ...(process.argv.includes('--default-graph') ? [{ modelId, dtype: 'q8', graphOptimizationLevel: 'all' }] : []),
   { modelId, dtype: 'q8', graphOptimizationLevel: 'basic' },
+  // The full-precision reference the README's fp32 row came from. Large (OPUS-MT
+  // ~420 MB, NLLB far more), so only on request.
+  ...(process.argv.includes('--fp32') ? [{ modelId, dtype: 'fp32' }] : []),
 ]);
 
 const browser = await chromium.launch();

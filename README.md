@@ -352,7 +352,7 @@ from Transformers.js 4.2, `scripts/probe-offline.mjs`, fresh cache each time,
 and keeps q8, which is the small download.
 
 Timings, same Chromium on a desktop PC, five paragraphs of book 9260
-(`scripts/measure-offline.mjs`, which also writes the Arabic with each
+(`scripts/measure-offline.mjs --fp32`, which also writes the Arabic with each
 translation to the gitignored `.verify/offline-samples.md` — book text is never
 committed). A paragraph is one to a few model calls; the figures are means:
 
@@ -363,6 +363,21 @@ committed). A paragraph is one to a few model calls; the figures are means:
 
 These are a desktop on a fast link, not the tablet; the tablet's numbers are
 not measured. On the five samples q8 and fp32 gave similar English with small word-level differences; both are rough (the model renders some words wrongly), which is the model, not the precision.
+
+**NLLB-200 distilled 600M**, measured the same way
+(`scripts/measure-offline.mjs --models opus-mt-ar-en,nllb-200-distilled-600M`):
+it loads at q8 / `basic` once it is told the languages (`arb_Arab` →
+`eng_Latn`; Transformers.js throws without the target). Its q8 files are 400 MB
++ 453 MB plus a 17 MB tokenizer, ~870 MB, not the 480 MB first listed. First
+load 94 s, about 10 s a sentence against OPUS-MT's 1.5 s. On the same five
+paragraphs its English was more fluent and closer to the register ("All praise
+is due to Allah", "the Straight Path"), but it dropped clauses (one paragraph
+came back as two sentences of five) and invented others ("I am His slave" for
+"Muhammad is His servant"; العصر as "evening prayer"). Dropped text is the worse
+fault, since a card looks complete. In the Playwright context its files were
+not kept in Cache Storage, so a second load downloaded them again; the cause
+(most likely that context's storage quota) is not confirmed, and the tablet is
+not measured.
 
 Other facts, still true:
 
@@ -401,7 +416,7 @@ for a probe, and **Clear cached weights** empties both caches.
 
 ### What the on-device model cannot do
 
-It is a dedicated NMT model (OPUS-MT, ~112 MB; NLLB-200 distilled, ~480 MB) run
+It is a dedicated NMT model (OPUS-MT, ~112 MB; NLLB-200 distilled, ~870 MB) run
 through Transformers.js — no native plugin, no Capacitor work. It beats a 1–3B
 general LLM at pure translation at a fraction of the size and avoids the
 instruction-following failures that make small LLMs unsafe here. No on-device

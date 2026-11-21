@@ -387,11 +387,11 @@ export function OfflineTranslation() {
                         ...probeModel.languages,
                       });
                       setStatus(
-                        `${probeDtype}: loaded and translated → "${output?.[0]?.translation_text ?? '(empty)'}"`,
+                        `${probeDtype}: ${probeModel.id} loaded and translated → "${output?.[0]?.translation_text ?? '(empty)'}"`,
                       );
                     } catch (error) {
                       setStatus(
-                        `${probeDtype}: ${error instanceof Error ? error.message : String(error)}`,
+                        `${probeDtype}: ${probeModel.id}: ${error instanceof Error ? error.message : String(error)}`,
                       );
                     } finally {
                       setBusy(null);
