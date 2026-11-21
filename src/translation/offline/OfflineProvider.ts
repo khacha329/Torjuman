@@ -284,8 +284,88 @@ type Translator = (
   options?: Record<string, unknown>,
 ) => Promise<{ translation_text: string }[]>;
 
-let pipelinePromise: Promise<Translator> | null = null;
-let loadedModelId: string | null = null;
+type DisposableTranslator = Translator & { dispose?: () => Promise<void> };
+
+/**
+ * One load of one model, shared by every caller that asks for that model.
+ *
+ * Its ONNX Runtime sessions live in WASM memory, outside the JavaScript heap,
+ * and stay there until the pipeline is disposed. Only dropping the reference —
+ * what unloading used to do — kept every earlier load's sessions, so repeated
+ * probes or a model switch in one tab ran the runtime out of memory: a second
+ * NLLB load failed with `std::bad_alloc` (seen on the owner's desktop and
+ * reproduced in Chromium, first load fine and every later one failing).
+ *
+ * So a load that is replaced or unloaded is *retired*, and freed once nothing
+ * uses it. `users` counts the translateProse runs holding it, so a model is
+ * never disposed under a translation still running in the reader — Settings →
+ * Delete, Clear cached weights, a probe or a model switch waits for it instead.
+ */
+interface PipelineEntry {
+  modelId: string;
+  promise: Promise<Translator>;
+  users: number;
+  retired: boolean;
+  disposed: boolean;
+}
+
+let current: PipelineEntry | null = null;
+
+async function disposeEntry(entry: PipelineEntry): Promise<void> {
+  if (entry.disposed) return;
+  entry.disposed = true;
+  try {
+    await ((await entry.promise) as DisposableTranslator).dispose?.();
+  } catch {
+    // The load failed, so the app holds no pipeline to dispose. Transformers.js
+    // builds a model's sessions with Promise.all and does not release the ones
+    // that were created when another fails, so those stay in WASM memory until
+    // the tab reloads; nothing here can reach them.
+  }
+}
+
+/** Take a load out of service, freeing it now if nothing is using it. */
+async function retire(entry: PipelineEntry): Promise<void> {
+  entry.retired = true;
+  if (current === entry) current = null;
+  if (entry.users === 0) await disposeEntry(entry);
+}
+
+/**
+ * Start a load and make it the current one, synchronously.
+ *
+ * The slot is claimed before the first await, so a second caller asking for
+ * the same model meanwhile shares this load rather than starting its own — two
+ * copies, one of them never freed, was the race when the claim came after
+ * awaiting the previous model's disposal. The previous load is retired inside
+ * the new one, before anything is fetched, so the two are not in memory
+ * together unless the old one is still translating.
+ */
+function startLoad(
+  modelId: string,
+  onProgress?: (progress: DownloadProgress) => void,
+  probe?: OfflineLoadOptions,
+): PipelineEntry {
+  const previous = current;
+  const entry: PipelineEntry = {
+    modelId,
+    promise: Promise.resolve(undefined as unknown as Translator),
+    users: 0,
+    retired: false,
+    disposed: false,
+  };
+  current = entry;
+  entry.promise = (async () => {
+    if (previous) await retire(previous);
+    return runLoad(modelId, onProgress, probe);
+  })();
+  // A failed load gives its slot back, but only if it still holds it: a later
+  // load may already have replaced it.
+  entry.promise.catch(() => {
+    if (current === entry) current = null;
+  });
+  return entry;
+}
 
 /**
  * Load (and on first use, download) the model.
@@ -299,18 +379,20 @@ export async function loadOfflineModel(
   /** Diagnostic only — the settings screen's "try another dtype" control. */
   probe?: OfflineLoadOptions,
 ): Promise<Translator> {
-  const isProbe = probe !== undefined;
-  if (pipelinePromise && loadedModelId === modelId && !isProbe) return pipelinePromise;
+  const entry =
+    current && current.modelId === modelId && probe === undefined
+      ? current
+      : startLoad(modelId, onProgress, probe);
+  return entry.promise;
+}
 
-  // Whatever was loaded before goes first, sessions and all. Replacing the
-  // promise alone left the old model's sessions in ONNX Runtime's WASM memory,
-  // which has a hard ceiling: a second NLLB load in the same tab failed with
-  // `std::bad_alloc` (reproduced in Chromium: first load fine, every later one
-  // failing).
-  await releasePipeline();
-
+/** One load, from the Hub or the cache, with its diagnostics. */
+async function runLoad(
+  modelId: string,
+  onProgress?: (progress: DownloadProgress) => void,
+  probe?: OfflineLoadOptions,
+): Promise<Translator> {
   const model = offlineModelById(modelId);
-  loadedModelId = modelId;
 
   const dtype = probe?.dtype ?? OFFLINE_DTYPE;
   const graphOptimization = probe?.graphOptimizationLevel ?? OFFLINE_GRAPH_OPTIMIZATION;
@@ -330,7 +412,7 @@ export async function loadOfflineModel(
   };
   lastLoad = diagnostics;
 
-  pipelinePromise = (async () => {
+  const loading = (async () => {
     const { pipeline, env } = await import('@huggingface/transformers');
 
     // Weights come from the Hub and are cached; nothing else is fetched at
@@ -403,14 +485,12 @@ export async function loadOfflineModel(
   })();
 
   try {
-    const translator = await pipelinePromise;
+    const translator = await loading;
     diagnostics.ok = true;
     diagnostics.durationMs = Date.now() - diagnostics.startedAt;
     await removeLegacyModelCache();
     return translator;
   } catch (error) {
-    pipelinePromise = null;
-    loadedModelId = null;
     diagnostics.ok = false;
     diagnostics.durationMs = Date.now() - diagnostics.startedAt;
     diagnostics.error = error instanceof Error ? error.message : String(error);
@@ -436,35 +516,15 @@ export async function loadOfflineModel(
 }
 
 export function isOfflineModelLoaded(modelId: string): boolean {
-  return pipelinePromise !== null && loadedModelId === modelId;
+  return current !== null && current.modelId === modelId;
 }
 
 /**
- * Forget the pipeline and free what it holds.
- *
- * Dropping the reference is not enough: the model's ONNX Runtime sessions live
- * in WASM memory, outside the JavaScript heap, and stay there until the
- * pipeline is disposed. Each load that was only forgotten kept its sessions —
- * for NLLB about a gigabyte — so repeated probes or a model switch in one tab
- * ran the runtime out of memory (`std::bad_alloc`). A load that failed holds
- * nothing to dispose.
+ * Forget the in-memory model and free its sessions — at once, or when the
+ * translation still using it finishes. Cached weights are removed separately.
  */
-async function releasePipeline(): Promise<void> {
-  const previous = pipelinePromise;
-  pipelinePromise = null;
-  loadedModelId = null;
-  if (!previous) return;
-  try {
-    const pipeline = (await previous) as Translator & { dispose?: () => Promise<void> };
-    await pipeline.dispose?.();
-  } catch {
-    // The load failed, or disposing did; either way there is nothing left to free.
-  }
-}
-
-/** Forget the in-memory pipeline and free its sessions. Cached weights are removed separately. */
 export async function unloadOfflineModel(): Promise<void> {
-  await releasePipeline();
+  if (current) await retire(current);
 }
 
 export interface OfflineTranslateOptions {
@@ -483,7 +543,23 @@ export async function translateProse(
   spans: string[],
   options: OfflineTranslateOptions,
 ): Promise<string[]> {
-  const loaded = await loadOfflineModel(options.modelId);
+  // Held for the whole run, so nothing frees the model between two sentences.
+  const entry =
+    current && current.modelId === options.modelId ? current : startLoad(options.modelId);
+  entry.users++;
+  try {
+    return await translateSpans(await entry.promise, spans, options);
+  } finally {
+    entry.users--;
+    if (entry.retired && entry.users === 0) void disposeEntry(entry);
+  }
+}
+
+async function translateSpans(
+  loaded: Translator,
+  spans: string[],
+  options: OfflineTranslateOptions,
+): Promise<string[]> {
   const languages = offlineModelById(options.modelId).languages ?? {};
   const translator: Translator = (input, extra) => loaded(input, { ...languages, ...extra });
 
