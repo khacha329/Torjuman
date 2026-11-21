@@ -32,7 +32,8 @@ node_modules/
 # /qul/       resources downloaded from the Qurʾān Universal Library, under
 #             their own licence terms. NOT src/qul/, which is source code.
 #
-# /hadith-json/  riyad_assalihin.json and nawawi40.json from the hadith-json
+# /hadith-json/  the collection files (riyad_assalihin.json, nawawi40.json,
+#             bukhari.json, muslim.json …) from the hadith-json
 #             dataset (github.com/AhmedBaset/hadith-json), whose text was scraped
 #             from sunnah.com. Personal use only: imported in Settings, stored on
 #             the device, never committed. How to distribute it legitimately is

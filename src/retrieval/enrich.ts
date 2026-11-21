@@ -114,7 +114,11 @@ async function enrichHadith(
         ...segment,
         english: local.english,
         source: 'hadith-json',
-        reference: `${local.collection}:${local.entry.number}`,
+        // Renumbered to the dataset only where its numbers are citable; for
+        // Bukhārī and Muslim the dataset's position is not the standard number.
+        reference: local.citable
+          ? `${local.collection}:${local.entry.number}`
+          : segment.reference,
       };
     }
     return {

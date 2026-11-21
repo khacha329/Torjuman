@@ -55,6 +55,23 @@ export interface HadithJsonCollection {
   displayName: string;
   /** The count the file's metadata claims; a different count is refused. */
   length: number;
+  /**
+   * Whether the number the importer derives is one the owner would cite.
+   *
+   * True where it was checked against the book itself (Riyāḍ: the sharḥ's
+   * printed numbers match, 412 and 413 included). False where it is only the
+   * dataset's own running index: Bukhārī agrees with the standard numbering at
+   * the start («إنما الأعمال بالنيات» is 1, «بني الإسلام على خمس» is 8) but the
+   * file has 7,277 ḥadīth against the standard 7,563, so by the end it is 286
+   * behind: the closing ḥadīth («كلمتان حبيبتان إلى الرحمن», standard 7563) is
+   * the file's last row, 7277, and its two earlier occurrences (standard 6406
+   * and 6682) are 6167 and 6438;
+   * Muslim's matches neither the standard nor sunnah.com's (the five pillars,
+   * standard 16, are 110–112 here), and its introduction is listed last like
+   * Riyāḍ's. For those, text is the identification and the number must not be
+   * printed as a citation. Measured with `npm run measure:hadith-corpus`.
+   */
+  citableNumbers: boolean;
 }
 
 export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
@@ -64,6 +81,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     arabicTitle: 'رياض الصالحين',
     displayName: 'Riyāḍ aṣ-Ṣāliḥīn',
     length: 1896,
+    citableNumbers: true,
   },
   {
     slug: 'nawawi40',
@@ -71,6 +89,23 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     arabicTitle: 'الأربعون النووية',
     displayName: 'Nawawī’s Forty (with the two extra)',
     length: 42,
+    citableNumbers: true,
+  },
+  {
+    slug: 'bukhari',
+    titles: ['sahih al-bukhari'],
+    arabicTitle: 'صحيح البخاري',
+    displayName: 'Ṣaḥīḥ al-Bukhārī',
+    length: 7277,
+    citableNumbers: false,
+  },
+  {
+    slug: 'muslim',
+    titles: ['sahih muslim'],
+    arabicTitle: 'صحيح مسلم',
+    displayName: 'Ṣaḥīḥ Muslim',
+    length: 7459,
+    citableNumbers: false,
   },
 ];
 
@@ -331,6 +366,13 @@ const REFERENCE = /^([a-z0-9]+):(\d+)$/;
 
 export interface LocalHadith extends HadithMatch {
   collection: string;
+  /**
+   * Whether `entry.number` may be shown as a citation or used in a sunnah.com
+   * link. False for Bukhārī and Muslim (see `citableNumbers`): their English is
+   * still text-confirmed and shown, but the number stays whatever the book or
+   * the model said it was.
+   */
+  citable: boolean;
   resource: QulResource;
   english: string;
 }
@@ -368,5 +410,6 @@ export async function findLocalHadith(
   if (!match) return null;
   const english = composeEnglish(match.entry);
   if (english === '') return null;
-  return { ...match, collection: slug, resource, english };
+  const citable = hadithJsonCollection(slug)?.citableNumbers ?? false;
+  return { ...match, collection: slug, citable, resource, english };
 }

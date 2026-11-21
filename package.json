@@ -13,6 +13,7 @@
     "layers": "node scripts/check-layers.mjs",
     "verify": "vite build --ssr scripts/verify-parsers.ts --outDir .verify --logLevel warn && node .verify/verify-parsers.js",
     "report:hadith-json": "vite build --ssr scripts/report-hadith-json.ts --outDir .verify/hadith --logLevel warn && node .verify/hadith/report-hadith-json.js",
+    "measure:hadith-corpus": "vite build --ssr scripts/measure-hadith-corpus.ts --outDir .verify/corpus --logLevel warn && node .verify/corpus/measure-hadith-corpus.js",
     "verify:selection": "vite build --logLevel warn && node scripts/verify-selection.mjs",
     "verify:reader": "vite build --logLevel warn && node scripts/verify-reader-scroll.mjs",
     "verify:markup": "node scripts/verify-markup.mjs",

@@ -5835,7 +5835,7 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
 
 {
   console.log('\n=== hadith-json source ===');
-  const { readHadithJson, composeEnglish, chooseCandidate, HadithJsonFormatError } = await import(
+  const { readHadithJson, composeEnglish, chooseCandidate, HadithJsonFormatError, HADITH_JSON_COLLECTIONS } = await import(
     '../src/retrieval/hadithJson'
   );
 
@@ -5929,6 +5929,37 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       { sunnahApiKey: '', preferred: 'sunnah', online: false },
     );
     check('a matn that agrees with no candidate gets no English', wrong.record, null);
+
+    // A collection whose numbers are not citable (Bukhārī, Muslim): the
+    // text-confirmed English is still given, but the dataset's position never
+    // becomes the reference, the number or a sunnah.com link.
+    const bukhariRows = rows.map((row) => ({ ...row, key: row.key.replace('riyadussalihin', 'bukhari') }));
+    const bukhari = {
+      ...fake,
+      async listQulResources() {
+        return [{ id: 'r', kind: 'hadith-json', collection: 'bukhari' }];
+      },
+      async getQulEntries(_id: string, keys: string[]) {
+        return bukhariRows.filter((row) => keys.includes(row.key));
+      },
+    };
+    // The model says 1; the text is the dataset's 3 (within the window).
+    const drifted = await lookup(
+      {} as never,
+      bukhari as never,
+      { reference: 'bukhari:1', arabicText: matns[2] },
+      { sunnahApiKey: '', preferred: 'sunnah', online: false },
+    );
+    check('non-citable collection: English still given', drifted.record?.english, 'Abu Huraira reported: English of 3');
+    check('  the number stays the reference’s, not the dataset’s', drifted.record?.number, '1');
+    check('  and no sunnah.com link is built from the dataset’s position', drifted.record?.sourceUrl, null);
+
+    const { enrichSegments } = await import('../src/retrieval/enrich');
+    const [segment] = await enrichSegments(
+      [{ type: 'hadith', arabic: matns[2], english: '', reference: 'bukhari:1' }] as never,
+      { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
+    );
+    check('  enrich keeps the model’s reference for it', [segment.english, segment.source, segment.reference], ['Abu Huraira reported: English of 3', 'hadith-json', 'bukhari:1']);
   }
 
   // The on-device report over stored blocks: matched by number, by neighbour,
@@ -5963,9 +5994,56 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('report counts: number, neighbour, unmatched, unnumbered',
       [result.numbered, result.byNumber, result.byNeighbour, result.unmatched.length, result.unnumbered],
       [3, 1, 1, 1, 1]);
+    // Each reason a miss can get, against a small collection built to produce it.
+    const { classifyMiss } = await import('../src/retrieval/hadithJsonReport');
+    const { letterFold: fold } = await import('../src/lib/arabic');
+    const unrelated = 'كان رجل يبيع التمر في السوق فمر به قوم من الغرباء فسألوه عن الطريق إلى المدينة';
+    const halfOf = matns[2].split(' ').slice(0, 9).join(' ') + ' ' + unrelated;
+    const corpus = new Map(
+      [
+        [1, matns[1]],
+        [2, halfOf],
+        [3, unrelated],
+        [30, matns[0]],
+      ].map(([n, arabic]) => [
+        n as number,
+        { t: 'hadith-json' as const, number: n as number, idInBook: n as number, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: arabic as string },
+      ]),
+    );
+    const classify = (matn: string, n: number) =>
+      classifyMiss(matn, n, corpus, (entry) => ` ${fold(entry.arabic)} `);
+    check('miss reason: too short', classify('١- قال نعم', 1).reason, 'too-short');
+    check('miss reason: over-stripped (the stripper left under four words)', classify('١- قال أبو بكر رواه البخاري ومسلم في الصحيح', 1).reason, 'over-stripped');
+    const drifted = classify(matns[0], 1);
+    check('miss reason: drifted, with where it agrees', [drifted.reason, drifted.bestElsewhere?.number, drifted.bestElsewhere?.offset], ['drifted', 30, 29]);
+    check('miss reason: partial (own number agrees in part)', classify(matns[2], 2).reason, 'partial');
+    // The plan's over-strip test: the stripper cuts «ورواه» mid-word and drops
+    // the tail that carries the match, while the unstripped text agrees.
+    const tail = 'من قام رمضان إيمانا واحتسابا غفر له ما تقدم من ذنبه ومن قام ليلة القدر إيمانا';
+    corpus.set(40, { t: 'hadith-json', number: 40, idInBook: 40, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: 'قال الناس يومئذ ورواه ' + tail });
+    check('miss reason: over-stripped (agrees only unstripped)', classify('قال الناس يومئذ ورواه ' + tail, 40).reason, 'over-stripped');
+    check('miss reason: no ḥadīth at that number', classify(matns[0], 999).reason, 'no-entry');
+    check('the longest common run is measured in words', classify(matns[2], 2).ownRunWords, 9);
+    check('miss reason: different wording', classify('أقبل الناس على الصلاة في المسجد الكبير يوم الجمعة بعد الأذان مباشرة', 3).reason, 'different-wording');
+
     check('the unmatched one is listed by number with its first words',
       [result.unmatched[0].number, result.unmatched[0].firstWords],
       [3, 'كلام آخر لا علاقة له بشيء من هذه']);
+  }
+
+  // Every registered collection whose file is present reads cleanly with its
+  // exact count (a wrong `length` in the registry would refuse the real file).
+  for (const collection of HADITH_JSON_COLLECTIONS) {
+    // The repository's file names, which are not all the sunnah.com slug.
+    const FILE_FOR: Record<string, string> = { riyadussalihin: 'riyad_assalihin.json' };
+    const file = FILE_FOR[collection.slug] ?? `${collection.slug}.json`;
+    const path = join(process.cwd(), 'hadith-json', file);
+    if (!existsSync(path)) {
+      console.log(`  (${file} not present: ${collection.slug} not read)`);
+      continue;
+    }
+    const read = readHadithJson(JSON.parse(readFileSync(path, 'utf8')), file);
+    check(`${file} reads as ${collection.slug} with ${collection.length} ḥadīth`, [read.collection.slug, read.entries.length], [collection.slug, collection.length]);
   }
 
   // The real measurement, where the owner's data is present.
