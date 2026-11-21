@@ -125,7 +125,7 @@ export function OfflineTranslation() {
           if (request.url.includes(model.repo)) await cache.delete(request);
         }
       }
-      unloadOfflineModel();
+      await unloadOfflineModel();
       await refresh();
       setStatus(`Removed. About ${model.approxMB} MB reclaimed.`);
     } finally {
@@ -396,7 +396,7 @@ export function OfflineTranslation() {
                     } finally {
                       setBusy(null);
                       setProgress(null);
-                      unloadOfflineModel();
+                      await unloadOfflineModel();
                       await refresh();
                     }
                   })();

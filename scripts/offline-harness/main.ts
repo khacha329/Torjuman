@@ -50,7 +50,7 @@ function pickSamples(pages: Record<string, string>, want: number): Sample[] {
 
 async function measure(config: OfflineLoadOptions & { modelId: string }, texts: string[]) {
   const { modelId, ...options } = config;
-  unloadOfflineModel();
+  await unloadOfflineModel();
   const loadStart = performance.now();
   await loadOfflineModel(modelId, undefined, options);
   const loadMs = performance.now() - loadStart;

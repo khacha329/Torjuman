@@ -268,7 +268,7 @@ export async function clearModelCache(): Promise<number> {
       if (await cache.delete(request)) removed++;
     }
   }
-  unloadOfflineModel();
+  await unloadOfflineModel();
   return removed;
 }
 
@@ -301,6 +301,13 @@ export async function loadOfflineModel(
 ): Promise<Translator> {
   const isProbe = probe !== undefined;
   if (pipelinePromise && loadedModelId === modelId && !isProbe) return pipelinePromise;
+
+  // Whatever was loaded before goes first, sessions and all. Replacing the
+  // promise alone left the old model's sessions in ONNX Runtime's WASM memory,
+  // which has a hard ceiling: a second NLLB load in the same tab failed with
+  // `std::bad_alloc` (reproduced in Chromium: first load fine, every later one
+  // failing).
+  await releasePipeline();
 
   const model = offlineModelById(modelId);
   loadedModelId = modelId;
@@ -432,10 +439,32 @@ export function isOfflineModelLoaded(modelId: string): boolean {
   return pipelinePromise !== null && loadedModelId === modelId;
 }
 
-/** Forget the in-memory pipeline. Cached weights are removed separately. */
-export function unloadOfflineModel(): void {
+/**
+ * Forget the pipeline and free what it holds.
+ *
+ * Dropping the reference is not enough: the model's ONNX Runtime sessions live
+ * in WASM memory, outside the JavaScript heap, and stay there until the
+ * pipeline is disposed. Each load that was only forgotten kept its sessions —
+ * for NLLB about a gigabyte — so repeated probes or a model switch in one tab
+ * ran the runtime out of memory (`std::bad_alloc`). A load that failed holds
+ * nothing to dispose.
+ */
+async function releasePipeline(): Promise<void> {
+  const previous = pipelinePromise;
   pipelinePromise = null;
   loadedModelId = null;
+  if (!previous) return;
+  try {
+    const pipeline = (await previous) as Translator & { dispose?: () => Promise<void> };
+    await pipeline.dispose?.();
+  } catch {
+    // The load failed, or disposing did; either way there is nothing left to free.
+  }
+}
+
+/** Forget the in-memory pipeline and free its sessions. Cached weights are removed separately. */
+export async function unloadOfflineModel(): Promise<void> {
+  await releasePipeline();
 }
 
 export interface OfflineTranslateOptions {
