@@ -49,7 +49,19 @@ for (const file of readdirSync(fixtureDir)) {
   }
 }
 
-const configs = [{ dtype: 'q8', graphOptimizationLevel: 'basic' }, { dtype: 'fp32' }];
+// --models a,b picks which offline models to run (default opus-mt-ar-en); each runs as q8 / basic, the
+// app's pinned setting. --default-graph adds a q8 run at 'all', the runtime's
+// own default, to see whether a model has OPUS-MT's session failure. (It has to
+// be named: leaving it out takes the app's pinned 'basic'.)
+const modelArg = process.argv.indexOf('--models');
+const models = modelArg === -1 ? ['opus-mt-ar-en'] : process.argv[modelArg + 1].split(',');
+const configs = models.flatMap((modelId) => [
+  ...(process.argv.includes('--default-graph') ? [{ modelId, dtype: 'q8', graphOptimizationLevel: 'all' }] : []),
+  { modelId, dtype: 'q8', graphOptimizationLevel: 'basic' },
+  // The full-precision reference the README's fp32 row came from. Large (OPUS-MT
+  // ~420 MB, NLLB far more), so only on request.
+  ...(process.argv.includes('--fp32') ? [{ modelId, dtype: 'fp32' }] : []),
+]);
 
 const browser = await chromium.launch();
 const report = [];
@@ -64,7 +76,15 @@ for (const options of configs) {
   const texts = samples.map((sample) => sample.arabic);
 
   console.log(`${JSON.stringify(options)}: first load (download)`);
-  const first = await page.evaluate(([o, t]) => window.harness.measure(o, t), [options, texts]);
+  let first;
+  try {
+    first = await page.evaluate(([o, t]) => window.harness.measure(o, t), [options, texts]);
+  } catch (error) {
+    console.log(`  FAILED: ${String(error.message).split(String.fromCharCode(10))[0].slice(0, 400)}`);
+    report.push({ options, failed: String(error.message).slice(0, 400) });
+    await context.close();
+    continue;
+  }
   const cached = await page.evaluate(() => window.harness.cachedModelFiles());
   console.log(`  load ${(first.loadMs / 1000).toFixed(1)} s, warm-up ${first.warmMs.toFixed(0)} ms`);
 
@@ -83,11 +103,15 @@ server.close();
 writeFileSync(join(out, 'offline-measurements.json'), JSON.stringify({ samples, report }, null, 2));
 
 const secs = (ms) => (ms / 1000).toFixed(1);
-const name = (o) => `${o.dtype}${o.graphOptimizationLevel ? ` / ${o.graphOptimizationLevel}` : ''}`;
+const name = (o) => `${o.modelId} ${o.dtype}${o.graphOptimizationLevel ? ` / ${o.graphOptimizationLevel}` : ''}`;
 const lines = ['# On-device translation, measured in Chromium', '', `Run ${new Date().toISOString()}`, ''];
 lines.push('| configuration | first load (download) | cached load | session warm-up | per paragraph (mean) | per sentence (mean) |');
 lines.push('| --- | --- | --- | --- | --- | --- |');
-for (const { options, first, second } of report) {
+for (const { options, first, second, failed } of report) {
+  if (failed) {
+    lines.push(`| ${name(options)} | failed: ${failed.replace(/\|/g, '/').slice(0, 160)} | | | | |`);
+    continue;
+  }
   const totalMs = second.results.reduce((sum, r) => sum + r.ms, 0);
   const sentences = second.results.reduce((sum, r) => sum + r.sentences, 0);
   lines.push(
@@ -99,8 +123,9 @@ lines.push('', '## Paragraphs', '');
 samples.forEach((sample, i) => {
   lines.push(`### ${i + 1}. ${sample.blockId}`, '', '**Arabic**', '', sample.arabic, '');
   for (const { options, second } of report) {
+    if (!second) continue;
     lines.push(
-      `**OPUS-MT ${name(options)}** (${second.results[i].sentences} sentences, ${secs(second.results[i].ms)} s)`,
+      `**${name(options)}** (${second.results[i].sentences} sentences, ${secs(second.results[i].ms)} s)`,
       '',
       second.results[i].translation,
       '',

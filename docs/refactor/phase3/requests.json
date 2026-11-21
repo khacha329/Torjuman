@@ -7356,9 +7356,13 @@
           {
             "id": "nllb-200-distilled-600M",
             "repo": "Xenova/nllb-200-distilled-600M",
-            "approxMB": 480,
-            "label": "NLLB-200 distilled — better",
-            "note": "About 480 MB. Noticeably better Arabic, slower, and a large download."
+            "approxMB": 870,
+            "languages": {
+              "src_lang": "arb_Arab",
+              "tgt_lang": "eng_Latn"
+            },
+            "label": "NLLB-200 distilled — larger",
+            "note": "About 870 MB. More fluent but can drop or invent phrases; several times slower."
           }
         ],
         "byProvider": {

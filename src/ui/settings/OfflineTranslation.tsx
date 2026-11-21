@@ -39,6 +39,7 @@ export function OfflineTranslation() {
   const [diagnostics, setDiagnostics] = useState<OfflineLoadDiagnostics | null>(null);
   const [cachedFiles, setCachedFiles] = useState<string[]>([]);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [probeModel, setProbeModel] = useState(OFFLINE_MODELS[0]);
   const [probeDtype, setProbeDtype] = useState<OfflineDtype>('q8');
   const [probeGraph, setProbeGraph] = useState<OfflineGraphOptimization | undefined>(undefined);
 
@@ -319,6 +320,25 @@ export function OfflineTranslation() {
                 runtime is fine and the problem is the artifact. */}
             <div className="flex flex-wrap items-end gap-2">
               <label className="block">
+                <span className="mb-1 block font-medium text-ink">Model</span>
+                <select
+                  className={`${inputClass} w-44`}
+                  value={probeModel.id}
+                  onChange={(event) =>
+                    setProbeModel(
+                      OFFLINE_MODELS.find((model) => model.id === event.target.value) ??
+                        OFFLINE_MODELS[0],
+                    )
+                  }
+                >
+                  {OFFLINE_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
                 <span className="mb-1 block font-medium text-ink">Try a dtype</span>
                 <select
                   className={`${inputClass} w-44`}
@@ -356,17 +376,22 @@ export function OfflineTranslation() {
                     setStatus(null);
                     try {
                       const translator = await loadOfflineModel(
-                        OFFLINE_MODELS[0].id,
+                        probeModel.id,
                         setProgress,
                         { dtype: probeDtype, graphOptimizationLevel: probeGraph },
                       );
-                      const output = await translator('السلام عليكم');
+                      // A sentence with a word the small model has got wrong
+                      // (الظهر, the noon prayer, read as "back"), so the probe
+                      // says something about quality, not only that it ran.
+                      const output = await translator('صلينا الظهر في المسجد ثم قرأنا الحديث.', {
+                        ...probeModel.languages,
+                      });
                       setStatus(
-                        `${probeDtype}: loaded and translated → "${output?.[0]?.translation_text ?? '(empty)'}"`,
+                        `${probeDtype}: ${probeModel.id} loaded and translated → "${output?.[0]?.translation_text ?? '(empty)'}"`,
                       );
                     } catch (error) {
                       setStatus(
-                        `${probeDtype}: ${error instanceof Error ? error.message : String(error)}`,
+                        `${probeDtype}: ${probeModel.id}: ${error instanceof Error ? error.message : String(error)}`,
                       );
                     } finally {
                       setBusy(null);
