@@ -5899,6 +5899,15 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   check('a short formula shared by the neighbours is refused', chooseCandidate(2, 'قال رسول الله', (n) => entries.get(n)), null);
   check('a short quotation is never matched through a neighbour', chooseCandidate(1, 'إنما الأعمال بالنيات', (n) => entries.get(n)), null);
   check('a one-word quotation is refused', chooseCandidate(3, 'إنما', (n) => entries.get(n)), null);
+  check('a two-word quotation is refused (three is the floor)', chooseCandidate(3, 'إنما الأعمال', (n) => entries.get(n)), null);
+  check('a short match is marked as one, not given a shingle score', chooseCandidate(3, 'إنما الأعمال بالنيات', (n) => entries.get(n))?.shortQuote, true);
+  // A long text the takhrīj stripper cuts to three words: the residue is never
+  // taken for the quotation, because the real text was never compared.
+  check(
+    'a long matn stripped to three words does not reach the short rule',
+    chooseCandidate(3, 'إنما الأعمال بالنيات وفي رواية أخرى عند غيره من أهل الحديث بلفظ مختلف عن هذا اللفظ كثيرا', (n) => entries.get(n)),
+    null,
+  );
 
   // References as the model writes them, not as the schema asks.
   {
@@ -5914,6 +5923,13 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('"no." before the number, ʾ in the name', parseHadithReference('Sunan an-Nasāʾī no. 5'), { collection: 'nasai', number: '5' });
     check('"Bukhari and Muslim" with numbers', parseHadithReferences('Bukhari 8 and Muslim 16').length, 2);
     check('a collection with no number is not a reference', parseHadithReferences('Ṣaḥīḥ al-Bukhārī'), []);
+    // A comma or slash inside a number never splits it into a wrong ḥadīth.
+    check('a thousands separator gives no reference, not ḥadīth 6', parseHadithReferences('Ṣaḥīḥ al-Bukhārī 6,406'), []);
+    check('a volume/page gives no reference, not ḥadīth 1', parseHadithReferences('Ṣaḥīḥ al-Bukhārī 1/9'), []);
+    check('a comma between citations still splits', parseHadithReferences('Bukhari 1, Muslim 1907').length, 2);
+    check('Arabic separators ، and ؛ split', parseHadithReferences('Bukhari 1، Muslim 1907؛ Nasai 5').length, 3);
+    check('"hadith" before the number', parseHadithReference('Sahih Muslim hadith 1907'), { collection: 'muslim', number: '1907' });
+    check('a non-breaking hyphen folds', parseHadithReference('Ṣaḥīḥ al‑Bukhārī 1'), { collection: 'bukhari', number: '1' });
   }
 
   // End to end through lookupHadith, offline: the imported English comes back

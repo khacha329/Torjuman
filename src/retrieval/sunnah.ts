@@ -88,7 +88,11 @@ export function parseHadithReference(raw: string): HadithReference | null {
  */
 export function parseHadithReferences(raw: string): HadithReference[] {
   const out: HadithReference[] = [];
-  for (const part of raw.split(/[;,/]|\band\b|،|؛/u)) {
+  // A comma or slash before a digit is part of the number, never a separator:
+  // "Bukhārī 6,406" or a volume/page «1/412» split there would become ḥadīth 6
+  // or 1, and sunnah.com's English is shown without any check of the text
+  // (review of 87f2a5e). Such a reference parses to nothing, as it always did.
+  for (const part of raw.split(/[;؛،]|,(?!\s*\d)|\/(?!\s*\d)|\band\b/u)) {
     const text = asciiFold(part);
     const match = /^([a-z0-9' -]+?)\s*(?:[:#]|\bno\.?|\bnumber\b|\bhadith\b)?\s*(\d+)$/.exec(text);
     if (!match) continue;
@@ -102,13 +106,15 @@ export function parseHadithReferences(raw: string): HadithReference[] {
 
 /**
  * "Ṣaḥīḥ al-Bukhārī" → "sahih al-bukhari". Combining marks go with NFD; the ʿayn
- * and hamza signs (ʿ ʾ ‘ ’ ') are dropped, so "Nasāʾī" and "Nasa'i" fold alike.
+ * and hamza signs (ʿ ʾ ʼ ‘ ’ ') are dropped, so "Nasāʾī" and "Nasa'i" fold alike,
+ * and the typographic hyphens (non-breaking, en, em) become "-".
  */
 function asciiFold(text: string): string {
   return text
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
-    .replace(/[ʿʾ‘’'`]/g, '')
+    .replace(/[ʿʾʼ‘’'`]/g, '')
+    .replace(/[‐‑‒–—]/g, '-')
     .toLowerCase()
     .trim();
 }
