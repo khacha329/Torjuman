@@ -1,7 +1,7 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { HadithJsonEntry, QulEntry, QulResource } from '../types';
 import { letterFold } from '../lib/arabic';
-import { matnShingles } from './sharh';
+import { matnShingles, stripApparatus } from './sharh';
 
 // The hadith-json dataset (github.com/AhmedBaset/hadith-json, scraped from
 // sunnah.com) as a local ḥadīth source.
@@ -319,6 +319,41 @@ export function agrees(result: Agreement): boolean {
   return result.tried > 0 && result.hits >= Math.min(2, result.tried) && result.hits / result.tried >= MIN_AGREEMENT;
 }
 
+/** Fewest words a quotation too short to shingle may have and still be checked. */
+export const SHORT_QUOTE_WORDS = 2;
+
+/**
+ * A quotation too short for four-word shingles, confirmed another way.
+ *
+ * A sharḥ — and the model, when it boxes one — often quotes only a ḥadīth's
+ * opening: «إنما الأعمال بالنيات» is three words, so `agreement` tries no
+ * shingle and the owner's first Bukhārī test was refused although the dataset's
+ * ḥadīth 1 says exactly that. The rule: the whole quotation, folded, occurs in
+ * the numbered candidate as consecutive words, AND in none of the neighbours
+ * within the window. The second half is what keeps a formula out: «قال رسول
+ * الله» or «صلى الله عليه» is in nearly every ḥadīth around any number, so it
+ * proves nothing and is refused; a phrase found only at the cited number is
+ * that ḥadīth. Only the cited number is accepted this way, never a neighbour —
+ * with so few words, the number has to carry half the proof.
+ */
+function shortQuoteHolds(
+  bookMatn: string,
+  candidate: HadithJsonEntry,
+  number: number,
+  byNumber: (n: number) => HadithJsonEntry | undefined,
+): boolean {
+  const words = letterFold(stripApparatus(bookMatn.replace(BOOK_NUMBER, ''))).split(' ').filter(Boolean);
+  if (words.length < SHORT_QUOTE_WORDS) return false;
+  const phrase = ` ${words.join(' ')} `;
+  const holds = (entry: HadithJsonEntry) => ` ${letterFold(entry.arabic)} `.includes(phrase);
+  if (!holds(candidate)) return false;
+  for (let offset = -NEIGHBOUR_WINDOW; offset <= NEIGHBOUR_WINDOW; offset++) {
+    const neighbour = offset === 0 ? undefined : byNumber(number + offset);
+    if (neighbour && holds(neighbour)) return false;
+  }
+  return true;
+}
+
 export interface HadithMatch {
   entry: HadithJsonEntry;
   /** matched number minus the book's number; 0 when the number itself held. */
@@ -343,6 +378,9 @@ export function chooseCandidate(
   if (exact) {
     const result = agreement(bookMatn, exact.arabic);
     if (agrees(result)) return { entry: exact, offset: 0, agreement: result };
+    if (result.tried === 0 && shortQuoteHolds(bookMatn, exact, number, byNumber)) {
+      return { entry: exact, offset: 0, agreement: { hits: 1, tried: 1 } };
+    }
   }
 
   let best: HadithMatch | null = null;

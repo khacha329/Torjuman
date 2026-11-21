@@ -38,15 +38,28 @@ const COLLECTION_SLUGS: Record<string, string> = {
   'riyad us-salihin': RIYAD_COLLECTION,
   'riyadh as-salihin': RIYAD_COLLECTION,
   riyadussalihin: RIYAD_COLLECTION,
+  'riyad al-salihin': RIYAD_COLLECTION,
+  'riyadh al-salihin': RIYAD_COLLECTION,
   'sahih al-bukhari': 'bukhari',
+  'sahih bukhari': 'bukhari',
+  'al-bukhari': 'bukhari',
   bukhari: 'bukhari',
   'sahih muslim': 'muslim',
   muslim: 'muslim',
+  // Nawawī's Forty: sunnah.com's slug and the hadith-json one are the same.
+  nawawi40: 'nawawi40',
+  'nawawi 40': 'nawawi40',
+  'forty hadith of an-nawawi': 'nawawi40',
+  'an-nawawis forty': 'nawawi40',
+  'nawawis forty': 'nawawi40',
+  'al-arbain an-nawawiyyah': 'nawawi40',
+  'arbain nawawi': 'nawawi40',
   'sunan abi dawud': 'abudawud',
   'abu dawud': 'abudawud',
   'jami at-tirmidhi': 'tirmidhi',
   tirmidhi: 'tirmidhi',
-  "sunan an-nasa'i": 'nasai',
+  // Keys are as `asciiFold` leaves them, so the apostrophe is already gone.
+  'sunan an-nasai': 'nasai',
   nasai: 'nasai',
   'sunan ibn majah': 'ibnmajah',
   'ibn majah': 'ibnmajah',
@@ -59,15 +72,45 @@ export interface HadithReference {
 
 /** Turn "Riyad as-Salihin 412" or "riyadussalihin:412" into a lookup. */
 export function parseHadithReference(raw: string): HadithReference | null {
-  const text = raw.trim().toLowerCase();
+  return parseHadithReferences(raw)[0] ?? null;
+}
 
-  const colon = /^([a-z' -]+)\s*[:#]\s*(\d+)$/.exec(text);
-  const spaced = /^([a-z' -]+?)\s+(\d+)$/.exec(text);
-  const match = colon ?? spaced;
-  if (!match) return null;
+/**
+ * Every collection-and-number a model-supplied reference names, in its order.
+ *
+ * The model writes the reference the way a book's takhrīj does, not the way the
+ * schema hopes: the owner's first Bukhārī test came back as "Ṣaḥīḥ al-Bukhārī 1;
+ * Ṣaḥīḥ Muslim 1907". The old single-reference parser matched `[a-z' -]` only,
+ * so the macrons, the dots under Ṣ and Ḥ, and the second citation each made it
+ * return null, and with it both the sunnah.com and the hadith-json lookups were
+ * never tried. So: split on the separators a citation list uses, fold the
+ * transliteration to plain ASCII, and accept "no." or "#" before the number.
+ */
+export function parseHadithReferences(raw: string): HadithReference[] {
+  const out: HadithReference[] = [];
+  for (const part of raw.split(/[;,/]|\band\b|،|؛/u)) {
+    const text = asciiFold(part);
+    const match = /^([a-z0-9' -]+?)\s*(?:[:#]|\bno\.?|\bnumber\b|\bhadith\b)?\s*(\d+)$/.exec(text);
+    if (!match) continue;
+    const slug = COLLECTION_SLUGS[match[1].replace(/\s+/g, ' ').trim()];
+    if (slug && !out.some((ref) => ref.collection === slug && ref.number === match[2])) {
+      out.push({ collection: slug, number: match[2] });
+    }
+  }
+  return out;
+}
 
-  const slug = COLLECTION_SLUGS[match[1].trim()];
-  return slug ? { collection: slug, number: match[2] } : null;
+/**
+ * "Ṣaḥīḥ al-Bukhārī" → "sahih al-bukhari". Combining marks go with NFD; the ʿayn
+ * and hamza signs (ʿ ʾ ‘ ’ ') are dropped, so "Nasāʾī" and "Nasa'i" fold alike.
+ */
+function asciiFold(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[ʿʾ‘’'`]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 export async function fetchHadith(

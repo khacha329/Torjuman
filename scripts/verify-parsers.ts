@@ -5891,6 +5891,31 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   check('a drifted number is found among the neighbours', chooseCandidate(1, matns[2], (n) => entries.get(n))?.offset, 2);
   check('a text that agrees with nothing is refused', chooseCandidate(1, 'كلام آخر لا علاقة له بشيء من هذه الأحاديث إطلاقا يا صاحبي', (n) => entries.get(n)), null);
 
+  // Quotations too short to shingle (the owner's first Bukhārī test): accepted
+  // at the cited number when the phrase is there and in no neighbour, refused
+  // when it is a formula every neighbour shares, and never via a neighbour.
+  check('a three-word opening is confirmed at its number', chooseCandidate(3, '«إنما الأعمال بالنيات»', (n) => entries.get(n))?.offset, 0);
+  check('a vowelled short quotation folds alike', chooseCandidate(3, 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ', (n) => entries.get(n))?.offset, 0);
+  check('a short formula shared by the neighbours is refused', chooseCandidate(2, 'قال رسول الله', (n) => entries.get(n)), null);
+  check('a short quotation is never matched through a neighbour', chooseCandidate(1, 'إنما الأعمال بالنيات', (n) => entries.get(n)), null);
+  check('a one-word quotation is refused', chooseCandidate(3, 'إنما', (n) => entries.get(n)), null);
+
+  // References as the model writes them, not as the schema asks.
+  {
+    const { parseHadithReferences, parseHadithReference } = await import('../src/retrieval/sunnah');
+    check(
+      'a takhrīj list with transliteration splits into both collections',
+      parseHadithReferences('Ṣaḥīḥ al-Bukhārī 1; Ṣaḥīḥ Muslim 1907'),
+      [{ collection: 'bukhari', number: '1' }, { collection: 'muslim', number: '1907' }],
+    );
+    check('the plain forms still parse', parseHadithReference('Riyad as-Salihin 412'), { collection: 'riyadussalihin', number: '412' });
+    check('slug and colon', parseHadithReference('riyadussalihin:412'), { collection: 'riyadussalihin', number: '412' });
+    check('a slug with a digit in it', parseHadithReference('nawawi40:7'), { collection: 'nawawi40', number: '7' });
+    check('"no." before the number, ʾ in the name', parseHadithReference('Sunan an-Nasāʾī no. 5'), { collection: 'nasai', number: '5' });
+    check('"Bukhari and Muslim" with numbers', parseHadithReferences('Bukhari 8 and Muslim 16').length, 2);
+    check('a collection with no number is not a reference', parseHadithReferences('Ṣaḥīḥ al-Bukhārī'), []);
+  }
+
   // End to end through lookupHadith, offline: the imported English comes back
   // under the book's own Arabic, attributed, and is NOT written to the cache.
   {
@@ -5960,6 +5985,18 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
     );
     check('  enrich keeps the model’s reference for it', [segment.english, segment.source, segment.reference], ['Abu Huraira reported: English of 3', 'hadith-json', 'bukhari:1']);
+
+    // The owner's tablet case, as the model really sent it: a transliterated
+    // takhrīj list naming two collections, and only the opening three words.
+    const [owner] = await enrichSegments(
+      [{ type: 'hadith', arabic: '"إنما الأعمال بالنيات"', english: '', reference: 'Ṣaḥīḥ al-Bukhārī 3; Ṣaḥīḥ Muslim 1907' }] as never,
+      { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
+    );
+    check(
+      '  a takhrīj list and a three-word quotation still get the English',
+      [owner.english, owner.source, owner.reference],
+      ['Abu Huraira reported: English of 3', 'hadith-json', 'Ṣaḥīḥ al-Bukhārī 3; Ṣaḥīḥ Muslim 1907'],
+    );
   }
 
   // The on-device report over stored blocks: matched by number, by neighbour,

@@ -1,10 +1,10 @@
 import type { HttpClient } from '../platform/http/HttpClient';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
-import type { TranslatedSegment } from '../types';
+import type { HadithRecord, TranslatedSegment } from '../types';
 import { renderTakhrij } from '../lib/takhrij';
 import { fetchVerse, type QuranLookupOptions } from './quran';
-import { fetchHadith, parseHadithReference } from './sunnah';
-import { findLocalHadith } from './hadithJson';
+import { fetchHadith, parseHadithReferences } from './sunnah';
+import { findLocalHadith, type LocalHadith } from './hadithJson';
 
 // Replaces the model's placeholder for scripture with the authoritative text.
 //
@@ -96,19 +96,29 @@ async function enrichHadith(
   segment: TranslatedSegment,
   deps: EnrichDeps,
 ): Promise<TranslatedSegment> {
-  const parsed = segment.reference ? parseHadithReference(segment.reference) : null;
+  // A takhrīj often names more than one collection ("Bukhārī 1; Muslim 1907").
+  // Each is tried in the model's order; the first that yields English wins.
+  const references = segment.reference ? parseHadithReferences(segment.reference) : [];
 
-  const record = parsed
-    ? await fetchHadith(deps.http, deps.storage, parsed, deps.sunnahApiKey)
-    : null;
+  let record: HadithRecord | null = null;
+  for (const reference of references) {
+    record = await fetchHadith(deps.http, deps.storage, reference, deps.sunnahApiKey);
+    if (record && record.english !== '') break;
+  }
 
   if (!record || record.english === '') {
-    // The imported hadith-json collection, when there is one. The reference is
-    // the model's and so is only a candidate; `findLocalHadith` confirms it
+    // The imported hadith-json collections, when there are any. The reference
+    // is the model's and so is only a candidate; `findLocalHadith` confirms it
     // against the Arabic the segment carries before any English is returned.
-    const local = segment.reference
-      ? await findLocalHadith(deps.storage, segment.reference.trim(), segment.arabic)
-      : null;
+    let local: LocalHadith | null = null;
+    for (const reference of references) {
+      local = await findLocalHadith(
+        deps.storage,
+        `${reference.collection}:${reference.number}`,
+        segment.arabic,
+      );
+      if (local) break;
+    }
     if (local) {
       return {
         ...segment,
