@@ -144,10 +144,12 @@ async function enrichHadith(
 
   // Text first (plan, Design 6): a match proved against the imported Arabic
   // beats a reference the model recalled, whichever provider recalled it.
-  // An error in the text search (an index that will not load, a row read that
-  // throws) falls back to the reference path rather than failing the card: the
-  // translation is already paid for (review of e23fe93). It does not make a
-  // broken store survivable — the reference path reads storage too.
+  // An error in the text search (the resource list or a row read that throws,
+  // or a fault in the matcher) falls back to the reference path rather than
+  // failing the card: the translation is already paid for (review of
+  // e23fe93). An index that will not load never gets here: loadHadithIndexes
+  // leaves that collection out and reports it. Nor does this make a broken
+  // store survivable — the reference path reads storage too.
   let byText: TranslatedSegment | null = null;
   try {
     byText = await enrichHadithByText(segment, references, deps);
@@ -356,7 +358,8 @@ async function enrichHadithByText(
       )
     ) {
       // The model named this ḥadīth's collection with a number within
-      // NEIGHBOUR_WINDOW of where the dataset has it: the same proof the
+      // NEIGHBOUR_WINDOW of one of the places the dataset has it (any member
+      // of the family, repetitions included): the same proof the
       // number path accepts, so its citation stands. A number further off —
       // «Ṣaḥīḥ al-Bukhārī 9999» — is not shown above proved English; it falls
       // to the name and "The model cited …" below (owner's answer, 2026-11-22,

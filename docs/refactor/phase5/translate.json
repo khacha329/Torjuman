@@ -6602,7 +6602,7 @@
         },
         {
           "id": "sharh-gemini-ambiguous-cited-elsewhere",
-          "through": "block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; this build cannot reach sunnah.com)",
+          "through": "block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; the plain build refuses the proxy-only host, and with a proxy set the request is aborted)",
           "requests": [
             {
               "method": "POST",
@@ -8378,7 +8378,7 @@
         },
         {
           "id": "sharh-anthropic-ambiguous-cited-elsewhere",
-          "through": "block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; this build cannot reach sunnah.com)",
+          "through": "block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; the plain build refuses the proxy-only host, and with a proxy set the request is aborted)",
           "requests": [
             {
               "method": "POST",
