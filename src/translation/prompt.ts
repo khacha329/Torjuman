@@ -79,8 +79,15 @@ const TYPE_LABELS: Record<BlockType, string> = {
   body: 'prose',
 };
 
-/** The per-call content. Everything here varies, so none of it is cached. */
-export function renderUser(request: TranslationRequest): string {
+/**
+ * The per-call content. Everything here varies, so none of it is cached.
+ *
+ * `numberedPieces` is the Gemini path's: the target as numbered pieces
+ * (sourceUnits.ts `numberedUnits`), which its segments refer to by number
+ * instead of writing the Arabic back. Without it the target is sent as the
+ * plain text, as it always was, and Claude's request is unchanged.
+ */
+export function renderUser(request: TranslationRequest, numberedPieces?: string): string {
   const sections: string[] = [];
 
   if (request.contextBefore.trim()) {
@@ -112,8 +119,12 @@ export function renderUser(request: TranslationRequest): string {
         ? `The Qurʾānic verses quoted in this passage have already been identified ` +
           `as ${verses.join(', ')}. Use exactly these references and do not substitute your own.\n`
         : '') +
-      '\n' +
-      request.targetText +
+      (numberedPieces !== undefined
+        ? 'It is given as numbered pieces. For each segment, give the numbers of the first and\n' +
+          'last piece it covers as from and to, in order, every piece in exactly one segment.\n' +
+          'Do not write the Arabic back: the application already has it.\n\n' +
+          numberedPieces
+        : '\n' + request.targetText) +
       '\n</target>',
   );
 

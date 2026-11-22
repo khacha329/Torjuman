@@ -47,6 +47,16 @@
 //     Anthropic key (`sk-ant-p-check-…`) in the Claude group, none in the
 //     no-key and on-device groups.
 //
+// A seventh group, "how a Gemini reply ends", was added with the change that
+// names every finishReason, stops asking Gemini to echo the Arabic and keeps
+// the whole segments of a reply that stops part-way: RECITATION and the retry
+// in two halves, a stream cut mid-segment with no finish reason (the partial
+// card and its "Translate the rest"), "[ {" with no finish reason (the
+// interrupted card and its Retry), and a named stop (OTHER). Its replies use
+// the new shape, piece numbers read from the request they answer
+// (`piecesSent`). The other groups' canned answers still echo `arabic`, which
+// the parser still reads, so their cards are the cards they were.
+//
 // Recorded per scenario: every request to the model host (method, URL, every
 // header Chromium sends (allHeaders), and the body, parsed only when re-serializing it
 // gives back the same text, otherwise the text itself); the `cards` store's
@@ -1063,6 +1073,153 @@ async function offlineGroup(scenario, { page, nextLoad, network }) {
   });
 }
 
+// How a Gemini reply ends, through the reader: added with the change that
+// names every finishReason, stops asking Gemini to echo the Arabic (each
+// segment names the numbered pieces of the passage it covers, and the app
+// fills the Arabic in), and keeps the whole segments of a reply that stops
+// part-way. The replies are in that new shape; their piece numbers are read
+// from the request each answers, so they follow the app's own cutting
+// (translation/sourceUnits.ts) rather than a copy of it. "[ {" is the raw text
+// the owner saw on the RECITATION failures; the segment cut mid-string with no
+// finish reason is the tablet's report.
+
+/** The numbered pieces a Gemini request sent as its target ("[1] …"), in order. */
+const piecesSent = (held) => {
+  const user = held.described.body.contents[0].parts[0].text;
+  const target = user.slice(user.indexOf('<target>'), user.indexOf('</target>'));
+  return [...target.matchAll(/^\[(\d+)\] (.*)$/gm)].map((match) => match[2]);
+};
+const piece = (from, to, english, extra = {}) => {
+  // A canned answer built from a piece that was not found would be a card
+  // nobody meant; fail the scenario instead.
+  if (!(from >= 1 && to >= from)) throw new Error(`a canned piece range ${from}..${to} is not a real range`);
+  return { type: 'prose', from, to, english, ...extra };
+};
+/** A reply that ends with no finish reason after `text`: the stream just closes. */
+const endsWithout = (text) => geminiStream([{ text, usage: { prompt: 640, candidates: 30 } }]);
+const stopsWith = (text, finishReason) => geminiStream([{ text, finishReason, usage: { prompt: 640, candidates: 2 } }]);
+
+/**
+ * P_SCREENSHOTS=<dir>: the cards this group makes, photographed at the
+ * tablet's two sizes for a PR (CLAUDE.md: a UI change carries screenshots).
+ * Off by default and never part of the record; a run that takes them resizes
+ * the page and puts it back, so compare nothing from it.
+ */
+async function photograph(page, cardId, name) {
+  const dir = process.env.P_SCREENSHOTS;
+  if (!dir) return;
+  mkdirSync(dir, { recursive: true });
+  for (const size of [VIEWPORT, { width: 600, height: 960 }]) {
+    await page.setViewportSize(size);
+    await sleep(600);
+    // In portrait the cards are in the bottom sheet: open it.
+    const sheet = page.getByRole('button', { name: /Cards \(\d+\)/ });
+    if (size.width < size.height && (await sheet.count())) {
+      await sheet.first().click();
+      await sleep(800);
+    }
+    const target = page.locator(`[data-card-id="${cardId}"]`);
+    if (await target.count()) await target.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+    await sleep(400);
+    await page.screenshot({ path: join(dir, `${name}-${size.width}x${size.height}.png`) });
+  }
+  await page.setViewportSize(VIEWPORT);
+  await sleep(600);
+}
+
+async function stopsGroup(scenario, { page }) {
+  await scenario('recitation-halves', 'block 10 → Translate, answered "[ {" with finishReason RECITATION: the passage is sent again in two halves, one request each, and the card is the two halves\' segments', async (p) => {
+    await select(page, ...wholeBlock(9));
+    await railTranslate(page).click();
+    const first = await p.request('the whole passage');
+    await first.respond(stopsWith('[ {', 'RECITATION'));
+    const one = await p.request('the first half');
+    await one.respond(answer([piece(1, piecesSent(one).length, 'The tenth, its first half.')], { prompt: 600, candidates: 20 }));
+    const two = await p.request('the second half');
+    await two.respond(answer([piece(1, piecesSent(two).length, 'The tenth, its second half.')], { prompt: 610, candidates: 20 }));
+    await untilCards(page, 'the complete card', (rows) => rows.some((row) => row.status === 'complete'));
+  });
+
+  let partialCard = null;
+  await scenario('cut-mid-segment', 'blocks 1–3 → Translate, answered with the first block\'s segments whole and the next one cut mid-string, no finish reason: a partial card — those segments, the notice, "Finish reason: none", Translate the rest', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, [0, 0], [2, TEXTS[2].length]);
+    await railTranslate(page).click();
+    const held = await p.request('the passage');
+    const sent = piecesSent(held);
+    const verseAt = sent.findIndex((text) => VERSE.startsWith(text));
+    const whole = JSON.stringify([
+      piece(1, 1, 'The first: a heading.'),
+      piece(2, verseAt, 'A test sentence, not from a real book.'),
+    ]);
+    await held.respond(endsWithout(`${whole.slice(0, -1)},{"type":"quran","from":${verseAt + 1},"to":${verseAt + 1},"english":"`));
+    const after = await untilCards(page, 'the partial card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+    partialCard = newCards(before, after)[0].id;
+    await photograph(page, partialCard, 'partial-card');
+  });
+
+  await scenario('translate-the-rest', 'the partial card\'s Translate the rest: one request for the passage from the verse to the end of block 3, answered: a second card beside the partial one, which is kept', async (p) => {
+    const before = await cardsOf(page);
+    await card(page, partialCard).getByRole('button', { name: 'Translate the rest' }).click();
+    const held = await p.request('the rest');
+    const sent = piecesSent(held);
+    const proseAt = sent.findIndex((text) => TEXTS[2].startsWith(text));
+    await held.respond(answer([
+      piece(1, proseAt, '', { type: 'quran', reference: '14:2' }),
+      piece(proseAt + 1, sent.length, 'The third: the rest, translated.'),
+    ], { prompt: 620, candidates: 40 }));
+    await untilCards(page, 'the card for the rest', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+  });
+
+  await scenario('partial-not-cached', 'blocks 1–3 selected again → Translate: the partial card is not a cache hit (getCardByCacheKey skips it), so a request, answered whole: a complete card beside the partial one', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, [0, 0], [2, TEXTS[2].length]);
+    await railTranslate(page).click();
+    const held = await p.request('the passage again');
+    const sent = piecesSent(held);
+    // Whole pieces, and the third block's searched for after the verse: the
+    // first eight letters of block 1 and block 3 are the same (الفقرة ا).
+    const verseAt = sent.findIndex((text) => VERSE.startsWith(text));
+    const proseAt = sent.findIndex((text, index) => index > verseAt && TEXTS[2].startsWith(text));
+    await held.respond(answer([
+      piece(1, verseAt, 'The first: translated whole this time.'),
+      piece(verseAt + 1, proseAt, '', { type: 'quran', reference: '14:2' }),
+      piece(proseAt + 1, sent.length, 'The third: translated whole this time.'),
+    ], { prompt: 700, candidates: 60 }));
+    await untilCards(page, 'the whole card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+  });
+
+  let interrupted = null;
+  await scenario('interrupted', 'block 11 → Translate, answered "[ {" and the stream closed with no finish reason: errorKind interrupted, "Connection interrupted", "Finish reason: none", Retry', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, ...wholeBlock(10));
+    await railTranslate(page).click();
+    const held = await p.request('the passage');
+    await held.respond(endsWithout('[ {'));
+    const after = await untilCards(page, 'the failed card', (rows) => newCards(before, rows).some((row) => row.status === 'error'));
+    interrupted = newCards(before, after)[0].id;
+    await photograph(page, interrupted, 'interrupted-card');
+  });
+
+  await scenario('interrupted-retry', 'the interrupted card\'s Retry: the passage requested again and answered; the failed card replaced', async (p) => {
+    const before = await cardsOf(page);
+    await card(page, interrupted).getByRole('button', { name: 'Retry' }).click();
+    const held = await p.request('the retry');
+    await held.respond(answer([piece(1, piecesSent(held).length, 'The eleventh: translated on the retry.')], { prompt: 640, candidates: 30 }));
+    await untilCards(page, 'the retried card', (rows) => !rows.some((row) => row.id === interrupted) && newCards(before, rows).some((row) => row.status === 'complete'));
+  });
+
+  await scenario('finish-other', 'block 12 → Translate, answered "[ {" with finishReason OTHER: errorKind stopped, its own message and "Finish reason: OTHER", never a parse failure', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, ...wholeBlock(11));
+    await railTranslate(page).click();
+    const held = await p.request('the passage');
+    await held.respond(stopsWith('[ {', 'OTHER'));
+    const after = await untilCards(page, 'the failed card', (rows) => newCards(before, rows).some((row) => row.status === 'error'));
+    await photograph(page, newCards(before, after)[0].id, 'stopped-card');
+  });
+}
+
 // ------------------------------------------------------------------ run
 
 const own = process.env.VERIFY_URL
@@ -1090,6 +1247,7 @@ try {
     keys: [],
     profile: { id: 'profile-p-check-offline', name: 'P: on device', providerId: 'offline', model: 'opus-mt-ar-en' },
   }, offlineGroup));
+  groups.push(await group(browser, base, 'how a Gemini reply ends', { keys: ['gemini'] }, stopsGroup));
 } finally {
   step('closing the browser');
   await within(60_000, 'closing the browser', browser.close());

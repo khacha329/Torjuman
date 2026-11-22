@@ -4514,7 +4514,7 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
 
   // ---- strict tool schemas -------------------------------------------------
   // Strict mode wants additionalProperties: false on every object, and Gemini's
-  // responseSchema does not take the keyword. The two share SEGMENT_PROPERTIES.
+  // responseSchema does not take the keyword. The two share SHARED_SEGMENT_PROPERTIES.
   function objectsWithout(schema: unknown, path = '$'): string[] {
     if (typeof schema !== 'object' || schema === null) return [];
     const record = schema as Record<string, unknown>;
@@ -6143,6 +6143,94 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   } else {
     console.log('  (hadith-json/ not present: the real-data match rate was not measured)');
   }
+}
+
+// ------------------------------------------- Gemini: pieces and partial replies
+//
+// The Gemini segment names the numbered pieces of the passage it covers and
+// the app fills the Arabic in (translation/sourceUnits.ts); a reply that stops
+// part-way keeps its whole segments, and "Translate the rest" walks the
+// offset where it stopped back to a block. Synthetic text, written here.
+console.log('\nGemini: source pieces, partial replies, the rest of a passage');
+{
+  const { splitUnits, numberedUnits, unitRange, unitsText, halfwayCut } = await import(
+    '../src/translation/sourceUnits'
+  );
+  const { parseSegmentRecords, coerceSegments, parseSegments } = await import(
+    '../src/translation/parseSegments'
+  );
+  const { remainderAnchor } = await import('../src/ui/reader/translationSteps');
+
+  const text = 'قال المصنف: هذه جملة، وتلك أخرى. ﴿آية للتجربة﴾ ثم قال: «متن للتجربة». وانتهى.\n\nسطر ثان';
+  const units = splitUnits(text);
+  const pieces = units.map((unit) => text.slice(unit.start, unit.end));
+  check('the pieces cover the passage exactly', pieces.join(''), text);
+  check('no piece is empty', pieces.every((piece) => piece.trim() !== ''), true);
+  check(
+    'pieces break after clause punctuation, around ﴿﴾ and «», and at a line break',
+    pieces.map((piece) => piece.trim()),
+    ['قال المصنف:', 'هذه جملة،', 'وتلك أخرى.', '﴿آية للتجربة﴾', 'ثم قال:', '«متن للتجربة».', 'وانتهى.', 'سطر ثان'],
+  );
+  check('numbered as the model sees them', numberedUnits(text, units).split('\n')[3], '[4] ﴿آية للتجربة﴾');
+  check('a range gives back the source verbatim', unitsText(text, units, { first: 2, last: 3 }), 'هذه جملة، وتلك أخرى.');
+  check('a reversed, out-of-range pair is put in order and clamped', unitRange(units, 99, 7), { first: 7, last: 8 });
+  check('a pair that is not numbers names no pieces', unitRange(units, '2', 3), null);
+  check('one piece with no punctuation is one unit', splitUnits('كلمة واحدة فقط').length, 1);
+  check('halving a passage cuts at the piece boundary nearest the middle', text.slice(0, halfwayCut(text, units)!).trim(), 'قال المصنف: هذه جملة، وتلك أخرى. ﴿آية للتجربة﴾');
+  check('halving one piece cuts at a space', halfwayCut('كلمة واحدة فقط', splitUnits('كلمة واحدة فقط')), 5);
+  check('one word cannot be halved', halfwayCut('كلمة', splitUnits('كلمة')), null);
+
+  // The owner's two failures, in synthetic form.
+  check('"[ {" holds no whole segment', parseSegmentRecords('[ {'), { records: [], closed: false });
+  check('the old parser still calls "[ {" no array', parseSegments('[ {').ok, false);
+  const cut =
+    '[{"type":"prose","from":1,"to":1,"english":"One"},{"type":"prose","from":2,"to":2,"english":"Two, with a } brace"},' +
+    '{"type":"prose","from":3,"to":3,"english":"Three"},{"type":"prose","from":4,"to":4,"english":"Fou';
+  const read = parseSegmentRecords(cut);
+  check('a cut array keeps every whole segment before the cut', read?.records.map((record) => record.english), ['One', 'Two, with a } brace', 'Three']);
+  check('and says the array did not close', read?.closed, false);
+  check('a whole array closes', parseSegmentRecords('```json\n[{"a":1}, {"b":2}]\n```')?.closed, true);
+  check('no bracket at all is null', parseSegmentRecords('no array here'), null);
+
+  const filled = coerceSegments(
+    [
+      { type: 'quran', from: 4, to: 4, english: '' },
+      { type: 'prose', arabic: 'نص قديم', english: 'An old-shape segment' },
+      { type: 'prose', from: 'x', to: 2, english: 'Pieces that are not numbers' },
+    ],
+    (record) => {
+      const range = unitRange(units, record.from, record.to);
+      return range ? unitsText(text, units, range) : null;
+    },
+  );
+  check('a verse with no English is kept: its Arabic comes from the pieces', [filled[0].type, filled[0].arabic], ['quran', '﴿آية للتجربة﴾']);
+  check('a segment that echoes its Arabic is still read', filled[1].arabic, 'نص قديم');
+  check('a segment with no usable pieces keeps its English', [filled.length, filled[2].english, filled[2].arabic], [3, 'Pieces that are not numbers', '']);
+
+  // "Translate the rest": an offset in sourceText back to a block.
+  const blocks = [
+    { id: 'b:p1:0', order: 0, text: 'سطر أول للتجربة. وبقيته.' },
+    { id: 'b:p1:1', order: 1, text: 'سطر ثان للتجربة.' },
+    { id: 'b:p1:2', order: 2, text: 'سطر ثالث للتجربة. وما بعده لم يختر.' },
+  ] as unknown as Parameters<typeof remainderAnchor>[0];
+  const sourceText = 'وبقيته.\n\nسطر ثان للتجربة.\n\nسطر ثالث للتجربة.';
+  const partialCard = {
+    startBlockId: 'b:p1:0', startOffset: 'سطر أول للتجربة. '.length,
+    endBlockId: 'b:p1:2', endOffset: 'سطر ثالث للتجربة.'.length,
+    sourceText, standalone: undefined,
+  };
+  const intoSecond = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 'وبقيته.\n\n'.length } });
+  check('the rest from the second block', intoSecond, {
+    startBlockId: 'b:p1:1', startOffset: 0, endBlockId: 'b:p1:2', endOffset: partialCard.endOffset,
+    sourceText: 'سطر ثان للتجربة.\n\nسطر ثالث للتجربة.',
+  });
+  const inFirst = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 3 } });
+  check('the rest from inside the first block counts its start offset', [inFirst?.startBlockId, inFirst?.startOffset], ['b:p1:0', 'سطر أول للتجربة. '.length + 3]);
+  const onSeparator = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 'وبقيته.'.length } });
+  check('an offset on the blank line starts the next block', [onSeparator?.startBlockId, onSeparator?.startOffset], ['b:p1:1', 0]);
+  check('text that no longer matches the blocks gives no anchor', remainderAnchor(blocks, { ...partialCard, sourceText: `${sourceText}!`, partial: { message: '', untranslatedFrom: 2 } }), null);
+  check('a partial card that does not say where it stopped gives no anchor', remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: null } }), null);
+  check('a standalone card keeps its anchor and carries the rest of its text', remainderAnchor(blocks, { ...partialCard, standalone: true, partial: { message: '', untranslatedFrom: 9 } })?.sourceText, 'سطر ثان للتجربة.\n\nسطر ثالث للتجربة.');
 }
 
 // ------------------------------------------------------------------ done

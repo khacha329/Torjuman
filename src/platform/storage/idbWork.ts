@@ -70,12 +70,15 @@ export async function getCardByCacheKey(
   // error again with no request, and a transient failure would stick until the
   // card's own Retry. Several rows can share one key (a failed card and the
   // later success), so the index is walked rather than reading its first row.
+  // A partial card (only part of the passage came back, TranslationCard.partial)
+  // is not a hit either: selecting the passage again is how it is asked for
+  // whole, and serving the part would answer that with the same part.
   let cursor = await handle()
     .transaction('cards')
     .store.index('byCacheKey')
     .openCursor(cacheKey);
   while (cursor) {
-    if (cursor.value.status === 'complete') return cursor.value;
+    if (cursor.value.status === 'complete' && !cursor.value.partial) return cursor.value;
     cursor = await cursor.continue();
   }
   return undefined;

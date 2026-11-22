@@ -48,6 +48,7 @@ export function CardPanel({
   onToggleCollapse,
   onCollapseAll,
   onRetranslate,
+  onTranslateRest,
   onDelete,
   onEditNote,
   onAddGlossaryTerm,
@@ -77,6 +78,8 @@ export function CardPanel({
     card: TranslationCard,
     options?: { providerId?: ProviderId; model?: string },
   ) => void;
+  /** A partial card's "Translate the rest" (useTranslator `translateRest`). */
+  onTranslateRest: (card: TranslationCard) => void;
   onDelete: (card: Card) => void;
   onEditNote: (card: Card) => void;
   onAddGlossaryTerm: (term: string) => void;
@@ -211,6 +214,7 @@ export function CardPanel({
                   onFocus={() => onFocusCard(card)}
                   onToggleCollapse={() => onToggleCollapse(card)}
                   onRetranslate={(options) => onRetranslate(card, options)}
+                  onTranslateRest={() => onTranslateRest(card)}
                   onDelete={() => onDelete(card)}
                   onAddGlossaryTerm={onAddGlossaryTerm}
                 />

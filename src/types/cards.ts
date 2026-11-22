@@ -67,6 +67,21 @@ export interface TranslationCard extends CardBase {
   error?: string;
   /** Distinguishes "your key is wrong" from "wait a minute". */
   errorKind?: TranslationErrorKind;
+  /**
+   * Why the model stopped, as the provider reported it (Gemini's
+   * finishReason), or 'none' when the reply's stream closed without one. Set
+   * on a card that failed, or came back partial, because of how the reply
+   * ended; absent on a reply that finished normally and on older cards.
+   */
+  stopReason?: string;
+  /**
+   * Set when only part of the passage came back: the reply stopped (or its
+   * connection was cut) after some whole segments, which are kept as the
+   * card's segments. `message` says why; `untranslatedFrom` is the offset in
+   * `sourceText` where the untranslated rest begins, for "Translate the
+   * rest", or null when the reply did not say which part it covered.
+   */
+  partial?: { message: string; untranslatedFrom: number | null };
   usedExternalLookup?: boolean;
   /**
    * Translated as its own text, not as part of the block it is anchored on:
