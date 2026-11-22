@@ -9,6 +9,7 @@ import { lookupHadith, type TextLookup } from '../../retrieval/HadithSource';
 import { HADITH_JSON_ATTRIBUTION, hadithJsonCollection } from '../../retrieval/hadithJson';
 import type { IndexProgress } from '../../retrieval/hadithTextIndex';
 import { hadithScopeFor } from './hadithScope';
+import { HADITH_QUOTED_IN_PART } from '../../retrieval/enrich';
 import type { DorarDiagnostics } from '../../retrieval/dorar';
 import type {
   Book,
@@ -103,8 +104,9 @@ export function HadithSheet({
 
     void (async () => {
       // The scope comes from the book, read here rather than passed down, so
-      // ReaderScreen and ReaderSheets do not change. The printed number of a
-      // book-scoped reference (`<bookId>#n`) orders the text's candidates.
+      // ReaderScreen and ReaderSheets do not change. The printed number — of a
+      // book-scoped reference (`<bookId>#n`) or a collection's (`riyadussalihin:n`)
+      // — is the hint for the text's candidates.
       const book = await storage.getBook(entity.bookId).catch(() => undefined);
       const collection = book ? hadithScopeFor(book) : null;
       const printed = /#(\d+)$/.exec(entity.reference ?? '')?.[1] ?? /:(\d+)$/.exec(entity.reference ?? '')?.[1];
@@ -291,7 +293,7 @@ export function HadithSheet({
         <Spinner
           label={
             indexing
-              ? `Building the ḥadīth text index (first use): ${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
+              ? `Building the ḥadīth text index (first use): ${indexing.stage === 'reading' ? 'reading ' : ''}${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
               : 'Looking it up…'
           }
         />
@@ -310,7 +312,7 @@ export function HadithSheet({
           </p>
           {text?.status === 'matched' && (text.partial || text.repetitions > 0) && (
             <p className="mt-1 text-[10px] text-muted">
-              {text.partial && 'Quoted in part; this is the whole ḥadīth. '}
+              {text.partial && `${HADITH_QUOTED_IN_PART} `}
               {text.repetitions > 0 &&
                 `The same matn appears ${text.repetitions} more time${text.repetitions === 1 ? '' : 's'} in this collection.`}
             </p>

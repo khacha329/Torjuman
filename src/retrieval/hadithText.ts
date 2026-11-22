@@ -123,6 +123,14 @@ export const AMBIGUITY_MARGIN = 0.1;
  */
 export const MAX_CANDIDATES = 40;
 
+/**
+ * Below this share of the matched ḥadīth's matn (past its isnād), a card or a
+ * sheet says the passage quotes it in part. Not 1: the dataset and the book
+ * differ by a word here and there (a «قال», a conjunction) in a quotation that
+ * is whole. One constant for both, so the card and the sheet cannot drift.
+ */
+export const QUOTED_IN_PART_BELOW = 0.9;
+
 /** Ḥadīth folded between two `onChunk` calls while an index is built. */
 export const BUILD_CHUNK = 500;
 

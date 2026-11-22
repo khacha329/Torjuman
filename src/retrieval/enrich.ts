@@ -14,6 +14,7 @@ import {
   type LocalHadith,
 } from './hadithJson';
 import { loadHadithIndexes, searchHadithText } from './hadithTextIndex';
+import { QUOTED_IN_PART_BELOW } from './hadithText';
 
 // Replaces the model's placeholder for scripture with the authoritative text.
 //
@@ -55,13 +56,6 @@ export const HADITH_BY_TEXT =
 
 export const HADITH_QUOTED_IN_PART = 'Quoted in part; this is the whole ḥadīth.';
 
-/**
- * Below this share of the matched ḥadīth's matn (past its isnād), the card
- * says the passage quotes it in part. Not 1: the dataset and the book differ
- * by a word here and there (a «قال», a conjunction) in a quotation that is
- * whole.
- */
-const QUOTED_IN_PART_BELOW = 0.9;
 
 /**
  * The ambiguity note, naming the candidates (numbers only where citable). Two

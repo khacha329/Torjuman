@@ -41,7 +41,7 @@ import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
 import { lookupHadith } from '../src/retrieval/HadithSource';
-import type { HadithIndexPart, QulEntry, QulResource } from '../src/types';
+import type { HadithIndexPart, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -469,6 +469,7 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   // a missing one would throw loudly here, which is what a check wants.
   const resources = new Map<string, QulResource>();
   const rows = new Map<string, QulEntry>();
+  const cachedHadiths = new Map<string, HadithRecord>();
   let reads = 0;
   const storage = {
     async listQulResources() {
@@ -487,9 +488,9 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     async getQulEntry(resourceId: string, key: string) {
       return rows.get(`${resourceId}|${key}`);
     },
-    // lookupHadith reads the cache first; nothing is cached here.
-    async getHadith() {
-      return undefined;
+    // lookupHadith reads the cache first; empty unless a case puts a record in.
+    async getHadith(reference: string) {
+      return cachedHadiths.get(reference);
     },
     async getQulEntries(resourceId: string, keys: string[]) {
       reads++;
@@ -548,6 +549,20 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     expect('T1: a scope that is not imported says so', absent.text?.status === 'not-imported', absent.text);
     const unscoped = await lookupHadith(http, storage, { reference: 'book-x#11', arabicText: text(matnA) }, options);
     expect('T1: without a scope nothing is searched by text', unscoped.text === undefined && !unscoped.record?.english, unscoped);
+
+    // A cached sunnah.com English wins over the text match (withLocalEnglish),
+    // so nothing may say the text identified it (review of 78a5be2).
+    cachedHadiths.set('book-x#11', {
+      reference: 'book-x#11', collection: 'alpha', number: '11', arabic: '', english: 'cached sunnah.com English',
+      grade: null, sourceUrl: null, fetchedAt: 1, sourceId: 'sunnah', gradings: [],
+    });
+    const cachedWins = await lookupHadith(http, storage, { reference: 'book-x#11', arabicText: text(matnA), scope: { collection: 'alpha', numberHint: 11 } }, options);
+    expect(
+      'T1: a cached English that wins leaves no "identified by its text"',
+      cachedWins.record?.english === 'cached sunnah.com English' && cachedWins.text === undefined,
+      cachedWins,
+    );
+    cachedHadiths.clear();
   }
 
   // Rows lost from an old import: the rebuild refuses rather than storing a

@@ -6,6 +6,8 @@ import { searchDorar, type DorarDiagnostics } from './dorar';
 import { narratorIn } from './narrator';
 import { composeEnglish, findLocalHadith, HADITH_JSON_ATTRIBUTION, hadithJsonCollection } from './hadithJson';
 import { loadHadithIndexes, searchHadithText, type IndexProgress } from './hadithTextIndex';
+import { QUOTED_IN_PART_BELOW } from './hadithText';
+import { recordRetrieval } from '../services/retrievalLog';
 
 // The seam between the app and whichever service knows about a ḥadīth.
 //
@@ -44,7 +46,10 @@ export interface HadithQuery {
    * and the number the book prints. When the reference does not find the
    * ḥadīth — a sharḥ of one of the six main books, whose numbers are its own,
    * or a Riyāḍ number that does not confirm (Q19) — it is looked for by its
-   * text in this one collection. The number only orders what the text found.
+   * text in this one collection. The number orders what the text found, and
+   * can settle two equally matching ḥadīth when one of them lies within
+   * ±NEIGHBOUR_WINDOW of it and agrees with the text (`findHadithByText`'s one
+   * exception); it never makes a match on its own.
    */
   scope?: { collection: string; numberHint?: number };
 }
@@ -58,12 +63,15 @@ export interface HadithLookupResult {
   record: HadithRecord | null;
   /** Present whenever dorar was consulted. Feeds the diagnostics view. */
   diagnostics: DorarDiagnostics | null;
-  /** Present when the query carried a scope and the reference found nothing. */
+  /**
+   * Present when the query carried a scope and Arabic and the reference found
+   * nothing. `matched` only when the English returned is that match's: a
+   * sunnah.com English that wins over it (cached, or the preferred source)
+   * leaves no `text`, so nothing claims the text identified it (review of
+   * 78a5be2).
+   */
   text?: TextLookup;
 }
-
-/** Below this share of the matched matn, the sheet says the passage quotes it in part (as the card does). */
-const QUOTED_IN_PART_BELOW = 0.9;
 
 export interface HadithSourceOptions {
   sunnahApiKey: string;
@@ -154,13 +162,20 @@ export async function lookupHadith(
   }
   const finish = (record: HadithRecord | null): HadithRecord | null =>
     withLocalEnglish(record, local, query);
+  // The answer, with `text` dropped when a matched text's English is not the
+  // English returned (an English already on the record wins in withLocalEnglish).
+  const done = (record: HadithRecord | null, diagnostics: DorarDiagnostics | null): HadithLookupResult => {
+    const finished = finish(record);
+    const shown = text?.status === 'matched' && finished?.sourceId !== 'hadith-json' ? undefined : text;
+    return { record: finished, diagnostics, text: shown };
+  };
 
   // A cached record that already carries its gradings is finished. One without
   // them is worth topping up once there is a network again.
   if (cached?.gradings || (cached && !options.online)) {
-    return { record: finish(cached), diagnostics: null, text };
+    return done(cached, null);
   }
-  if (!options.online) return { record: finish(cached ?? null), diagnostics: null, text };
+  if (!options.online) return done(cached ?? null, null);
 
   const parsed = query.reference ? parseHadithReference(query.reference) : null;
 
@@ -182,7 +197,7 @@ export async function lookupHadith(
   // dorar is consulted for what it is for: grading and takhrīj. It is never
   // consulted for English, and cannot supply any — see the header.
   if (query.arabicText.trim() === '') {
-    return { record: finish(record), diagnostics: null, text };
+    return done(record, null);
   }
 
   // The narrator comes from the surrounding passage where possible: the isnād
@@ -222,7 +237,7 @@ export async function lookupHadith(
 
   if (record.reference) await storage.putHadith(record);
 
-  return { record: finish(record), diagnostics, text };
+  return done(record, diagnostics);
 }
 
 /** The English laid over a record, from either the reference or the text. */
@@ -238,8 +253,9 @@ interface LocalEnglish {
  * The book's matn looked for by its text in the book's one collection.
  *
  * Errors are an answer, not a failure of the sheet: a collection whose index
- * cannot be built reads as no match, and the loader has reported why. Nothing
- * is cached (the rule at the top of `lookupHadith`).
+ * cannot be built, or a read that throws, reads as no match, and the reason
+ * goes to the retrieval log (Settings → Retrieval) as the card path's does.
+ * Nothing is cached (the rule at the top of `lookupHadith`).
  */
 async function lookupByText(
   storage: StorageAdapter,
@@ -253,7 +269,9 @@ async function lookupByText(
       (resource) => resource.kind === 'hadith-json' && resource.collection === collection,
     );
     if (!imported) return { local: null, text: { status: 'not-imported', collection } };
-    const loaded = await loadHadithIndexes(storage, [collection], onProgress);
+    const loaded = await loadHadithIndexes(storage, [collection], onProgress, (_, error) =>
+      recordFailure(collection, error),
+    );
     if (loaded.length === 0) return { local: null, text: { status: 'no-match', collection } };
     const result = await searchHadithText(storage, loaded, arabicText, {
       mode: 'segment',
@@ -278,9 +296,20 @@ async function lookupByText(
         repetitions: result.repetitions,
       },
     };
-  } catch {
+  } catch (error) {
+    recordFailure(collection, error);
     return { local: null, text: { status: 'no-match', collection } };
   }
+}
+
+function recordFailure(collection: string, error: unknown): void {
+  recordRetrieval({
+    kind: 'hadith',
+    outcome: 'lookup-failed',
+    query: `text search in ${collection}`,
+    summary: 'The text search could not run; the sheet says nothing matched.',
+    detail: [['error', error instanceof Error ? error.message : String(error)]],
+  });
 }
 
 /**
