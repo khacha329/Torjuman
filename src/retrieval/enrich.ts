@@ -125,7 +125,8 @@ async function enrichHadith(
         english: local.english,
         source: 'hadith-json',
         // Renumbered to the dataset only where its numbers are citable; for
-        // Bukhārī and Muslim the dataset's position is not the standard number.
+        // every collection but Riyāḍ and the Forty, the dataset's position is
+        // not (or not proven to be) the standard number.
         reference: local.citable
           ? `${local.collection}:${local.entry.number}`
           : segment.reference,

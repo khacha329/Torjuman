@@ -504,7 +504,8 @@ export interface LocalHadith extends HadithMatch {
   collection: string;
   /**
    * Whether `entry.number` may be shown as a citation or used in a sunnah.com
-   * link. False for Bukhārī and Muslim (see `citableNumbers`): their English is
+   * link. False for every collection but Riyāḍ and the Forty (see
+   * `citableNumbers`): their English is
    * still text-confirmed and shown, but the number stays whatever the book or
    * the model said it was.
    */
