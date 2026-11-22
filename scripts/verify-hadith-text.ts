@@ -183,10 +183,8 @@ expect('keys and values are the same length', indexAlpha.keys.length === indexAl
       again.values.every((value, i) => value === indexAlpha.values[i]),
   );
 }
-expect('onChunk ran once per 500 ḥadīth', chunks === Math.floor(alpha.length / 500), {
-  chunks,
-  entries: alpha.length,
-});
+// Under BUILD_CHUNK, so never called; the corpus past it is near the end.
+expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.length < 500, chunks);
 {
   const numbers = new Set([...indexAlpha.values].map((value) => value >>> 16));
   expect('entries under four words leave no posting', ![204, 205, 206].some((n) => numbers.has(n)));
@@ -386,6 +384,34 @@ expect('onChunk ran once per 500 ḥadīth', chunks === Math.floor(alpha.length 
   expect('isnād plus the opening of the matn: that ḥadīth', chosenId(chainAndOpening) === 'delta:12', chainAndOpening);
   const chainAndLittle = find([indexDelta], text([...chain, ...matnY.slice(0, 4)]));
   expect('isnād plus under MIN_MATN_WORDS of matn: refused', chainAndLittle.chosen === null && chainAndLittle.candidates.length === 0, chainAndLittle);
+}
+
+{
+  // The cap across the scope: a phrase in 13 ḥadīth of each of two collections
+  // is under MAX_POSTINGS in each and over it in both together.
+  const phrase = words(8);
+  const sharing = (from: number): IndexableEntry[] =>
+    Array.from({ length: 13 }, (_, i) => ({
+      number: from + i,
+      arabic: text([...words(6), ...phrase, ...words(6)]),
+    }));
+  const indexEps = await buildHadithIndex('eps', [...filler(1, 20), ...sharing(21)]);
+  const indexZeta = await buildHadithIndex('zeta', [...filler(1, 20), ...sharing(21)]);
+  const named = (indexes: HadithTextIndex[]) =>
+    [...candidateNumbers(indexes, text(phrase), 'segment').values()].reduce((n, list) => n + list.length, 0);
+  expect('scope cap: the phrase names candidates in one collection', named([indexEps]) === 13, named([indexEps]));
+  expect('scope cap: and in the other alone', named([indexZeta]) === 13, named([indexZeta]));
+  expect('scope cap: over MAX_POSTINGS across both, it names none', named([indexEps, indexZeta]) === 0, named([indexEps, indexZeta]));
+}
+{
+  // `onChunk` across a corpus past BUILD_CHUNK twice.
+  const calls: number[] = [];
+  await buildHadithIndex('big', filler(1, 1200), {
+    onChunk: (done) => {
+      calls.push(done);
+    },
+  });
+  expect('onChunk: called after each 500 ḥadīth, with the count done', calls.join() === '500,1000', calls);
 }
 
 // ------------------------------------------------------------------- summary

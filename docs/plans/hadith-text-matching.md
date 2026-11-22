@@ -605,6 +605,15 @@ chain printed after the matn (Ibn Mājah, Muslim) and an entry opening «قال
 أبو داود». These are for step 5 to count on real sharḥ queries; random
 excerpts land in chains far more often than a matn block does.
 
+Without the scope cap (MIN_MATN_WORDS kept), across all ten: 17 different
+instead of 8, and 119 none instead of 134. The cap is kept. Searching one
+collection it changes nothing. These two rules were added after approval and
+are put to the owner before step 4b relies on them (review of 87b1ce8).
+
+Result shape, against Design 3.5: the spans (`queryStart…entryEnd`) and
+`coverageOfEntry` are on each candidate, not in a separate `chain` field, and
+`contenders` lists the best member of each family in an ambiguity.
+
 ### Step 3 — persist, load, self-heal [CHANGED]
 
 As approved (`HadithIndexPart`, `encodePart`/`decodePart`, `writeIndex`

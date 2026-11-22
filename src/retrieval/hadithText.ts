@@ -21,8 +21,10 @@ import { agreement, agrees, NEIGHBOUR_WINDOW } from './hadithJson';
 // One index per collection: every folded four-word window of every ḥadīth,
 // hashed to 32 bits (FNV-1a, plain JS: trap 9 — no crypto.subtle on plain-HTTP
 // LAN dev), stored as two sorted typed arrays. Measured on the owner's PC for
-// all ten files: 2.27 M windows, 15.2 MB of arrays, 1.9 s to build; Bukhārī's
-// alone is 3.05 MB. Rejected: a Map<string, number[]> (tens of MB of objects
+// all ten files: 2.27 M windows and 15.2 MB of arrays, Bukhārī's alone 3.05
+// MB; this code builds all ten in 2.5–3.1 s (the plan's 1.9 s was a radix-sort
+// prototype; the comparator sort here is simpler and the tablet's number is
+// step 3's Settings line). Rejected: a Map<string, number[]> (tens of MB of objects
 // on a tablet) and an anchor index like the Qurʾān's (a ḥadīth has no fixed
 // anchor words).
 //
@@ -88,10 +90,11 @@ export const MIN_SHINGLE_HITS = 3;
  *
  * A chain of narrators says which route a report came by, not which report it
  * is: «حدثنا عبيد الله بن معاذ العنبري حدثنا ابي حدثنا شعبه» heads dozens of
- * different matns. Measured on the owner's PC before this rule (2026-11-22):
- * of 1,000 random twelve-word excerpts searched across all ten collections, 7
- * were matched to a different ḥadīth, and every one matched on the isnād
- * alone. A Muslim sharḥ prints chain-only blocks («ح وحدثنا …») as a matter of
+ * different matns. Measured on the owner's PC (2026-11-22), 1,000 random
+ * twelve-word excerpts searched across all ten collections: with neither this
+ * rule nor the scope cap in `postingsFor`, 5 were matched to a different
+ * ḥadīth; with the scope cap alone, 7 (fewer rivals were left to make the
+ * match ambiguous). Every one matched on the isnād alone. A Muslim sharḥ prints chain-only blocks («ح وحدثنا …») as a matter of
  * course, so this is not only a sampling artefact. The isnād still counts
  * toward coverage — it is what tells Bukhārī's repetitions apart — but it can
  * no longer be the whole proof.
@@ -113,8 +116,9 @@ export const AMBIGUITY_MARGIN = 0.1;
 
 /**
  * Most candidates read and compared per query, by hash hits. Bounds the
- * IndexedDB reads a query costs; the right ḥadīth has the most hits, so it is
- * never the one cut off.
+ * IndexedDB reads a query costs. Candidates are kept by hash hits, and the
+ * ḥadīth a query quotes normally has the most, so it should not be the one cut
+ * off; that is an expectation from the hit counts, not a guarantee.
  */
 export const MAX_CANDIDATES = 40;
 
@@ -212,8 +216,12 @@ const PROPHET_AFTER_LINK = 2;
  * الله» — with any «قال»/«يقول» after it, or else after the last link of the
  * run. A first version allowed seven words between links, and parallel
  * narrators broke it on real files: Muslim and al-Nasāʾī chains were read as
- * matn (measured, 2026-11-22). Erring long only refuses a few more matches;
- * erring short lets a chain stand as proof.
+ * matn (measured, 2026-11-22). It errs long — «أن», «قال» and «عن» recur inside
+ * a matn, so a report with no mention of the Prophet after its chain can have
+ * much of its matn counted as isnād — and that refuses matches: with this
+ * rule, 131 of 707 own-collection excerpts holding matn found nothing (mostly
+ * too few matn words past the chain). Erring short would let a chain stand as
+ * proof, which shows the wrong English; refusing shows none.
  */
 export function isnadEnd(words: readonly string[]): number {
   if (!words.slice(0, 2).some((word) => CHAIN_OPENERS.has(word))) return 0;
@@ -262,7 +270,7 @@ export interface HadithTextIndex {
   version: number;
   keys: Uint32Array;
   values: Uint32Array;
-  /** Ḥadīth folded in. */
+  /** Entries given to the build, including any skipped for a number outside 1–65,535. */
   entries: number;
 }
 
@@ -434,10 +442,12 @@ function postingsFor(
   // The posting cap again, over the whole scope. Each index caps its own
   // windows, but an isnād is shared across collections: «عن الزهري عن ابي سلمه
   // عن ابي هريره» can sit under the cap in each of ten files and still be in
-  // a hundred ḥadīth between them. Measured on the owner's PC before this
-  // existed: of 1,000 random twelve-word excerpts searched across all ten, 5
-  // were matched to a different ḥadīth, every one on a chain of narrators
-  // alone. A window that common across what is searched proves nothing here.
+  // a hundred ḥadīth between them. A window that common across what is
+  // searched proves nothing here. Measured on the owner's PC (2026-11-22), with
+  // MIN_MATN_WORDS in place, 1,000 random twelve-word excerpts across all ten:
+  // 8 matched to a different ḥadīth with this cap and 17 without it, at the
+  // cost of 15 more finding nothing (134 against 119). Searching one
+  // collection, it changes nothing.
   const ranges = windows.map((key) =>
     indexes.map((index) => {
       const start = lowerBound(index.keys, key);
@@ -622,15 +632,18 @@ function overlaps(a: TextCandidate, b: TextCandidate): boolean {
   return shared * 2 >= shorter;
 }
 
-const NO_MATCH: TextMatchResult = {
-  chosen: null,
-  also: [],
-  repetitions: 0,
-  ambiguous: false,
-  contenders: [],
-  candidates: [],
-  stripped: false,
-};
+/** A fresh empty result each time, so no caller can change another's arrays. */
+function noMatch(): TextMatchResult {
+  return {
+    chosen: null,
+    also: [],
+    repetitions: 0,
+    ambiguous: false,
+    contenders: [],
+    candidates: [],
+    stripped: false,
+  };
+}
 
 /**
  * Identify the ḥadīth `text` is, within `indexes` (the scope, in priority
@@ -648,7 +661,7 @@ export function findHadithByText(
     const result = matchPass(indexes, passes[p], options);
     if (result.candidates.length > 0) return { ...result, stripped: p > 0 };
   }
-  return NO_MATCH;
+  return noMatch();
 }
 
 function matchPass(
@@ -657,7 +670,7 @@ function matchPass(
   options: TextMatchOptions & { arabicOf: (collection: string, number: number) => string | undefined },
 ): TextMatchResult {
   const query = foldForMatch(text).words;
-  if (query.length < MIN_RUN_WORDS) return NO_MATCH;
+  if (query.length < MIN_RUN_WORDS) return noMatch();
 
   const rank = new Map(indexes.map((index, i) => [index.collection, i]));
   const arabic = new Map<TextCandidate, string>();
@@ -685,7 +698,7 @@ function matchPass(
     candidates.push(candidate);
     arabic.set(candidate, source);
   }
-  if (candidates.length === 0) return NO_MATCH;
+  if (candidates.length === 0) return noMatch();
 
   const hintFor = (candidate: TextCandidate) =>
     options.hints?.find((hint) => hint.collection === candidate.collection);
@@ -743,7 +756,7 @@ function matchPass(
 
   if (!chosenFamily) {
     return {
-      ...NO_MATCH,
+      ...noMatch(),
       ambiguous: true,
       contenders: contending.map((family) => family[0]),
       candidates,
