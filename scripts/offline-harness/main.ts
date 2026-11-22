@@ -50,7 +50,7 @@ function pickSamples(pages: Record<string, string>, want: number): Sample[] {
 
 async function measure(config: OfflineLoadOptions & { modelId: string }, texts: string[]) {
   const { modelId, ...options } = config;
-  unloadOfflineModel();
+  await unloadOfflineModel();
   const loadStart = performance.now();
   await loadOfflineModel(modelId, undefined, options);
   const loadMs = performance.now() - loadStart;
@@ -74,9 +74,35 @@ async function measure(config: OfflineLoadOptions & { modelId: string }, texts: 
   return { options: config, loadMs, warmMs, load, results };
 }
 
+/**
+ * The two races the pipeline bookkeeping exists for: two loads of one model at
+ * once must share one load, and unloading while a translation runs (Settings →
+ * Delete, Clear cached weights, a probe) must not break that translation.
+ */
+async function raceChecks(modelId: string, text: string) {
+  await unloadOfflineModel();
+  const [a, b] = await Promise.all([loadOfflineModel(modelId), loadOfflineModel(modelId)]);
+  const sameLoad = a === b;
+
+  const running = translateProse([text], { modelId, glossary: [] });
+  // Long enough for the first sentence to be under way.
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await unloadOfflineModel();
+  let midRun: string;
+  try {
+    midRun = (await running)[0];
+  } catch (error) {
+    midRun = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
+  const after = (await translateProse(['السلام عليكم'], { modelId, glossary: [] }))[0];
+  return { sameLoad, midRun, after };
+}
+
 (window as unknown as Record<string, unknown>).harness = {
   pickSamples,
   measure,
+  raceChecks,
   cachedModelFiles,
   clearModelCache,
 };
