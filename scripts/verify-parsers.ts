@@ -6056,7 +6056,7 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('  run on into the commentary, it is not matched', ranOn.english, '');
     check(
       '  and its note names the words that stopped the match',
-      ranOn.note?.endsWith('This segment also holds words after the quotation («والمراد به شيء آخر»), which belong to the commentary; that may be why no verified translation matched it.'),
+      ranOn.note?.endsWith('This segment also holds words after the quotation («والمراد به شيء آخر»), which belong to the commentary; that may be why the imported ḥadīth collection did not match it.'),
       true,
     );
   }

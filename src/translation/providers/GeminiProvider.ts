@@ -470,17 +470,22 @@ function readReply(
   let previousTo = 0;
   for (const record of parsed.records) {
     const sequence = pieceSequenceProblem(previousTo, record.from, record.to, units.length);
-    // The highest piece named, so a backwards pair that covered a piece does
-    // not make the next segment report it missing.
+    // The highest real piece named, so a backwards pair that covered a piece
+    // does not make the next segment report it missing, and a number past the
+    // end does not make every later segment look like a repeat.
     for (const end of [record.from, record.to]) {
-      if (typeof end === 'number' && Number.isFinite(end)) previousTo = Math.max(previousTo, end);
+      if (typeof end === 'number' && end >= 1 && end <= units.length) {
+        previousTo = Math.max(previousTo, end);
+      }
     }
     const [segment] = coerceSegments([record], arabicFor);
     if (!segment) continue;
     const note =
       sequence === null
         ? segment.note
-        : [segment.note, pieceSequenceNote(sequence)].filter(Boolean).join(' ');
+        : [segment.note, pieceSequenceNote(sequence)]
+            .filter((part): part is string => Boolean(part && part.trim()))
+            .join(' ');
     segments.push(note === segment.note ? segment : { ...segment, note });
   }
   return { segments, closed: parsed.closed, coveredTo };

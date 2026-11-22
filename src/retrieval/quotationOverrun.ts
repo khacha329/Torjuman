@@ -5,11 +5,12 @@ import { stripApparatus } from './sharh';
 // in the segment itself: it holds commentary after the quotation.
 //
 // From a real Gemini Flash-Lite card (see the comment at the top of
-// translation/sourceUnits.ts). Its ḥadīth segment was `"…" والمراد بالأعمال:`,
+// translation/sourceUnits.ts). Its ḥadīth segment was the quotation plus the commentary words after it,
 // and the hadith-json match, which wants every word of a short quotation
-// inside the stored ḥadīth, found nothing for it, so the card asked for a
-// sunnah.com key that would not have helped either. Cutting the pieces better
-// makes this rare; when it still happens, the unavailable note says so.
+// inside the stored ḥadīth, found nothing for it. (A sunnah.com lookup goes by
+// the reference number and never reads the Arabic, so the overrun can only
+// explain the imported collection's miss.) Cutting the pieces better makes
+// this rare; when it still happens, the unavailable note says so.
 //
 // It lives here, not with the translation checks, because only the lookup
 // knows whether it matters: a ḥadīth that was found anyway needs no note, and
@@ -88,6 +89,6 @@ export function hadithQuotationOverrun(arabic: string): string | null {
 export function quotationOverrunNote(words: string): string {
   return (
     `This segment also holds words after the quotation («${words}»), which belong to ` +
-    'the commentary; that may be why no verified translation matched it.'
+    'the commentary; that may be why the imported ḥadīth collection did not match it.'
   );
 }
