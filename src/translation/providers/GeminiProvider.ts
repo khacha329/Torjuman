@@ -16,6 +16,12 @@ import {
 import { renderSystem, renderUser } from '../prompt';
 import { coerceSegments, parseSegmentRecords, parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
+import {
+  pieceSequenceNote,
+  pieceSequenceProblem,
+  quotationOverrun,
+  quotationOverrunNote,
+} from '../segmentChecks';
 import { delay } from '../../lib/delay';
 import {
   GEMINI_FINISH_REASONS,
@@ -453,7 +459,7 @@ function readReply(
   if (parsed === null) return { segments: [], closed: false, coveredTo: 0 };
 
   let coveredTo: number | null = 0;
-  const segments = coerceSegments(parsed.records, (record) => {
+  const arabicFor = (record: Record<string, unknown>) => {
     const range = unitRange(units, record.from, record.to);
     if (range === null) {
       coveredTo = null;
@@ -461,7 +467,25 @@ function readReply(
     }
     if (coveredTo !== null) coveredTo = Math.max(coveredTo, units[range.last - 1].end);
     return unitsText(partText, units, range);
-  });
+  };
+
+  // One record at a time, so each segment's notes can say what was wrong with
+  // its own piece numbers and quotation (translation/segmentChecks.ts).
+  const segments: TranslatedSegment[] = [];
+  let previousTo = 0;
+  for (const record of parsed.records) {
+    const sequence = pieceSequenceProblem(previousTo, record.from, record.to, units.length);
+    if (typeof record.to === 'number' && Number.isFinite(record.to)) previousTo = record.to;
+    const [segment] = coerceSegments([record], arabicFor);
+    if (!segment) continue;
+    const overrun = quotationOverrun(segment.type, segment.arabic);
+    const notes = [
+      segment.note,
+      sequence === null ? undefined : pieceSequenceNote(sequence),
+      overrun === null ? undefined : quotationOverrunNote(segment.type, overrun),
+    ].filter((note): note is string => Boolean(note && note.trim()));
+    segments.push(notes.length > 0 ? { ...segment, note: notes.join(' ') } : segment);
+  }
   return { segments, closed: parsed.closed, coveredTo };
 }
 

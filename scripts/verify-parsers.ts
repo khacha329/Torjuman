@@ -6195,6 +6195,52 @@ console.log('\nGemini: source pieces, partial replies, the rest of a passage');
     trimmedPieces('قال تعالى (آية للتجربة) ثم قال “متن آخر”، وانتهى.'),
     ['قال تعالى', '(آية للتجربة)', 'ثم قال', '“متن آخر”،', 'وانتهى.'],
   );
+  // Marks side by side leave no piece that is only a mark (review of 58467f9).
+  check(
+    'the ((…)) Shamela prints round a matn is one piece, the lone ( joined to it',
+    trimmedPieces('فقال: ((متن للتجربة)) ثم قال.'),
+    ['فقال:', '((متن للتجربة))', 'ثم قال.'],
+  );
+  for (const sample of [
+    'قال: «كلام للتجربة (آية للتجربة)» ثم انتهى.',
+    'قال: "(آية للتجربة)" ثم انتهى.',
+    'قال: «﴿آية للتجربة﴾» ثم انتهى.',
+    '«متن للتجربة»',
+  ]) {
+    check(
+      `no piece without a letter: ${sample}`,
+      trimmedPieces(sample).filter((piece) => !/[\p{L}\p{N}]/u.test(piece)),
+      [],
+    );
+  }
+  // The checks that put a note on a card instead of repairing it silently.
+  const { pieceSequenceProblem, quotationOverrun } = await import('../src/translation/segmentChecks');
+  check('pieces that follow on are fine', pieceSequenceProblem(1, 2, 3, 5), null);
+  check('the first segment starts at 1', pieceSequenceProblem(0, 1, 1, 5), null);
+  check('a skipped piece is named', pieceSequenceProblem(1, 3, 3, 5)?.detail, 'piece 2 is in no segment');
+  check(
+    'a reused piece is named',
+    pieceSequenceProblem(3, 3, 4, 5)?.detail,
+    'it starts at piece 3, which the segment before already covered',
+  );
+  check('a backwards pair is named', pieceSequenceProblem(0, 2, 1, 5)?.detail, 'it names pieces 2 to 1, backwards');
+  check(
+    'running past the end is the overflow the clamp used to hide',
+    pieceSequenceProblem(5, 6, 6, 5),
+    { detail: 'it names piece 6, and the passage has pieces 1–5', overran: true },
+  );
+  check('numbers that are not numbers are left to unitRange', pieceSequenceProblem(0, '1', 1, 5), null);
+  check(
+    'a ḥadīth segment that runs on into the commentary is caught',
+    quotationOverrun('hadith', 'قال: "متن للتجربة" والمراد به:'),
+    'والمراد به',
+  );
+  check('a takhrīj after the quotation is not', quotationOverrun('hadith', '((متن للتجربة)) رواه مسلم'), null);
+  check('nor a bracketed citation after a verse', quotationOverrun('quran', '﴿آية للتجربة﴾ [البقرة: ٢]'), null);
+  check('a lead-in before the quotation is not', quotationOverrun('hadith', 'قال: «متن للتجربة».'), null);
+  check('a matn with no quotation marks is not checked', quotationOverrun('hadith', 'متن للتجربة بلا علامات'), null);
+  check('prose is not checked', quotationOverrun('prose', '"متن" وكلام بعده'), null);
+
   const unpaired = 'قال: "متن بلا إغلاق ثم كلام بعده.';
   check(
     'an unpaired plain quote still leaves pieces that join back verbatim',
