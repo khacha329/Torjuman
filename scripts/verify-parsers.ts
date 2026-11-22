@@ -5936,6 +5936,20 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       parseHadithReferences('Sunan Abī Dāwūd 1; Jāmiʿ at-Tirmidhī 2; Sunan an-Nasāʾī 3; Sunan Ibn Mājah 4; Muwaṭṭaʾ Mālik 5; Musnad Aḥmad 6').map((ref) => ref.collection),
       ['abudawud', 'tirmidhi', 'nasai', 'ibnmajah', 'malik', 'ahmad'],
     );
+
+    // Mālik and Aḥmad are never asked of sunnah.com, key or not (owner's
+    // decision): the request is never made.
+    const { fetchHadith } = await import('../src/retrieval/sunnah');
+    let requests = 0;
+    const http = { async get() { requests++; return { ok: false, status: 500, body: '' }; } };
+    const empty = { async getHadith() { return undefined; }, async putHadith() {} };
+    const skipped = [
+      await fetchHadith(http as never, empty as never, { collection: 'malik', number: '5' }, 'fake-key'),
+      await fetchHadith(http as never, empty as never, { collection: 'ahmad', number: '6' }, 'fake-key'),
+    ];
+    check('Mālik and Aḥmad are not fetched from sunnah.com', [skipped, requests], [[null, null], 0]);
+    await fetchHadith(http as never, empty as never, { collection: 'abudawud', number: '1' }, 'fake-key');
+    check('  while Abū Dāwūd still is, with a key', requests, 1);
   }
 
   // End to end through lookupHadith, offline: the imported English comes back

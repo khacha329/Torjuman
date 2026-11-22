@@ -85,6 +85,9 @@ const COLLECTION_SLUGS: Record<string, string> = {
   ahmad: 'ahmad',
 };
 
+/** Collections recognised in references but never fetched from sunnah.com (see `fetchHadith`). */
+export const SUNNAH_COM_SKIPPED: ReadonlySet<string> = new Set(['malik', 'ahmad']);
+
 export interface HadithReference {
   collection: string;
   number: string;
@@ -149,6 +152,14 @@ export async function fetchHadith(
 
   const cached = await storage.getHadith(key);
   if (cached) return cached;
+
+  // Never asked of sunnah.com: its English is shown with no check against
+  // the matn, and these two are cited by edition numbers that differ most
+  // from sunnah.com's (the Muwaṭṭaʾ by recension, the Musnad by edition), so a
+  // number the model gives could open a different ḥadīth. The imported
+  // hadith-json files serve them instead, confirmed by text. The owner's
+  // decision, 2026-11-22.
+  if (SUNNAH_COM_SKIPPED.has(reference.collection)) return null;
 
   // Cached lookups still work offline; a live lookup needs the key.
   if (!apiKey) return null;
