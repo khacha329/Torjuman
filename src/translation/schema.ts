@@ -18,13 +18,19 @@
 
 export const EMIT_TOOL_NAME = 'emit_translation';
 
-const SEGMENT_PROPERTIES = {
+// The fields both shapes share. Anthropic's segment adds `arabic`, the
+// echoed source; Gemini's adds `from` and `to`, the pieces of the passage the
+// segment covers, and the app fills the Arabic in (translation/sourceUnits.ts
+// has why: Gemini stops with RECITATION on output that reproduces a known
+// text, and the echoed Arabic of a classical book is exactly that). Claude has
+// no such stop, so its tool keeps the shape its cards and check Q were made
+// with.
+const SHARED_SEGMENT_PROPERTIES = {
   type: {
     type: 'string',
     enum: ['quran', 'hadith', 'poetry', 'prose'],
     description: 'What kind of material this segment is.',
   },
-  arabic: { type: 'string', description: 'The Arabic of this segment.' },
   english: {
     type: 'string',
     description:
@@ -42,12 +48,23 @@ const SEGMENT_PROPERTIES = {
   },
 } as const;
 
+// Key order is kept as it was (type, arabic, english, …): the tool definition
+// is part of the request, and check Q pins its bytes.
+const SEGMENT_PROPERTIES = {
+  type: SHARED_SEGMENT_PROPERTIES.type,
+  arabic: { type: 'string', description: 'The Arabic of this segment.' },
+  english: SHARED_SEGMENT_PROPERTIES.english,
+  reference: SHARED_SEGMENT_PROPERTIES.reference,
+  note: SHARED_SEGMENT_PROPERTIES.note,
+  uncertainTerms: SHARED_SEGMENT_PROPERTIES.uncertainTerms,
+} as const;
+
 /**
  * Anthropic tool definition, in strict mode.
  *
  * Strict mode requires `additionalProperties: false` on every object. It is
- * added here, on the two Anthropic objects, and NOT to SEGMENT_PROPERTIES:
- * that is shared with Gemini's responseSchema, which does not take the keyword.
+ * added here, on the two Anthropic objects, and NOT to the shared properties:
+ * they are also Gemini's responseSchema, which does not take the keyword.
  */
 export const EMIT_TRANSLATION_TOOL = {
   name: EMIT_TOOL_NAME,
@@ -82,13 +99,35 @@ export function answerWithTool(systemPrompt: string, toolName: string): string {
   );
 }
 
-/** Gemini generationConfig.responseSchema — the same shape, as a bare array. */
+/**
+ * Gemini generationConfig.responseSchema: a bare array of segments, each naming
+ * the numbered pieces of the passage it covers (`from`..`to`, inclusive) rather
+ * than writing its Arabic back. `propertyOrdering` puts the piece numbers
+ * before the English, so a reply cut off part-way has already said which
+ * pieces its last whole segment covered.
+ */
 export const GEMINI_RESPONSE_SCHEMA = {
   type: 'array',
   items: {
     type: 'object',
-    properties: SEGMENT_PROPERTIES,
-    required: ['type', 'arabic', 'english'],
+    properties: {
+      type: SHARED_SEGMENT_PROPERTIES.type,
+      from: {
+        type: 'integer',
+        description: 'The number of the first piece of the passage this segment covers.',
+      },
+      to: {
+        type: 'integer',
+        description:
+          'The number of the last piece this segment covers (the same as from for a single piece).',
+      },
+      english: SHARED_SEGMENT_PROPERTIES.english,
+      reference: SHARED_SEGMENT_PROPERTIES.reference,
+      note: SHARED_SEGMENT_PROPERTIES.note,
+      uncertainTerms: SHARED_SEGMENT_PROPERTIES.uncertainTerms,
+    },
+    required: ['type', 'from', 'to', 'english'],
+    propertyOrdering: ['type', 'from', 'to', 'english', 'reference', 'note', 'uncertainTerms'],
   },
 };
 

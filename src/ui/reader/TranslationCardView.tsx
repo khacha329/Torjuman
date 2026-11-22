@@ -24,6 +24,7 @@ export function TranslationCardView({
   onFocus,
   onToggleCollapse,
   onRetranslate,
+  onTranslateRest,
   onDelete,
   onAddGlossaryTerm,
 }: {
@@ -36,6 +37,8 @@ export function TranslationCardView({
   onFocus: () => void;
   onToggleCollapse: () => void;
   onRetranslate: (options?: { providerId?: ProviderId; model?: string }) => void;
+  /** A partial card's "Translate the rest". */
+  onTranslateRest?: () => void;
   onDelete: () => void;
   onAddGlossaryTerm: (term: string) => void;
 }) {
@@ -152,8 +155,9 @@ export function TranslationCardView({
           only signal is the measurement, so it is stated plainly and above the
           text rather than as a footnote under it — the point is to be seen
           before the translation is trusted. Cards made before coverage was
-          measured have no value here and say nothing. */}
-      {card.status === 'complete' && card.coverage !== undefined && isIncomplete({
+          measured have no value here and say nothing. A partial card says
+          it is incomplete in its own words, below, and is not told twice. */}
+      {card.status === 'complete' && !card.partial && card.coverage !== undefined && isIncomplete({
         sourceWords: 0,
         translatedWords: 0,
         ratio: card.coverage,
@@ -167,6 +171,30 @@ export function TranslationCardView({
           Translate a shorter selection, or use <em>Translate all</em> on a ḥadīth,
           which goes block by block.
         </p>
+      )}
+
+      {/* The reply stopped part-way and its whole segments were kept. Said
+          above them, like the coverage notice, with why and with the one
+          action that finishes the job. */}
+      {card.status === 'complete' && card.partial && (
+        <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+          <p>
+            <strong>Only part of this passage was translated.</strong> {card.partial.message}{' '}
+            The segments below are what came back whole.
+          </p>
+          <StopReasonLine stopReason={card.stopReason} />
+          {!readOnly && onTranslateRest && card.partial.untranslatedFrom !== null && (
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onTranslateRest();
+              }}
+              className="mt-1.5 rounded-md border border-current/30 bg-white/70 px-3 py-1 text-xs font-medium hover:bg-white"
+            >
+              Translate the rest
+            </button>
+          )}
+        </div>
       )}
 
       {card.status === 'complete' && (
@@ -375,7 +403,12 @@ function CostLabel({ card }: { card: TranslationCard }) {
  */
 function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => void }) {
   const kind = card.errorKind;
-  const soft = kind === 'rate-limit' || kind === 'truncated' || kind === 'parse';
+  const soft =
+    kind === 'rate-limit' ||
+    kind === 'truncated' ||
+    kind === 'parse' ||
+    kind === 'stopped' ||
+    kind === 'interrupted';
 
   const tone = soft
     ? 'border-amber-200 bg-amber-50 text-amber-900'
@@ -388,18 +421,23 @@ function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => v
         ? 'API key rejected'
         : kind === 'network'
           ? 'Network problem'
-          : kind === 'truncated'
-            ? 'The answer was cut off'
-            : kind === 'parse'
-              ? 'No structured output returned'
-              : kind === 'refusal'
-                ? 'The model declined'
-                : 'Translation failed';
+          : kind === 'interrupted'
+            ? 'Connection interrupted'
+            : kind === 'stopped'
+              ? 'The model stopped early'
+              : kind === 'truncated'
+                ? 'The answer was cut off'
+                : kind === 'parse'
+                  ? 'No structured output returned'
+                  : kind === 'refusal'
+                    ? 'The model declined'
+                    : 'Translation failed';
 
   return (
     <div className={`rounded-md border p-3 text-sm ${tone}`}>
       <p className="mb-1 font-medium">{heading}</p>
       <p className="mb-2">{card.error}</p>
+      <StopReasonLine stopReason={card.stopReason} />
 
       {kind === 'auth' && (
         <p className="text-xs opacity-80">
@@ -408,6 +446,9 @@ function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => v
       )}
       {kind === 'rate-limit' && (
         <p className="text-xs opacity-80">Your key is valid. Wait a moment, then retry.</p>
+      )}
+      {kind === 'interrupted' && (
+        <p className="text-xs opacity-80">Nothing is wrong with the passage or the key. Retry.</p>
       )}
 
       <button
@@ -434,6 +475,22 @@ function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => v
         </details>
       )}
     </div>
+  );
+}
+
+/**
+ * The card's diagnostics: how the model's reply ended, as the provider
+ * reported it. Shown wherever a card failed or came back partial because of
+ * that ending, so "the connection was cut" and "Gemini stopped on its own"
+ * can be told apart without the raw text.
+ */
+function StopReasonLine({ stopReason }: { stopReason?: string }) {
+  if (stopReason === undefined) return null;
+  return (
+    <p className="mb-1 font-mono text-[10px] opacity-75">
+      Finish reason:{' '}
+      {stopReason === 'none' ? 'none — the stream ended without one' : stopReason}
+    </p>
   );
 }
 

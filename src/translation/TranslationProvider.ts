@@ -67,23 +67,36 @@ export interface TranslationResult {
    * (FOUND_ISSUES 43), not whenever the profile allowed it.
    */
   searched?: boolean;
+  /**
+   * Set when the reply stopped part-way and the segments are what came back
+   * whole before it did (see TranslationCard.partial). `untranslatedFrom` is
+   * an offset in the request's targetText. Gemini only.
+   */
+  incomplete?: { stopReason: string; message: string; untranslatedFrom: number | null };
 }
 
 export class TranslationError extends Error {
   readonly kind: TranslationErrorKind;
   readonly retryAfterSeconds: number | null;
   readonly raw: string | null;
+  /** The provider's own reason for stopping, or 'none' (TranslationCard.stopReason). */
+  readonly stopReason: string | null;
 
   constructor(
     kind: TranslationErrorKind,
     message: string,
-    options: { retryAfterSeconds?: number | null; raw?: string | null } = {},
+    options: {
+      retryAfterSeconds?: number | null;
+      raw?: string | null;
+      stopReason?: string | null;
+    } = {},
   ) {
     super(message);
     this.name = 'TranslationError';
     this.kind = kind;
     this.retryAfterSeconds = options.retryAfterSeconds ?? null;
     this.raw = options.raw ?? null;
+    this.stopReason = options.stopReason ?? null;
   }
 }
 

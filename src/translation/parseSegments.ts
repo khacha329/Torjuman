@@ -47,9 +47,59 @@ export function parseSegments(raw: string): SegmentParseResult {
  * data directly and there is no text to parse — and by the text parser once it
  * has produced an array.
  */
-export function coerceSegments(value: unknown): TranslatedSegment[] {
+export function coerceSegments(
+  value: unknown,
+  arabicFor?: (record: Record<string, unknown>) => string | null,
+): TranslatedSegment[] {
   if (!Array.isArray(value)) return [];
-  return value.map(coerceSegment).filter((s): s is TranslatedSegment => s !== null);
+  return value
+    .map((item) => coerceSegment(item, arabicFor))
+    .filter((s): s is TranslatedSegment => s !== null);
+}
+
+/**
+ * Every complete segment object of a JSON array, even when the array itself
+ * was cut off.
+ *
+ * A reply that stops part-way — the connection ends, the model stops for a
+ * reason of its own — can still hold three whole segments before the fourth
+ * breaks off mid-string. `parseSegments` repairs only an array that needs
+ * nothing but closing brackets, so that reply came out as "No JSON array
+ * found" and the three segments were lost with it. This walks the array's
+ * top level instead and keeps each object that closed, stopping at the first
+ * that did not. `closed` says whether the array's own `]` arrived. Null when
+ * there is no `[` at all.
+ */
+export function parseSegmentRecords(
+  raw: string,
+): { records: Record<string, unknown>[]; closed: boolean } | null {
+  const unfenced = unfence(raw);
+  const open = unfenced.indexOf('[');
+  if (open === -1) return null;
+
+  const records: Record<string, unknown>[] = [];
+  let at = open + 1;
+  while (at < unfenced.length) {
+    const ch = unfenced[at];
+    if (/\s|,/.test(ch)) {
+      at++;
+      continue;
+    }
+    if (ch === ']') return { records, closed: true };
+    if (ch !== '{') break;
+    const object = extractBalanced(unfenced, at, '{', '}', false);
+    if (object === null) break;
+    try {
+      const parsed: unknown = JSON.parse(object);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        records.push(parsed as Record<string, unknown>);
+      }
+    } catch {
+      break;
+    }
+    at += object.length;
+  }
+  return { records, closed: false };
 }
 
 /**
@@ -100,6 +150,7 @@ function extractBalanced(
   start: number,
   open: '[' | '{',
   close: ']' | '}',
+  repair = true,
 ): string | null {
   // Scan for the matching bracket rather than using lastIndexOf, so a trailing
   // sentence after the JSON does not break the parse.
@@ -132,7 +183,7 @@ function extractBalanced(
   }
 
   // Unterminated — the stream may have been cut off. Try closing it.
-  if (depth > 0) {
+  if (depth > 0 && repair) {
     const repaired = unfenced.slice(start) + close.repeat(depth);
     try {
       JSON.parse(repaired);
@@ -145,7 +196,16 @@ function extractBalanced(
   return null;
 }
 
-function coerceSegment(value: unknown): TranslatedSegment | null {
+/**
+ * `arabicFor` is the Gemini path's: its segments name the pieces of the
+ * passage they cover instead of echoing the Arabic (translation/sourceUnits.ts),
+ * and it returns that Arabic, or null when the record names no usable pieces,
+ * in which case an echoed `arabic` is still taken.
+ */
+function coerceSegment(
+  value: unknown,
+  arabicFor?: (record: Record<string, unknown>) => string | null,
+): TranslatedSegment | null {
   if (typeof value !== 'object' || value === null) return null;
   const record = value as Record<string, unknown>;
 
@@ -153,7 +213,8 @@ function coerceSegment(value: unknown): TranslatedSegment | null {
     ? (record.type as SegmentType)
     : 'prose';
 
-  const arabic = typeof record.arabic === 'string' ? record.arabic : '';
+  const arabic =
+    arabicFor?.(record) ?? (typeof record.arabic === 'string' ? record.arabic : '');
   const english = typeof record.english === 'string' ? record.english : '';
   if (arabic === '' && english === '') return null;
 

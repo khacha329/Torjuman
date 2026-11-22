@@ -78,3 +78,126 @@ export async function geminiHttpError(response: Response): Promise<TranslationEr
 
   return new TranslationError('api', `Gemini API error: ${message}`);
 }
+
+// ------------------------------------------------------------ finish reasons
+
+/**
+ * What each of Gemini's `finishReason` values means for a translation.
+ *
+ * Until this table only MAX_TOKENS, SAFETY and PROHIBITED_CONTENT were read;
+ * every other stop fell through to the JSON parser, and a reply that stopped
+ * with RECITATION after "[ {" reached the card as "No structured output
+ * returned … No JSON array found" — a parse failure, which it was not. Now
+ * every stop has its own message naming the reason, and only a reply that
+ * finished normally (STOP) and still cannot be read is a parse failure.
+ *
+ * The values are the `FinishReason` enum of the Gemini API reference
+ * (generateContent, Candidate.finishReason), read for this change. A content
+ * filter's stop is a `refusal`; the others are `stopped`. MAX_TOKENS is
+ * handled by the provider before this table (its budget retry, then
+ * `truncated`), and STOP is not a stop to report. A value the API adds later
+ * reaches `unknownFinishReason`, which still names it.
+ */
+export const GEMINI_FINISH_REASONS: Record<
+  string,
+  { kind: 'refusal' | 'stopped'; message: string }
+> = {
+  SAFETY: {
+    kind: 'refusal',
+    message: 'Gemini stopped because its safety filter flagged the reply (SAFETY).',
+  },
+  PROHIBITED_CONTENT: {
+    kind: 'refusal',
+    message: 'Gemini stopped because it flagged the reply as possibly prohibited content (PROHIBITED_CONTENT).',
+  },
+  BLOCKLIST: {
+    kind: 'refusal',
+    message: 'Gemini stopped because the reply contained a term on its blocklist (BLOCKLIST).',
+  },
+  SPII: {
+    kind: 'refusal',
+    message:
+      'Gemini stopped because it flagged the reply as possibly holding sensitive personal information (SPII).',
+  },
+  ESCALATION: {
+    kind: 'refusal',
+    message: 'Gemini stopped because the request was filtered by an escalation rule (ESCALATION).',
+  },
+  RECITATION: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped because the reply reproduced a known text too closely (RECITATION). Classical books trigger this.',
+  },
+  LANGUAGE: {
+    kind: 'stopped',
+    message: 'Gemini stopped because it flagged the language as unsupported (LANGUAGE).',
+  },
+  OTHER: {
+    kind: 'stopped',
+    message: 'Gemini stopped for a reason it did not give (OTHER).',
+  },
+  FINISH_REASON_UNSPECIFIED: {
+    kind: 'stopped',
+    message: 'Gemini stopped with an unspecified finish reason (FINISH_REASON_UNSPECIFIED).',
+  },
+  MALFORMED_RESPONSE: {
+    kind: 'stopped',
+    message: 'Gemini stopped because its own reply was malformed (MALFORMED_RESPONSE).',
+  },
+  MALFORMED_FUNCTION_CALL: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped over a malformed tool call, though a translation offers it no tools (MALFORMED_FUNCTION_CALL).',
+  },
+  UNEXPECTED_TOOL_CALL: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped over a tool call, though a translation offers it no tools (UNEXPECTED_TOOL_CALL).',
+  },
+  TOO_MANY_TOOL_CALLS: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped after too many tool calls, though a translation offers it no tools (TOO_MANY_TOOL_CALLS).',
+  },
+  MISSING_THOUGHT_SIGNATURE: {
+    kind: 'stopped',
+    message: 'Gemini stopped because it reported a missing thought signature (MISSING_THOUGHT_SIGNATURE).',
+  },
+  CONTINUATION: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped at its per-request limit and expects the reply to be continued, which this app does not do (CONTINUATION).',
+  },
+  PUP_LIMITED_DISABLED: {
+    kind: 'stopped',
+    message:
+      'Gemini stopped because the account is limited or disabled under its Prohibited Use Policy (PUP_LIMITED_DISABLED). Check the account in Google AI Studio.',
+  },
+  // Image-generation stops. A text request should never see one; each is
+  // still named rather than read as a parse failure.
+  IMAGE_SAFETY: { kind: 'stopped', message: 'Gemini stopped with an image-safety stop (IMAGE_SAFETY).' },
+  IMAGE_PROHIBITED_CONTENT: {
+    kind: 'stopped',
+    message: 'Gemini stopped with an image stop (IMAGE_PROHIBITED_CONTENT).',
+  },
+  IMAGE_OTHER: { kind: 'stopped', message: 'Gemini stopped with an image stop (IMAGE_OTHER).' },
+  IMAGE_RECITATION: { kind: 'stopped', message: 'Gemini stopped with an image stop (IMAGE_RECITATION).' },
+  NO_IMAGE: { kind: 'stopped', message: 'Gemini stopped with an image stop (NO_IMAGE).' },
+};
+
+/** A finish reason the table does not know: still named, never a parse failure. */
+export function unknownFinishReason(reason: string): { kind: 'stopped'; message: string } {
+  return {
+    kind: 'stopped',
+    message: `Gemini stopped with a finish reason this app does not know (${reason}).`,
+  };
+}
+
+/**
+ * A reply whose stream closed without any finish reason. Gemini sets one on
+ * the candidate when it stops generating, so a stream that ends without it
+ * was cut — what the tablet showed as three whole segments and a fourth
+ * broken off mid-string, reported as "No JSON array found".
+ */
+export const GEMINI_NO_FINISH_REASON =
+  'The connection was interrupted: the reply from Gemini ended without a finish reason, before it was complete.';

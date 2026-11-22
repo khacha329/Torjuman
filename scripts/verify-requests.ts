@@ -376,6 +376,10 @@ function describeError(error: unknown): Record<string, unknown> {
   for (const field of ['kind', 'message', 'retryAfterSeconds', 'raw'] as const) {
     if (field in error) record[field] = plain((error as unknown as Record<string, unknown>)[field]);
   }
+  // TranslationError.stopReason (the provider's finish reason, or 'none'):
+  // recorded only when set, so the errors that carry none read as before.
+  const stopReason = (error as unknown as Record<string, unknown>).stopReason;
+  if (stopReason !== undefined && stopReason !== null) record.stopReason = plain(stopReason);
   // A SyntaxError's message is the JavaScript engine's wording, not the app's,
   // and it differs between Node versions: for the HTML body, `Unexpected token
   // '<', … is not valid JSON` in Node 20+, `Unexpected token < in JSON at
@@ -906,6 +910,92 @@ await scenario(
 );
 await scenario('gemini.translate.fetch-throws', [CONNECTION_FAILURE], translateGemini(geminiRequest()));
 await scenario('gemini.translate.200-no-body', [{ status: 200, body: null }], translateGemini(geminiRequest()));
+
+// ------------------------------------- Gemini: how a reply ends (the stops)
+//
+// Added with the change that names every finishReason, stops asking Gemini to
+// echo the Arabic and keeps the whole segments of a reply that stops
+// part-way. The passage is four synthetic sentences, so it is four numbered
+// pieces (translation/sourceUnits.ts) and halves into two pieces each. The
+// replies are in the new shape: each segment names the pieces it covers by
+// `from` and `to`, and the app fills its Arabic in. "[ {" is the raw text the
+// owner saw on the RECITATION failures; the cut fourth segment with no finish
+// reason is the tablet's report.
+
+const STOPS_TARGET =
+  'الجملة الأولى للتجربة. الجملة الثانية للتجربة. الجملة الثالثة للتجربة. الجملة الرابعة للتجربة.';
+const stopsRequest = () => geminiRequest({ targetText: STOPS_TARGET });
+const piece = (from: number, to: number, english: string, type = 'prose') => ({ type, from, to, english });
+/** A whole reply in the new shape, split across two chunks, then STOP. */
+const piecesOk = (segments: unknown[], candidates = 40): Canned => {
+  const text = JSON.stringify(segments);
+  const cut = Math.floor(text.length / 2);
+  return geminiStream([
+    { text: text.slice(0, cut), usage: { prompt: 320, candidates: Math.floor(candidates / 2) } },
+    { text: text.slice(cut), finishReason: 'STOP', usage: { prompt: 320, candidates } },
+  ]);
+};
+const openBracket = (finishReason?: string): Canned =>
+  geminiStream([{ text: '[ {', ...(finishReason ? { finishReason } : {}), usage: { prompt: 320, candidates: 2 } }]);
+const FOUR = [
+  piece(1, 1, 'The first sentence, for the test.'),
+  piece(2, 2, 'The second sentence, for the test.'),
+  piece(3, 3, 'The third sentence, for the test.'),
+  piece(4, 4, 'The fourth sentence, for the test.'),
+];
+const HALF = [piece(1, 1, 'One half, its first sentence.'), piece(2, 2, 'One half, its second sentence.')];
+
+await scenario('gemini.translate.pieces', [piecesOk([...FOUR.slice(0, 2), piece(3, 4, '', 'quran')], 60)], translateGemini(stopsRequest()));
+await scenario('gemini.translate.recitation-then-halves', [openBracket('RECITATION'), piecesOk(HALF), piecesOk(HALF)], translateGemini(stopsRequest()));
+await scenario('gemini.translate.recitation-after-two-segments', [
+  geminiStream([{ text: `${JSON.stringify(FOUR.slice(0, 2)).slice(0, -1)}, {"type":"prose","from":3`, finishReason: 'RECITATION', usage: { prompt: 320, candidates: 30 } }]),
+  piecesOk([piece(1, 1, 'The third, sent alone.')]),
+  piecesOk([piece(1, 1, 'The fourth, sent alone.')]),
+], translateGemini(stopsRequest()));
+await scenario('gemini.translate.recitation-again-in-second-half', [openBracket('RECITATION'), piecesOk(HALF), openBracket('RECITATION')], translateGemini(stopsRequest()));
+await scenario('gemini.translate.recitation-again-in-first-half', [openBracket('RECITATION'), openBracket('RECITATION')], translateGemini(stopsRequest()));
+await scenario('gemini.translate.recitation-one-word', [openBracket('RECITATION')], translateGemini(geminiRequest({ targetText: 'كلمة' })));
+await scenario('gemini.translate.open-bracket-no-finish-reason', [openBracket()], translateGemini(stopsRequest()));
+await scenario('gemini.translate.open-bracket-stop', [openBracket('STOP')], translateGemini(stopsRequest()));
+await scenario(
+  'gemini.translate.cut-mid-segment-no-finish-reason',
+  [geminiStream([
+    { text: JSON.stringify(FOUR.slice(0, 2)).slice(0, -1), usage: { prompt: 320, candidates: 20 } },
+    { text: `,${JSON.stringify(FOUR[2])},{"type":"prose","from":4,"to":4,"english":"The fourth sen`, usage: { prompt: 320, candidates: 35 } },
+  ])],
+  translateGemini(stopsRequest()),
+);
+// The same two whole segments, then the connection drops a few bytes into
+// the second chunk: the read throws (the `network` path), not a clean end.
+const twoThenDrop = geminiStream([
+  { text: JSON.stringify(FOUR.slice(0, 2)).slice(0, -1), usage: { prompt: 320, candidates: 20 } },
+  { text: `,${JSON.stringify(FOUR.slice(2)).slice(1)}`, finishReason: 'STOP', usage: { prompt: 320, candidates: 40 } },
+]) as Extract<Canned, { status: number }>;
+const firstLineBytes = new TextEncoder().encode(String(twoThenDrop.body).split('\r\n\r\n')[0]).length + 4;
+// `dropped` is declared further down, with the other body drops.
+await scenario(
+  'gemini.translate.cut-mid-segment-body-drop',
+  [{ ...twoThenDrop, dropAfterBytes: firstLineBytes + 30 }],
+  translateGemini(stopsRequest()),
+);
+await scenario(
+  'gemini.translate.max-tokens-twice-after-segments',
+  times(2, () => geminiStream([{ text: `${JSON.stringify(FOUR.slice(0, 3)).slice(0, -1)},{"type":"pro`, finishReason: 'MAX_TOKENS', usage: { prompt: 320, candidates: 2048 } }])),
+  translateGemini(stopsRequest()),
+);
+await scenario(
+  'gemini.translate.stop-without-closing-bracket',
+  [geminiStream([{ text: JSON.stringify(FOUR).slice(0, -1), finishReason: 'STOP', usage: { prompt: 320, candidates: 50 } }])],
+  translateGemini(stopsRequest()),
+);
+for (const reason of ['OTHER', 'BLOCKLIST', 'SPII', 'LANGUAGE', 'MALFORMED_RESPONSE', 'CONTINUATION', 'A_REASON_FROM_THE_FUTURE']) {
+  await scenario(`gemini.translate.finish-${reason.toLowerCase().replace(/_/g, '-')}`, [openBracket(reason)], translateGemini(stopsRequest()));
+}
+await scenario(
+  'gemini.translate.second-half-429',
+  [openBracket('RECITATION'), piecesOk(HALF), ...times(4, () => ({ ...geminiError(429, 'Resource has been exhausted.', 'RESOURCE_EXHAUSTED'), headers: { 'content-type': 'application/json', 'retry-after': '0' } }))],
+  translateGemini(stopsRequest()),
+);
 
 // ------------------------------------------------- Gemini: validateKey
 

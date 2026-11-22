@@ -191,8 +191,84 @@ export function failedCard(card: TranslationCard, caught: unknown): TranslationC
     error: error.message,
     errorKind: error.kind,
     rawResponse: error.raw ?? undefined,
+    ...(error.stopReason !== null ? { stopReason: error.stopReason } : {}),
   };
   return failed;
+}
+
+/**
+ * The anchor of what a partial card did not translate, for "Translate the
+ * rest": from `card.partial.untranslatedFrom` (an offset in `sourceText`) to
+ * the card's own end.
+ *
+ * A selection's sourceText is its blocks' stored text, the first from
+ * startOffset and the last up to endOffset, joined with a blank line
+ * (selection.ts `storedText`); a one-block selection is the browser's
+ * selection.toString(), which is the block's text since BlockText renders it
+ * verbatim. The offset is walked back through that join to a block and an
+ * offset in it. If the stored text does not give back the card's sourceText
+ * exactly — the book was re-imported, or a browser's toString differed — the
+ * walk would land somewhere else, so it returns null and the reader is asked
+ * to select the rest by hand. A standalone card (a dictionary entry) has no
+ * blocks behind its text: its rest keeps the card's anchor and carries the
+ * text alone.
+ */
+export function remainderAnchor(
+  blocks: Block[],
+  card: Pick<
+    TranslationCard,
+    'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText' | 'standalone' | 'partial'
+  >,
+): SelectionAnchor | null {
+  const from = card.partial?.untranslatedFrom;
+  if (from === null || from === undefined) return null;
+  const rest = card.sourceText.slice(from);
+  const lead = rest.length - rest.trimStart().length;
+  // Trimmed at the front only, so the rest's text is still exactly its blocks'
+  // stored text and a rest that comes back partial can be walked again.
+  const sourceText = rest.slice(lead);
+  if (sourceText.trim() === '') return null;
+
+  if (card.standalone) {
+    return {
+      startBlockId: card.startBlockId,
+      startOffset: card.startOffset,
+      endBlockId: card.endBlockId,
+      endOffset: card.endOffset,
+      sourceText,
+    };
+  }
+
+  const covered = blocksInRange(blocks, card.startBlockId, card.endBlockId);
+  if (covered.length === 0) return null;
+  const pieces = covered.map((block, index) => ({
+    block,
+    start: index === 0 ? card.startOffset : 0,
+    end: index === covered.length - 1 ? card.endOffset : block.text.length,
+  }));
+  const joined = pieces
+    .map((piece) => piece.block.text.slice(piece.start, piece.end))
+    .join('\n\n');
+  if (joined !== card.sourceText) return null;
+
+  // The offset of the rest's first character, walked to its block.
+  let at = from + lead;
+  for (const piece of pieces) {
+    const length = piece.end - piece.start;
+    if (at < length) {
+      return {
+        startBlockId: piece.block.id,
+        startOffset: piece.start + at,
+        endBlockId: card.endBlockId,
+        endOffset: card.endOffset,
+        sourceText,
+      };
+    }
+    at -= length + 2;
+    // Inside the blank line between two blocks: the rest starts the next one.
+    if (at < 0) at = 0;
+  }
+  return null;
 }
 
 export function withoutStream(

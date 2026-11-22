@@ -34,6 +34,14 @@ export type TranslationErrorKind =
   | 'parse'
   /** The token limit was reached mid-answer. A different remedy from a parse error. */
   | 'truncated'
+  /**
+   * The model stopped for a reason of its own that is neither a refusal nor
+   * the token limit — Gemini's RECITATION, LANGUAGE, OTHER and the rest. The
+   * card names the reason; it is never reported as a parse failure.
+   */
+  | 'stopped'
+  /** The reply's stream closed with no finish reason: the connection was cut. */
+  | 'interrupted'
   | 'api';
 
 /**
