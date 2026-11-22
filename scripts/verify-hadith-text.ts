@@ -183,7 +183,7 @@ expect('keys and values are the same length', indexAlpha.keys.length === indexAl
       again.values.every((value, i) => value === indexAlpha.values[i]),
   );
 }
-// Under BUILD_CHUNK, so never called; the corpus past it is near the end.
+// Under BUILD_CHUNK, so never called here; the case with a corpus past it is at the end of the file.
 expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.length < 500, chunks);
 {
   const numbers = new Set([...indexAlpha.values].map((value) => value >>> 16));

@@ -483,7 +483,7 @@ owner's sizing questions:
 - **Memory:** 3.05 MB of typed arrays per Bukhārī-sized collection, and
   15.2 MB for all ten. The build adds ~45 MB of transient heap for Bukhārī
   (strings plus word arrays). On import the parsed file is in memory anyway.
-- **Build time:** 0.06–0.43 s per collection, 1.9 s for all ten, on this PC.
+- **Build time:** 0.06–0.43 s per collection, 1.9 s for all ten, on this PC (the radix-sort prototype; the built code takes 2.5–3.1 s, see "Step 2 — built").
   The tablet is unmeasured: Settings shows "built in N s" so the owner reads
   the real number (M).
 - **When it is built:** at import, from the entries already in memory,
@@ -907,6 +907,11 @@ text proves the ḥadīth; Q19 yes, rescue Riyāḍ's and the Forty's
 non-confirming numbers by text at tap time. Q11 (which sharḥs the owner reads
 as books) has no titles yet: T1 is built on the general rule, and the owner's
 exact titles go into check H when given.
+
+The two acceptance rules added in step 2 (the posting cap across the scope,
+and `MIN_MATN_WORDS` past `isnadEnd`): the owner answered "keep both" on
+2026-11-22, with the measurements of the "Step 2 — built" paragraph in front
+of them. Step 5 measures them on real sharḥ queries.
 
 Step 0a: the 56 unmatched numbers of book 9260, and what each one looked like:
 (left empty for the owner; the device report from step 0b gives a reason per

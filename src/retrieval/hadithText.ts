@@ -22,11 +22,11 @@ import { agreement, agrees, NEIGHBOUR_WINDOW } from './hadithJson';
 // hashed to 32 bits (FNV-1a, plain JS: trap 9 — no crypto.subtle on plain-HTTP
 // LAN dev), stored as two sorted typed arrays. Measured on the owner's PC for
 // all ten files: 2.27 M windows and 15.2 MB of arrays, Bukhārī's alone 3.05
-// MB; this code builds all ten in 2.5–3.1 s (the plan's 1.9 s was a radix-sort
-// prototype; the comparator sort here is simpler and the tablet's number is
-// step 3's Settings line). Rejected: a Map<string, number[]> (tens of MB of objects
-// on a tablet) and an anchor index like the Qurʾān's (a ḥadīth has no fixed
-// anchor words).
+// MB; this code builds all ten in 2.5–3.1 s (the plan's 1.9 s was a
+// radix-sort prototype; the comparator sort here is simpler, and the tablet's
+// number is step 3's Settings line). Rejected: a Map<string, number[]> (tens
+// of MB of objects on a tablet) and an anchor index like the Qurʾān's (a
+// ḥadīth has no fixed anchor words).
 //
 // A hash hit is only a hint. Every hit is checked word by word against the
 // candidate's own Arabic before it counts, so a hash collision costs a lookup
@@ -94,8 +94,9 @@ export const MIN_SHINGLE_HITS = 3;
  * twelve-word excerpts searched across all ten collections: with neither this
  * rule nor the scope cap in `postingsFor`, 5 were matched to a different
  * ḥadīth; with the scope cap alone, 7 (fewer rivals were left to make the
- * match ambiguous). Every one matched on the isnād alone. A Muslim sharḥ prints chain-only blocks («ح وحدثنا …») as a matter of
- * course, so this is not only a sampling artefact. The isnād still counts
+ * match ambiguous). Every one inspected — three of the five, all seven —
+ * matched on the isnād alone. A Muslim sharḥ prints chain-only blocks («ح
+ * وحدثنا …») as a matter of course, so this is not only a sampling artefact. The isnād still counts
  * toward coverage — it is what tells Bukhārī's repetitions apart — but it can
  * no longer be the whole proof.
  */
