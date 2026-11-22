@@ -971,9 +971,10 @@ await scenario(
   [piecesOk([...FOUR, piece(5, 5, 'A fifth segment for a passage of four pieces.')])],
   translateGemini(stopsRequest()),
 );
-// A ḥadīth segment whose range takes in the commentary after the quotation:
-// noted, because its English will be empty and its verified translation will
-// not be found.
+// A ḥadīth segment whose range takes in the commentary after the quotation.
+// The provider passes it on unchanged, Arabic filled in from pieces 2–3: the
+// note explaining it belongs to the ḥadīth lookup, and only when the lookup
+// fails (retrieval/quotationOverrun.ts), so it is not recorded here.
 await scenario(
   'gemini.translate.hadith-range-runs-on',
   [piecesOk([
