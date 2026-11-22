@@ -129,7 +129,7 @@ export class GeminiProvider implements TranslationProvider {
     let split = false;
 
     const partial = (
-      stopReason: string,
+      stopReason: string | null,
       message: string,
       untranslatedFrom: number | null,
     ): TranslationResult => ({
@@ -164,9 +164,10 @@ export class GeminiProvider implements TranslationProvider {
           throw caught;
         }
         // A later part that fails (a rate limit after the split, say) costs
-        // the parts before it nothing.
+        // the parts before it nothing. No stop reason: no reply ended, so the
+        // card must not say "the stream ended without one".
         if (segments.length > 0 && caught instanceof TranslationError) {
-          return partial(caught.stopReason ?? 'none', caught.message, part.start);
+          return partial(caught.stopReason, caught.message, part.start);
         }
         throw caught;
       }
@@ -217,7 +218,7 @@ export class GeminiProvider implements TranslationProvider {
         }
       }
 
-      const stop = describeStop(reply, parseSegments(reply.text));
+      const stop = describeStop(reply, parseSegments(reply.text), segments.length > 0);
       if (segments.length > 0) {
         return partial(reply.finishReason ?? 'none', stop.message, resumeAt);
       }
@@ -486,6 +487,7 @@ function resumeOffset(
 function describeStop(
   reply: GeminiReply,
   parsed: ReturnType<typeof parseSegments>,
+  keptSegments: boolean,
 ): { kind: TranslationErrorKind; message: string } {
   const reason = reply.finishReason;
   if (reason === undefined) return { kind: 'interrupted', message: GEMINI_NO_FINISH_REASON };
@@ -493,6 +495,14 @@ function describeStop(
     return {
       kind: 'truncated',
       message: `The answer was cut off at the ${reply.budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
+    };
+  }
+  if (reason === 'STOP' && keptSegments) {
+    // Said above the segments that were kept, so not "no structured output".
+    return {
+      kind: 'parse',
+      message:
+        'Gemini said its reply was finished (STOP), but the reply broke off before the end of the passage.',
     };
   }
   if (reason === 'STOP') {

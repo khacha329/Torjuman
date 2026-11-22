@@ -2700,6 +2700,63 @@
       }
     },
     {
+      "id": "gemini.translate.stop-unclosed-after-two",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\nIt is given as numbered pieces. For each segment, give the numbers of the first and\\nlast piece it covers as from and to, in order, every piece in exactly one segment.\\nDo not write the Arabic back: the application already has it.\\n\\n[1] الجملة الأولى للتجربة.\\n[2] الجملة الثانية للتجربة.\\n[3] الجملة الثالثة للتجربة.\\n[4] الجملة الرابعة للتجربة.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"from\":{\"type\":\"integer\",\"description\":\"The number of the first piece of the passage this segment covers.\"},\"to\":{\"type\":\"integer\",\"description\":\"The number of the last piece this segment covers (the same as from for a single piece).\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"from\",\"to\",\"english\"],\"propertyOrdering\":[\"type\",\"from\",\"to\",\"english\",\"reference\",\"note\",\"uncertainTerms\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "الجملة الأولى للتجربة.",
+              "english": "The first sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "الجملة الثانية للتجربة.",
+              "english": "The second sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 320,
+            "outputTokens": 30,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "costUsd": null,
+          "raw": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The first sentence, for the test.\"},{\"type\":\"prose\",\"from\":2,\"to\":2,\"english\":\"The second sentence, for the test.\"},{\"type\":\"prose\",\"from\":3",
+          "incomplete": {
+            "stopReason": "STOP",
+            "message": "Gemini said its reply was finished (STOP), but the reply broke off before the end of the passage.",
+            "untranslatedFrom": 47
+          }
+        }
+      },
+      "progress": {
+        "count": 1,
+        "last": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The first sentence, for the test.\"},{\"type\":\"prose\",\"from\":2,\"to\":2,\"english\":\"The second sentence, for the test.\"},{\"type\":\"prose\",\"from\":3"
+      }
+    },
+    {
       "id": "gemini.translate.finish-other",
       "requests": [
         {
@@ -3016,7 +3073,7 @@
           "costUsd": null,
           "raw": "[ {\n[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"One half, its first sentence.\"},{\"type\":\"prose\",\"from\":2,\"to\":2,\"english\":\"One half, its second sentence.\"}]",
           "incomplete": {
-            "stopReason": "none",
+            "stopReason": null,
             "message": "Gemini free-tier rate limit reached. Your key is fine — wait a moment and translate again, or check your current limits in Google AI Studio.",
             "untranslatedFrom": 47
           }

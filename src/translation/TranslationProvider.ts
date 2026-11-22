@@ -70,9 +70,11 @@ export interface TranslationResult {
   /**
    * Set when the reply stopped part-way and the segments are what came back
    * whole before it did (see TranslationCard.partial). `untranslatedFrom` is
-   * an offset in the request's targetText. Gemini only.
+   * an offset in the request's targetText. `stopReason` is how the reply
+   * ended (finishReason, or 'none'), null when what stopped the run was not a
+   * reply's ending — an HTTP error on a later part. Gemini only.
    */
-  incomplete?: { stopReason: string; message: string; untranslatedFrom: number | null };
+  incomplete?: { stopReason: string | null; message: string; untranslatedFrom: number | null };
 }
 
 export class TranslationError extends Error {

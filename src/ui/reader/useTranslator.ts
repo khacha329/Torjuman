@@ -415,7 +415,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           // translate it.
           ...(result.incomplete
             ? {
-                stopReason: result.incomplete.stopReason,
+                ...(result.incomplete.stopReason !== null
+                  ? { stopReason: result.incomplete.stopReason }
+                  : {}),
                 partial: {
                   message: result.incomplete.message,
                   untranslatedFrom: result.incomplete.untranslatedFrom,

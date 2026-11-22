@@ -988,6 +988,13 @@ await scenario(
   [geminiStream([{ text: JSON.stringify(FOUR).slice(0, -1), finishReason: 'STOP', usage: { prompt: 320, candidates: 50 } }])],
   translateGemini(stopsRequest()),
 );
+// STOP, but the array broke off after two of the four: partial, and its
+// message does not call the kept segments "no structured output".
+await scenario(
+  'gemini.translate.stop-unclosed-after-two',
+  [geminiStream([{ text: `${JSON.stringify(FOUR.slice(0, 2)).slice(0, -1)},{"type":"prose","from":3`, finishReason: 'STOP', usage: { prompt: 320, candidates: 30 } }])],
+  translateGemini(stopsRequest()),
+);
 for (const reason of ['OTHER', 'BLOCKLIST', 'SPII', 'LANGUAGE', 'MALFORMED_RESPONSE', 'CONTINUATION', 'A_REASON_FROM_THE_FUTURE']) {
   await scenario(`gemini.translate.finish-${reason.toLowerCase().replace(/_/g, '-')}`, [openBracket(reason)], translateGemini(stopsRequest()));
 }

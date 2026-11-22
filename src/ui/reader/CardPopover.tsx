@@ -42,7 +42,7 @@ export function CardPopover({
   onRetranslate: (
     card: TranslationCard,
     options?: { providerId?: ProviderId; model?: string },
-) => void;
+  ) => void;
   /** A partial card's "Translate the rest" (useTranslator `translateRest`). */
   onTranslateRest: (card: TranslationCard) => void;
   onDelete: (card: TranslationCard) => void;
@@ -91,7 +91,7 @@ export function CardPopover({
                 : onToggleCollapse(card)
             }
             onRetranslate={(options) => onRetranslate(card, options)}
-                  onTranslateRest={() => onTranslateRest(card)}
+            onTranslateRest={() => onTranslateRest(card)}
             onDelete={() => {
               onDelete(card);
               if (shown.length === 1) onClose();

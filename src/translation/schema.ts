@@ -103,8 +103,8 @@ export function answerWithTool(systemPrompt: string, toolName: string): string {
  * Gemini generationConfig.responseSchema: a bare array of segments, each naming
  * the numbered pieces of the passage it covers (`from`..`to`, inclusive) rather
  * than writing its Arabic back. `propertyOrdering` puts the piece numbers
- * before the English, so a reply cut off part-way has already said which
- * pieces its last whole segment covered.
+ * before the English, so the model commits to which pieces a segment covers
+ * before it writes that segment's translation.
  */
 export const GEMINI_RESPONSE_SCHEMA = {
   type: 'array',

@@ -1107,6 +1107,12 @@ async function photograph(page, cardId, name) {
   for (const size of [VIEWPORT, { width: 600, height: 960 }]) {
     await page.setViewportSize(size);
     await sleep(600);
+    // In portrait the cards are in the bottom sheet: open it.
+    const sheet = page.getByRole('button', { name: /Cards \(\d+\)/ });
+    if (size.width < size.height && (await sheet.count())) {
+      await sheet.first().click();
+      await sleep(800);
+    }
     const target = page.locator(`[data-card-id="${cardId}"]`);
     if (await target.count()) await target.evaluate((node) => node.scrollIntoView({ block: 'center' }));
     await sleep(400);
@@ -1158,6 +1164,22 @@ async function stopsGroup(scenario, { page }) {
       piece(proseAt + 1, sent.length, 'The third: the rest, translated.'),
     ], { prompt: 620, candidates: 40 }));
     await untilCards(page, 'the card for the rest', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+  });
+
+  await scenario('partial-not-cached', 'blocks 1–3 selected again → Translate: the partial card is not a cache hit (getCardByCacheKey skips it), so a request, answered whole: a complete card beside the partial one', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, [0, 0], [2, TEXTS[2].length]);
+    await railTranslate(page).click();
+    const held = await p.request('the passage again');
+    const sent = piecesSent(held);
+    const verseAt = sent.findIndex((text) => VERSE.startsWith(text.slice(0, 8)));
+    const proseAt = sent.findIndex((text) => TEXTS[2].startsWith(text.slice(0, 8)));
+    await held.respond(answer([
+      piece(1, verseAt, 'The first: translated whole this time.'),
+      piece(verseAt + 1, proseAt, '', { type: 'quran', reference: '14:2' }),
+      piece(proseAt + 1, sent.length, 'The third: translated whole this time.'),
+    ], { prompt: 700, candidates: 60 }));
+    await untilCards(page, 'the whole card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
   });
 
   let interrupted = null;

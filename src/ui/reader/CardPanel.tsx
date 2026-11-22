@@ -77,7 +77,7 @@ export function CardPanel({
   onRetranslate: (
     card: TranslationCard,
     options?: { providerId?: ProviderId; model?: string },
-) => void;
+  ) => void;
   /** A partial card's "Translate the rest" (useTranslator `translateRest`). */
   onTranslateRest: (card: TranslationCard) => void;
   onDelete: (card: Card) => void;

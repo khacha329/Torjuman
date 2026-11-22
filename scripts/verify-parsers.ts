@@ -4514,7 +4514,7 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
 
   // ---- strict tool schemas -------------------------------------------------
   // Strict mode wants additionalProperties: false on every object, and Gemini's
-  // responseSchema does not take the keyword. The two share SEGMENT_PROPERTIES.
+  // responseSchema does not take the keyword. The two share SHARED_SEGMENT_PROPERTIES.
   function objectsWithout(schema: unknown, path = '$'): string[] {
     if (typeof schema !== 'object' || schema === null) return [];
     const record = schema as Record<string, unknown>;
