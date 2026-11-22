@@ -39,6 +39,8 @@ import { sharhCollectionFor } from '../src/retrieval/hadithJson';
 import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
+import type { HttpClient } from '../src/platform/http/HttpClient';
+import { lookupHadith } from '../src/retrieval/HadithSource';
 import type { HadithIndexPart, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
@@ -485,6 +487,10 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     async getQulEntry(resourceId: string, key: string) {
       return rows.get(`${resourceId}|${key}`);
     },
+    // lookupHadith reads the cache first; nothing is cached here.
+    async getHadith() {
+      return undefined;
+    },
     async getQulEntries(resourceId: string, keys: string[]) {
       reads++;
       return keys.map((key) => rows.get(`${resourceId}|${key}`)).filter((row): row is QulEntry => row !== undefined);
@@ -528,6 +534,21 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const matnNumber = numbered[alpha.findIndex((e) => e.number === 11)].number;
   const found = await searchHadithText(storage, [fromParts], text(matnA), { mode: 'segment' });
   expect('search over storage: found, with its row', found.chosen?.number === matnNumber && found.entries.get(`alpha:${matnNumber}`)?.text === 'english', found.chosen);
+
+  // T1: the sheet's lookup, offline (no dorar, no sunnah.com), with a scope.
+  {
+    const http = { get: async () => { throw new Error('no network in check H'); } } as unknown as HttpClient;
+    const options = { online: false, preferred: 'hadith-json' as const, sunnahApiKey: '' };
+    const matched = await lookupHadith(http, storage, { reference: 'book-x#11', arabicText: text(matnA), scope: { collection: 'alpha', numberHint: 11 } }, options);
+    expect('T1: a book-scoped matn is found by its text in the scope', matched.text?.status === 'matched' && matched.record?.english === 'english', matched.text);
+    expect('T1: and shows no dataset number or link (alpha is no registered collection, so not citable)', matched.record?.number === '' && matched.record?.sourceUrl === null, matched.record);
+    const missing = await lookupHadith(http, storage, { reference: 'book-x#1', arabicText: text(words(20)), scope: { collection: 'alpha' } }, options);
+    expect('T1: an unknown text is no match, with no English', missing.text?.status === 'no-match' && !missing.record?.english, missing.text);
+    const absent = await lookupHadith(http, storage, { reference: 'book-x#1', arabicText: text(matnA), scope: { collection: 'zeta-not-imported' } }, options);
+    expect('T1: a scope that is not imported says so', absent.text?.status === 'not-imported', absent.text);
+    const unscoped = await lookupHadith(http, storage, { reference: 'book-x#11', arabicText: text(matnA) }, options);
+    expect('T1: without a scope nothing is searched by text', unscoped.text === undefined && !unscoped.record?.english, unscoped);
+  }
 
   // Rows lost from an old import: the rebuild refuses rather than storing a
   // partial index as complete, and the failure is not remembered.

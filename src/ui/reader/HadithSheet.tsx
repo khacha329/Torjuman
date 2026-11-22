@@ -5,8 +5,10 @@ import { navigate } from '../../app/router';
 import { secrets } from '../../services/secrets';
 import { useOnline } from '../../app/useOnline';
 import { BidiText } from '../../components/BidiText';
-import { lookupHadith } from '../../retrieval/HadithSource';
-import { HADITH_JSON_ATTRIBUTION } from '../../retrieval/hadithJson';
+import { lookupHadith, type TextLookup } from '../../retrieval/HadithSource';
+import { HADITH_JSON_ATTRIBUTION, hadithJsonCollection } from '../../retrieval/hadithJson';
+import type { IndexProgress } from '../../retrieval/hadithTextIndex';
+import { hadithScopeFor } from './hadithScope';
 import type { DorarDiagnostics } from '../../retrieval/dorar';
 import type {
   Book,
@@ -35,6 +37,10 @@ function Diagnostic({ label, children }: { label: string; children: string }) {
 }
 
 // ------------------------------------------------------------------ ḥadīth
+
+function collectionName(slug: string): string {
+  return hadithJsonCollection(slug)?.displayName ?? slug;
+}
 
 /**
  * The ḥadīth sheet.
@@ -70,6 +76,10 @@ export function HadithSheet({
   const [diagnostics, setDiagnostics] = useState<DorarDiagnostics | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [loading, setLoading] = useState(true);
+  // The text search in the book's own collection (step T1 of the plan), and a
+  // first-use index build while it runs.
+  const [text, setText] = useState<TextLookup | undefined>(undefined);
+  const [indexing, setIndexing] = useState<IndexProgress | null>(null);
 
   // Whichever commentaries happen to be imported. Not a fixed list, and no work
   // is named in code: a book qualifies by Shamela's own «شروح الحديث» category,
@@ -89,28 +99,49 @@ export function HadithSheet({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setIndexing(null);
 
-    void lookupHadith(
-      http,
-      storage,
-      { reference: entity.reference, arabicText: sourceText, contextText },
-      {
-        sunnahApiKey: secrets.getSunnahKey(),
-        preferred: settings.hadithSourceId,
-        online,
-      },
-    ).then((found) => {
+    void (async () => {
+      // The scope comes from the book, read here rather than passed down, so
+      // ReaderScreen and ReaderSheets do not change. The printed number of a
+      // book-scoped reference (`<bookId>#n`) orders the text's candidates.
+      const book = await storage.getBook(entity.bookId).catch(() => undefined);
+      const collection = book ? hadithScopeFor(book) : null;
+      const printed = /#(\d+)$/.exec(entity.reference ?? '')?.[1] ?? /:(\d+)$/.exec(entity.reference ?? '')?.[1];
+      const found = await lookupHadith(
+        http,
+        storage,
+        {
+          reference: entity.reference,
+          arabicText: sourceText,
+          contextText,
+          scope: collection
+            ? { collection, numberHint: printed !== undefined ? Number(printed) : undefined }
+            : undefined,
+        },
+        {
+          sunnahApiKey: secrets.getSunnahKey(),
+          preferred: settings.hadithSourceId,
+          online,
+          onIndexProgress: (progress) => {
+            if (!cancelled) setIndexing(progress);
+          },
+        },
+      );
       if (cancelled) return;
       setRecord(found.record);
       setDiagnostics(found.diagnostics);
+      setText(found.text);
+      setIndexing(null);
       setLoading(false);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [
     contextText,
+    entity.bookId,
     entity.reference,
     http,
     online,
@@ -120,6 +151,13 @@ export function HadithSheet({
   ]);
 
   const gradings = record?.gradings ?? [];
+  // A miss in a sharḥ of one of the six main books gets its own wording. Riyāḍ
+  // and the Forty keep the note below, key prompt included: their numbers are
+  // citable, so sunnah.com is a real route for them.
+  const scopedMiss =
+    text !== undefined &&
+    text.status !== 'matched' &&
+    hadithJsonCollection(text.collection)?.citableNumbers === false;
 
   return (
     <AnchoredPanel
@@ -249,7 +287,15 @@ export function HadithSheet({
         {record?.arabic || sourceText}
       </p>
 
-      {loading && <Spinner label="Looking it up…" />}
+      {loading && (
+        <Spinner
+          label={
+            indexing
+              ? `Building the ḥadīth text index (first use): ${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
+              : 'Looking it up…'
+          }
+        />
+      )}
 
       {!loading && record?.english && (
         <>
@@ -258,11 +304,48 @@ export function HadithSheet({
           </p>
           <p className="mt-2 text-[10px] text-muted">
             {record.sourceId === 'hadith-json' ? HADITH_JSON_ATTRIBUTION : 'sunnah.com'}
+            {text?.status === 'matched' && (
+              <> · {collectionName(text.collection)}, identified by its text</>
+            )}
           </p>
+          {text?.status === 'matched' && (text.partial || text.repetitions > 0) && (
+            <p className="mt-1 text-[10px] text-muted">
+              {text.partial && 'Quoted in part; this is the whole ḥadīth. '}
+              {text.repetitions > 0 &&
+                `The same matn appears ${text.repetitions} more time${text.repetitions === 1 ? '' : 's'} in this collection.`}
+            </p>
+          )}
         </>
       )}
 
-      {!loading && !record?.english && (
+      {!loading && !record?.english && scopedMiss && (
+        <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+          No verified English translation is available for this ḥadīth, so none is shown. A
+          machine translation is deliberately not produced for ḥadīth text.
+          {/* The book's own collection was searched by its text. sunnah.com is
+              not offered: a non-citable book's numbers are never sent there.
+              The import hint is the author's business, as below. */}
+          {text.status === 'no-match' && (
+            <> No ḥadīth in the imported {collectionName(text.collection)} matched this text.</>
+          )}
+          {text.status === 'ambiguous' && (
+            <> This text matches more than one ḥadīth in {collectionName(text.collection)}, so none is shown.</>
+          )}
+          {text.status === 'not-imported' && !readOnly && (
+            <>
+              {' '}
+              Import <code>{hadithJsonCollection(text.collection)?.fileName ?? `${text.collection}.json`}</code>{' '}
+              (hadith-json) in{' '}
+              <button className="underline" onClick={() => navigate({ name: 'settings' })}>
+                Settings
+              </button>{' '}
+              to find this ḥadīth by its text.
+            </>
+          )}
+        </p>
+      )}
+
+      {!loading && !record?.english && !scopedMiss && (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
           No verified English translation is available for this ḥadīth, so none is shown. A
           machine translation is deliberately not produced for ḥadīth text.

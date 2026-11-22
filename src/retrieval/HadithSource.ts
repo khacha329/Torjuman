@@ -4,7 +4,8 @@ import type { HadithRecord, HadithSourceId } from '../types';
 import { fetchHadith, parseHadithReference } from './sunnah';
 import { searchDorar, type DorarDiagnostics } from './dorar';
 import { narratorIn } from './narrator';
-import { findLocalHadith, HADITH_JSON_ATTRIBUTION, type LocalHadith } from './hadithJson';
+import { composeEnglish, findLocalHadith, HADITH_JSON_ATTRIBUTION, hadithJsonCollection } from './hadithJson';
+import { loadHadithIndexes, searchHadithText, type IndexProgress } from './hadithTextIndex';
 
 // The seam between the app and whichever service knows about a ḥadīth.
 //
@@ -38,13 +39,31 @@ export interface HadithQuery {
    * range alone is usually not enough to read it from.
    */
   contextText?: string;
+  /**
+   * The hadith-json collection the book's ḥadīth belong to (`hadithScopeFor`),
+   * and the number the book prints. When the reference does not find the
+   * ḥadīth — a sharḥ of one of the six main books, whose numbers are its own,
+   * or a Riyāḍ number that does not confirm (Q19) — it is looked for by its
+   * text in this one collection. The number only orders what the text found.
+   */
+  scope?: { collection: string; numberHint?: number };
 }
+
+/** What the text search in the book's collection came to, for the sheet's wording. */
+export type TextLookup =
+  | { status: 'matched'; collection: string; partial: boolean; repetitions: number }
+  | { status: 'no-match' | 'ambiguous' | 'not-imported'; collection: string };
 
 export interface HadithLookupResult {
   record: HadithRecord | null;
   /** Present whenever dorar was consulted. Feeds the diagnostics view. */
   diagnostics: DorarDiagnostics | null;
+  /** Present when the query carried a scope and the reference found nothing. */
+  text?: TextLookup;
 }
+
+/** Below this share of the matched matn, the sheet says the passage quotes it in part (as the card does). */
+const QUOTED_IN_PART_BELOW = 0.9;
 
 export interface HadithSourceOptions {
   sunnahApiKey: string;
@@ -103,7 +122,12 @@ export async function lookupHadith(
   http: HttpClient,
   storage: StorageAdapter,
   query: HadithQuery,
-  options: HadithSourceOptions & { preferred: HadithSourceId; online: boolean },
+  options: HadithSourceOptions & {
+    preferred: HadithSourceId;
+    online: boolean;
+    /** Progress of a first-use index build (self-heal), for the spinner. */
+    onIndexProgress?: (progress: IndexProgress) => void;
+  },
 ): Promise<HadithLookupResult> {
   const cached = query.reference ? await storage.getHadith(query.reference) : undefined;
 
@@ -111,18 +135,32 @@ export async function lookupHadith(
   // applied to what is RETURNED and never to what is cached: the cache is read
   // by backups and shared chapters, and this text is the user's private import,
   // deletable in Settings. Writing it into `hadiths` would outlive that delete.
-  const local = query.reference
+  const byReference = query.reference
     ? await findLocalHadith(storage, query.reference, query.arabicText)
     : null;
+  let local: LocalEnglish | null = byReference
+    ? {
+        english: byReference.english,
+        collection: byReference.collection,
+        citable: byReference.citable,
+        number: byReference.entry.number,
+      }
+    : null;
+  let text: TextLookup | undefined;
+  if (!local && query.scope && query.arabicText.trim() !== '') {
+    const found = await lookupByText(storage, query.scope, query.arabicText, options.onIndexProgress);
+    local = found.local;
+    text = found.text;
+  }
   const finish = (record: HadithRecord | null): HadithRecord | null =>
     withLocalEnglish(record, local, query);
 
   // A cached record that already carries its gradings is finished. One without
   // them is worth topping up once there is a network again.
   if (cached?.gradings || (cached && !options.online)) {
-    return { record: finish(cached), diagnostics: null };
+    return { record: finish(cached), diagnostics: null, text };
   }
-  if (!options.online) return { record: finish(cached ?? null), diagnostics: null };
+  if (!options.online) return { record: finish(cached ?? null), diagnostics: null, text };
 
   const parsed = query.reference ? parseHadithReference(query.reference) : null;
 
@@ -144,7 +182,7 @@ export async function lookupHadith(
   // dorar is consulted for what it is for: grading and takhrīj. It is never
   // consulted for English, and cannot supply any — see the header.
   if (query.arabicText.trim() === '') {
-    return { record: finish(record), diagnostics: null };
+    return { record: finish(record), diagnostics: null, text };
   }
 
   // The narrator comes from the surrounding passage where possible: the isnād
@@ -184,7 +222,65 @@ export async function lookupHadith(
 
   if (record.reference) await storage.putHadith(record);
 
-  return { record: finish(record), diagnostics };
+  return { record: finish(record), diagnostics, text };
+}
+
+/** The English laid over a record, from either the reference or the text. */
+interface LocalEnglish {
+  english: string;
+  collection: string;
+  citable: boolean;
+  /** The dataset's position: shown or linked only where `citable`. */
+  number: number;
+}
+
+/**
+ * The book's matn looked for by its text in the book's one collection.
+ *
+ * Errors are an answer, not a failure of the sheet: a collection whose index
+ * cannot be built reads as no match, and the loader has reported why. Nothing
+ * is cached (the rule at the top of `lookupHadith`).
+ */
+async function lookupByText(
+  storage: StorageAdapter,
+  scope: NonNullable<HadithQuery['scope']>,
+  arabicText: string,
+  onProgress?: (progress: IndexProgress) => void,
+): Promise<{ local: LocalEnglish | null; text: TextLookup }> {
+  const collection = scope.collection;
+  try {
+    const imported = (await storage.listQulResources()).some(
+      (resource) => resource.kind === 'hadith-json' && resource.collection === collection,
+    );
+    if (!imported) return { local: null, text: { status: 'not-imported', collection } };
+    const loaded = await loadHadithIndexes(storage, [collection], onProgress);
+    if (loaded.length === 0) return { local: null, text: { status: 'no-match', collection } };
+    const result = await searchHadithText(storage, loaded, arabicText, {
+      mode: 'segment',
+      hints: scope.numberHint !== undefined ? [{ collection, number: scope.numberHint }] : [],
+    });
+    if (result.ambiguous) return { local: null, text: { status: 'ambiguous', collection } };
+    const chosen = result.chosen;
+    const entry = chosen ? result.entries.get(`${chosen.collection}:${chosen.number}`) : undefined;
+    const english = entry ? composeEnglish(entry) : '';
+    if (!chosen || english === '') return { local: null, text: { status: 'no-match', collection } };
+    return {
+      local: {
+        english,
+        collection,
+        citable: hadithJsonCollection(collection)?.citableNumbers ?? false,
+        number: chosen.number,
+      },
+      text: {
+        status: 'matched',
+        collection,
+        partial: chosen.coverageOfMatn < QUOTED_IN_PART_BELOW,
+        repetitions: result.repetitions,
+      },
+    };
+  } catch {
+    return { local: null, text: { status: 'no-match', collection } };
+  }
 }
 
 /**
@@ -196,7 +292,7 @@ export async function lookupHadith(
  */
 function withLocalEnglish(
   record: HadithRecord | null,
-  local: LocalHadith | null,
+  local: LocalEnglish | null,
   query: HadithQuery,
 ): HadithRecord | null {
   if (!local || record?.english) return record;
@@ -204,7 +300,7 @@ function withLocalEnglish(
   return {
     reference: record?.reference ?? query.reference,
     collection: record?.collection ?? parsed?.collection ?? local.collection,
-    number: record?.number ?? parsed?.number ?? (local.citable ? String(local.entry.number) : ''),
+    number: record?.number ?? parsed?.number ?? (local.citable ? String(local.number) : ''),
     arabic: record?.arabic ?? '',
     english: local.english,
     grade: record?.grade ?? null,
@@ -212,7 +308,7 @@ function withLocalEnglish(
     // sunnah.com it would open a different ḥadīth (any collection whose
     // `citableNumbers` is false).
     sourceUrl: local.citable
-      ? `https://sunnah.com/${local.collection}:${local.entry.number}`
+      ? `https://sunnah.com/${local.collection}:${local.number}`
       : (record?.sourceUrl ?? null),
     fetchedAt: record?.fetchedAt ?? Date.now(),
     sourceId: 'hadith-json',

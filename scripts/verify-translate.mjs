@@ -233,6 +233,9 @@ const SYNTHETIC_COLLECTION = [
   'وهذه جملة أخرى للتجربة تتحدث عن الماء والزرع والمطر في أرض بعيدة عن المدينة',
   `وفي خبر آخر مختلف عن الأول تماما ${SYNTHETIC_SHARED} كان له نور يوم يلقى ربه بين الخلائق`,
   'وآخر جملة في هذه المجموعة التجريبية عن السفر والطريق والرفقة الصالحة في الليل',
+  // The book's own matn (block 5's quotation), so a tap on it finds this
+  // entry by text (step T1).
+  HADITH_QUOTE.replace(/[«»]/g, ''),
 ];
 function sharhRows() {
   const at = FIXED_NOW - 86_400_000;
@@ -279,7 +282,11 @@ function bookRows({ profiles = [], settings = {}, sharh = false } = {}) {
       })),
       entities: [
         entity('quran', 'quran', 1, 0, VERSE.length, { reference: '14:2', label: 'إبراهيم 2', textUthmani: VERSE }),
-        entity('hadith', 'hadith', 4, hadithAt, hadithAt + HADITH_QUOTE.length, { reference: 'riyadussalihin:1' }),
+        // In a sharḥ of a non-citable collection the matn's reference is
+        // book-scoped (detectEntities' `<bookId>#n`), its number the book's own.
+        entity('hadith', 'hadith', 4, hadithAt, hadithAt + HADITH_QUOTE.length, {
+          reference: sharh ? `${BOOK}#1` : 'riyadussalihin:1',
+        }),
       ],
       profiles,
       ...(sharh ? sharhRows() : {}),
@@ -1153,6 +1160,24 @@ function sharhGroup(provider) {
     await once('ambiguous-cited-elsewhere', 'block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; the plain build refuses the proxy-only host, and with a proxy set the request is aborted)', 10, [hadith(SYNTHETIC_SHARED, 'Ṣaḥīḥ Muslim 5')], { note: 'No verified English translation was retrieved from sunnah.com', sunnahAllowed: true });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
+
+    // Step T1: the matn tapped. Its book-scoped reference finds nothing by
+    // number, so the sheet looks for it by text in the book's collection and
+    // shows that English. dorar's lookup (aborted) still writes its row, and
+    // that row must carry no English: the import is never cached.
+    await scenario(`sharh-${provider}-tap`, 'the matn tapped: the sheet finds it by text in the synthetic Bukhārī and shows its English, "identified by its text"; the hadiths row dorar\'s lookup writes carries no English', async () => {
+      const matn = page.locator('[data-entity-id="entity-hadith"]');
+      await centre(page, matn);
+      await matn.click();
+      const sheet = page.getByRole('dialog').last();
+      await within(20_000, 'the sheet\'s English', sheet.getByText('identified by its text').waitFor());
+      const shown = await sheet.innerText();
+      if (!shown.includes(`Synthetic English ${SYNTHETIC_COLLECTION.length}`)) harnessFail(`sharh-${provider}-tap`, 'the sheet does not show the matched entry\'s English');
+      const { hadiths: rows } = await dumpDatabase(page, ['hadiths']);
+      if ((rows ?? []).some((row) => row.english)) harnessFail(`sharh-${provider}-tap`, 'a hadiths row carries English: the import was cached');
+      await sheet.getByRole('button', { name: /close/i }).first().click();
+      await within(10_000, 'the sheet closed', sheet.waitFor({ state: 'detached' }));
+    });
   };
 }
 

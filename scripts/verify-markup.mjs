@@ -443,7 +443,43 @@ const CACHED_WORD = 'تجريبي';
 const UNCACHED_WORD = 'الفقرة';
 const SEARCH_WORD = 'متن';
 
-function seedReader({ compile = false } = {}) {
+/**
+ * The hadith-json rows for a reader seeded as a sharḥ of Bukhārī (step T1 of
+ * docs/plans/hadith-text-matching.md), one state per capture. Invented
+ * sentences, not ḥadīth; the "matched" entry is the seeded matn's quotation
+ * itself, so the sheet finds it by text. No index is seeded: the sheet builds
+ * it on first use, as a tablet with an older import does.
+ */
+function sharhCollectionRows(state) {
+  if (state === 'not-imported') return {};
+  const at = FIXED_NOW - 7_200_000;
+  const quote = READER_HADITH.replace(/[«»]/g, '');
+  const rest = (words) => words;
+  const arabic = {
+    matched: ['جملة تجريبية أولى عن الطريق والسفر والرفقة في الليل الطويل', quote, 'جملة تجريبية أخيرة عن الماء والمطر والزرع في الأرض البعيدة'],
+    'no-match': ['جملة تجريبية أولى عن الطريق والسفر والرفقة في الليل الطويل', 'جملة تجريبية أخيرة عن الماء والمطر والزرع في الأرض البعيدة'],
+    ambiguous: [
+      rest(`قال الراوي التجريبي في المجلس الأول أمام الناس ${quote} ثم سكت طويلا ولم يزد شيئا بعد ذلك`),
+      rest(`وفي خبر آخر مختلف تماما عن الذي قبله ${quote} فلما سمعوا ذلك خرجوا إلى السوق مسرعين جميعا`),
+    ],
+  }[state];
+  const id = 'qul-u-sharh-bukhari';
+  return {
+    qulResources: [{
+      id, kind: 'hadith-json', name: 'Synthetic Bukhārī (check U)', fileName: 'bukhari.json', byteSize: 4096,
+      entryCount: arabic.length, format: 'json', importedAt: at, collection: 'bukhari',
+    }],
+    qulEntries: arabic.map((text, i) => ({
+      id: `${id}|bukhari:${i + 1}`, resourceId: id, key: `bukhari:${i + 1}`,
+      value: {
+        t: 'hadith-json', number: i + 1, idInBook: i + 1, chapterId: 0, chapterEnglish: '',
+        narrator: 'Narrated (synthetic):', text: `Synthetic English ${i + 1}, written for check U; not a ḥadīth.`, arabic: text,
+      },
+    })),
+  };
+}
+
+function seedReader({ compile = false, sharh = null } = {}) {
   const at = FIXED_NOW - 7_200_000;
   const rows = seedRows();
   const blocks = rows.blocks.map((block) => ({ ...block }));
@@ -468,11 +504,26 @@ function seedReader({ compile = false } = {}) {
   return {
     rows: {
       ...rows,
-      books: rows.books.map((book) => (book.id === BOOK ? { ...book, nameIndexSize: 0 } : book)),
+      ...(sharh ? sharhCollectionRows(sharh) : {}),
+      books: rows.books.map((book) =>
+        book.id === BOOK
+          ? {
+              ...book,
+              nameIndexSize: 0,
+              // A sharḥ of Bukhārī: category and a title fragment (Design 8).
+              ...(sharh ? { title: 'شرح تجريبي على صحيح البخاري', category: 'شروح الحديث' } : {}),
+            }
+          : book,
+      ),
       blocks,
       entities: [
         entity('quran', 'quran', 1, 0, READER_VERSE.length, { reference: '14:2', label: 'إبراهيم 2', textUthmani: READER_VERSE }),
-        entity('hadith', 'hadith', 2, hadithAt, hadithAt + READER_HADITH.length, { reference: 'riyadussalihin:1' }),
+        // In a sharḥ of a non-citable collection the matn's reference is
+        // book-scoped (detectEntities' `<bookId>#n`), its number the book's own.
+        entity('hadith', 'hadith', 2, hadithAt, hadithAt + READER_HADITH.length, {
+          reference: sharh ? `${BOOK}#1` : 'riyadussalihin:1',
+          ...(sharh ? { label: 'Ḥadīth 1' } : {}),
+        }),
         entity('narrator', 'narrator', 2, narratorAt, narratorAt + READER_NARRATOR.length, { reference: 'ابي هريره', label: READER_NARRATOR }),
       ],
       marks: [read(10), read(20), read(30)],
@@ -1098,6 +1149,23 @@ async function readerCaptures(fresh, profile, dir) {
   await diagnostics.waitFor();
   await capture(page, dir, 'reader-hadith-diagnostics', diagnostics);
   await page.context().close();
+
+  // The sheet in a sharḥ of Bukhārī (step T1): the ḥadīth looked for by its
+  // text in the book's collection, in each of its four outcomes. Each its own
+  // context and seed (sharhCollectionRows), so no other capture's database
+  // holds a hadith-json collection.
+  for (const [state, waitFor] of [
+    ['matched', 'identified by its text'],
+    ['no-match', 'matched this text'],
+    ['ambiguous', 'more than one ḥadīth'],
+    ['not-imported', 'to find this ḥadīth by its text'],
+  ]) {
+    page = await open({ reader: { sharh: state } });
+    await tap(page, page.locator('[data-entity-id="entity-hadith"]'));
+    await dialog(page).getByText(waitFor).waitFor({ timeout: STABLE_LIMIT_MS });
+    await captureDialog(page, `reader-hadith-sharh-${state}`);
+    await page.context().close();
+  }
 
   // BiographySheet for the narrator (no biographical work imported).
   page = await open();
