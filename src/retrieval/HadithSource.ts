@@ -209,7 +209,8 @@ function withLocalEnglish(
     english: local.english,
     grade: record?.grade ?? null,
     // No link built from a number that is only the dataset's own position: on
-    // sunnah.com it would open a different ḥadīth (Bukhārī, Muslim).
+    // sunnah.com it would open a different ḥadīth (any collection whose
+    // `citableNumbers` is false).
     sourceUrl: local.citable
       ? `https://sunnah.com/${local.collection}:${local.entry.number}`
       : (record?.sourceUrl ?? null),

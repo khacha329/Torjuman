@@ -53,6 +53,8 @@ export interface HadithJsonCollection {
   /** Arabic title as the file prints it, matched after folding. */
   arabicTitle: string;
   displayName: string;
+  /** The file's name in the dataset's repository (db/by_book/…), as the owner downloads it. */
+  fileName: string;
   /** The count the file's metadata claims; a different count is refused. */
   length: number;
   /**
@@ -80,6 +82,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     titles: ['riyad as-salihin', 'riyad us-salihin'],
     arabicTitle: 'رياض الصالحين',
     displayName: 'Riyāḍ aṣ-Ṣāliḥīn',
+    fileName: 'riyad_assalihin.json',
     length: 1896,
     citableNumbers: true,
   },
@@ -88,6 +91,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     titles: ['the forty hadith of imam nawawi', 'forty hadith of an-nawawi'],
     arabicTitle: 'الأربعون النووية',
     displayName: 'Nawawī’s Forty (with the two extra)',
+    fileName: 'nawawi40.json',
     length: 42,
     citableNumbers: true,
   },
@@ -96,6 +100,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     titles: ['sahih al-bukhari'],
     arabicTitle: 'صحيح البخاري',
     displayName: 'Ṣaḥīḥ al-Bukhārī',
+    fileName: 'bukhari.json',
     length: 7277,
     citableNumbers: false,
   },
@@ -104,7 +109,75 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     titles: ['sahih muslim'],
     arabicTitle: 'صحيح مسلم',
     displayName: 'Ṣaḥīḥ Muslim',
+    fileName: 'muslim.json',
     length: 7459,
+    citableNumbers: false,
+  },
+  // The rest of the nine books, measured on 2026-11-22 with
+  // `npm run measure:hadith-corpus`. Every file's `idInBook` is unique and
+  // continuous; Ibn Mājah lists its chapter 0 last like Riyāḍ and Muslim, the
+  // others have none. None has been checked against the standard numbering, so
+  // none is citable: Claude's number is a candidate the text must confirm, and
+  // the card keeps the reference the model gave. Where the dataset drifts more
+  // than NEIGHBOUR_WINDOW from the cited number, only the text index (the plan's
+  // steps 2–4) will find it.
+  //
+  // Left out: ad-Dārimī. The file has 3,406 ḥadīth and no English at all
+  // (0.00 MB measured), so it can supply nothing this source exists to supply.
+  {
+    slug: 'abudawud',
+    titles: ['sunan abi dawud'],
+    arabicTitle: 'سنن أبي داود',
+    displayName: 'Sunan Abī Dāwūd',
+    fileName: 'abudawud.json',
+    length: 5276,
+    citableNumbers: false,
+  },
+  {
+    slug: 'tirmidhi',
+    titles: ["jami' al-tirmidhi", 'jami al-tirmidhi'],
+    arabicTitle: 'جامع الترمذي',
+    displayName: 'Jāmiʿ at-Tirmidhī',
+    fileName: 'tirmidhi.json',
+    length: 4053,
+    citableNumbers: false,
+  },
+  {
+    slug: 'nasai',
+    titles: ["sunan al-nasa'i", 'sunan an-nasai'],
+    arabicTitle: 'سنن النسائي',
+    displayName: 'Sunan an-Nasāʾī',
+    fileName: 'nasai.json',
+    length: 5768,
+    citableNumbers: false,
+  },
+  {
+    slug: 'ibnmajah',
+    titles: ['sunan ibn majah'],
+    arabicTitle: 'سنن ابن ماجه',
+    displayName: 'Sunan Ibn Mājah',
+    fileName: 'ibnmajah.json',
+    length: 4345,
+    citableNumbers: false,
+  },
+  {
+    slug: 'malik',
+    titles: ['muwatta malik'],
+    arabicTitle: 'موطأ مالك',
+    displayName: 'Muwaṭṭaʾ Mālik',
+    fileName: 'malik.json',
+    length: 1985,
+    citableNumbers: false,
+  },
+  {
+    // Only 1,374 ḥadīth: the part of the Musnad sunnah.com has translated, not
+    // the whole of it. Its running index cannot be the Musnad's numbering.
+    slug: 'ahmad',
+    titles: ['musnad ahmad ibn hanbal'],
+    arabicTitle: 'مسند الإمام أحمد بن حنبل',
+    displayName: 'Musnad Aḥmad (the translated part)',
+    fileName: 'ahmed.json',
+    length: 1374,
     citableNumbers: false,
   },
 ];
@@ -431,7 +504,8 @@ export interface LocalHadith extends HadithMatch {
   collection: string;
   /**
    * Whether `entry.number` may be shown as a citation or used in a sunnah.com
-   * link. False for Bukhārī and Muslim (see `citableNumbers`): their English is
+   * link. False for every collection but Riyāḍ and the Forty (see
+   * `citableNumbers`): their English is
    * still text-confirmed and shown, but the number stays whatever the book or
    * the model said it was.
    */

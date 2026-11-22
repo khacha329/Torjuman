@@ -186,8 +186,14 @@ export function HadithJsonResources() {
         >
           hadith-json
         </a>{' '}
-        dataset, imported from files you download — <code>riyad_assalihin.json</code>,{' '}
-        <code>nawawi40.json</code>, <code>bukhari.json</code>, <code>muslim.json</code>. It is shown under the book’s own Arabic, attributed “
+        dataset, imported from files you download —{' '}
+        {HADITH_JSON_COLLECTIONS.map((c, i) => (
+          <span key={c.slug}>
+            {i > 0 ? ', ' : ''}
+            <code>{c.fileName}</code>
+          </span>
+        ))}
+        . It is shown under the book’s own Arabic, attributed “
         {HADITH_JSON_ATTRIBUTION}”. Each ḥadīth is found by its number and then checked
         against the book’s text, so a numbering that has drifted shows nothing rather than
         the wrong ḥadīth. The files stay on this device.

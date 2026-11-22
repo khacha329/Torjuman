@@ -5930,6 +5930,37 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('Arabic separators ، and ؛ split', parseHadithReferences('Bukhari 1، Muslim 1907؛ Nasai 5').length, 3);
     check('"hadith" before the number', parseHadithReference('Sahih Muslim hadith 1907'), { collection: 'muslim', number: '1907' });
     check('a non-breaking hyphen folds', parseHadithReference('Ṣaḥīḥ al‑Bukhārī 1'), { collection: 'bukhari', number: '1' });
+    // The rest of the nine books, as the model transliterates them.
+    check(
+      'each of the nine books is recognised',
+      parseHadithReferences('Sunan Abī Dāwūd 1; Jāmiʿ at-Tirmidhī 2; Sunan an-Nasāʾī 3; Sunan Ibn Mājah 4; Muwaṭṭaʾ Mālik 5; Musnad Aḥmad 6').map((ref) => ref.collection),
+      ['abudawud', 'tirmidhi', 'nasai', 'ibnmajah', 'malik', 'ahmad'],
+    );
+
+    // Mālik and Aḥmad are never asked of sunnah.com, key or not (owner's
+    // decision): the request is never made.
+    const { fetchHadith } = await import('../src/retrieval/sunnah');
+    let requests = 0;
+    const http = { async get() { requests++; return { ok: false, status: 500, body: '' }; } };
+    const empty = { async getHadith() { return undefined; }, async putHadith() {} };
+    const skipped = [
+      await fetchHadith(http as never, empty as never, { collection: 'malik', number: '5' }, 'fake-key'),
+      await fetchHadith(http as never, empty as never, { collection: 'ahmad', number: '6' }, 'fake-key'),
+    ];
+    check('Mālik and Aḥmad are not fetched from sunnah.com', [skipped, requests], [[null, null], 0]);
+    await fetchHadith(http as never, empty as never, { collection: 'abudawud', number: '1' }, 'fake-key');
+    check('  while Abū Dāwūd still is, with a key', requests, 1);
+
+    // And the card does not send the reader for a key that would never be used.
+    const { enrichSegments, HADITH_IMPORT_ONLY, HADITH_NEEDS_KEY } = await import('../src/retrieval/enrich');
+    const noImports = { ...empty, async listQulResources() { return []; } };
+    const cardNote = async (reference: string) =>
+      (await enrichSegments(
+        [{ type: 'hadith', arabic: 'نص', english: '', reference }] as never,
+        { http: http as never, storage: noImports as never, quran: {} as never, sunnahApiKey: '' },
+      ))[0].note;
+    check('a Mālik miss says the English comes only from the import', await cardNote('Muwaṭṭaʾ Mālik 5'), HADITH_IMPORT_ONLY);
+    check('  a Bukhārī miss still asks for the key', await cardNote('Ṣaḥīḥ al-Bukhārī 1'), HADITH_NEEDS_KEY);
   }
 
   // End to end through lookupHadith, offline: the imported English comes back
@@ -6087,9 +6118,8 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   // Every registered collection whose file is present reads cleanly with its
   // exact count (a wrong `length` in the registry would refuse the real file).
   for (const collection of HADITH_JSON_COLLECTIONS) {
-    // The repository's file names, which are not all the sunnah.com slug.
-    const FILE_FOR: Record<string, string> = { riyadussalihin: 'riyad_assalihin.json' };
-    const file = FILE_FOR[collection.slug] ?? `${collection.slug}.json`;
+    // The repository's file name (not always the sunnah.com slug: ahmed.json).
+    const file = collection.fileName;
     const path = join(process.cwd(), 'hadith-json', file);
     if (!existsSync(path)) {
       console.log(`  (${file} not present: ${collection.slug} not read)`);
@@ -6097,6 +6127,9 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     }
     const read = readHadithJson(JSON.parse(readFileSync(path, 'utf8')), file);
     check(`${file} reads as ${collection.slug} with ${collection.length} ḥadīth`, [read.collection.slug, read.entries.length], [collection.slug, collection.length]);
+    // A registered collection exists to supply English: one whose file has
+    // none (ad-Dārimī's) must not be registered.
+    expect(`${file} carries English`, read.entries.some((entry) => entry.value.text.trim() !== ''));
   }
 
   // The real measurement, where the owner's data is present.
