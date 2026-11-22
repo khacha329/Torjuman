@@ -5,6 +5,7 @@ import { renderTakhrij } from '../lib/takhrij';
 import { fetchVerse, type QuranLookupOptions } from './quran';
 import { fetchHadith, parseHadithReferences, SUNNAH_COM_SKIPPED } from './sunnah';
 import { findLocalHadith, type LocalHadith } from './hadithJson';
+import { hadithQuotationOverrun, quotationOverrunNote } from './quotationOverrun';
 
 // Replaces the model's placeholder for scripture with the authoritative text.
 //
@@ -148,6 +149,7 @@ async function enrichHadith(
           : deps.sunnahApiKey
             ? HADITH_UNAVAILABLE
             : HADITH_NEEDS_KEY,
+        overrunNote(segment.arabic),
       ),
     };
   }
@@ -174,6 +176,16 @@ export function applyTakhrijTable(segment: TranslatedSegment): TranslatedSegment
   const rendered = renderTakhrij(segment.arabic);
   if (!rendered) return segment;
   return { ...segment, english: rendered.english, source: 'takhrij-table' };
+}
+
+/**
+ * Why the lookup may have missed, when the segment holds commentary after the
+ * quotation (retrieval/quotationOverrun.ts). Only on the unavailable path: a
+ * ḥadīth found anyway needs no such note.
+ */
+function overrunNote(arabic: string): string | undefined {
+  const words = hadithQuotationOverrun(arabic);
+  return words === null ? undefined : quotationOverrunNote(words);
 }
 
 function joinNotes(...parts: (string | undefined)[]): string | undefined {

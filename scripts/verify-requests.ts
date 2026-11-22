@@ -946,6 +946,45 @@ const FOUR = [
 const HALF = [piece(1, 1, 'One half, its first sentence.'), piece(2, 2, 'One half, its second sentence.')];
 
 await scenario('gemini.translate.pieces', [piecesOk([...FOUR.slice(0, 2), piece(3, 4, '', 'quran')], 60)], translateGemini(stopsRequest()));
+
+// Quotations get pieces of their own, so a ḥadīth in "…" or ((…)) no longer
+// shares one with the commentary after it (translation/sourceUnits.ts). Six
+// pieces: قال الشيخ: | "متن…" | والمراد… | ثم قال: | ((متن ثان…)) | رواه مسلم.
+const QUOTED_TARGET =
+  'قال الشيخ: "متن للتجربة" والمراد به شيء آخر. ثم قال: ((متن ثان للتجربة)) رواه مسلم.';
+const quotedRequest = () => geminiRequest({ targetText: QUOTED_TARGET });
+await scenario(
+  'gemini.translate.quoted-matn-pieces',
+  [piecesOk([
+    piece(1, 1, 'The shaykh said:'),
+    piece(2, 2, '', 'hadith'),
+    piece(3, 4, 'What is meant by it is something else. Then he said:'),
+    piece(5, 6, '', 'hadith'),
+  ])],
+  translateGemini(quotedRequest()),
+);
+// The owner's card: an extra segment early on keeps the numbers in order but
+// one piece late, and only the overflow at the end shows it. The clamp still
+// fills the Arabic in; the segment now says why it may be wrong.
+await scenario(
+  'gemini.translate.numbers-run-past-the-end',
+  [piecesOk([...FOUR, piece(5, 5, 'A fifth segment for a passage of four pieces.')])],
+  translateGemini(stopsRequest()),
+);
+// A ḥadīth segment whose range takes in the commentary after the quotation.
+// The provider passes it on unchanged, Arabic filled in from pieces 2–3: the
+// note explaining it belongs to the ḥadīth lookup, and only when the lookup
+// fails (retrieval/quotationOverrun.ts), so it is not recorded here.
+await scenario(
+  'gemini.translate.hadith-range-runs-on',
+  [piecesOk([
+    piece(1, 1, 'The shaykh said:'),
+    piece(2, 3, '', 'hadith'),
+    piece(4, 4, 'Then he said:'),
+    piece(5, 6, '', 'hadith'),
+  ])],
+  translateGemini(quotedRequest()),
+);
 await scenario('gemini.translate.recitation-then-halves', [openBracket('RECITATION'), piecesOk(HALF), piecesOk(HALF)], translateGemini(stopsRequest()));
 await scenario('gemini.translate.recitation-after-two-segments', [
   geminiStream([{ text: `${JSON.stringify(FOUR.slice(0, 2)).slice(0, -1)}, {"type":"prose","from":3`, finishReason: 'RECITATION', usage: { prompt: 320, candidates: 30 } }]),

@@ -13,11 +13,30 @@
 // a word in half, where a wrong piece number is at worst one sentence out.
 //
 // Boundaries are where a segment can plausibly start or end: after sentence
-// and clause punctuation followed by a space, at a line break, and around the
-// brackets a verse (﴿﴾) or a quoted matn («») is printed in, so a verse inside
-// a sentence can still be its own segment. A piece is never empty and the
-// pieces cover the passage exactly (whitespace between them included in the
-// piece before), so joining any run of them gives back the source verbatim.
+// and clause punctuation followed by a space, at a line break, and around
+// whatever a verse or a quoted matn is printed in — ﴿﴾, «», “”, plain "…", and
+// ( ) — so a verse or a ḥadīth inside a sentence can still be its own segment.
+//
+// The plain quotes and parentheses were added after a real card went wrong: a
+// ḥadīth printed as "إنما الأعمال بالنيات" shared one piece with the
+// commentary after it. Gemini Flash-Lite wanted the ḥadīth and the commentary
+// as two segments, had one number for both, and numbered every later segment
+// one piece late, the app clamping the overflow onto the last piece. The same
+// shared piece also carried the commentary's words into the ḥadīth segment's
+// Arabic, so the hadith-json lookup, which wants every word of a short
+// quotation inside the stored ḥadīth, found nothing. Book 9260 prints its verses
+// in ASCII parentheses (see quran/detectEntities.ts), hence ( ). A pair of
+// parentheses round a citation or a short gloss becomes a piece of its own
+// too, which is one more number for the model. (Curly { }, which also wraps
+// verses in some books, is not cut.)
+//
+// A piece always holds at least one letter or digit. Marks side by side —
+// Shamela's ((…)) round a ḥadīth, (…)», "( — would otherwise leave a piece
+// that is only a bracket or a quote mark, and a numbered piece with nothing in
+// it is what a small model miscounts. Such a mark joins the piece it belongs
+// to: an opening mark the piece after it, a closing one the piece before.
+// The pieces cover the passage exactly (whitespace between them included in
+// the piece before), so joining any run of them gives back the source verbatim.
 
 export interface SourceUnit {
   /** Offsets into the passage, end exclusive. */
@@ -28,8 +47,26 @@ export interface SourceUnit {
 /** After one of these and whitespace, a new piece starts. */
 const CLAUSE_END = /[.!?؟؛:،]/;
 
+/** A piece starts at one of these… */
+const OPENERS = '﴿«“(';
+/** …and ends after one of these, with the punctuation that closes the quotation. */
+const CLOSERS = '﴾»”)';
+
 export function splitUnits(text: string): SourceUnit[] {
   const cuts: number[] = [];
+  // A plain " opens and closes alike, so they are paired in order. An unpaired
+  // one only misplaces a boundary, and every piece still joins back verbatim.
+  let inPlainQuote = false;
+  // Where a plain " opened a quotation, so a piece holding only that mark can
+  // tell an opening one from a closing one.
+  const openingPlainQuotes = new Set<number>();
+  const cutAfterClose = (i: number) => {
+    let j = i + 1;
+    // Keep the punctuation that closes the quotation with it.
+    while (j < text.length && /[.!?؟؛:،)\]]/.test(text[j])) j++;
+    while (j < text.length && /\s/.test(text[j])) j++;
+    cuts.push(j);
+  };
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     // A cut is the index where the next piece starts.
@@ -42,14 +79,17 @@ export function splitUnits(text: string): SourceUnit[] {
       let j = i + 1;
       while (j < text.length && /\s/.test(text[j])) j++;
       cuts.push(j);
-    } else if (ch === '﴿' || ch === '«') {
+    } else if (OPENERS.includes(ch)) {
       cuts.push(i);
-    } else if (ch === '﴾' || ch === '»') {
-      let j = i + 1;
-      // Keep the punctuation that closes the quotation with it.
-      while (j < text.length && /[.!?؟؛:،)\]]/.test(text[j])) j++;
-      while (j < text.length && /\s/.test(text[j])) j++;
-      cuts.push(j);
+    } else if (CLOSERS.includes(ch)) {
+      cutAfterClose(i);
+    } else if (ch === '"') {
+      if (inPlainQuote) cutAfterClose(i);
+      else {
+        cuts.push(i);
+        openingPlainQuotes.add(i);
+      }
+      inPlainQuote = !inPlainQuote;
     }
   }
 
@@ -66,7 +106,47 @@ export function splitUnits(text: string): SourceUnit[] {
     if (units.length > 0 && text.slice(start).trim() === '') units[units.length - 1].end = text.length;
     else units.push({ start, end: text.length });
   }
-  return units;
+  return foldMarkOnlyPieces(text, units, openingPlainQuotes);
+}
+
+/** Any letter or digit, in any script. */
+const HAS_WORDS = /[\p{L}\p{N}]/u;
+
+/**
+ * Join each piece that holds no letter or digit to its neighbour: a piece of
+ * opening marks only to the piece after it, any other to the piece before.
+ * A passage that is nothing but marks stays one piece.
+ */
+function foldMarkOnlyPieces(
+  text: string,
+  units: SourceUnit[],
+  openingPlainQuotes: Set<number>,
+): SourceUnit[] {
+  const out: SourceUnit[] = [];
+  let carry: number | null = null;
+  units.forEach((unit, index) => {
+    const start = carry ?? unit.start;
+    carry = null;
+    const piece = text.slice(unit.start, unit.end);
+    if (!HAS_WORDS.test(piece)) {
+      let onlyOpening = true;
+      for (let i = unit.start; i < unit.end; i++) {
+        const ch = text[i];
+        if (/\s/.test(ch)) continue;
+        if (!(OPENERS.includes(ch) || (ch === '"' && openingPlainQuotes.has(i)))) onlyOpening = false;
+      }
+      if (onlyOpening && index + 1 < units.length) {
+        carry = start;
+        return;
+      }
+      if (out.length > 0) {
+        out[out.length - 1].end = unit.end;
+        return;
+      }
+    }
+    out.push({ start, end: unit.end });
+  });
+  return out;
 }
 
 /** The pieces as the model sees them: `[1] …`, one per line. */

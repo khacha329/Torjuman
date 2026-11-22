@@ -2041,6 +2041,225 @@
       }
     },
     {
+      "id": "gemini.translate.quoted-matn-pieces",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\nIt is given as numbered pieces. For each segment, give the numbers of the first and\\nlast piece it covers as from and to, in order, every piece in exactly one segment.\\nDo not write the Arabic back: the application already has it.\\n\\n[1] قال الشيخ:\\n[2] \\\"متن للتجربة\\\"\\n[3] والمراد به شيء آخر.\\n[4] ثم قال:\\n[5] ((متن ثان للتجربة))\\n[6] رواه مسلم.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"from\":{\"type\":\"integer\",\"description\":\"The number of the first piece of the passage this segment covers.\"},\"to\":{\"type\":\"integer\",\"description\":\"The number of the last piece this segment covers (the same as from for a single piece).\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"from\",\"to\",\"english\"],\"propertyOrdering\":[\"type\",\"from\",\"to\",\"english\",\"reference\",\"note\",\"uncertainTerms\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "قال الشيخ:",
+              "english": "The shaykh said:",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "hadith",
+              "arabic": "\"متن للتجربة\"",
+              "english": "",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "والمراد به شيء آخر. ثم قال:",
+              "english": "What is meant by it is something else. Then he said:",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "hadith",
+              "arabic": "((متن ثان للتجربة)) رواه مسلم.",
+              "english": "",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 320,
+            "outputTokens": 40,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "costUsd": null,
+          "raw": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The shaykh said:\"},{\"type\":\"hadith\",\"from\":2,\"to\":2,\"english\":\"\"},{\"type\":\"prose\",\"from\":3,\"to\":4,\"english\":\"What is meant by it is something else. Then he said:\"},{\"type\":\"hadith\",\"from\":5,\"to\":6,\"english\":\"\"}]"
+        }
+      },
+      "progress": {
+        "count": 2,
+        "last": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The shaykh said:\"},{\"type\":\"hadith\",\"from\":2,\"to\":2,\"english\":\"\"},{\"type\":\"prose\",\"from\":3,\"to\":4,\"english\":\"What is meant by it is something else. Then he said:\"},{\"type\":\"hadith\",\"from\":5,\"to\":6,\"english\":\"\"}]"
+      }
+    },
+    {
+      "id": "gemini.translate.numbers-run-past-the-end",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\nIt is given as numbered pieces. For each segment, give the numbers of the first and\\nlast piece it covers as from and to, in order, every piece in exactly one segment.\\nDo not write the Arabic back: the application already has it.\\n\\n[1] الجملة الأولى للتجربة.\\n[2] الجملة الثانية للتجربة.\\n[3] الجملة الثالثة للتجربة.\\n[4] الجملة الرابعة للتجربة.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"from\":{\"type\":\"integer\",\"description\":\"The number of the first piece of the passage this segment covers.\"},\"to\":{\"type\":\"integer\",\"description\":\"The number of the last piece this segment covers (the same as from for a single piece).\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"from\",\"to\",\"english\"],\"propertyOrdering\":[\"type\",\"from\",\"to\",\"english\",\"reference\",\"note\",\"uncertainTerms\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "الجملة الأولى للتجربة.",
+              "english": "The first sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "الجملة الثانية للتجربة.",
+              "english": "The second sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "الجملة الثالثة للتجربة.",
+              "english": "The third sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "الجملة الرابعة للتجربة.",
+              "english": "The fourth sentence, for the test.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "الجملة الرابعة للتجربة.",
+              "english": "A fifth segment for a passage of four pieces.",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "The model's piece numbers ran past the end of the passage (it names piece 5, and the passage has pieces 1–4), so this English, and possibly the English of the segments before it, may sit beside the wrong Arabic.",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 320,
+            "outputTokens": 40,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "costUsd": null,
+          "raw": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The first sentence, for the test.\"},{\"type\":\"prose\",\"from\":2,\"to\":2,\"english\":\"The second sentence, for the test.\"},{\"type\":\"prose\",\"from\":3,\"to\":3,\"english\":\"The third sentence, for the test.\"},{\"type\":\"prose\",\"from\":4,\"to\":4,\"english\":\"The fourth sentence, for the test.\"},{\"type\":\"prose\",\"from\":5,\"to\":5,\"english\":\"A fifth segment for a passage of four pieces.\"}]"
+        }
+      },
+      "progress": {
+        "count": 2,
+        "last": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The first sentence, for the test.\"},{\"type\":\"prose\",\"from\":2,\"to\":2,\"english\":\"The second sentence, for the test.\"},{\"type\":\"prose\",\"from\":3,\"to\":3,\"english\":\"The third sentence, for the test.\"},{\"type\":\"prose\",\"from\":4,\"to\":4,\"english\":\"The fourth sentence, for the test.\"},{\"type\":\"prose\",\"from\":5,\"to\":5,\"english\":\"A fifth segment for a passage of four pieces.\"}]"
+      }
+    },
+    {
+      "id": "gemini.translate.hadith-range-runs-on",
+      "requests": [
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse",
+          "headers": {
+            "content-type": "application/json",
+            "x-goog-api-key": "AIza-q-check-not-a-real-key"
+          },
+          "body": "{\"systemInstruction\":{\"parts\":[{\"text\":\"Translate the passage into plain English.\\n\\nGLOSSARY\\nRender these terms exactly as given wherever they appear:\\n\\nالمثال = the example\\nالتجربة = the trial  [in the sense of a test]\"}]},\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"<target>\\nThis — and only this — is the text to translate.\\nThe source marks it as: prose.\\nIt is given as numbered pieces. For each segment, give the numbers of the first and\\nlast piece it covers as from and to, in order, every piece in exactly one segment.\\nDo not write the Arabic back: the application already has it.\\n\\n[1] قال الشيخ:\\n[2] \\\"متن للتجربة\\\"\\n[3] والمراد به شيء آخر.\\n[4] ثم قال:\\n[5] ((متن ثان للتجربة))\\n[6] رواه مسلم.\\n</target>\\n\\nTranslate the <target> passage according to your instructions.\\nRespond with the JSON array only.\"}]}],\"generationConfig\":{\"responseMimeType\":\"application/json\",\"responseSchema\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"quran\",\"hadith\",\"poetry\",\"prose\"],\"description\":\"What kind of material this segment is.\"},\"from\":{\"type\":\"integer\",\"description\":\"The number of the first piece of the passage this segment covers.\"},\"to\":{\"type\":\"integer\",\"description\":\"The number of the last piece this segment covers (the same as from for a single piece).\"},\"english\":{\"type\":\"string\",\"description\":\"The English rendering. Empty for a Qurʾānic verse or a hadith matn, which the application retrieves from an authoritative source.\"},\"reference\":{\"type\":\"string\",\"description\":\"For quran, \\\"surah:ayah\\\". For hadith, the collection and number.\"},\"note\":{\"type\":\"string\",\"description\":\"Ambiguity, or a note that a poem was summarised.\"},\"uncertainTerms\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Arabic terms that look like glossary candidates but are not in it.\"}},\"required\":[\"type\",\"from\",\"to\",\"english\"],\"propertyOrdering\":[\"type\",\"from\",\"to\",\"english\",\"reference\",\"note\",\"uncertainTerms\"]}},\"maxOutputTokens\":2048}}",
+          "otherInit": []
+        }
+      ],
+      "waits": [],
+      "outcome": {
+        "result": {
+          "segments": [
+            {
+              "type": "prose",
+              "arabic": "قال الشيخ:",
+              "english": "The shaykh said:",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "hadith",
+              "arabic": "\"متن للتجربة\" والمراد به شيء آخر.",
+              "english": "",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "prose",
+              "arabic": "ثم قال:",
+              "english": "Then he said:",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            },
+            {
+              "type": "hadith",
+              "arabic": "((متن ثان للتجربة)) رواه مسلم.",
+              "english": "",
+              "source": "model",
+              "reference": "(undefined)",
+              "note": "(undefined)",
+              "uncertainTerms": "(undefined)"
+            }
+          ],
+          "usage": {
+            "inputTokens": 320,
+            "outputTokens": 40,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0
+          },
+          "costUsd": null,
+          "raw": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The shaykh said:\"},{\"type\":\"hadith\",\"from\":2,\"to\":3,\"english\":\"\"},{\"type\":\"prose\",\"from\":4,\"to\":4,\"english\":\"Then he said:\"},{\"type\":\"hadith\",\"from\":5,\"to\":6,\"english\":\"\"}]"
+        }
+      },
+      "progress": {
+        "count": 2,
+        "last": "[{\"type\":\"prose\",\"from\":1,\"to\":1,\"english\":\"The shaykh said:\"},{\"type\":\"hadith\",\"from\":2,\"to\":3,\"english\":\"\"},{\"type\":\"prose\",\"from\":4,\"to\":4,\"english\":\"Then he said:\"},{\"type\":\"hadith\",\"from\":5,\"to\":6,\"english\":\"\"}]"
+      }
+    },
+    {
       "id": "gemini.translate.recitation-then-halves",
       "requests": [
         {

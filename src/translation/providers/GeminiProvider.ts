@@ -16,6 +16,7 @@ import {
 import { renderSystem, renderUser } from '../prompt';
 import { coerceSegments, parseSegmentRecords, parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
+import { pieceSequenceNote, pieceSequenceProblem } from '../segmentChecks';
 import { delay } from '../../lib/delay';
 import {
   GEMINI_FINISH_REASONS,
@@ -453,7 +454,7 @@ function readReply(
   if (parsed === null) return { segments: [], closed: false, coveredTo: 0 };
 
   let coveredTo: number | null = 0;
-  const segments = coerceSegments(parsed.records, (record) => {
+  const arabicFor = (record: Record<string, unknown>) => {
     const range = unitRange(units, record.from, record.to);
     if (range === null) {
       coveredTo = null;
@@ -461,7 +462,32 @@ function readReply(
     }
     if (coveredTo !== null) coveredTo = Math.max(coveredTo, units[range.last - 1].end);
     return unitsText(partText, units, range);
-  });
+  };
+
+  // One record at a time, so each segment's note can say what was wrong with
+  // its own piece numbers (translation/segmentChecks.ts).
+  const segments: TranslatedSegment[] = [];
+  let previousTo = 0;
+  for (const record of parsed.records) {
+    const sequence = pieceSequenceProblem(previousTo, record.from, record.to, units.length);
+    // The highest real piece named, so a backwards pair that covered a piece
+    // does not make the next segment report it missing, and a number past the
+    // end does not make every later segment look like a repeat.
+    for (const end of [record.from, record.to]) {
+      if (typeof end === 'number' && end >= 1 && end <= units.length) {
+        previousTo = Math.max(previousTo, end);
+      }
+    }
+    const [segment] = coerceSegments([record], arabicFor);
+    if (!segment) continue;
+    const note =
+      sequence === null
+        ? segment.note
+        : [segment.note, pieceSequenceNote(sequence)]
+            .filter((part): part is string => Boolean(part && part.trim()))
+            .join(' ');
+    segments.push(note === segment.note ? segment : { ...segment, note });
+  }
   return { segments, closed: parsed.closed, coveredTo };
 }
 

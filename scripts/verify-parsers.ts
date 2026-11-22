@@ -6044,6 +6044,21 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       [owner.english, owner.source, owner.reference],
       ['Abu Huraira reported: English of 3', 'hadith-json', 'Ṣaḥīḥ al-Bukhārī 3; Ṣaḥīḥ Muslim 1907'],
     );
+    check('  and, found, it carries no note about a quotation running on', owner.note, undefined);
+
+    // The Gemini card before its pieces were cut at quotes: the same segment
+    // with commentary after the quotation (synthetic words here). Not found,
+    // and the note now says why.
+    const [ranOn] = await enrichSegments(
+      [{ type: 'hadith', arabic: '"إنما الأعمال بالنيات" والمراد به شيء آخر:', english: '', reference: 'Ṣaḥīḥ al-Bukhārī 3' }] as never,
+      { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
+    );
+    check('  run on into the commentary, it is not matched', ranOn.english, '');
+    check(
+      '  and its note names the words that stopped the match',
+      ranOn.note?.endsWith('This segment also holds words after the quotation («والمراد به شيء آخر»), which belong to the commentary; that may be why the imported ḥadīth collection did not match it.'),
+      true,
+    );
   }
 
   // The on-device report over stored blocks: matched by number, by neighbour,
@@ -6179,6 +6194,99 @@ console.log('\nGemini: source pieces, partial replies, the rest of a passage');
   check('halving a passage cuts at the piece boundary nearest the middle', text.slice(0, halfwayCut(text, units)!).trim(), 'قال المصنف: هذه جملة، وتلك أخرى. ﴿آية للتجربة﴾');
   check('halving one piece cuts at a space', halfwayCut('كلمة واحدة فقط', splitUnits('كلمة واحدة فقط')), 5);
   check('one word cannot be halved', halfwayCut('كلمة', splitUnits('كلمة')), null);
+
+  // A matn in plain quotes shares no piece with the commentary after it. It
+  // did, and Flash-Lite numbered every later segment one piece late (see the
+  // comment at the top of sourceUnits.ts).
+  const trimmedPieces = (input: string) =>
+    splitUnits(input).map((unit) => input.slice(unit.start, unit.end).trim());
+  check(
+    'a matn in plain quotes is a piece of its own',
+    trimmedPieces('ومن هذا قوله: "متن قصير للتجربة" والمراد به: شيء آخر.'),
+    ['ومن هذا قوله:', '"متن قصير للتجربة"', 'والمراد به:', 'شيء آخر.'],
+  );
+  check(
+    'so are a verse in ( ) and a matn in “ ”, closing punctuation kept with them',
+    trimmedPieces('قال تعالى (آية للتجربة) ثم قال “متن آخر”، وانتهى.'),
+    ['قال تعالى', '(آية للتجربة)', 'ثم قال', '“متن آخر”،', 'وانتهى.'],
+  );
+  // Marks side by side leave no piece that is only a mark (review of 58467f9).
+  check(
+    'the ((…)) Shamela prints round a matn is one piece, the lone ( joined to it',
+    trimmedPieces('فقال: ((متن للتجربة)) ثم قال.'),
+    ['فقال:', '((متن للتجربة))', 'ثم قال.'],
+  );
+  for (const sample of [
+    'قال: «كلام للتجربة (آية للتجربة)» ثم انتهى.',
+    'قال: "(آية للتجربة)" ثم انتهى.',
+    'قال: «﴿آية للتجربة﴾» ثم انتهى.',
+    '«متن للتجربة»',
+  ]) {
+    check(
+      `no piece without a letter: ${sample}`,
+      trimmedPieces(sample).filter((piece) => !/[\p{L}\p{N}]/u.test(piece)),
+      [],
+    );
+  }
+  // The checks that put a note on a card instead of repairing it silently.
+  const { pieceSequenceProblem } = await import('../src/translation/segmentChecks');
+  check('pieces that follow on are fine', pieceSequenceProblem(1, 2, 3, 5), null);
+  check('the first segment starts at 1', pieceSequenceProblem(0, 1, 1, 5), null);
+  check('a skipped piece is named', pieceSequenceProblem(1, 3, 3, 5)?.detail, 'piece 2 is in no segment');
+  check(
+    'a reused piece is named',
+    pieceSequenceProblem(3, 3, 4, 5)?.detail,
+    'it starts at piece 3, which the segment before already covered',
+  );
+  check('a backwards pair is named', pieceSequenceProblem(0, 2, 1, 5)?.detail, 'it names pieces 2 to 1, backwards');
+  check(
+    'running past the end is the overflow the clamp used to hide',
+    pieceSequenceProblem(5, 6, 6, 5),
+    { detail: 'it names piece 6, and the passage has pieces 1–5', overran: true },
+  );
+  check('numbers that are not numbers are left to unitRange', pieceSequenceProblem(0, '1', 1, 5), null);
+  check('a backwards pair is flagged once, not again on the next segment', pieceSequenceProblem(3, 4, 4, 5), null);
+
+  // A ḥadīth segment that runs on past its quotation, named in the note that
+  // says its verified English was not found (retrieval/quotationOverrun.ts).
+  const { hadithQuotationOverrun } = await import('../src/retrieval/quotationOverrun');
+  check(
+    'a ḥadīth segment that runs on into the commentary is caught',
+    hadithQuotationOverrun('قال: "متن للتجربة" والمراد به:'),
+    'والمراد به',
+  );
+  check(
+    'more than six words are cut with …',
+    hadithQuotationOverrun('«متن» والمراد به هنا شيء آخر غير ما ذكر'),
+    'والمراد به هنا شيء آخر غير…',
+  );
+  for (const tail of [
+    '((متن للتجربة)) رواه مسلم',
+    '((متن للتجربة)) رَوَاهُ مُسْلِمٌ',
+    '«متن للتجربة» متفق عليه',
+    '«متن للتجربة» قال الترمذي: حديث حسن صحيح',
+    '«متن للتجربة» وإسناده صحيح',
+    '«متن للتجربة» الحديث',
+    '«متن للتجربة» أو كما قال',
+    '«متن للتجربة» [البخاري: ١]',
+    'قال: «متن للتجربة».',
+    'متن للتجربة بلا علامات',
+  ]) {
+    check(`not flagged: ${tail}`, hadithQuotationOverrun(tail), null);
+  }
+
+  const unpaired = 'قال: "متن بلا إغلاق ثم كلام بعده.';
+  check(
+    'an unpaired plain quote still leaves pieces that join back verbatim',
+    splitUnits(unpaired).map((unit) => unpaired.slice(unit.start, unit.end)).join(''),
+    unpaired,
+  );
+  const { letterFold } = await import('../src/lib/arabic');
+  check(
+    'a quoted piece folds to its words alone, as the hadith-json match compares them',
+    letterFold('"متن قصير للتجربة"'),
+    letterFold('متن قصير للتجربة'),
+  );
 
   // The owner's two failures, in synthetic form.
   check('"[ {" holds no whole segment', parseSegmentRecords('[ {'), { records: [], closed: false });
