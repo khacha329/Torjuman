@@ -14,6 +14,7 @@ import {
   type MissReason,
   type UnmatchedHadith,
 } from '../../retrieval/hadithJsonReport';
+import { hadithIndexStatus, type IndexProgress, type IndexStatus } from '../../retrieval/hadithTextIndex';
 import { hadithCollectionFor } from '../../quran/detectEntities';
 import type { Book, QulResource } from '../../types';
 import { Button, Spinner, SettingsSection } from '../kit';
@@ -51,6 +52,17 @@ function reportText(report: DeviceMatchReport): string {
   ].join('\n');
 }
 
+/** The collection's text index in one line. */
+function describeIndex(status: IndexStatus): string {
+  if (!status.built) {
+    return status.reason === 'stale'
+      ? 'Text index: from an older version — rebuilt on first use.'
+      : 'Text index: not built yet — built on first use.';
+  }
+  const time = status.builtMs === null ? '' : `, built in ${(status.builtMs / 1000).toFixed(1)} s`;
+  return `Text index: ${status.positions.toLocaleString()} positions${time}.`;
+}
+
 export function HadithJsonResources() {
   const { storage } = useApp();
   const [resources, setResources] = useState<QulResource[]>([]);
@@ -59,6 +71,11 @@ export function HadithJsonResources() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The text index: its build during an import, and each collection's state.
+  // The "built in N s" line is how the owner reads the tablet's build time,
+  // which nothing on the PC can measure.
+  const [indexing, setIndexing] = useState<IndexProgress | null>(null);
+  const [indexStatus, setIndexStatus] = useState<Record<string, IndexStatus>>({});
 
   // The match report: which imported book, running state, result.
   const [books, setBooks] = useState<Book[]>([]);
@@ -79,7 +96,11 @@ export function HadithJsonResources() {
   };
 
   const refresh = useCallback(async () => {
-    setResources(await listHadithJsonResources(storage));
+    const listed = await listHadithJsonResources(storage);
+    setResources(listed);
+    const statuses: Record<string, IndexStatus> = {};
+    for (const resource of listed) statuses[resource.id] = await hadithIndexStatus(storage, resource);
+    setIndexStatus(statuses);
   }, [storage]);
 
   useEffect(() => {
@@ -143,7 +164,7 @@ export function HadithJsonResources() {
     if (!pending) return;
     setBusy(true);
     try {
-      const resource = await commitHadithJsonImport(storage, pending);
+      const resource = await commitHadithJsonImport(storage, pending, setIndexing);
       setPending(null);
       setStatus(
         `Imported ${resource.name} — ${resource.entryCount.toLocaleString()} ḥadīth. ` +
@@ -154,6 +175,7 @@ export function HadithJsonResources() {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setBusy(false);
+      setIndexing(null);
     }
   };
 
@@ -214,7 +236,15 @@ export function HadithJsonResources() {
             event.target.value = '';
           }}
         />
-        {busy && <Spinner label="Working…" />}
+        {busy && (
+          <Spinner
+            label={
+              indexing
+                ? `Building the text index: ${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
+                : 'Working…'
+            }
+          />
+        )}
       </div>
 
       {error && (
@@ -263,6 +293,11 @@ export function HadithJsonResources() {
               <Button variant="danger" onClick={() => void remove(resource)}>
                 Remove
               </Button>
+              {indexStatus[resource.id] && (
+                <span className="basis-full text-[11px] text-muted">
+                  {describeIndex(indexStatus[resource.id])}
+                </span>
+              )}
             </div>
           ))}
         </div>

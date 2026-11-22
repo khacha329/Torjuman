@@ -26,7 +26,18 @@ import {
   type TextMatchOptions,
   type TextMatchResult,
 } from '../src/retrieval/hadithText';
+import {
+  decodeIndex,
+  encodeIndex,
+  forgetLoadedIndexes,
+  hadithIndexStatus,
+  INDEX_PARTS,
+  loadHadithIndexes,
+  searchHadithText,
+} from '../src/retrieval/hadithTextIndex';
 import { letterFold } from '../src/lib/arabic';
+import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
+import type { HadithIndexPart, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -412,6 +423,109 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     },
   });
   expect('onChunk: called after each 500 ḥadīth, with the count done', calls.join() === '500,1000', calls);
+}
+
+// ------------------------------------------------------- stored (step 3)
+
+{
+  // encode → JSON → decode: the whole-tablet transfer writes rows as NDJSON.
+  const parts = encodeIndex(indexAlpha, 123);
+  expect('encode: sixteen parts', parts.length === INDEX_PARTS);
+  expect('encode: part 0 carries the counts and build time', parts[0].positions === indexAlpha.keys.length && parts[0].builtMs === 123 && parts[0].entries === alpha.length);
+  const throughJson = JSON.parse(JSON.stringify(parts)) as HadithIndexPart[];
+  const decoded = decodeIndex('alpha', throughJson);
+  expect(
+    'decode: the same arrays after a JSON round trip',
+    decoded !== null &&
+      decoded.keys.length === indexAlpha.keys.length &&
+      decoded.keys.every((key, i) => key === indexAlpha.keys[i]) &&
+      decoded.values.every((value, i) => value === indexAlpha.values[i]),
+  );
+  expect(
+    'decode: the same answers from the decoded index',
+    decoded !== null && chosenId(find([decoded], text(matnA))) === 'alpha:11',
+  );
+  expect('decode: a part of another version is refused', decodeIndex('alpha', throughJson.map((p, i) => (i === 3 ? { ...p, v: INDEX_VERSION + 1 } : p))) === null);
+  expect('decode: a missing part is refused', decodeIndex('alpha', throughJson.map((p, i) => (i === 5 ? undefined : p))) === null);
+  expect('decode: another collection’s parts are refused', decodeIndex('beta', throughJson) === null);
+  expect('decode: a part holding another part’s keys is refused', decodeIndex('alpha', throughJson.map((p, i) => (i === 1 ? { ...throughJson[2], part: 1 } : p))) === null);
+}
+{
+  // The loader over an in-memory store: only the QUL methods it uses. The cast
+  // is the check's, not the app's: the adapter interface has ninety methods and
+  // a missing one would throw loudly here, which is what a check wants.
+  const resources = new Map<string, QulResource>();
+  const rows = new Map<string, QulEntry>();
+  let reads = 0;
+  const storage = {
+    async listQulResources() {
+      return [...resources.values()];
+    },
+    async putQulResource(resource: QulResource) {
+      resources.set(resource.id, resource);
+    },
+    async deleteQulResource(id: string) {
+      for (const key of [...rows.keys()]) if (rows.get(key)!.resourceId === id) rows.delete(key);
+      resources.delete(id);
+    },
+    async putQulEntries(entries: QulEntry[]) {
+      for (const entry of entries) rows.set(entry.id, entry);
+    },
+    async getQulEntry(resourceId: string, key: string) {
+      return rows.get(`${resourceId}|${key}`);
+    },
+    async getQulEntries(resourceId: string, keys: string[]) {
+      reads++;
+      return keys.map((key) => rows.get(`${resourceId}|${key}`)).filter((row): row is QulEntry => row !== undefined);
+    },
+  } as unknown as StorageAdapter;
+
+  // A collection imported before the index existed: ḥadīth rows, no parts.
+  const resource: QulResource = {
+    id: 'qul-old', kind: 'hadith-json', name: 'alpha', fileName: 'alpha.json', byteSize: 0,
+    entryCount: alpha.length, format: 'json', importedAt: 1, collection: 'alpha',
+  };
+  await storage.putQulResource(resource);
+  // Numbers 1..n so the loader's read-back by number finds every row.
+  const numbered = alpha.map((entry, i) => ({ ...entry, number: i + 1 }));
+  await storage.putQulEntries(
+    numbered.map((entry) => ({
+      id: `qul-old|alpha:${entry.number}`,
+      resourceId: 'qul-old',
+      key: `alpha:${entry.number}`,
+      value: { t: 'hadith-json', number: entry.number, idInBook: entry.number, chapterId: 0, chapterEnglish: '', narrator: '', text: 'english', arabic: entry.arabic },
+    })),
+  );
+  expect('status: an old import has no index', (await hadithIndexStatus(storage, resource)).built === false);
+
+  forgetLoadedIndexes();
+  const stages = new Set<string>();
+  const [first] = await loadHadithIndexes(storage, ['alpha', 'missing'], (p) => stages.add(p.stage));
+  expect('self-heal: the old import is read back and indexed', first?.index.keys.length === (await buildHadithIndex('alpha', numbered)).keys.length);
+  expect('self-heal: progress reports reading', stages.has('reading'));
+  const status = await hadithIndexStatus(storage, resource);
+  expect('self-heal: the parts are written', status.built === true && status.positions === first.index.keys.length, status);
+
+  const readsBefore = reads;
+  const [again] = await loadHadithIndexes(storage, ['alpha']);
+  expect('memo: a second load reads nothing', again.index === first.index && reads === readsBefore);
+
+  forgetLoadedIndexes();
+  const [fromParts] = await loadHadithIndexes(storage, ['alpha']);
+  expect('a cold load decodes the stored parts in one read', reads === readsBefore + 1 && fromParts.index.keys.length === first.index.keys.length);
+
+  const matnNumber = numbered[alpha.findIndex((e) => e.number === 11)].number;
+  const found = await searchHadithText(storage, [fromParts], text(matnA), { mode: 'segment' });
+  expect('search over storage: found, with its row', found.chosen?.number === matnNumber && found.entries.get(`alpha:${matnNumber}`)?.text === 'english', found.chosen);
+
+  // A re-import replaces the resource: the memo must not serve the old arrays.
+  await storage.putQulResource({ ...resource, importedAt: 2 });
+  const [afterReimport] = await loadHadithIndexes(storage, ['alpha']);
+  expect('memo: a re-import is not served the old index', afterReimport.index !== fromParts.index);
+
+  await storage.deleteQulResource('qul-old');
+  expect('delete: the index parts go with the collection', ![...rows.keys()].some((key) => key.includes('idx:')));
+  expect('delete: nothing is loaded afterwards', (await loadHadithIndexes(storage, ['alpha'])).length === 0);
 }
 
 // ------------------------------------------------------------------- summary

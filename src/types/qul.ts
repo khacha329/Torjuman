@@ -75,7 +75,8 @@ export type QulEntryValue =
   | TopicRecord
   | TopicsForAyah
   | SurahInfo
-  | HadithJsonEntry;
+  | HadithJsonEntry
+  | HadithIndexPart;
 
 /**
  * A passage of commentary, with every āyah it covers.
@@ -156,6 +157,33 @@ export interface HadithJsonEntry {
   narrator: string;
   text: string;
   arabic: string;
+}
+
+/**
+ * One sixteenth of a hadith-json collection's text index
+ * (retrieval/hadithText.ts), stored beside its ḥadīth under the same resource
+ * with the key `idx:<collection>:<part>`, so the range delete that removes a
+ * collection removes its index too.
+ *
+ * Derived data: rebuilt from the ḥadīth rows whenever a part is missing or `v`
+ * is not the current INDEX_VERSION. The arrays are base64 of little-endian
+ * uint32s, not typed arrays, because the whole-tablet transfer writes every
+ * row through JSON.stringify, which turns a Uint32Array into an object of
+ * numbered keys. Part p holds the windows whose hash has p as its top four
+ * bits; the sorted arrays split into sixteen contiguous runs that way, so each
+ * row stays well under a megabyte.
+ */
+export interface HadithIndexPart {
+  t: 'hadith-index';
+  v: number;
+  collection: string;
+  part: number;
+  keys: string;
+  values: string;
+  /** Part 0 only: ḥadīth the build was given, windows kept, and how long the build took. */
+  entries?: number;
+  positions?: number;
+  builtMs?: number;
 }
 
 /**
