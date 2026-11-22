@@ -19,7 +19,7 @@ import {
 //
 // As extra rows of the hadith-json resource it was built from, in the QUL
 // entry store: `idx:<collection>:<part>`, sixteen parts. No new store, so no
-// schema change on any tablet (trap 6), and the one range delete that removes
+// schema change on any tablet (trap 6), and the purge by resource that removes
 // a collection (deleteQulResource) removes its index with it. The keys cannot
 // collide with the ḥadīth rows, which are `<collection>:<number>`.
 //
@@ -34,7 +34,8 @@ import {
 // rebuilds rather than misreads.
 //
 // Loaded per collection, only when asked for, and kept in memory for the
-// session: a tap in a Bukhārī sharḥ loads Bukhārī's 3 MB and nothing else. The
+// session: once taps use it (step T1), a tap in a Bukhārī sharḥ loads Bukhārī's
+// 3 MB and nothing else. The
 // memo is keyed by resource id and import time, so a re-import or a delete is
 // never served the old index.
 // ---------------------------------------------------------------------------
@@ -226,6 +227,16 @@ async function readEntries(
       done: Math.min(from + READ_BATCH - 1, resource.entryCount),
       total: resource.entryCount,
     });
+  }
+  // The importer numbers a collection 1…entryCount and refuses a partial file
+  // (readHadithJson), so a shortfall means rows were lost; an index built from
+  // what is left would be stored as complete and never rebuilt (review of
+  // e73152a). Fail instead: the load is not memoised, and the caller treats it
+  // as no index.
+  if (out.length !== resource.entryCount) {
+    throw new Error(
+      `${collection}: ${out.length} of ${resource.entryCount} ḥadīth rows found; the text index was not built. Re-import the file.`,
+    );
   }
   return out;
 }

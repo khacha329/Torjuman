@@ -518,6 +518,29 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const found = await searchHadithText(storage, [fromParts], text(matnA), { mode: 'segment' });
   expect('search over storage: found, with its row', found.chosen?.number === matnNumber && found.entries.get(`alpha:${matnNumber}`)?.text === 'english', found.chosen);
 
+  // Rows lost from an old import: the rebuild refuses rather than storing a
+  // partial index as complete, and the failure is not remembered.
+  {
+    const lost = { ...resource, id: 'qul-lost', collection: 'beta', entryCount: 3 };
+    await storage.putQulResource(lost);
+    await storage.putQulEntries(
+      [1, 2].map((n) => ({
+        id: `qul-lost|beta:${n}`, resourceId: 'qul-lost', key: `beta:${n}`,
+        value: { t: 'hadith-json', number: n, idInBook: n, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: text(words(10)) },
+      })),
+    );
+    const refused = await loadHadithIndexes(storage, ['beta']).then(() => false, () => true);
+    expect('self-heal: a collection missing rows is refused, not indexed', refused);
+    expect('self-heal: and nothing is written for it', !rows.has('qul-lost|idx:beta:0'));
+    await storage.putQulEntries([{
+      id: 'qul-lost|beta:3', resourceId: 'qul-lost', key: 'beta:3',
+      value: { t: 'hadith-json', number: 3, idInBook: 3, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: text(words(10)) },
+    }]);
+    const [healed] = await loadHadithIndexes(storage, ['beta']);
+    expect('self-heal: the failure was not memoised; complete rows index', healed?.index.collection === 'beta');
+    await storage.deleteQulResource('qul-lost');
+  }
+
   // A re-import replaces the resource: the memo must not serve the old arrays.
   await storage.putQulResource({ ...resource, importedAt: 2 });
   const [afterReimport] = await loadHadithIndexes(storage, ['alpha']);

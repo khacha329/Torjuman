@@ -73,7 +73,8 @@ export function HadithJsonResources() {
   const fileRef = useRef<HTMLInputElement>(null);
   // The text index: its build during an import, and each collection's state.
   // The "built in N s" line is how the owner reads the tablet's build time,
-  // which nothing on the PC can measure.
+  // which nothing on the PC can measure — when the tablet built it: after a
+  // whole-tablet transfer the parts, and so the time, are the other device's.
   const [indexing, setIndexing] = useState<IndexProgress | null>(null);
   const [indexStatus, setIndexStatus] = useState<Record<string, IndexStatus>>({});
 
@@ -240,7 +241,7 @@ export function HadithJsonResources() {
           <Spinner
             label={
               indexing
-                ? `Building the text index: ${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
+                ? `Building the text index: ${indexing.stage === 'reading' ? 'reading ' : ''}${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
                 : 'Working…'
             }
           />

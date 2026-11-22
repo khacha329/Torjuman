@@ -162,8 +162,8 @@ export interface HadithJsonEntry {
 /**
  * One sixteenth of a hadith-json collection's text index
  * (retrieval/hadithText.ts), stored beside its ḥadīth under the same resource
- * with the key `idx:<collection>:<part>`, so the range delete that removes a
- * collection removes its index too.
+ * with the key `idx:<collection>:<part>`, so the purge by resource that removes
+ * a collection removes its index too.
  *
  * Derived data: rebuilt from the ḥadīth rows whenever a part is missing or `v`
  * is not the current INDEX_VERSION. The arrays are base64 of little-endian

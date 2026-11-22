@@ -333,6 +333,33 @@ function seedRows() {
 }
 
 /**
+ * Two imported hadith-json collections for the Ḥadīth English capture (step 3
+ * of docs/plans/hadith-text-matching.md): one whose text index is built, one
+ * imported before the index existed. Synthetic: no ḥadīth row at all, only the
+ * resource rows and the index's part 0 with made-up counts — the section reads
+ * nothing else. The index arrays are empty strings; nothing here decodes them.
+ */
+function seedHadithJson() {
+  const at = FIXED_NOW - 86_400_000;
+  const resource = (id, collection, name, entryCount, byteSize) => ({
+    id, kind: 'hadith-json', name, fileName: `${collection}.json`, byteSize, entryCount, format: 'json',
+    importedAt: at, collection,
+  });
+  return {
+    qulResources: [
+      resource('qul-u-built', 'riyadussalihin', 'Synthetic collection with an index', 1896, 3 * 1048576),
+      resource('qul-u-old', 'nawawi40', 'Synthetic collection without one', 42, 65536),
+    ],
+    qulEntries: [
+      {
+        id: 'qul-u-built|idx:riyadussalihin:0', resourceId: 'qul-u-built', key: 'idx:riyadussalihin:0',
+        value: { t: 'hadith-index', v: 1, collection: 'riyadussalihin', part: 0, keys: '', values: '', entries: 1896, positions: 80222, builtMs: 1234 },
+      },
+    ],
+  };
+}
+
+/**
  * Translation cards for the reader captures (Phase 3 step 3b), written only
  * into the contexts that take them, so every earlier capture's database is
  * what it was. Synthetic, like the rows above: the Arabic is the seeded
@@ -462,7 +489,7 @@ function seedReader({ compile = false } = {}) {
 
 // ------------------------------------------------------------------ browser
 
-async function newPage(browser, base, profile, { onboarded = true, seed = true, cards = false, reader = null, network = {} } = {}) {
+async function newPage(browser, base, profile, { onboarded = true, seed = true, cards = false, reader = null, hadithJson = false, network = {} } = {}) {
   const context = await browser.newContext({
     viewport: profile.viewport,
     hasTouch: true,
@@ -593,7 +620,13 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
         });
       }
       db.close();
-    }, readerSeed ? readerSeed.rows : cards ? { ...seedRows(), cards: seedCards() } : seedRows());
+    }, readerSeed
+      ? readerSeed.rows
+      : cards
+        ? { ...seedRows(), cards: seedCards() }
+        : hadithJson
+          ? { ...seedRows(), ...seedHadithJson() }
+          : seedRows());
     if (readerSeed?.settings) {
       // Merged into the row the first boot wrote (idbWork.ts: one row, key
       // 'app'), so every other setting is what it would have been.
@@ -845,6 +878,17 @@ async function plainCaptures(browser, base, profile, dir) {
   await profiles.getByText(/This profile runs on\s*Claude/).waitFor();
   await capture(page, dir, 'settings--translation--claude', translation);
   await capture(page, dir, 'settings--translation-profiles--claude', profiles);
+  await page.context().close();
+
+  // Ḥadīth English with two imported collections (seedHadithJson): the text
+  // index line in both its states. Its own context, so every capture above
+  // keeps a database with no hadith-json resource.
+  page = await fresh({ hadithJson: true });
+  await go(page, '#/settings');
+  const hadithEnglish = section(page, /^Ḥadīth English/);
+  await hadithEnglish.getByText('Text index: not built yet').waitFor();
+  await hadithEnglish.getByText('Text index: 80,222 positions').waitFor();
+  await capture(page, dir, 'settings--hadith-english--imported', hadithEnglish);
   await page.context().close();
 
   // Translation cards (Q13): the card panel with the seeded cards (seedCards).
