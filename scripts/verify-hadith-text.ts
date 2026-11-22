@@ -35,6 +35,8 @@ import {
   loadHadithIndexes,
   searchHadithText,
 } from '../src/retrieval/hadithTextIndex';
+import { sharhCollectionFor } from '../src/retrieval/hadithJson';
+import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HadithIndexPart, QulEntry, QulResource } from '../src/types';
@@ -549,6 +551,33 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   await storage.deleteQulResource('qul-old');
   expect('delete: the index parts go with the collection', ![...rows.keys()].some((key) => key.includes('idx:')));
   expect('delete: nothing is loaded afterwards', (await loadHadithIndexes(storage, ['alpha'])).length === 0);
+}
+
+// --------------------------------------------- the sharḥ's collection (4a)
+
+{
+  // Titles only, from public/catalog.json (already committed metadata), and
+  // made-up titles built from the same fragments. No book text.
+  const commentary = 'شروح الحديث';
+  const sharh = (title: string, category = commentary) => sharhCollectionFor({ title, category });
+  expect('4a: Fatḥ al-Bārī in «شروح الحديث» is a sharḥ of Bukhārī', sharh('فتح الباري بشرح البخاري') === 'bukhari');
+  expect('4a: the same title outside the category is no one’s', sharh('فتح الباري بشرح البخاري', 'كتب السنة') === null);
+  expect('4a: al-Minhāj is a sharḥ of Muslim', sharh('المنهاج شرح صحيح مسلم بن الحجاج') === 'muslim');
+  expect('4a: a sharḥ of Riyāḍ is left to the citable path', sharh('شرح رياض الصالحين') === null);
+  expect('4a: the Forty likewise', sharh('شرح الأربعين النووية') === null);
+  expect('4a: a title naming two collections is no one’s', sharh('زوائد سنن ابن ماجه على صحيح البخاري') === null);
+  expect('4a: «مسلم» alone is not Muslim', sharh('شرح حديث المسلم أخو المسلم') === null);
+  expect('4a: Abū Dāwūd, with ى or ي', sharh('عون المعبود شرح سنن أبى داود') === 'abudawud' && sharh('شرح سنن أبي داود') === 'abudawud');
+  expect('4a: at-Tirmidhī', sharh('تحفة الأحوذي بشرح جامع الترمذي') === 'tirmidhi');
+  expect('4a: an-Nasāʾī by name or as al-Mujtabā', sharh('حاشية السندي على سنن النسائي') === 'nasai' && sharh('شرح المجتبى') === 'nasai');
+  expect('4a: Ibn Mājah, with ه or ة', sharh('شرح سنن ابن ماجه') === 'ibnmajah' && sharh('شرح سنن ابن ماجة') === 'ibnmajah');
+  expect('4a: Mālik and Aḥmad are not recognised yet (Q16)', sharh('شرح الموطأ') === null && sharh('شرح مسند أحمد') === null);
+
+  const book = (title: string, category = commentary, hadithCollection: string | null = null) => ({ title, category, hadithCollection });
+  expect('4a: scope prefers the collection stored at import', hadithScopeFor(book('فتح الباري بشرح البخاري', commentary, 'riyadussalihin')) === 'riyadussalihin');
+  expect('4a: then the title (Riyāḍ)', hadithScopeFor(book('شرح رياض الصالحين')) === 'riyadussalihin');
+  expect('4a: then the sharḥ rule', hadithScopeFor(book('فتح الباري بشرح البخاري')) === 'bukhari');
+  expect('4a: any other book has no scope', hadithScopeFor(book('كتاب المثال في الطهارة', 'الفقه')) === null);
 }
 
 // ------------------------------------------------------------------- summary
