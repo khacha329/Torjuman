@@ -1089,7 +1089,12 @@ const piecesSent = (held) => {
   const target = user.slice(user.indexOf('<target>'), user.indexOf('</target>'));
   return [...target.matchAll(/^\[(\d+)\] (.*)$/gm)].map((match) => match[2]);
 };
-const piece = (from, to, english, extra = {}) => ({ type: 'prose', from, to, english, ...extra });
+const piece = (from, to, english, extra = {}) => {
+  // A canned answer built from a piece that was not found would be a card
+  // nobody meant; fail the scenario instead.
+  if (!(from >= 1 && to >= from)) throw new Error(`a canned piece range ${from}..${to} is not a real range`);
+  return { type: 'prose', from, to, english, ...extra };
+};
 /** A reply that ends with no finish reason after `text`: the stream just closes. */
 const endsWithout = (text) => geminiStream([{ text, usage: { prompt: 640, candidates: 30 } }]);
 const stopsWith = (text, finishReason) => geminiStream([{ text, finishReason, usage: { prompt: 640, candidates: 2 } }]);
@@ -1142,7 +1147,7 @@ async function stopsGroup(scenario, { page }) {
     await railTranslate(page).click();
     const held = await p.request('the passage');
     const sent = piecesSent(held);
-    const verseAt = sent.findIndex((text) => VERSE.startsWith(text.slice(0, 8)));
+    const verseAt = sent.findIndex((text) => VERSE.startsWith(text));
     const whole = JSON.stringify([
       piece(1, 1, 'The first: a heading.'),
       piece(2, verseAt, 'A test sentence, not from a real book.'),
@@ -1158,7 +1163,7 @@ async function stopsGroup(scenario, { page }) {
     await card(page, partialCard).getByRole('button', { name: 'Translate the rest' }).click();
     const held = await p.request('the rest');
     const sent = piecesSent(held);
-    const proseAt = sent.findIndex((text) => TEXTS[2].startsWith(text.slice(0, 8)));
+    const proseAt = sent.findIndex((text) => TEXTS[2].startsWith(text));
     await held.respond(answer([
       piece(1, proseAt, '', { type: 'quran', reference: '14:2' }),
       piece(proseAt + 1, sent.length, 'The third: the rest, translated.'),
@@ -1172,8 +1177,10 @@ async function stopsGroup(scenario, { page }) {
     await railTranslate(page).click();
     const held = await p.request('the passage again');
     const sent = piecesSent(held);
-    const verseAt = sent.findIndex((text) => VERSE.startsWith(text.slice(0, 8)));
-    const proseAt = sent.findIndex((text) => TEXTS[2].startsWith(text.slice(0, 8)));
+    // Whole pieces, and the third block's searched for after the verse: the
+    // first eight letters of block 1 and block 3 are the same (الفقرة ا).
+    const verseAt = sent.findIndex((text) => VERSE.startsWith(text));
+    const proseAt = sent.findIndex((text, index) => index > verseAt && TEXTS[2].startsWith(text));
     await held.respond(answer([
       piece(1, verseAt, 'The first: translated whole this time.'),
       piece(verseAt + 1, proseAt, '', { type: 'quran', reference: '14:2' }),
