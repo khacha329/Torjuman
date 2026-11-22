@@ -6180,6 +6180,34 @@ console.log('\nGemini: source pieces, partial replies, the rest of a passage');
   check('halving one piece cuts at a space', halfwayCut('كلمة واحدة فقط', splitUnits('كلمة واحدة فقط')), 5);
   check('one word cannot be halved', halfwayCut('كلمة', splitUnits('كلمة')), null);
 
+  // A matn in plain quotes shares no piece with the commentary after it. It
+  // did, and Flash-Lite numbered every later segment one piece late (see the
+  // comment at the top of sourceUnits.ts).
+  const trimmedPieces = (input: string) =>
+    splitUnits(input).map((unit) => input.slice(unit.start, unit.end).trim());
+  check(
+    'a matn in plain quotes is a piece of its own',
+    trimmedPieces('ومن هذا قوله: "متن قصير للتجربة" والمراد به: شيء آخر.'),
+    ['ومن هذا قوله:', '"متن قصير للتجربة"', 'والمراد به:', 'شيء آخر.'],
+  );
+  check(
+    'so are a verse in ( ) and a matn in “ ”, closing punctuation kept with them',
+    trimmedPieces('قال تعالى (آية للتجربة) ثم قال “متن آخر”، وانتهى.'),
+    ['قال تعالى', '(آية للتجربة)', 'ثم قال', '“متن آخر”،', 'وانتهى.'],
+  );
+  const unpaired = 'قال: "متن بلا إغلاق ثم كلام بعده.';
+  check(
+    'an unpaired plain quote still leaves pieces that join back verbatim',
+    splitUnits(unpaired).map((unit) => unpaired.slice(unit.start, unit.end)).join(''),
+    unpaired,
+  );
+  const { letterFold } = await import('../src/lib/arabic');
+  check(
+    'a quoted piece folds to its words alone, as the hadith-json match compares them',
+    letterFold('"متن قصير للتجربة"'),
+    letterFold('متن قصير للتجربة'),
+  );
+
   // The owner's two failures, in synthetic form.
   check('"[ {" holds no whole segment', parseSegmentRecords('[ {'), { records: [], closed: false });
   check('the old parser still calls "[ {" no array', parseSegments('[ {').ok, false);
