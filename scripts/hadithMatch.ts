@@ -28,6 +28,8 @@ export interface MatchRow extends NumberedHadith {
   outcome: Outcome;
   /** For a neighbour: matched number minus printed number. */
   offset?: number;
+  /** Confirmed as a short quotation, so hits/tried is a placeholder, not a score. */
+  shortQuote?: boolean;
   hits: number;
   tried: number;
   /** For a miss: the dataset number that agrees best OUTSIDE the NEIGHBOUR_WINDOW. */
@@ -116,6 +118,7 @@ export async function runMatch(
         ...item,
         outcome: match.offset === 0 ? 'number' : 'neighbour',
         offset: match.offset,
+        shortQuote: match.shortQuote === true,
         hits: match.agreement.hits,
         tried: match.agreement.tried,
       } satisfies MatchRow;
@@ -163,7 +166,7 @@ export function formatReport(report: MatchReport, title: string): string {
   lines.push('', '  every numbered ḥadīth read:');
   for (const row of report.rows) {
     lines.push(
-      `    book ${String(row.number).padStart(4)}  page ${String(row.pageIndex).padStart(4)}  ${row.outcome.padEnd(9)} ${row.hits}/${row.tried} shingles`,
+      `    book ${String(row.number).padStart(4)}  page ${String(row.pageIndex).padStart(4)}  ${row.outcome.padEnd(9)} ${row.shortQuote ? 'short quotation, phrase found' : `${row.hits}/${row.tried} shingles`}`,
     );
   }
   const neighbours = report.rows.filter((row) => row.outcome === 'neighbour');

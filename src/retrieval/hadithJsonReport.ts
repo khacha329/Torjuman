@@ -27,11 +27,16 @@ import { matnShingles, stripApparatus } from './sharh';
 export type MissReason =
   /** The dataset has no ḥadīth at this number (past its end, or a gap). */
   | 'no-entry'
-  /** Under four words even before stripping: never confirmable. */
+  /**
+   * Under four words even before stripping, and not taken by the short-
+   * quotation rule either (`shortQuoteHolds`: under three words, or the phrase
+   * is missing from its own number or also in a neighbour).
+   */
   | 'too-short'
   /**
    * The stripper (`stripApparatus`) is what failed it. Either it left under
-   * four words, or the UNSTRIPPED matn agrees with its own number or a
+   * four words that the short-quotation rule did not take (one it took counts
+   * in `byNumber`), or the UNSTRIPPED matn agrees with its own number or a
    * neighbour in the window while the stripped one does not. The second
    * happens two ways (review of 17ac63a): `agrees` is a ratio over at most ten
    * evenly drawn runs, and runs from the isnād or a takhrīj-like phrase can be
