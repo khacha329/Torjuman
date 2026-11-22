@@ -639,6 +639,28 @@ is new markup, so the re-baseline goes in a separate commit with the
 screenshots in the PR. Gap: D imports no hadith-json file, so the transfer of
 a tablet holding the index is a tablet check (M).
 
+**Step 3 — built (2026-11-22), and what the review of e73152a added.**
+- U: no capture imported a hadith-json collection, so the new index line
+  rendered nowhere. Added `settings--hadith-english--imported` (two synthetic
+  resources, one index part 0 with made-up counts). Found while doing it: the
+  Ḥadīth English section's own capture (`settings--hadith-english-hadith-json`)
+  was never in the manifest since PR #16 added the section; earlier runs
+  reported it as "not in the manifest", which the "differs" filter hid. Both
+  are baselined (.html only, as before; PNGs differ on this PC throughout).
+- "Built on first use" in Settings is true only once a caller loads indexes
+  (4b, T1). **The PR is not merged or tagged before 4b is in it.**
+- A rebuild that finds fewer rows than `entryCount` throws rather than
+  storing a partial index.
+- For 4b and T1: a self-heal running while its collection is removed or
+  replaced writes its sixteen parts after the purge, as rows with no
+  resource, which Remove can then never clear. The caller must re-check the
+  resource before writing, or the loader must (fix with the first caller).
+- The comparator sort, posting-cap pass and encode run without a yield after
+  the last chunk: about 0.5 s on this PC for Bukhārī, unmeasured on the
+  tablet (M). The spinner then sits near its last count.
+- Settings' build time is the time on the device that built the index; after
+  a whole-tablet transfer it is the other device's.
+
 ### Step 4a — recognising the sharḥ's collection [NEW]
 
 `sharhTitles` on the six non-citable entries of `HADITH_JSON_COLLECTIONS`
