@@ -5950,6 +5950,17 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('Mālik and Aḥmad are not fetched from sunnah.com', [skipped, requests], [[null, null], 0]);
     await fetchHadith(http as never, empty as never, { collection: 'abudawud', number: '1' }, 'fake-key');
     check('  while Abū Dāwūd still is, with a key', requests, 1);
+
+    // And the card does not send the reader for a key that would never be used.
+    const { enrichSegments, HADITH_IMPORT_ONLY, HADITH_NEEDS_KEY } = await import('../src/retrieval/enrich');
+    const noImports = { ...empty, async listQulResources() { return []; } };
+    const cardNote = async (reference: string) =>
+      (await enrichSegments(
+        [{ type: 'hadith', arabic: 'نص', english: '', reference }] as never,
+        { http: http as never, storage: noImports as never, quran: {} as never, sunnahApiKey: '' },
+      ))[0].note;
+    check('a Mālik miss says the English comes only from the import', await cardNote('Muwaṭṭaʾ Mālik 5'), HADITH_IMPORT_ONLY);
+    check('  a Bukhārī miss still asks for the key', await cardNote('Ṣaḥīḥ al-Bukhārī 1'), HADITH_NEEDS_KEY);
   }
 
   // End to end through lookupHadith, offline: the imported English comes back

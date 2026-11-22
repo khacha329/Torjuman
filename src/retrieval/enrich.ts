@@ -3,7 +3,7 @@ import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { HadithRecord, TranslatedSegment } from '../types';
 import { renderTakhrij } from '../lib/takhrij';
 import { fetchVerse, type QuranLookupOptions } from './quran';
-import { fetchHadith, parseHadithReferences } from './sunnah';
+import { fetchHadith, parseHadithReferences, SUNNAH_COM_SKIPPED } from './sunnah';
 import { findLocalHadith, type LocalHadith } from './hadithJson';
 
 // Replaces the model's placeholder for scripture with the authoritative text.
@@ -31,6 +31,9 @@ export const HADITH_UNAVAILABLE =
 
 export const HADITH_NEEDS_KEY =
   'No verified English translation was retrieved: sunnah.com requires an API key, which is not set in Settings. A model-generated translation is deliberately not substituted.';
+
+export const HADITH_IMPORT_ONLY =
+  'No verified English translation was found: for this collection the English comes only from the imported hadith-json file (Settings), and no imported ḥadīth matched this text. A model-generated translation is deliberately not substituted.';
 
 export async function enrichSegments(
   segments: TranslatedSegment[],
@@ -138,7 +141,13 @@ async function enrichHadith(
       source: undefined,
       note: joinNotes(
         segment.note,
-        deps.sunnahApiKey ? HADITH_UNAVAILABLE : HADITH_NEEDS_KEY,
+        // A sunnah.com key cannot help where every cited collection is one
+        // sunnah.com is never asked for (Mālik, Aḥmad); say where it comes from.
+        references.length > 0 && references.every((ref) => SUNNAH_COM_SKIPPED.has(ref.collection))
+          ? HADITH_IMPORT_ONLY
+          : deps.sunnahApiKey
+            ? HADITH_UNAVAILABLE
+            : HADITH_NEEDS_KEY,
       ),
     };
   }
