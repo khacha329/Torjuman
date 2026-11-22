@@ -577,6 +577,34 @@ round trip. **New cases:**
 
 Checks: T, B, L, H. No reader code.
 
+**Step 2 — built, and what real data changed (2026-11-22).** Measured with a
+throwaway script (not committed) that built all ten indexes on this PC and
+looked up 100 random 12-word excerpts per collection, once in the excerpt's
+own collection and once across all ten. Build: 2.5–3.1 s for all ten, Muslim
+the slowest at 0.66 s. Query: 0.2–0.5 ms.
+
+The first build matched **isnād-only excerpts to a different ḥadīth** with the
+same chain: 5 of 1,000 across all ten, every one on a chain of narrators
+alone. A Muslim sharḥ prints chain-only «ح وحدثنا» blocks, so this would
+happen on real taps. Two rules were added beyond Design 3:
+- **The posting cap is applied again over the whole scope at query time.** A
+  chain under the cap in each file can still be in a hundred ḥadīth between
+  them.
+- **`MIN_MATN_WORDS` (6): the chain must cover six words past the entry's
+  isnād** (`isnadEnd`, a heuristic: a run of transmission words from a chain
+  opener, ending at the Prophet's mention right after a link). The isnād
+  still counts toward coverage, so it still decides among repetitions.
+
+Afterwards, own collection, excerpts the heuristic says hold matn: 557 one
+ḥadīth, 17 ambiguous, 131 none (too few matn words past the chain), 2
+different. One of the 2 is a near-identical repetition in Mālik and one a
+chain match. Across all ten: 8 counted different, of which 6 are the same
+ḥadīth quoted in Riyāḍ or the Forty with «النبي» for «رسول الله» or similar.
+The rest are chain matches in two layouts the heuristic misses: a second
+chain printed after the matn (Ibn Mājah, Muslim) and an entry opening «قال
+أبو داود». These are for step 5 to count on real sharḥ queries; random
+excerpts land in chains far more often than a matn block does.
+
 ### Step 3 — persist, load, self-heal [CHANGED]
 
 As approved (`HadithIndexPart`, `encodePart`/`decodePart`, `writeIndex`
