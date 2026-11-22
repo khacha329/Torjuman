@@ -5930,6 +5930,12 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     check('Arabic separators ، and ؛ split', parseHadithReferences('Bukhari 1، Muslim 1907؛ Nasai 5').length, 3);
     check('"hadith" before the number', parseHadithReference('Sahih Muslim hadith 1907'), { collection: 'muslim', number: '1907' });
     check('a non-breaking hyphen folds', parseHadithReference('Ṣaḥīḥ al‑Bukhārī 1'), { collection: 'bukhari', number: '1' });
+    // The rest of the nine books, as the model transliterates them.
+    check(
+      'each of the nine books is recognised',
+      parseHadithReferences('Sunan Abī Dāwūd 1; Jāmiʿ at-Tirmidhī 2; Sunan an-Nasāʾī 3; Sunan Ibn Mājah 4; Muwaṭṭaʾ Mālik 5; Musnad Aḥmad 6').map((ref) => ref.collection),
+      ['abudawud', 'tirmidhi', 'nasai', 'ibnmajah', 'malik', 'ahmad'],
+    );
   }
 
   // End to end through lookupHadith, offline: the imported English comes back
@@ -6087,9 +6093,8 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   // Every registered collection whose file is present reads cleanly with its
   // exact count (a wrong `length` in the registry would refuse the real file).
   for (const collection of HADITH_JSON_COLLECTIONS) {
-    // The repository's file names, which are not all the sunnah.com slug.
-    const FILE_FOR: Record<string, string> = { riyadussalihin: 'riyad_assalihin.json' };
-    const file = FILE_FOR[collection.slug] ?? `${collection.slug}.json`;
+    // The repository's file name (not always the sunnah.com slug: ahmed.json).
+    const file = collection.fileName;
     const path = join(process.cwd(), 'hadith-json', file);
     if (!existsSync(path)) {
       console.log(`  (${file} not present: ${collection.slug} not read)`);
@@ -6097,6 +6102,9 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     }
     const read = readHadithJson(JSON.parse(readFileSync(path, 'utf8')), file);
     check(`${file} reads as ${collection.slug} with ${collection.length} ḥadīth`, [read.collection.slug, read.entries.length], [collection.slug, collection.length]);
+    // A registered collection exists to supply English: one whose file has
+    // none (ad-Dārimī's) must not be registered.
+    expect(`${file} carries English`, read.entries.some((entry) => entry.value.text.trim() !== ''));
   }
 
   // The real measurement, where the owner's data is present.
