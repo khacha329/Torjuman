@@ -6990,6 +6990,311 @@
             ],
             "rail": null
           }
+        },
+        {
+          "id": "sharh-gemini-tap",
+          "through": "the matn tapped: the sheet finds it by text in the synthetic Bukhārī and shows its English, \"identified by its text\"; the hadiths row dorar's lookup writes carries no English",
+          "requests": [],
+          "states": [],
+          "cards": [
+            {
+              "id": "card_mwkgq3mo001c7d",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:2",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:2",
+              "endOffset": 63,
+              "sourceText": "الفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "d718cd05bd711e8e779a74f3756edbc4bc95186057c1694dd396e2f4804e2ccf",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo0021cc8",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:0",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:0",
+              "endOffset": 62,
+              "sourceText": "الفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ al-Bukhārī 9999."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "be6adb77bc7f681db2196b8a7e2a4890fa2b68785c4acf58706bc12ca47675b1",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo00313b9",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:9",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:9",
+              "endOffset": 48,
+              "sourceText": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī 5"
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "e9b42518f640909837c20533a1642956542f9e3f5375488c4ca16f472ba9f5b4",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo00496c",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ Muslim 9999."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "7bcad12853bc57d80dcee192816af0e3043bceedf92669e05a327073f2c570ff",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo005ihv",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:8",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:8",
+              "endOffset": 60,
+              "sourceText": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "من حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته",
+                  "english": "",
+                  "note": "This text matches more than one ḥadīth in Ṣaḥīḥ al-Bukhārī, so none is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "93e90c2643bb8d8a19dc5ca2329c133010ecd8523dc73ec96c706587ab020c10",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo006jmg",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:10",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:10",
+              "endOffset": 55,
+              "sourceText": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "من حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته",
+                  "english": "",
+                  "reference": "Ṣaḥīḥ Muslim 5",
+                  "note": "No verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-study-circle",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "gemini",
+              "model": "gemini-3.7-flash",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "6567e73fdebf8665a1bc32582719deb82b61ec0759c4bce73512e07ade52400c",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 620,
+                "outputTokens": 110,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": null,
+              "coverage": 1,
+              "reachedEnd": true
+            }
+          ],
+          "screen": {
+            "bars": [],
+            "session": "This session\n6 translations\nGemini: 6 requests (free tier)",
+            "panel": [
+              {
+                "id": "card_mwkgq3mo0021cc8",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ al-Bukhārī 9999.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo001c7d",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo00496c",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ Muslim 9999.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo005ihv",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\n\nمن حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته\n\nTranslation unavailable\n\nThis text matches more than one ḥadīth in Ṣaḥīḥ al-Bukhārī, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo00313b9",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 5\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo006jmg",
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ Muslim 5\n\nمن حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              }
+            ],
+            "rail": null
+          }
         }
       ]
     },
@@ -8495,6 +8800,311 @@
               }
             }
           ],
+          "states": [],
+          "cards": [
+            {
+              "id": "card_mwkgq3mo001c7d",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:2",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:2",
+              "endOffset": 63,
+              "sourceText": "الفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given."
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "fca70dd7567a084511e5bdcb86a7a102aefb6b0d2742a76bc631cd0045d6d74b",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo00213b9",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:0",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:0",
+              "endOffset": 62,
+              "sourceText": "الفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ al-Bukhārī 9999."
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "47a1d478490719e40e33e1f53d09be38de7612bc8d8029d5aecbbed21acbabdf",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo003ihv",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:9",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:9",
+              "endOffset": 48,
+              "sourceText": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī 5"
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "a13fd7c0a95ce2831cc63e0e40bc273dd287ec52bf39612396a3440159020afc",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo0041146",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p1:3",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p1:3",
+              "endOffset": 60,
+              "sourceText": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل",
+                  "english": "Narrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.",
+                  "source": "hadith-json",
+                  "reference": "Ṣaḥīḥ al-Bukhārī",
+                  "note": "Identified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ Muslim 9999."
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "66659d4358d1f1f6df053704301ccee3efd95408fd46c4e0593d233f915141b7",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo005tv0",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:8",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:8",
+              "endOffset": 60,
+              "sourceText": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "من حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته",
+                  "english": "",
+                  "note": "This text matches more than one ḥadīth in Ṣaḥīḥ al-Bukhārī, so none is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "851d203f1f9a6bfcca9b7bbf9e07659f67045131c23b978fa2eb03d4c43d8bfb",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            },
+            {
+              "id": "card_mwkgq3mo006164r",
+              "kind": "translation",
+              "bookId": "shamela-616161",
+              "startBlockId": "shamela-616161:p3:10",
+              "startOffset": 0,
+              "endBlockId": "shamela-616161:p3:10",
+              "endOffset": 55,
+              "sourceText": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
+              "segments": [
+                {
+                  "type": "prose",
+                  "arabic": "الفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.",
+                  "english": "A test sentence (check P, sharḥ group).",
+                  "source": "model"
+                },
+                {
+                  "type": "hadith",
+                  "arabic": "من حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته",
+                  "english": "",
+                  "reference": "Ṣaḥīḥ Muslim 5",
+                  "note": "No verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted."
+                }
+              ],
+              "profileId": "profile-p-check-claude",
+              "promptVersion": 1,
+              "glossaryHash": "e3b0c44298fc1c14",
+              "providerId": "anthropic",
+              "model": "claude-sonnet-5-5",
+              "createdAt": 1794906060000,
+              "collapsed": false,
+              "cacheKey": "5d43b55a6dcb838a9b8256e8a6e8308937f9004f63fd90562980df11d123bc38",
+              "status": "complete",
+              "usedExternalLookup": false,
+              "usage": {
+                "inputTokens": 1100,
+                "outputTokens": 260,
+                "cacheReadTokens": 1024,
+                "cacheWriteTokens": 0
+              },
+              "costUsd": 0.0049023999999999995,
+              "coverage": 1,
+              "reachedEnd": true
+            }
+          ],
+          "screen": {
+            "bars": [],
+            "session": "This session\n6 translations\nClaude: 6 · $0.029\n6,144 tokens from cache",
+            "panel": [
+              {
+                "id": "card_mwkgq3mo00213b9",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ al-Bukhārī 9999.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo001c7d",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo0041146",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nIdentified by its text; this dataset’s numbering is not the standard one, so no number is given. The model cited Ṣaḥīḥ Muslim 9999.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo005tv0",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\n\nمن حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته\n\nTranslation unavailable\n\nThis text matches more than one ḥadīth in Ṣaḥīḥ al-Bukhārī, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo003ihv",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 5\nsunnah.com (via hadith-json)\n\nكان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل\n\nNarrated (synthetic): Synthetic English 2, written for check P; not a ḥadīth.\n\nRetranslate ▾\nCopy English\nDelete"
+              },
+              {
+                "id": "card_mwkgq3mo006164r",
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ Muslim 5\n\nمن حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته\n\nTranslation unavailable\n\nNo verified English translation was retrieved from sunnah.com, so none is shown. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+              }
+            ],
+            "rail": null
+          }
+        },
+        {
+          "id": "sharh-anthropic-tap",
+          "through": "the matn tapped: the sheet finds it by text in the synthetic Bukhārī and shows its English, \"identified by its text\"; the hadiths row dorar's lookup writes carries no English",
+          "requests": [],
           "states": [],
           "cards": [
             {
