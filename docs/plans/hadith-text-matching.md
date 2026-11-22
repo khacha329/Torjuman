@@ -935,6 +935,27 @@ and `MIN_MATN_WORDS` past `isnadEnd`): the owner answered "keep both" on
 2026-11-22, with the measurements of the "Step 2 — built" paragraph in front
 of them. Step 5 measures them on real sharḥ queries.
 
+From the review of e23fe93 (step 4b), the owner answered on 2026-11-22:
+- **A text match under a far-off citation.** The model's reference is kept
+  only when it names a collection the matched ḥadīth is in with a number
+  within ±`NEIGHBOUR_WINDOW` of the dataset's position (the proof the number
+  path accepts). Otherwise the card shows the collection's name, the by-text
+  note and «The model cited …». So «Ṣaḥīḥ al-Bukhārī 9999» is never shown
+  above English found by text. (This settles the conflict between Design 6's
+  "kept, as today" and the step 4b bullet.)
+- **An ambiguous text match when the model cited a collection that was not
+  searched** (not imported, or failed to load) falls through to the old
+  reference path, sunnah.com included, instead of ending as "none is shown".
+  An ambiguity among collections the citation names still ends the search.
+
+Recorded, not asked: the tiers are not a pure load optimisation (Design 6
+said "cannot change which English wins"). A tier-1 answer can differ from
+one pass over all: a fuller copy in an unsearched collection, a rival family
+there, and the scope-wide posting cap and candidate cut all depend on what
+is searched. That is intended; the comment in `enrich.ts` says so. A storage
+error in the text search now falls back to the reference path instead of
+failing a paid card.
+
 Step 0a: the 56 unmatched numbers of book 9260, and what each one looked like:
 (left empty for the owner; the device report from step 0b gives a reason per
 number)

@@ -10,6 +10,7 @@ import {
   findLocalHadith,
   HADITH_JSON_COLLECTIONS,
   hadithJsonCollection,
+  NEIGHBOUR_WINDOW,
   type LocalHadith,
 } from './hadithJson';
 import { loadHadithIndexes, searchHadithText } from './hadithTextIndex';
@@ -143,7 +144,20 @@ async function enrichHadith(
 
   // Text first (plan, Design 6): a match proved against the imported Arabic
   // beats a reference the model recalled, whichever provider recalled it.
-  const byText = await enrichHadithByText(segment, references, deps);
+  // A storage error here falls back to the reference path rather than failing
+  // the card: the translation is already paid for (review of e23fe93).
+  let byText: TranslatedSegment | null = null;
+  try {
+    byText = await enrichHadithByText(segment, references, deps);
+  } catch (error) {
+    recordRetrieval({
+      kind: 'hadith',
+      outcome: 'lookup-failed',
+      query: segment.arabic.slice(0, 80),
+      summary: 'The text search failed; the reference was tried instead.',
+      detail: [['error', error instanceof Error ? error.message : String(error)]],
+    });
+  }
   if (byText) return byText;
 
   let record: HadithRecord | null = null;
@@ -217,8 +231,16 @@ function isNonCitable(slug: string | null | undefined): boolean {
 /**
  * The collections to search, in priority order (Q3): the book's own, then
  * Bukhārī, Muslim, then the registry's order. The order is the matcher's
- * collection priority, so the tiers below change what is loaded, never which
- * English wins.
+ * collection priority.
+ *
+ * The tiers below do more than limit what is loaded, and the plan's Design 6
+ * said otherwise (review of e23fe93). A tier-1 answer can differ from one pass
+ * over every collection: the matcher prefers the member with the longer chain
+ * before the collection's rank, so a fuller copy in an unsearched collection
+ * would have won; a family in an unsearched collection could have made the
+ * answer ambiguous; and the posting cap and the candidate cut count only what
+ * is searched. That is the intent — the book's own collection and the ones
+ * the model named are the better evidence — but it is a choice, not a no-op.
  */
 function priorityOrder(scope: string | null | undefined, imported: ReadonlySet<string>): string[] {
   const order = [scope, 'bukhari', 'muslim', ...HADITH_JSON_COLLECTIONS.map((c) => c.slug)];
@@ -275,7 +297,17 @@ async function enrichHadithByText(
     );
     if (loaded.length === 0) continue;
     const result = await searchHadithText(deps.storage, loaded, segment.arabic, { mode: 'segment', hints });
-    const searched = loaded.map((item) => item.index.collection).join(', ');
+    const searchedSet = new Set(loaded.map((item) => item.index.collection));
+    const searched = [...searchedSet].join(', ');
+
+    // An ambiguity among what was searched does not contradict a citation of
+    // a collection that was not (not imported, or failed to load): the old
+    // reference path, sunnah.com included, gets its turn. The owner's answer,
+    // 2026-11-22 (review of e23fe93): before text came first, such a card had
+    // sunnah.com's English.
+    if (result.ambiguous && references.some((ref) => !searchedSet.has(ref.collection))) {
+      return null;
+    }
 
     if (result.ambiguous) {
       const named = result.contenders.map((candidate) => describeCandidate(candidate.collection, candidate.number));
@@ -301,14 +333,27 @@ async function enrichHadithByText(
     if (english === '') return null;
 
     const collection = hadithJsonCollection(chosen.collection);
-    const family = new Set([chosen.collection, ...result.also.map((member) => member.collection)]);
+    const members = [chosen, ...result.also];
     const notes: (string | undefined)[] = [segment.note];
     let reference: string | undefined;
     if (collection?.citableNumbers) {
       reference = `${chosen.collection}:${chosen.number}`;
-    } else if (segment.reference && references.some((ref) => family.has(ref.collection))) {
-      // The model named a collection this ḥadīth is in: its citation stands,
-      // as on the number path (the dataset's position is not the standard one).
+    } else if (
+      segment.reference &&
+      references.some((ref) =>
+        members.some(
+          (member) =>
+            member.collection === ref.collection &&
+            Math.abs(member.number - Number(ref.number)) <= NEIGHBOUR_WINDOW,
+        ),
+      )
+    ) {
+      // The model named this ḥadīth's collection with a number within
+      // NEIGHBOUR_WINDOW of where the dataset has it: the same proof the
+      // number path accepts, so its citation stands. A number further off —
+      // «Ṣaḥīḥ al-Bukhārī 9999» — is not shown above proved English; it falls
+      // to the name and "The model cited …" below (owner's answer, 2026-11-22,
+      // review of e23fe93).
       reference = segment.reference;
     } else {
       reference = collection?.displayName ?? chosen.collection;

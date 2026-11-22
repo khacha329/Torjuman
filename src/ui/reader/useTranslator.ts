@@ -421,7 +421,11 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             knownQuranRefs: known.quran,
             // Read per translation, not held: a book is one IndexedDB get, and
             // nothing about the scope is stored (hadithScope.ts).
-            hadithScope: await storage.getBook(bookId).then((book) => (book ? hadithScopeFor(book) : null)),
+            // A failed read means no scope, never a failed card.
+            hadithScope: await storage
+              .getBook(bookId)
+              .then((book) => (book ? hadithScopeFor(book) : null))
+              .catch(() => null),
           }),
         };
 

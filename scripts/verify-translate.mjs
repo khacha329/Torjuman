@@ -1105,10 +1105,18 @@ async function offlineGroup(scenario, { page, nextLoad, network }) {
  * times; once with canned Gemini answers and once with canned Claude ones,
  * the same segments, so the two records side by side are the proof that the
  * card path cannot tell the providers apart (plan, R16). Each answer has one
- * `hadith` segment: (a) a matn with no reference; (b) the same matn with a
- * reference naming a collection not imported («Ṣaḥīḥ Muslim 9999»); (c) a
- * wording two invented ḥadīth share. The sunnah.com key is set throughout:
- * none of the three may reach sunnah.com, and the `hadiths` store stays empty.
+ * `hadith` segment: (a) a matn with no reference; (b) the same matn cited as
+ * «Ṣaḥīḥ al-Bukhārī 9999», far from where the dataset has it; (b2) cited as
+ * «Ṣaḥīḥ al-Bukhārī 5», within ten of it; (b3) cited from a collection not
+ * imported («Ṣaḥīḥ Muslim 9999»); (c) a wording two invented ḥadīth share,
+ * no reference; (c2) the same wording citing «Ṣaḥīḥ Muslim 5», which was not
+ * searched, so the old reference path runs (owner's answers of 2026-11-22).
+ * The sunnah.com key is set throughout. No request reaches sunnah.com in any
+ * of them: in this plain build WebHttpClient refuses the proxy-only host
+ * before fetching (ProxyUnavailableError), which fetchHadith turns into null.
+ * So (c2)'s fallback shows on its card, as the sunnah.com note the reference
+ * path writes when a key is set, not as a request. The `hadiths` store stays
+ * empty.
  */
 function sharhGroup(provider) {
   const respond = (segments) => (provider === 'anthropic'
@@ -1118,7 +1126,8 @@ function sharhGroup(provider) {
   return async (scenario, { page, context }) => {
     const sunnahRequests = [];
     context.on('request', (request) => { if (isSunnahUrl(request.url())) sunnahRequests.push(request.url()); });
-    const once = async (id, through, blockIndex, segments) => {
+    const once = async (id, through, blockIndex, segments, { note = null } = {}) => {
+      const sunnahBefore = sunnahRequests.length;
       await scenario(`sharh-${provider}-${id}`, through, async (p) => {
         const before = await cardsOf(page);
         await select(page, ...wholeBlock(blockIndex));
@@ -1126,12 +1135,21 @@ function sharhGroup(provider) {
         const held = await p.request('the translation');
         await held.respond(respond([prose(TEXTS[blockIndex], 'A test sentence (check P, sharḥ group).'), ...segments]));
         await untilCards(page, 'the card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+        if (note) {
+          const card = newCards(before, await cardsOf(page)).find((row) => row.status === 'complete');
+          const segment = card?.segments?.find((s) => s.type === 'hadith');
+          if (!segment?.note?.startsWith(note)) harnessFail(`sharh-${provider}-${id}`, `the ḥadīth's note is not the reference path's: ${segment?.note}`);
+        }
       });
+      const asked = sunnahRequests.length - sunnahBefore;
+      if (asked !== 0) harnessFail(`sharh-${provider}-${id}`, `${asked} request(s) reached sunnah.com`);
     };
     await once('no-reference', 'block 3 → Translate: a ḥadīth segment with no reference, found by its text in the synthetic Bukhārī (self-healing its index): its English, "Ṣaḥīḥ al-Bukhārī" with no number and the by-text note', 2, [hadith(SYNTHETIC_MATN, null)]);
+    await once('wrong-number', 'block 1 → Translate: the same matn cited «Ṣaḥīḥ al-Bukhārī 9999», far from its place in the dataset: the English by text, "Ṣaḥīḥ al-Bukhārī" with no number, and "The model cited …"', 0, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ al-Bukhārī 9999')]);
+    await once('near-number', 'block 10 → Translate: the same matn cited «Ṣaḥīḥ al-Bukhārī 5», within ten of its place: the English by text under the model\'s citation, no by-text note', 9, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ al-Bukhārī 5')]);
     await once('other-collection', 'block 4 → Translate: the same matn, the model citing «Ṣaḥīḥ Muslim 9999» (not imported): found by text in Bukhārī all the same, the collection name, and "The model cited …"', 3, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ Muslim 9999')]);
     await once('ambiguous', 'block 9 → Translate: a wording two invented ḥadīth share: no English, the ambiguity note naming the collection (no number: not citable)', 8, [hadith(SYNTHETIC_SHARED, null)]);
-    if (sunnahRequests.length > 0) harnessFail(`sharh-${provider}`, `${sunnahRequests.length} request(s) to sunnah.com, where the text proved or refused the match`);
+    await once('ambiguous-cited-elsewhere', 'block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; this build cannot reach sunnah.com)', 10, [hadith(SYNTHETIC_SHARED, 'Ṣaḥīḥ Muslim 5')], { note: 'No verified English translation was retrieved from sunnah.com' });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
   };
