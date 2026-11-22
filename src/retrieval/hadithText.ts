@@ -393,6 +393,12 @@ export interface TextCandidate {
   coverage: number;
   /** Entry words the chain covers, over the entry's words: under 1 is a partial quotation. */
   coverageOfEntry: number;
+  /**
+   * The same past the entry's isnād (`isnadEnd`). What "quoted in part" is
+   * judged by: a sharḥ quotes the matn without the collection's chain, so
+   * `coverageOfEntry` is under 1 for nearly every Bukhārī quotation.
+   */
+  coverageOfMatn: number;
   /** The chain's span in the query's folded words, end exclusive. */
   queryStart: number;
   queryEnd: number;
@@ -681,7 +687,8 @@ function matchPass(
     const source = options.arabicOf(posting.collection, posting.number);
     if (source === undefined) continue;
     const entry = foldForMatch(source).words;
-    const chain = chainFor(query, entry, isnadEnd(entry));
+    const matnFrom = isnadEnd(entry);
+    const chain = chainFor(query, entry, matnFrom);
     if (!chain || chain.matnMatched < MIN_MATN_WORDS) continue;
     const candidate: TextCandidate = {
       collection: posting.collection,
@@ -694,6 +701,7 @@ function matchPass(
       entryEnd: chain.entryEnd,
       coverage: chain.matchedWords / query.length,
       coverageOfEntry: entry.length ? Math.min(1, chain.entryMatched / entry.length) : 0,
+      coverageOfMatn: Math.min(1, chain.matnMatched / Math.max(1, entry.length - matnFrom)),
     };
     if (!accepted(candidate, options.mode)) continue;
     candidates.push(candidate);

@@ -269,9 +269,10 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('a quoted opening: found', chosenId(result) === 'alpha:11', result);
   expect(
     'a quoted opening: partial of the ḥadīth',
-    (result.chosen?.coverageOfEntry ?? 1) < 0.7,
+    (result.chosen?.coverageOfEntry ?? 1) < 0.7 && (result.chosen?.coverageOfMatn ?? 1) < 0.7,
     result.chosen,
   );
+  expect('the whole matn: its matn fully covered', find([indexAlpha], text(matnA)).chosen?.coverageOfMatn === 1);
 }
 {
   // 21 words then 9: the chain keeps order, so only the longer part counts.
@@ -395,6 +396,8 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('the isnād alone proves no ḥadīth', chainOnly.chosen === null && chainOnly.candidates.length === 0, chainOnly);
   const chainAndOpening = find([indexDelta], text([...chain, ...matnY.slice(0, 8)]));
   expect('isnād plus the opening of the matn: that ḥadīth', chosenId(chainAndOpening) === 'delta:12', chainAndOpening);
+  const matnOnly = find([indexDelta], text(matnY));
+  expect('the matn without the collection’s isnād: its matn is wholly covered', matnOnly.chosen?.coverageOfMatn === 1 && (matnOnly.chosen?.coverageOfEntry ?? 1) < 1, matnOnly.chosen);
   const chainAndLittle = find([indexDelta], text([...chain, ...matnY.slice(0, 4)]));
   expect('isnād plus under MIN_MATN_WORDS of matn: refused', chainAndLittle.chosen === null && chainAndLittle.candidates.length === 0, chainAndLittle);
 }
@@ -531,8 +534,10 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
         value: { t: 'hadith-json', number: n, idInBook: n, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: text(words(10)) },
       })),
     );
-    const refused = await loadHadithIndexes(storage, ['beta']).then(() => false, () => true);
-    expect('self-heal: a collection missing rows is refused, not indexed', refused);
+    const errors: string[] = [];
+    const partly = await loadHadithIndexes(storage, ['beta', 'alpha'], undefined, (collection) => errors.push(collection));
+    expect('self-heal: a collection missing rows is refused, not indexed', errors.join() === 'beta', errors);
+    expect('self-heal: the others still load', partly.length === 1 && partly[0].index.collection === 'alpha');
     expect('self-heal: and nothing is written for it', !rows.has('qul-lost|idx:beta:0'));
     await storage.putQulEntries([{
       id: 'qul-lost|beta:3', resourceId: 'qul-lost', key: 'beta:3',
@@ -541,6 +546,27 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     const [healed] = await loadHadithIndexes(storage, ['beta']);
     expect('self-heal: the failure was not memoised; complete rows index', healed?.index.collection === 'beta');
     await storage.deleteQulResource('qul-lost');
+  }
+
+  // Removed while its rebuild runs: the parts are not written after the purge.
+  {
+    const doomed = { ...resource, id: 'qul-doomed', collection: 'gamma', entryCount: 2 };
+    await storage.putQulResource(doomed);
+    await storage.putQulEntries(
+      [1, 2].map((n) => ({
+        id: `qul-doomed|gamma:${n}`, resourceId: 'qul-doomed', key: `gamma:${n}`,
+        value: { t: 'hadith-json', number: n, idInBook: n, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: text(words(10)) },
+      })),
+    );
+    let removed = false;
+    await loadHadithIndexes(storage, ['gamma'], (progress) => {
+      // The read-back is done and the build is next: remove it now.
+      if (progress.stage === 'reading' && !removed) {
+        removed = true;
+        void storage.deleteQulResource('qul-doomed');
+      }
+    });
+    expect('self-heal: no parts written for a collection removed meanwhile', ![...rows.keys()].some((key) => key.startsWith('qul-doomed|')));
   }
 
   // A re-import replaces the resource: the memo must not serve the old arrays.

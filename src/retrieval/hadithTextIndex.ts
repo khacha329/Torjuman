@@ -180,14 +180,7 @@ export async function writeHadithIndex(
     },
   });
   const builtMs = Date.now() - started;
-  await storage.putQulEntries(
-    encodeIndex(index, builtMs).map((value, part) => ({
-      id: `${resourceId}|${indexPartKey(collection, part)}`,
-      resourceId,
-      key: indexPartKey(collection, part),
-      value,
-    })),
-  );
+  await storage.putQulEntries(partRows(resourceId, index, builtMs));
   return index;
 }
 
@@ -265,6 +258,7 @@ export async function loadHadithIndexes(
   storage: StorageAdapter,
   collections: readonly string[],
   onProgress?: (progress: IndexProgress) => void,
+  onError?: (collection: string, error: unknown) => void,
 ): Promise<LoadedIndex[]> {
   const resources = (await storage.listQulResources()).filter(
     (resource) => resource.kind === 'hadith-json' && resource.collection,
@@ -285,7 +279,14 @@ export async function loadHadithIndexes(
       // A failed load is not remembered: the next call tries again.
       pending.catch(() => memo.delete(key));
     }
-    loaded.push({ resource, index: await pending });
+    // One collection that cannot load (rows lost, a write refused) is left out
+    // and reported, not allowed to take the others down with it (review of
+    // 4c96995): the caller searches what did load.
+    try {
+      loaded.push({ resource, index: await pending });
+    } catch (error) {
+      onError?.(collection, error);
+    }
   }
   return loaded;
 }
@@ -299,7 +300,48 @@ async function loadOne(
   const decoded = decodeIndex(collection, await readParts(storage, resource, collection));
   if (decoded) return decoded;
   const entries = await readEntries(storage, resource, collection, onProgress);
-  return writeHadithIndex(storage, resource.id, collection, entries, onProgress);
+  const index = await buildAndCheck(storage, resource, collection, entries, onProgress);
+  return index;
+}
+
+/**
+ * Build, then write only if the collection is still the one that was read.
+ *
+ * A rebuild takes seconds on a tablet; if the collection is removed or
+ * re-imported meanwhile, writing its parts afterwards would leave sixteen rows
+ * with no resource row, which Remove can never reach (review of e73152a). The
+ * index is still returned for this one use. A remove landing between the check
+ * and the write is not covered; it is a window of one transaction.
+ */
+async function buildAndCheck(
+  storage: StorageAdapter,
+  resource: QulResource,
+  collection: string,
+  entries: readonly HadithJsonEntry[],
+  onProgress?: (progress: IndexProgress) => void,
+): Promise<HadithTextIndex> {
+  const started = Date.now();
+  const index = await buildHadithIndex(collection, entries, {
+    onChunk: async (done) => {
+      onProgress?.({ collection, stage: 'building', done, total: entries.length });
+      await delay(0);
+    },
+  });
+  const builtMs = Date.now() - started;
+  const current = (await storage.listQulResources()).find((r) => r.id === resource.id);
+  if (current && current.importedAt === resource.importedAt) {
+    await storage.putQulEntries(partRows(resource.id, index, builtMs));
+  }
+  return index;
+}
+
+function partRows(resourceId: string, index: HadithTextIndex, builtMs: number): QulEntry[] {
+  return encodeIndex(index, builtMs).map((value, part) => ({
+    id: `${resourceId}|${indexPartKey(index.collection, part)}`,
+    resourceId,
+    key: indexPartKey(index.collection, part),
+    value,
+  }));
 }
 
 /** For tests: forget every loaded index. */

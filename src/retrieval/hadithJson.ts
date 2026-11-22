@@ -207,8 +207,10 @@ export function hadithJsonCollection(slug: string): HadithJsonCollection | undef
  * The collection a book comments on, when it is a sharḥ of one of the six main
  * books; null otherwise.
  *
- * A book qualifies by Shamela's own «شروح الحديث» category (the same test that
- * gives it its hadith-commentary structure, so its matns are typed at all) AND
+ * A book qualifies by Shamela's own «شروح الحديث» category — tested with
+ * `includes`, as `isCommentaryWork` does; the hadith-commentary structure that
+ * types its matns is given only to an exact match (parseBook.ts), so a book
+ * that merely contains the words passes here and finds nothing — AND
  * exactly one collection's title fragment in its `normalize`d title: a title
  * naming two — a zawāʾid or a comparison — is no one collection's sharḥ. The
  * answer is a scope for the text search, never a proof: a book recognised

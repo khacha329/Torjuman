@@ -17,6 +17,7 @@ import {
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
+import { hadithScopeFor } from './hadithScope';
 import {
   cacheAnchorFor,
   failedCard,
@@ -418,6 +419,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             },
             sunnahApiKey: secrets.getSunnahKey(),
             knownQuranRefs: known.quran,
+            // Read per translation, not held: a book is one IndexedDB get, and
+            // nothing about the scope is stored (hadithScope.ts).
+            hadithScope: await storage.getBook(bookId).then((book) => (book ? hadithScopeFor(book) : null)),
           }),
         };
 
