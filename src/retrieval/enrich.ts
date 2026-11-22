@@ -144,8 +144,10 @@ async function enrichHadith(
 
   // Text first (plan, Design 6): a match proved against the imported Arabic
   // beats a reference the model recalled, whichever provider recalled it.
-  // A storage error here falls back to the reference path rather than failing
-  // the card: the translation is already paid for (review of e23fe93).
+  // An error in the text search (an index that will not load, a row read that
+  // throws) falls back to the reference path rather than failing the card: the
+  // translation is already paid for (review of e23fe93). It does not make a
+  // broken store survivable — the reference path reads storage too.
   let byText: TranslatedSegment | null = null;
   try {
     byText = await enrichHadithByText(segment, references, deps);
@@ -258,11 +260,13 @@ function describeCandidate(slug: string, number: number): string {
 
 /**
  * The imported English for a `hadith` segment, found by its text; null when
- * nothing is imported, nothing matched, or the English is empty — the caller
- * then tries the references as before.
+ * nothing is imported, nothing matched, the English is empty, or the match is
+ * ambiguous while the model cited a collection that was not searched — the
+ * caller then tries the references as before, sunnah.com included (the
+ * owner's answer, 2026-11-22).
  *
  * Tier 1 searches the book's collection and the ones the model cited; tier 2,
- * only when tier 1 found nothing at all, every imported collection. An
+ * only when tier 1 found nothing at all, every imported collection. Any other
  * ambiguous answer ends the search: it is returned as Arabic with a note,
  * never resolved by a recalled number.
  */
@@ -333,7 +337,10 @@ async function enrichHadithByText(
     if (english === '') return null;
 
     const collection = hadithJsonCollection(chosen.collection);
-    const members = [chosen, ...result.also];
+    // The whole family, repetitions included: Bukhārī repeats a ḥadīth under
+    // many numbers, and a citation of any of them is a citation of this one
+    // (review of 07b207b).
+    const members = result.family;
     const notes: (string | undefined)[] = [segment.note];
     let reference: string | undefined;
     if (collection?.citableNumbers) {

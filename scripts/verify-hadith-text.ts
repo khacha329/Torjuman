@@ -336,6 +336,12 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const withChain = find([indexAlpha], text([...chains[1], ...repeated]));
   expect('repetitions: the printed isnād picks its own', chosenId(withChain) === 'alpha:20', withChain);
   expect('repetitions: two others counted', withChain.repetitions === 2, withChain.repetitions);
+  expect(
+    'repetitions: the family lists all three, the chosen first',
+    withChain.family[0] === withChain.chosen &&
+      withChain.family.map((m) => m.number).sort((a, b) => a - b).join() === '10,20,30',
+    withChain.family.map((m) => m.number),
+  );
 
   const bare = find([indexAlpha], text(repeated));
   expect('repetitions, no isnād, no hint: the lowest number', chosenId(bare) === 'alpha:10', bare);

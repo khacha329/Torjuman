@@ -413,6 +413,8 @@ export interface TextMatchResult {
   also: TextCandidate[];
   /** Other members of the chosen family in the chosen collection. */
   repetitions: number;
+  /** Every member of the chosen family, `chosen` first: repetitions and other collections alike. */
+  family: TextCandidate[];
   ambiguous: boolean;
   /** When ambiguous: the best member of each contending family. */
   contenders: TextCandidate[];
@@ -645,6 +647,7 @@ function noMatch(): TextMatchResult {
     chosen: null,
     also: [],
     repetitions: 0,
+    family: [],
     ambiguous: false,
     contenders: [],
     candidates: [],
@@ -786,6 +789,7 @@ function matchPass(
     repetitions: chosenFamily.filter(
       (member) => member !== chosen && member.collection === chosen.collection,
     ).length,
+    family: chosenFamily,
     ambiguous: false,
     contenders: [],
     candidates,
