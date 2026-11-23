@@ -490,6 +490,19 @@ second family.
   provider call sites, so confirm it is identical, not changed). Check V:
   `verify-parsers.ts:5955-5963` passes unchanged.
 
+**As built (13604c5, and the review of it).** The note is a function,
+`hadithShortQuoteNote(name)`, since it names the collection, and Design 7's
+ambiguity row is brought forward as `hadithShortAmbiguousNote(name)`. The hit
+log records the family instead of the phrase's word count. A failed read
+counts as a collection not searched, as for the text search. The review
+found that an ambiguous short search ended the card before sunnah.com and
+the old exact-number rule (`shortQuoteHolds`), against Q9; the owner chose
+"old rules first" (below), so an ambiguity is now only the note when the
+reference path also finds nothing (H pins it). Check V's owner case had a
+fake resource without `entryCount`, so it never reached the new path; with
+one, the owner's «إنما الأعمال بالنيات» card is found at the cited number and
+gains "Quoted in part…", a deliberate change.
+
 ### Step 4 — the notes
 
 - `enrich.ts:193-211`: the table of Design 7, with constants (or small
@@ -685,3 +698,10 @@ tablet's timing is read; Q9 `shortQuoteHolds` unchanged; Q10 the measurement
 script is committed (counts only); Q11 the new sheet copy, with U
 re-baselined for those states in step 5; Q12 the owner retranslates the one
 existing card; Q13 Muslim and the six unmeasured books stay at ±10.
+
+From the review of 13604c5, the owner answered on 2026-11-23: **old rules
+first.** An ambiguous short search (the phrase in two families of the
+collection) does not end the card. sunnah.com and the old exact-number rule
+still get their turn, and the ambiguity note is shown only when they too
+find nothing. This keeps Q9 as answered: the existing paths stay, and the new
+search decides only where they fail or where it matches.

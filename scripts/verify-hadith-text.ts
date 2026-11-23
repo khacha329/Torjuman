@@ -902,6 +902,20 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const closeCard = await card('bukhari:905');
   expect('S3: within ten of a family member the model’s citation stands', closeCard.reference === 'bukhari:905' && closeCard.note === HADITH_QUOTED_IN_PART, closeCard);
 
+  // The owner's answer of 2026-11-23 (review of 13604c5): an ambiguity in the
+  // whole collection does not end the card. Here the phrase is in two
+  // families (200/900 and 1000), but the cited 1000 has it and none of its
+  // ten neighbours do, so the old exact-number rule still gives 1000's
+  // English, under the model's reference and with no short-quotation note.
+  put(withQuote(1000));
+  const exactHolds = await card('bukhari:1000');
+  expect(
+    'S3: ambiguous in the collection, but the old exact-number rule holds: its English',
+    exactHolds.english === 'english 1000' && exactHolds.source === 'hadith-json' && exactHolds.reference === 'bukhari:1000' && exactHolds.note === undefined,
+    exactHolds,
+  );
+  put(row(1000, [...chain, ...words(20)]));
+
   put(withQuote(100));
   const ambiguousCard = await card('bukhari:1000');
   expect(

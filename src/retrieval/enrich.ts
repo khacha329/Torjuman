@@ -174,10 +174,14 @@ async function enrichHadith(
   if (byText) return byText;
 
   // A quotation too short for the text search, proved by the cited number
-  // and the whole collection (docs/plans/hadith-short-quote.md). Before
-  // sunnah.com because it is a text proof, like the search above (Q5).
-  const byShortQuote = await enrichHadithByShortQuote(segment, references, deps);
-  if (byShortQuote) return byShortQuote;
+  // and the whole collection (docs/plans/hadith-short-quote.md). A match
+  // comes before sunnah.com because it is a text proof, like the search above
+  // (Q5). An ambiguity does not end the card: sunnah.com and the old
+  // exact-number rule (`shortQuoteHolds`) still get their turn, and the
+  // ambiguity is only the note when they too find nothing (owner's answer,
+  // 2026-11-23, review of 13604c5; Q9: the existing paths stay).
+  const short = await enrichHadithByShortQuote(segment, references, deps);
+  if (short.segment) return short.segment;
 
   let record: HadithRecord | null = null;
   for (const reference of references) {
@@ -209,6 +213,21 @@ async function enrichHadith(
         reference: local.citable
           ? `${local.collection}:${local.entry.number}`
           : segment.reference,
+      };
+    }
+    if (short.ambiguousIn) {
+      recordRetrieval({
+        kind: 'hadith',
+        outcome: 'no-match',
+        query: segment.arabic.slice(0, 80),
+        summary: `The short quotation occurs in more than one ḥadīth of ${short.ambiguousIn}, and the cited number did not settle it.`,
+        detail: [['reference', segment.reference ?? '(none)']],
+      });
+      return {
+        ...segment,
+        english: '',
+        source: undefined,
+        note: joinNotes(segment.note, hadithShortAmbiguousNote(short.ambiguousIn), overrunNote(segment.arabic)),
       };
     }
     return {
@@ -420,21 +439,23 @@ async function enrichHadithByText(
 
 /**
  * The imported English for a short quotation, proved by a cited number
- * (`findShortQuote`); null to let the reference path run.
+ * (`findShortQuote`). Without a match the reference path runs.
  *
  * Each reference is tried in the model's order and the first match wins.
- * When none matched and one was ambiguous, the card ends there with the
- * ambiguity note, unless the model also cited a collection that is not
- * imported, which then gets the old path, sunnah.com included: the rule the
- * owner chose for the text search (2026-11-22), kept for this one (Design 5).
- * A read that fails is logged and counts as no match for that reference.
+ * When none matched and one was ambiguous, `ambiguousIn` names that
+ * collection, for the reference path's note if it too finds nothing; it is
+ * left null when the model also cited a collection that was not searched
+ * (not imported, or its read failed), as the text search does (owner's
+ * answer, 2026-11-22), and the old notes stand. A read that fails is logged
+ * and counts as no match for that reference.
  */
 async function enrichHadithByShortQuote(
   segment: TranslatedSegment,
   references: readonly HadithReference[],
   deps: EnrichDeps,
-): Promise<TranslatedSegment | null> {
-  if (segment.arabic.trim() === '' || references.length === 0) return null;
+): Promise<{ segment: TranslatedSegment | null; ambiguousIn: string | null }> {
+  const none = { segment: null, ambiguousIn: null };
+  if (segment.arabic.trim() === '' || references.length === 0) return none;
 
   let ambiguousIn: string | null = null;
   let unsearchedCitation = false;
@@ -448,7 +469,7 @@ async function enrichHadithByShortQuote(
         kind: 'hadith',
         outcome: 'lookup-failed',
         query: segment.arabic.slice(0, 80),
-        summary: `The short-quotation search of ${ref.collection} failed; the reference was tried instead.`,
+        summary: `The short-quotation search of ${ref.collection} failed; that reference counts as not searched.`,
         detail: [['error', error instanceof Error ? error.message : String(error)]],
       });
       unsearchedCitation = true;
@@ -501,20 +522,13 @@ async function enrichHadithByShortQuote(
         ['reference', segment.reference ?? '(none)'],
       ],
     });
-    return { ...segment, english, source: 'hadith-json', reference, note: joinNotes(...notes) };
+    return {
+      segment: { ...segment, english, source: 'hadith-json', reference, note: joinNotes(...notes) },
+      ambiguousIn: null,
+    };
   }
 
-  if (ambiguousIn && !unsearchedCitation) {
-    recordRetrieval({
-      kind: 'hadith',
-      outcome: 'no-match',
-      query: segment.arabic.slice(0, 80),
-      summary: `The short quotation occurs in more than one ḥadīth of ${ambiguousIn}.`,
-      detail: [['reference', segment.reference ?? '(none)']],
-    });
-    return { ...segment, english: '', source: undefined, note: joinNotes(segment.note, hadithShortAmbiguousNote(ambiguousIn)) };
-  }
-  return null;
+  return { segment: null, ambiguousIn: unsearchedCitation ? null : ambiguousIn };
 }
 
 /**

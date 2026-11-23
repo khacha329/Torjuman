@@ -7775,7 +7775,7 @@
         },
         {
           "id": "sharh-gemini-short-quote-ambiguous",
-          "through": "block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, so no English and the short-quotation ambiguity note; no sunnah.com request",
+          "through": "block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, which does not end the card (the owner's answer, 2026-11-23): sunnah.com gets its turn (refused by the plain build, as above) and the old exact-number rule finds the words not at 4, so no English and the short-quotation ambiguity note",
           "requests": [
             {
               "method": "POST",
@@ -10953,7 +10953,7 @@
         },
         {
           "id": "sharh-anthropic-short-quote-ambiguous",
-          "through": "block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, so no English and the short-quotation ambiguity note; no sunnah.com request",
+          "through": "block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, which does not end the card (the owner's answer, 2026-11-23): sunnah.com gets its turn (refused by the plain build, as above) and the old exact-number rule finds the words not at 4, so no English and the short-quotation ambiguity note",
           "requests": [
             {
               "method": "POST",

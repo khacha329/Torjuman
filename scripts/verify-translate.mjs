@@ -1178,7 +1178,7 @@ function sharhGroup(provider) {
     // text search, found from the citation. Blocks 6 and 12 have no other
     // scenario, so no card here is a cache hit of another.
     await once('short-quote', 'block 6 → Translate: three words of the fourth invented entry, cited «Ṣaḥīḥ al-Bukhārī 200», far past it: found as a short quotation in the whole synthetic collection; its English, "Ṣaḥīḥ al-Bukhārī" with no number, the short-quotation note, "The model cited …" and "quoted in part"; no sunnah.com request', 5, [hadith(SHORT_QUOTE, 'Ṣaḥīḥ al-Bukhārī 200')], { note: 'Identified by a short quotation' });
-    await once('short-quote-ambiguous', 'block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, so no English and the short-quotation ambiguity note; no sunnah.com request', 11, [hadith(SHORT_SHARED, 'Ṣaḥīḥ al-Bukhārī 4')], { note: 'These few words occur in more than one ḥadīth' });
+    await once('short-quote-ambiguous', 'block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, which does not end the card (the owner\'s answer, 2026-11-23): sunnah.com gets its turn (refused by the plain build, as above) and the old exact-number rule finds the words not at 4, so no English and the short-quotation ambiguity note', 11, [hadith(SHORT_SHARED, 'Ṣaḥīḥ al-Bukhārī 4')], { note: 'These few words occur in more than one ḥadīth', sunnahAllowed: true });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
 
