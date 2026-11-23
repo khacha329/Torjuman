@@ -6,6 +6,7 @@ import { fetchVerse, type QuranLookupOptions } from './quran';
 import { recordRetrieval } from '../services/retrievalLog';
 import { fetchHadith, parseHadithReferences, SUNNAH_COM_SKIPPED, type HadithReference } from './sunnah';
 import {
+  agreement,
   composeEnglish,
   findLocalHadith,
   HADITH_JSON_COLLECTIONS,
@@ -90,15 +91,19 @@ export interface ImportedMiss {
   number: string;
   /** How many ḥadīth the imported file holds. */
   entryCount: number;
+  /** For a long quotation: whether the number path had any text to compare. */
+  numberCompared: boolean;
 }
 
 /**
  * The note for a card whose cited collection is imported and still gave no
  * English, saying which test failed, instead of blaming a missing key alone
  * (the owner's Bukhārī 6607 card: docs/plans/hadith-short-quote.md, Goal).
- * A quotation of six words or more (`too-long` here) went through the text
- * search and the number path's ±NEIGHBOUR_WINDOW check, so the note says
- * what that check found at the cited number.
+ * A quotation of six words or more (`too-long` here) is given a note only
+ * where the text search really searched that collection and found no
+ * candidate (`noCandidateIn`), and it says what the number path's
+ * ±NEIGHBOUR_WINDOW check found only when that check had text to compare
+ * (`numberCompared`).
  */
 export function hadithImportedMissNote(miss: ImportedMiss): string {
   const { name, number } = miss;
@@ -113,9 +118,12 @@ export function hadithImportedMissNote(miss: ImportedMiss): string {
     case 'none-near':
       return `No ḥadīth of the imported ${name} near number ${number} contains these words; the file’s numbering may differ from the book’s. ${NOT_SUBSTITUTED}`;
     case 'too-long':
-      return Number(number) <= miss.entryCount
-        ? `No ḥadīth in the imported ${name} matched this text, and its ḥadīth at number ${number} and the ${NEIGHBOUR_WINDOW} either side are different ones. ${NOT_SUBSTITUTED}`
-        : `No ḥadīth in the imported ${name} matched this text, and the file has no ḥadīth numbered ${number}. ${NOT_SUBSTITUTED}`;
+      if (Number(number) > miss.entryCount) {
+        return `No ḥadīth in the imported ${name} matched this text, and the file has no ḥadīth numbered ${number}. ${NOT_SUBSTITUTED}`;
+      }
+      return miss.numberCompared
+        ? `No ḥadīth in the imported ${name} matched this text, and the ḥadīth at and around number ${number} (up to ${NEIGHBOUR_WINDOW} either side) are different ones. ${NOT_SUBSTITUTED}`
+        : `No ḥadīth in the imported ${name} matched this text. ${NOT_SUBSTITUTED}`;
   }
 }
 
@@ -207,9 +215,14 @@ async function enrichHadith(
   // leaves that collection out and reports it. Nor does this make a broken
   // store survivable — the reference path reads storage too.
   let byText: TranslatedSegment | null = null;
+  // The collections the text search really searched and found no candidate
+  // in: only for those may a note say "no ḥadīth in the imported X matched
+  // this text" (review of 15bcf20).
+  const noCandidateIn = new Set<string>();
   try {
-    byText = await enrichHadithByText(segment, references, deps);
+    byText = await enrichHadithByText(segment, references, deps, noCandidateIn);
   } catch (error) {
+    noCandidateIn.clear();
     recordRetrieval({
       kind: 'hadith',
       outcome: 'lookup-failed',
@@ -228,7 +241,7 @@ async function enrichHadith(
   // ambiguity is only the note when they too find nothing (owner's answer,
   // 2026-11-23, review of 13604c5; Q9: the existing paths stay). Any other
   // miss in an imported collection is kept for the note, too.
-  const short = await enrichHadithByShortQuote(segment, references, deps);
+  const short = await enrichHadithByShortQuote(segment, references, deps, noCandidateIn);
   if (short.segment) return short.segment;
 
   let record: HadithRecord | null = null;
@@ -369,6 +382,13 @@ async function enrichHadithByText(
   segment: TranslatedSegment,
   references: readonly HadithReference[],
   deps: EnrichDeps,
+  /**
+   * Filled with every collection searched in a tier that found no candidate
+   * at all; emptied when the search ends in null for another reason (an
+   * ambiguity beside an unsearched citation, a match with no English), so a
+   * later note never claims a search found nothing when it found something.
+   */
+  noCandidateIn: Set<string>,
 ): Promise<TranslatedSegment | null> {
   if (segment.arabic.trim() === '') return null;
   const imported = new Set(
@@ -409,6 +429,7 @@ async function enrichHadithByText(
     // 2026-11-22 (review of e23fe93): before text came first, such a card had
     // sunnah.com's English.
     if (result.ambiguous && references.some((ref) => !searchedSet.has(ref.collection))) {
+      noCandidateIn.clear();
       return null;
     }
 
@@ -430,10 +451,16 @@ async function enrichHadithByText(
     }
 
     const chosen = result.chosen;
-    if (!chosen) continue;
+    if (!chosen) {
+      for (const slug of searchedSet) noCandidateIn.add(slug);
+      continue;
+    }
     const entry = result.entries.get(`${chosen.collection}:${chosen.number}`);
     const english = entry ? composeEnglish(entry) : '';
-    if (english === '') return null;
+    if (english === '') {
+      noCandidateIn.clear();
+      return null;
+    }
 
     const collection = hadithJsonCollection(chosen.collection);
     // The whole family, repetitions included: Bukhārī repeats a ḥadīth under
@@ -512,6 +539,7 @@ async function enrichHadithByShortQuote(
   segment: TranslatedSegment,
   references: readonly HadithReference[],
   deps: EnrichDeps,
+  noCandidateIn: ReadonlySet<string>,
 ): Promise<{ segment: TranslatedSegment | null; miss: ImportedMiss | null }> {
   let miss: ImportedMiss | null = null;
   if (segment.arabic.trim() === '' || references.length === 0) return { segment: null, miss };
@@ -535,7 +563,20 @@ async function enrichHadithByShortQuote(
     const collection = hadithJsonCollection(ref.collection);
     const name = collection?.displayName ?? ref.collection;
     if (result.status !== 'matched') {
-      miss ??= { status: result.status, name, number: ref.number, entryCount: search.entryCount };
+      // A quotation too long for this search was the text search's: its
+      // note may say nothing matched only where that search really ran on
+      // this collection and found no candidate (review of 15bcf20).
+      if (result.status === 'too-long' && !noCandidateIn.has(ref.collection)) continue;
+      miss ??= {
+        status: result.status,
+        name,
+        number: ref.number,
+        entryCount: search.entryCount,
+        // Whether the number path compared any text: a quotation that the
+        // apparatus stripper cuts under four words has no shingle to compare
+        // (FOUND_ISSUES 74), so nothing may be said about the ḥadīth at N.
+        numberCompared: agreement(segment.arabic, '').tried > 0,
+      };
       continue;
     }
 

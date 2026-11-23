@@ -536,6 +536,19 @@ P adds `sharh-{gemini,anthropic}-imported-miss` (block 7), the taps differ
 only by its card and the session line; V 1029/1029 unchanged; U shows only
 the six captures that already differ on main.
 
+The review of 15bcf20 found the long-quotation row could be false: it was
+chosen whenever the short search refused the phrase as too long, whether or
+not the text search ran. In place of the plan's `{ segment, imported }`,
+`enrichHadithByText` fills a `noCandidateIn` set with the collections a tier
+searched and found no candidate in, emptied when it ends in null for another
+reason (an ambiguity beside an unsearched citation, a match with no English)
+or throws. The row is given only for those collections, and its "the ḥadīth
+at and around number N (up to 10 either side) are different ones" only when
+the number path had text to compare (`agreement(…).tried > 0`; a raw-long
+text the stripper cuts under four words gets only "No ḥadīth … matched this
+text."). Otherwise the old note stands. H pins an index that will not load,
+an ambiguity beside an unsearched citation and the cut-short text.
+
 ### Step 5 — taps and on device
 
 - `HadithSource.ts`: in `lookupHadith`, a short search for a collection

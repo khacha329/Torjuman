@@ -8277,7 +8277,7 @@
         },
         {
           "id": "sharh-gemini-imported-miss",
-          "through": "block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and its ḥadīth at 3 and the ten either side are different ones",
+          "through": "block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and the ḥadīth at and around 3 (up to ten either side) are different ones",
           "requests": [
             {
               "method": "POST",
@@ -8757,7 +8757,7 @@
                   "arabic": "جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة",
                   "english": "",
                   "reference": "Ṣaḥīḥ al-Bukhārī 3",
-                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted."
+                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted."
                 }
               ],
               "profileId": "profile-study-circle",
@@ -8803,7 +8803,7 @@
               },
               {
                 "id": "card_mwkgq3mo009tv0",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgq3mo005ihv",
@@ -9207,7 +9207,7 @@
                   "arabic": "جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة",
                   "english": "",
                   "reference": "Ṣaḥīḥ al-Bukhārī 3",
-                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted."
+                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted."
                 }
               ],
               "profileId": "profile-study-circle",
@@ -9253,7 +9253,7 @@
               },
               {
                 "id": "card_mwkgq3mo009tv0",
-                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nGemini · Flash 3.7\nfree tier\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgq3mo005ihv",
@@ -12068,7 +12068,7 @@
         },
         {
           "id": "sharh-anthropic-imported-miss",
-          "through": "block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and its ḥadīth at 3 and the ten either side are different ones",
+          "through": "block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and the ḥadīth at and around 3 (up to ten either side) are different ones",
           "requests": [
             {
               "method": "POST",
@@ -12563,7 +12563,7 @@
                   "arabic": "جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة",
                   "english": "",
                   "reference": "Ṣaḥīḥ al-Bukhārī 3",
-                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted."
+                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted."
                 }
               ],
               "profileId": "profile-p-check-claude",
@@ -12609,7 +12609,7 @@
               },
               {
                 "id": "card_mwkgq3mo009c2s",
-                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgq3mo005tv0",
@@ -13013,7 +13013,7 @@
                   "arabic": "جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة",
                   "english": "",
                   "reference": "Ṣaḥīḥ al-Bukhārī 3",
-                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted."
+                  "note": "No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted."
                 }
               ],
               "profileId": "profile-p-check-claude",
@@ -13059,7 +13059,7 @@
               },
               {
                 "id": "card_mwkgq3mo009c2s",
-                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3 and the 10 either side are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
+                "text": "▾\nClaude · Sonnet 5.5\n$0.0049\ncached ×1,024\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nA test sentence (check P, sharḥ group).\n\nḤadīth\nṢaḥīḥ al-Bukhārī 3\n\nجملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة\n\nTranslation unavailable\n\nNo ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones. A model-generated translation is deliberately not substituted.\n\nRetranslate ▾\nCopy English\nDelete"
               },
               {
                 "id": "card_mwkgq3mo005tv0",

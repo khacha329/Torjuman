@@ -790,6 +790,7 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   let rowsServed = 0;
   let failReads = false;
   let failFullRead = false;
+  let failIndex = false;
   const resource: QulResource = {
     id: 'qul-short', kind: 'hadith-json', name: 'bukhari', fileName: 'bukhari.json', byteSize: 0,
     entryCount: COUNT, format: 'json', importedAt: 1, collection: 'bukhari',
@@ -805,12 +806,14 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       calls++;
       if (failReads) throw new Error('read failed');
       if (failFullRead && keys.length === 500) throw new Error('full read failed');
+      if (failIndex && keys.some((key) => key.startsWith('idx:'))) throw new Error('index unreadable');
       const out = keys.map((key) => store.get(`${resourceId}|${key}`)).filter((r): r is QulEntry => r !== undefined);
       rowsServed += out.length;
       return out;
     },
     // The text search self-heals the synthetic collection's index on first use.
     async putQulEntries(entries: QulEntry[]) {
+      if (failIndex) throw new Error('index unwritable');
       for (const entry of entries) store.set(entry.id, entry);
     },
     async getQulEntry(resourceId: string, key: string) {
@@ -825,6 +828,11 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const put = (entry: HadithJsonEntry) =>
     store.set(`qul-short|bukhari:${entry.number}`, { id: `qul-short|bukhari:${entry.number}`, resourceId: 'qul-short', key: `bukhari:${entry.number}`, value: entry });
   for (let n = 1; n <= COUNT; n++) put(row(n, [...chain, ...words(20)]));
+  // Two unrelated ḥadīth sharing a long run, for a long quotation the text
+  // search finds ambiguous (step 4's review of 15bcf20).
+  const sharedRun = words(14);
+  put(row(600, [...chain, ...words(12), ...sharedRun, ...words(12)]));
+  put(row(700, [...chain, ...words(12), ...sharedRun, ...words(12)]));
   const reset = () => {
     calls = 0;
     rowsServed = 0;
@@ -961,11 +969,34 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const different = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:500' }], deps))[0];
   expect(
     'S4: a long quotation that matched nothing: the ḥadīth at the cited number and its neighbours are different ones',
-    (different.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and its ḥadīth at number 500 and the 10 either side are different ones.`) && (different.note ?? '').endsWith(HADITH_KEY_WOULD_HELP),
+    (different.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and the ḥadīth at and around number 500 (up to 10 either side) are different ones.`) && (different.note ?? '').endsWith(HADITH_KEY_WOULD_HELP),
     different,
   );
   const pastTheEnd = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:5000' }], deps))[0];
   expect('S4: …and past the file’s end: the file has no ḥadīth of that number', (pastTheEnd.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and the file has no ḥadīth numbered 5000.`), pastTheEnd);
+  // The review of 15bcf20: the "matched nothing" note only where the text
+  // search really searched the collection and found no candidate, and "the
+  // ḥadīth at N … are different ones" only where the number path compared
+  // text.
+  forgetLoadedIndexes();
+  failIndex = true;
+  const unloaded = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:500' }], deps))[0];
+  failIndex = false;
+  forgetLoadedIndexes();
+  expect('S4: the index would not load: no claim that nothing matched, the old note', unloaded.note === HADITH_NEEDS_KEY, unloaded);
+  const sharedQuote = text(sharedRun);
+  const ambiguousBeside = (await enrichSegments([{ type: 'hadith', arabic: sharedQuote, english: '', reference: 'bukhari:500; muslim:5' }], deps))[0];
+  expect(
+    'S4: the text search ambiguous beside a citation it did not search: no claim that nothing matched',
+    ambiguousBeside.english === '' && ambiguousBeside.note === HADITH_NEEDS_KEY,
+    ambiguousBeside,
+  );
+  const cutShort = (await enrichSegments([{ type: 'hadith', arabic: `${text(quote)} رواه ${text(words(10))}`, english: '', reference: 'bukhari:500' }], deps))[0];
+  expect(
+    'S4: a long text the stripper cuts to three words: nothing said about the ḥadīth at the number',
+    cutShort.note === joinNotesForCheck(`No ḥadīth in the imported ${BUKHARI} matched this text. A model-generated translation is deliberately not substituted.`, HADITH_KEY_WOULD_HELP),
+    cutShort,
+  );
   expect(
     'S4: too common is its own note',
     hadithImportedMissNote({ status: 'common', name: BUKHARI, number: '1', entryCount: COUNT }).startsWith(`These words are too common in the imported ${BUKHARI}`),

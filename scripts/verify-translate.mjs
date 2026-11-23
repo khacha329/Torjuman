@@ -1184,7 +1184,7 @@ function sharhGroup(provider) {
     // Step 4: a long matn the collection does not have, cited at a number it
     // does: the note says what the import found there, not "a key is
     // needed" (a key is set in this group, so no key sentence either).
-    await once('imported-miss', 'block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and its ḥadīth at 3 and the ten either side are different ones', 6, [hadith(UNMATCHED_MATN, 'Ṣaḥīḥ al-Bukhārī 3')], { note: 'No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3', sunnahAllowed: true });
+    await once('imported-miss', 'block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and the ḥadīth at and around 3 (up to ten either side) are different ones', 6, [hadith(UNMATCHED_MATN, 'Ṣaḥīḥ al-Bukhārī 3')], { note: 'No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones.', sunnahAllowed: true });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
 
