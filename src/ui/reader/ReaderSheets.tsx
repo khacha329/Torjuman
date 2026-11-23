@@ -291,6 +291,7 @@ export function ReaderSheets({
           onClose={() => setPopover(null)}
           onToggleCollapse={(card) => void translator.setCollapsed(card, !card.collapsed)}
           onRetranslate={(card, options) => void translator.retranslate(card, options)}
+          onTranslateRest={(card) => void translator.translateRest(card)}
           onDelete={(card) => void translator.remove(card)}
           onAddGlossaryTerm={(term) => void translator.addGlossaryTerm(term)}
         />

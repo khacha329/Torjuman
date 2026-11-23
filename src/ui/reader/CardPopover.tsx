@@ -28,6 +28,7 @@ export function CardPopover({
   onClose,
   onToggleCollapse,
   onRetranslate,
+  onTranslateRest,
   onDelete,
   onAddGlossaryTerm,
 }: {
@@ -42,6 +43,8 @@ export function CardPopover({
     card: TranslationCard,
     options?: { providerId?: ProviderId; model?: string },
   ) => void;
+  /** A partial card's "Translate the rest" (useTranslator `translateRest`). */
+  onTranslateRest: (card: TranslationCard) => void;
   onDelete: (card: TranslationCard) => void;
   onAddGlossaryTerm: (term: string) => void;
 }) {
@@ -88,6 +91,7 @@ export function CardPopover({
                 : onToggleCollapse(card)
             }
             onRetranslate={(options) => onRetranslate(card, options)}
+            onTranslateRest={() => onTranslateRest(card)}
             onDelete={() => {
               onDelete(card);
               if (shown.length === 1) onClose();

@@ -5,7 +5,7 @@ import {
   type TranslationRequest,
   type TranslationResult,
 } from '../TranslationProvider';
-import type { TranslationUsage } from '../../types';
+import type { TranslatedSegment, TranslationErrorKind, TranslationUsage } from '../../types';
 import {
   GEMINI_BASE,
   GEMINI_DEFAULT_MODEL,
@@ -14,10 +14,27 @@ import {
   maxTokensFor,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
-import { parseSegments } from '../parseSegments';
+import { coerceSegments, parseSegmentRecords, parseSegments } from '../parseSegments';
 import { GEMINI_RESPONSE_SCHEMA, stripJsonInstruction } from '../schema';
+import { pieceSequenceNote, pieceSequenceProblem } from '../segmentChecks';
 import { delay } from '../../lib/delay';
-import { geminiHttpError, geminiModelUrl, postGemini, readRetryAfter } from '../gemini';
+import {
+  GEMINI_FINISH_REASONS,
+  GEMINI_NO_FINISH_REASON,
+  geminiHttpError,
+  geminiModelUrl,
+  postGemini,
+  readRetryAfter,
+  unknownFinishReason,
+} from '../gemini';
+import {
+  halfwayCut,
+  numberedUnits,
+  splitUnits,
+  unitRange,
+  unitsText,
+  type SourceUnit,
+} from '../sourceUnits';
 
 // Google Generative Language API.
 //
@@ -84,11 +101,154 @@ export class GeminiProvider implements TranslationProvider {
     return response.ok;
   }
 
+  /**
+   * One translation, in as many parts as it takes.
+   *
+   * Normally one part, the whole passage. A RECITATION stop cuts what is left
+   * of the passage in two and sends each half on its own, once: the owner's
+   * classical books stop Gemini on output that reproduces a known text, and a
+   * shorter passage reproduces less. Every whole segment that came back is
+   * kept, whatever happens after it — a reply that stops part-way, or a part
+   * that fails, ends the run as a partial result (`incomplete`) rather than an
+   * error, and only a run with nothing to show throws.
+   */
   async translate(
     request: TranslationRequest,
     key: string,
     onChunk?: (partial: string) => void,
   ): Promise<TranslationResult> {
+    const text = request.targetText;
+    const usage: TranslationUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    };
+    const segments: TranslatedSegment[] = [];
+    const raws: string[] = [];
+    const queue: PassagePart[] = [{ start: 0, end: text.length }];
+    let split = false;
+
+    const partial = (
+      stopReason: string | null,
+      message: string,
+      untranslatedFrom: number | null,
+    ): TranslationResult => ({
+      segments,
+      usage,
+      costUsd: null,
+      raw: raws.join('\n'),
+      incomplete: { stopReason, message, untranslatedFrom },
+    });
+
+    while (queue.length > 0) {
+      const part = queue.shift()!;
+      const partRequest = partRequestFor(request, part);
+      const units = splitUnits(partRequest.targetText);
+      const earlier = raws.join('\n');
+
+      let reply: GeminiReply;
+      try {
+        reply = await this.stream(partRequest, units, key, (streamed) =>
+          onChunk?.(earlier ? `${earlier}\n${streamed}` : streamed),
+        );
+      } catch (caught) {
+        // A connection dropped mid-reply still delivered whatever came before
+        // the drop, kept as the error's raw: its whole segments are kept too.
+        if (caught instanceof TranslationError && caught.kind === 'network' && caught.raw) {
+          const read = readReply(partRequest.targetText, units, caught.raw);
+          segments.push(...read.segments);
+          raws.push(caught.raw);
+          if (segments.length > 0) {
+            return partial('none', caught.message, resumeOffset(text, part, read));
+          }
+          throw caught;
+        }
+        // A later part that fails (a rate limit after the split, say) costs
+        // the parts before it nothing. No stop reason: no reply ended, so the
+        // card must not say "the stream ended without one".
+        if (segments.length > 0 && caught instanceof TranslationError) {
+          return partial(caught.stopReason, caught.message, part.start);
+        }
+        throw caught;
+      }
+
+      raws.push(reply.text);
+      usage.inputTokens += reply.usage.inputTokens;
+      usage.outputTokens += reply.usage.outputTokens;
+      usage.cacheReadTokens += reply.usage.cacheReadTokens;
+      const raw = raws.join('\n');
+
+      // A blocked prompt has no candidates, only promptFeedback.blockReason; it
+      // was reported as an empty parse failure (FOUND_ISSUES 14.4).
+      if (reply.blockReason) {
+        const message = `Gemini declined to translate this passage (${reply.blockReason}).`;
+        if (segments.length > 0) return partial(reply.blockReason, message, part.start);
+        throw new TranslationError('refusal', message, { raw: raw || null });
+      }
+
+      const read = readReply(partRequest.targetText, units, reply.text);
+      if (reply.finishReason === 'STOP' && read.closed && read.segments.length > 0) {
+        segments.push(...read.segments);
+        continue;
+      }
+      // Every piece came back whole although the reply did not end cleanly
+      // (it stopped on the closing bracket): nothing is missing.
+      if (
+        read.segments.length > 0 &&
+        read.coveredTo !== null &&
+        partRequest.targetText.slice(read.coveredTo).trim() === ''
+      ) {
+        segments.push(...read.segments);
+        continue;
+      }
+
+      segments.push(...read.segments);
+      const resumeAt = resumeOffset(text, part, read);
+
+      if (reply.finishReason === 'RECITATION' && !split && resumeAt !== null) {
+        split = true;
+        const remaining = text.slice(resumeAt, part.end);
+        const cut = halfwayCut(remaining, splitUnits(remaining));
+        if (cut !== null) {
+          queue.unshift(
+            { start: resumeAt, end: resumeAt + cut },
+            { start: resumeAt + cut, end: part.end },
+          );
+          continue;
+        }
+      }
+
+      const stop = describeStop(reply, parseSegments(reply.text), segments.length > 0);
+      if (segments.length > 0) {
+        return partial(reply.finishReason ?? 'none', stop.message, resumeAt);
+      }
+      throw new TranslationError(stop.kind, stop.message, {
+        raw,
+        stopReason: stop.kind === 'parse' ? null : (reply.finishReason ?? 'none'),
+      });
+    }
+
+    return {
+      segments,
+      usage,
+      // The Gemini path here is the free tier: the budget that matters is
+      // requests, not dollars, so the UI shows a request count instead.
+      costUsd: null,
+      raw: raws.join('\n'),
+    };
+  }
+
+  /**
+   * One request for one part, streamed: the rate-limit retries and the one
+   * retry with a larger budget after MAX_TOKENS, then the reply as it ended.
+   */
+  private async stream(
+    request: TranslationRequest,
+    units: SourceUnit[],
+    key: string,
+    onChunk: (partial: string) => void,
+  ): Promise<GeminiReply> {
     const url = geminiModelUrl(request.model, 'streamGenerateContent?alt=sse');
 
     let text = '';
@@ -111,7 +271,14 @@ export class GeminiProvider implements TranslationProvider {
           // the JSON twice.
           parts: [{ text: stripJsonInstruction(renderSystem(request)) }],
         },
-        contents: [{ role: 'user', parts: [{ text: renderUser(request) }] }],
+        contents: [
+          {
+            role: 'user',
+            // The target as numbered pieces, which the segments name instead
+            // of echoing the Arabic (sourceUnits.ts).
+            parts: [{ text: renderUser(request, numberedUnits(request.targetText, units)) }],
+          },
+        ],
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: RESPONSE_SCHEMA,
@@ -197,7 +364,7 @@ export class GeminiProvider implements TranslationProvider {
             for (const part of candidate.content?.parts ?? []) {
               if (part.text) {
                 text += part.text;
-                onChunk?.(text);
+                onChunk(text);
               }
             }
             if (candidate.finishReason) finishReason = candidate.finishReason;
@@ -231,46 +398,148 @@ export class GeminiProvider implements TranslationProvider {
       break;
     }
 
-    if (finishReason === 'MAX_TOKENS') {
-      throw new TranslationError(
-        'truncated',
-        `The answer was cut off at the ${budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
-        { raw: text },
-      );
-    }
+    return { text, finishReason, blockReason, usage, budget };
+  }
+}
 
-    // A blocked prompt has no candidates, only promptFeedback.blockReason; it
-    // was reported as an empty parse failure (FOUND_ISSUES 14.4).
-    if (blockReason) {
-      throw new TranslationError(
-        'refusal',
-        `Gemini declined to translate this passage (${blockReason}).`,
-        { raw: text || null },
-      );
-    }
+/** A stretch of the request's targetText, end exclusive. */
+interface PassagePart {
+  start: number;
+  end: number;
+}
 
-    if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') {
-      throw new TranslationError('refusal', 'Gemini declined to translate this passage.', {
-        raw: text,
-      });
-    }
+interface GeminiReply {
+  text: string;
+  /** Undefined when the stream closed without one. */
+  finishReason: string | undefined;
+  blockReason: string | undefined;
+  usage: TranslationUsage;
+  /** The output budget the last attempt ran with. */
+  budget: number;
+}
 
-    const parsed = parseSegments(text);
-    if (!parsed.ok) {
-      throw new TranslationError(
-        'parse',
-        `Gemini returned no structured output: ${parsed.error}`,
-        { raw: parsed.raw },
-      );
-    }
+/**
+ * The request for one part. The whole passage is the request itself, byte
+ * for byte. A part after a split is sent trimmed, with the rest of the
+ * passage around it as context, so its pronouns and argument still have what
+ * came before and after.
+ */
+function partRequestFor(request: TranslationRequest, part: PassagePart): TranslationRequest {
+  const text = request.targetText;
+  if (part.start === 0 && part.end === text.length) return request;
+  const join = (...pieces: string[]) =>
+    pieces
+      .map((piece) => piece.trim())
+      .filter(Boolean)
+      .join('\n\n');
+  return {
+    ...request,
+    targetText: text.slice(part.start, part.end).trim(),
+    contextBefore: join(request.contextBefore, text.slice(0, part.start)),
+    contextAfter: join(text.slice(part.end), request.contextAfter),
+  };
+}
 
+/**
+ * The whole segments of a reply, their Arabic filled in from the pieces they
+ * name, and how far into the part's text they reach (`coveredTo`; null when a
+ * segment named no usable pieces, so where the reply stopped is not known).
+ */
+function readReply(
+  partText: string,
+  units: SourceUnit[],
+  replyText: string,
+): { segments: TranslatedSegment[]; closed: boolean; coveredTo: number | null } {
+  const parsed = parseSegmentRecords(replyText);
+  if (parsed === null) return { segments: [], closed: false, coveredTo: 0 };
+
+  let coveredTo: number | null = 0;
+  const arabicFor = (record: Record<string, unknown>) => {
+    const range = unitRange(units, record.from, record.to);
+    if (range === null) {
+      coveredTo = null;
+      return null;
+    }
+    if (coveredTo !== null) coveredTo = Math.max(coveredTo, units[range.last - 1].end);
+    return unitsText(partText, units, range);
+  };
+
+  // One record at a time, so each segment's note can say what was wrong with
+  // its own piece numbers (translation/segmentChecks.ts).
+  const segments: TranslatedSegment[] = [];
+  let previousTo = 0;
+  for (const record of parsed.records) {
+    const sequence = pieceSequenceProblem(previousTo, record.from, record.to, units.length);
+    // The highest real piece named, so a backwards pair that covered a piece
+    // does not make the next segment report it missing, and a number past the
+    // end does not make every later segment look like a repeat.
+    for (const end of [record.from, record.to]) {
+      if (typeof end === 'number' && end >= 1 && end <= units.length) {
+        previousTo = Math.max(previousTo, end);
+      }
+    }
+    const [segment] = coerceSegments([record], arabicFor);
+    if (!segment) continue;
+    const note =
+      sequence === null
+        ? segment.note
+        : [segment.note, pieceSequenceNote(sequence)]
+            .filter((part): part is string => Boolean(part && part.trim()))
+            .join(' ');
+    segments.push(note === segment.note ? segment : { ...segment, note });
+  }
+  return { segments, closed: parsed.closed, coveredTo };
+}
+
+/**
+ * Where in the whole passage the untranslated rest of a part begins, or null
+ * when the reply did not say which pieces it covered. A part after a split was
+ * sent trimmed (partRequestFor), so the whitespace trimmed off its front is
+ * counted back in.
+ */
+function resumeOffset(
+  text: string,
+  part: PassagePart,
+  read: { coveredTo: number | null },
+): number | null {
+  if (read.coveredTo === null) return null;
+  const whole = part.start === 0 && part.end === text.length;
+  const slice = text.slice(part.start, part.end);
+  const lead = whole ? 0 : slice.length - slice.trimStart().length;
+  return part.start + lead + read.coveredTo;
+}
+
+/** Why a reply that did not finish cleanly stopped, as the card will say it. */
+function describeStop(
+  reply: GeminiReply,
+  parsed: ReturnType<typeof parseSegments>,
+  keptSegments: boolean,
+): { kind: TranslationErrorKind; message: string } {
+  const reason = reply.finishReason;
+  if (reason === undefined) return { kind: 'interrupted', message: GEMINI_NO_FINISH_REASON };
+  if (reason === 'MAX_TOKENS') {
     return {
-      segments: parsed.segments,
-      usage,
-      // The Gemini path here is the free tier: the budget that matters is
-      // requests, not dollars, so the UI shows a request count instead.
-      costUsd: null,
-      raw: text,
+      kind: 'truncated',
+      message: `The answer was cut off at the ${reply.budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
     };
   }
+  if (reason === 'STOP' && keptSegments) {
+    // Said above the segments that were kept, so not "no structured output".
+    return {
+      kind: 'parse',
+      message:
+        'Gemini said its reply was finished (STOP), but the reply broke off before the end of the passage.',
+    };
+  }
+  if (reason === 'STOP') {
+    // The only reply that is a parse failure: it says it finished, and what
+    // it finished with cannot be read.
+    return {
+      kind: 'parse',
+      message: `Gemini returned no structured output: ${
+        parsed.ok ? 'The array contained no usable segments.' : parsed.error
+      }`,
+    };
+  }
+  return GEMINI_FINISH_REASONS[reason] ?? unknownFinishReason(reason);
 }

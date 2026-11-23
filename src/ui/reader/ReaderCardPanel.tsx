@@ -82,6 +82,7 @@ export function ReaderCardPanel({
         for (const card of sharh.cards) void sharh.setCollapsed(card, collapsed);
       }}
       onRetranslate={(card, options) => void translator.retranslate(card, options)}
+      onTranslateRest={(card) => void translator.translateRest(card)}
       onDelete={(card) => {
         if (card.kind === 'note') void marks.removeMark(card.markId);
         else if (card.kind === 'explanation') void explanations.remove(card);

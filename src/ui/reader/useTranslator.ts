@@ -24,6 +24,7 @@ import {
   failedCard,
   loadingCard,
   passageFor,
+  remainderAnchor,
   standalonePassage,
   translationRequestFor,
   withoutStream,
@@ -430,6 +431,20 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           costUsd: result.costUsd,
           coverage: coverage.ratio,
           reachedEnd: coverage.reachedEnd,
+          // The reply stopped part-way: what came back whole is the card's
+          // segments, and the card says why the rest is missing and offers to
+          // translate it.
+          ...(result.incomplete
+            ? {
+                ...(result.incomplete.stopReason !== null
+                  ? { stopReason: result.incomplete.stopReason }
+                  : {}),
+                partial: {
+                  message: result.incomplete.message,
+                  untranslatedFrom: result.incomplete.untranslatedFrom,
+                },
+              }
+            : {}),
           segments: await enrichSegments(result.segments, {
             http,
             storage,
@@ -503,6 +518,31 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     [translate],
   );
 
+  /**
+   * "Translate the rest" on a partial card: a new translation of the part of
+   * its passage that did not come back, on the card's own provider and model.
+   * The partial card is kept — its segments were paid for, and the rest is a
+   * card of its own beside it.
+   */
+  const translateRest = useCallback(
+    async (card: TranslationCard) => {
+      const anchor = remainderAnchor(blocks, card);
+      if (!anchor) {
+        setNotice(
+          'The rest of this passage could not be found in the book. Select it and translate it.',
+        );
+        return null;
+      }
+      return translate({
+        anchor,
+        providerId: card.providerId,
+        model: card.model,
+        standalone: card.standalone === true,
+      });
+    },
+    [blocks, translate],
+  );
+
   const remove = useCallback(
     async (card: TranslationCard) => {
       await storage.deleteCard(card.id);
@@ -567,6 +607,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     stats,
     translate,
     retranslate,
+    translateRest,
     remove,
     setCollapsed,
     setAllCollapsed,

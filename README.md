@@ -606,6 +606,45 @@ come back, in readable form, with the specific reason — truncated, no structur
 output, provider error — a Retry button, and the raw text persisted so it
 survives navigating away.
 
+### How a Gemini reply ends
+
+**Gemini no longer writes the Arabic back.** Its segments used to echo each
+segment's Arabic verbatim, and Gemini stops a reply whose output reproduces a
+known text with `finishReason: RECITATION` — classical books are exactly that
+text. The owner saw replies end after `[ {`, reported as "No structured output
+returned … No JSON array found". Now the passage is sent as numbered pieces
+(`translation/sourceUnits.ts`: cut after clause punctuation, at line breaks and
+around ﴿﴾ and «»), each segment returns `from` and `to` piece numbers with its
+English, and the app fills the Arabic in from the text it sent. Piece numbers,
+not character offsets: a small model miscounts characters and an offset cuts a
+word in half. Claude's `emit_translation` tool keeps its `arabic` field — Claude
+has no such stop, and its cards and requests stay as they were. The parser
+still reads an echoed `arabic`, so older replies and cards are unaffected.
+
+**Every finish reason is named.** `GEMINI_FINISH_REASONS` in
+`translation/gemini.ts` holds each value of the API's `FinishReason` enum with
+its own message; content filters (SAFETY, PROHIBITED_CONTENT, BLOCKLIST, SPII,
+ESCALATION) are `refusal`, the rest `stopped`, an unknown value is still named.
+Only a reply that finished with STOP and still cannot be read is a parse
+failure. A stream that closes with **no** finish reason was cut: errorKind
+`interrupted`, "Connection interrupted", with Retry. The card shows the reason
+(`stopReason`, or "none") under the message.
+
+**On RECITATION the passage is retried once in two halves**, cut at the piece
+boundary nearest the middle, each its own request with the rest of the passage
+as context. It costs one or two more free-tier requests, only when Gemini stops.
+
+**Whole segments are kept when a reply stops part-way.** The array is read
+object by object (`parseSegmentRecords`), so three whole segments before a
+fourth cut mid-string are three segments, not a parse failure. The card shows
+them with a notice saying why the rest is missing and a **Translate the rest**
+button, which walks the offset where the reply stopped back to a block anchor
+(`remainderAnchor`) and translates that as a card of its own. A partial card is
+not a cache hit: selecting the passage again asks for it whole.
+
+The cache key (`cacheKeyFor`) is unchanged — prompt and schema are not among its
+inputs — so every cached Gemini card is still served.
+
 ## Offline dictionary
 
 Single-word lookup against al-Miṣbāḥ al-Munīr (Shamela **12145**), imported

@@ -4514,7 +4514,7 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
 
   // ---- strict tool schemas -------------------------------------------------
   // Strict mode wants additionalProperties: false on every object, and Gemini's
-  // responseSchema does not take the keyword. The two share SEGMENT_PROPERTIES.
+  // responseSchema does not take the keyword. The two share SHARED_SEGMENT_PROPERTIES.
   function objectsWithout(schema: unknown, path = '$'): string[] {
     if (typeof schema !== 'object' || schema === null) return [];
     const record = schema as Record<string, unknown>;
@@ -6044,6 +6044,21 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       [owner.english, owner.source, owner.reference],
       ['Abu Huraira reported: English of 3', 'hadith-json', 'Ṣaḥīḥ al-Bukhārī 3; Ṣaḥīḥ Muslim 1907'],
     );
+    check('  and, found, it carries no note about a quotation running on', owner.note, undefined);
+
+    // The Gemini card before its pieces were cut at quotes: the same segment
+    // with commentary after the quotation (synthetic words here). Not found,
+    // and the note now says why.
+    const [ranOn] = await enrichSegments(
+      [{ type: 'hadith', arabic: '"إنما الأعمال بالنيات" والمراد به شيء آخر:', english: '', reference: 'Ṣaḥīḥ al-Bukhārī 3' }] as never,
+      { http: {} as never, storage: bukhari as never, quran: {} as never, sunnahApiKey: '' },
+    );
+    check('  run on into the commentary, it is not matched', ranOn.english, '');
+    check(
+      '  and its note names the words that stopped the match',
+      ranOn.note?.endsWith('This segment also holds words after the quotation («والمراد به شيء آخر»), which belong to the commentary; that may be why the imported ḥadīth collection did not match it.'),
+      true,
+    );
   }
 
   // The on-device report over stored blocks: matched by number, by neighbour,
@@ -6143,6 +6158,187 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
   } else {
     console.log('  (hadith-json/ not present: the real-data match rate was not measured)');
   }
+}
+
+// ------------------------------------------- Gemini: pieces and partial replies
+//
+// The Gemini segment names the numbered pieces of the passage it covers and
+// the app fills the Arabic in (translation/sourceUnits.ts); a reply that stops
+// part-way keeps its whole segments, and "Translate the rest" walks the
+// offset where it stopped back to a block. Synthetic text, written here.
+console.log('\nGemini: source pieces, partial replies, the rest of a passage');
+{
+  const { splitUnits, numberedUnits, unitRange, unitsText, halfwayCut } = await import(
+    '../src/translation/sourceUnits'
+  );
+  const { parseSegmentRecords, coerceSegments, parseSegments } = await import(
+    '../src/translation/parseSegments'
+  );
+  const { remainderAnchor } = await import('../src/ui/reader/translationSteps');
+
+  const text = 'قال المصنف: هذه جملة، وتلك أخرى. ﴿آية للتجربة﴾ ثم قال: «متن للتجربة». وانتهى.\n\nسطر ثان';
+  const units = splitUnits(text);
+  const pieces = units.map((unit) => text.slice(unit.start, unit.end));
+  check('the pieces cover the passage exactly', pieces.join(''), text);
+  check('no piece is empty', pieces.every((piece) => piece.trim() !== ''), true);
+  check(
+    'pieces break after clause punctuation, around ﴿﴾ and «», and at a line break',
+    pieces.map((piece) => piece.trim()),
+    ['قال المصنف:', 'هذه جملة،', 'وتلك أخرى.', '﴿آية للتجربة﴾', 'ثم قال:', '«متن للتجربة».', 'وانتهى.', 'سطر ثان'],
+  );
+  check('numbered as the model sees them', numberedUnits(text, units).split('\n')[3], '[4] ﴿آية للتجربة﴾');
+  check('a range gives back the source verbatim', unitsText(text, units, { first: 2, last: 3 }), 'هذه جملة، وتلك أخرى.');
+  check('a reversed, out-of-range pair is put in order and clamped', unitRange(units, 99, 7), { first: 7, last: 8 });
+  check('a pair that is not numbers names no pieces', unitRange(units, '2', 3), null);
+  check('one piece with no punctuation is one unit', splitUnits('كلمة واحدة فقط').length, 1);
+  check('halving a passage cuts at the piece boundary nearest the middle', text.slice(0, halfwayCut(text, units)!).trim(), 'قال المصنف: هذه جملة، وتلك أخرى. ﴿آية للتجربة﴾');
+  check('halving one piece cuts at a space', halfwayCut('كلمة واحدة فقط', splitUnits('كلمة واحدة فقط')), 5);
+  check('one word cannot be halved', halfwayCut('كلمة', splitUnits('كلمة')), null);
+
+  // A matn in plain quotes shares no piece with the commentary after it. It
+  // did, and Flash-Lite numbered every later segment one piece late (see the
+  // comment at the top of sourceUnits.ts).
+  const trimmedPieces = (input: string) =>
+    splitUnits(input).map((unit) => input.slice(unit.start, unit.end).trim());
+  check(
+    'a matn in plain quotes is a piece of its own',
+    trimmedPieces('ومن هذا قوله: "متن قصير للتجربة" والمراد به: شيء آخر.'),
+    ['ومن هذا قوله:', '"متن قصير للتجربة"', 'والمراد به:', 'شيء آخر.'],
+  );
+  check(
+    'so are a verse in ( ) and a matn in “ ”, closing punctuation kept with them',
+    trimmedPieces('قال تعالى (آية للتجربة) ثم قال “متن آخر”، وانتهى.'),
+    ['قال تعالى', '(آية للتجربة)', 'ثم قال', '“متن آخر”،', 'وانتهى.'],
+  );
+  // Marks side by side leave no piece that is only a mark (review of 58467f9).
+  check(
+    'the ((…)) Shamela prints round a matn is one piece, the lone ( joined to it',
+    trimmedPieces('فقال: ((متن للتجربة)) ثم قال.'),
+    ['فقال:', '((متن للتجربة))', 'ثم قال.'],
+  );
+  for (const sample of [
+    'قال: «كلام للتجربة (آية للتجربة)» ثم انتهى.',
+    'قال: "(آية للتجربة)" ثم انتهى.',
+    'قال: «﴿آية للتجربة﴾» ثم انتهى.',
+    '«متن للتجربة»',
+  ]) {
+    check(
+      `no piece without a letter: ${sample}`,
+      trimmedPieces(sample).filter((piece) => !/[\p{L}\p{N}]/u.test(piece)),
+      [],
+    );
+  }
+  // The checks that put a note on a card instead of repairing it silently.
+  const { pieceSequenceProblem } = await import('../src/translation/segmentChecks');
+  check('pieces that follow on are fine', pieceSequenceProblem(1, 2, 3, 5), null);
+  check('the first segment starts at 1', pieceSequenceProblem(0, 1, 1, 5), null);
+  check('a skipped piece is named', pieceSequenceProblem(1, 3, 3, 5)?.detail, 'piece 2 is in no segment');
+  check(
+    'a reused piece is named',
+    pieceSequenceProblem(3, 3, 4, 5)?.detail,
+    'it starts at piece 3, which the segment before already covered',
+  );
+  check('a backwards pair is named', pieceSequenceProblem(0, 2, 1, 5)?.detail, 'it names pieces 2 to 1, backwards');
+  check(
+    'running past the end is the overflow the clamp used to hide',
+    pieceSequenceProblem(5, 6, 6, 5),
+    { detail: 'it names piece 6, and the passage has pieces 1–5', overran: true },
+  );
+  check('numbers that are not numbers are left to unitRange', pieceSequenceProblem(0, '1', 1, 5), null);
+  check('a backwards pair is flagged once, not again on the next segment', pieceSequenceProblem(3, 4, 4, 5), null);
+
+  // A ḥadīth segment that runs on past its quotation, named in the note that
+  // says its verified English was not found (retrieval/quotationOverrun.ts).
+  const { hadithQuotationOverrun } = await import('../src/retrieval/quotationOverrun');
+  check(
+    'a ḥadīth segment that runs on into the commentary is caught',
+    hadithQuotationOverrun('قال: "متن للتجربة" والمراد به:'),
+    'والمراد به',
+  );
+  check(
+    'more than six words are cut with …',
+    hadithQuotationOverrun('«متن» والمراد به هنا شيء آخر غير ما ذكر'),
+    'والمراد به هنا شيء آخر غير…',
+  );
+  for (const tail of [
+    '((متن للتجربة)) رواه مسلم',
+    '((متن للتجربة)) رَوَاهُ مُسْلِمٌ',
+    '«متن للتجربة» متفق عليه',
+    '«متن للتجربة» قال الترمذي: حديث حسن صحيح',
+    '«متن للتجربة» وإسناده صحيح',
+    '«متن للتجربة» الحديث',
+    '«متن للتجربة» أو كما قال',
+    '«متن للتجربة» [البخاري: ١]',
+    'قال: «متن للتجربة».',
+    'متن للتجربة بلا علامات',
+  ]) {
+    check(`not flagged: ${tail}`, hadithQuotationOverrun(tail), null);
+  }
+
+  const unpaired = 'قال: "متن بلا إغلاق ثم كلام بعده.';
+  check(
+    'an unpaired plain quote still leaves pieces that join back verbatim',
+    splitUnits(unpaired).map((unit) => unpaired.slice(unit.start, unit.end)).join(''),
+    unpaired,
+  );
+  const { letterFold } = await import('../src/lib/arabic');
+  check(
+    'a quoted piece folds to its words alone, as the hadith-json match compares them',
+    letterFold('"متن قصير للتجربة"'),
+    letterFold('متن قصير للتجربة'),
+  );
+
+  // The owner's two failures, in synthetic form.
+  check('"[ {" holds no whole segment', parseSegmentRecords('[ {'), { records: [], closed: false });
+  check('the old parser still calls "[ {" no array', parseSegments('[ {').ok, false);
+  const cut =
+    '[{"type":"prose","from":1,"to":1,"english":"One"},{"type":"prose","from":2,"to":2,"english":"Two, with a } brace"},' +
+    '{"type":"prose","from":3,"to":3,"english":"Three"},{"type":"prose","from":4,"to":4,"english":"Fou';
+  const read = parseSegmentRecords(cut);
+  check('a cut array keeps every whole segment before the cut', read?.records.map((record) => record.english), ['One', 'Two, with a } brace', 'Three']);
+  check('and says the array did not close', read?.closed, false);
+  check('a whole array closes', parseSegmentRecords('```json\n[{"a":1}, {"b":2}]\n```')?.closed, true);
+  check('no bracket at all is null', parseSegmentRecords('no array here'), null);
+
+  const filled = coerceSegments(
+    [
+      { type: 'quran', from: 4, to: 4, english: '' },
+      { type: 'prose', arabic: 'نص قديم', english: 'An old-shape segment' },
+      { type: 'prose', from: 'x', to: 2, english: 'Pieces that are not numbers' },
+    ],
+    (record) => {
+      const range = unitRange(units, record.from, record.to);
+      return range ? unitsText(text, units, range) : null;
+    },
+  );
+  check('a verse with no English is kept: its Arabic comes from the pieces', [filled[0].type, filled[0].arabic], ['quran', '﴿آية للتجربة﴾']);
+  check('a segment that echoes its Arabic is still read', filled[1].arabic, 'نص قديم');
+  check('a segment with no usable pieces keeps its English', [filled.length, filled[2].english, filled[2].arabic], [3, 'Pieces that are not numbers', '']);
+
+  // "Translate the rest": an offset in sourceText back to a block.
+  const blocks = [
+    { id: 'b:p1:0', order: 0, text: 'سطر أول للتجربة. وبقيته.' },
+    { id: 'b:p1:1', order: 1, text: 'سطر ثان للتجربة.' },
+    { id: 'b:p1:2', order: 2, text: 'سطر ثالث للتجربة. وما بعده لم يختر.' },
+  ] as unknown as Parameters<typeof remainderAnchor>[0];
+  const sourceText = 'وبقيته.\n\nسطر ثان للتجربة.\n\nسطر ثالث للتجربة.';
+  const partialCard = {
+    startBlockId: 'b:p1:0', startOffset: 'سطر أول للتجربة. '.length,
+    endBlockId: 'b:p1:2', endOffset: 'سطر ثالث للتجربة.'.length,
+    sourceText, standalone: undefined,
+  };
+  const intoSecond = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 'وبقيته.\n\n'.length } });
+  check('the rest from the second block', intoSecond, {
+    startBlockId: 'b:p1:1', startOffset: 0, endBlockId: 'b:p1:2', endOffset: partialCard.endOffset,
+    sourceText: 'سطر ثان للتجربة.\n\nسطر ثالث للتجربة.',
+  });
+  const inFirst = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 3 } });
+  check('the rest from inside the first block counts its start offset', [inFirst?.startBlockId, inFirst?.startOffset], ['b:p1:0', 'سطر أول للتجربة. '.length + 3]);
+  const onSeparator = remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: 'وبقيته.'.length } });
+  check('an offset on the blank line starts the next block', [onSeparator?.startBlockId, onSeparator?.startOffset], ['b:p1:1', 0]);
+  check('text that no longer matches the blocks gives no anchor', remainderAnchor(blocks, { ...partialCard, sourceText: `${sourceText}!`, partial: { message: '', untranslatedFrom: 2 } }), null);
+  check('a partial card that does not say where it stopped gives no anchor', remainderAnchor(blocks, { ...partialCard, partial: { message: '', untranslatedFrom: null } }), null);
+  check('a standalone card keeps its anchor and carries the rest of its text', remainderAnchor(blocks, { ...partialCard, standalone: true, partial: { message: '', untranslatedFrom: 9 } })?.sourceText, 'سطر ثان للتجربة.\n\nسطر ثالث للتجربة.');
 }
 
 // ------------------------------------------------------------------ done

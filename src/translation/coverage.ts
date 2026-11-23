@@ -32,7 +32,10 @@ import type { TranslatedSegment } from '../types';
 //               alone can miss when the model padded what it did return.
 //
 // Both are computed on letters alone: the segments echo the Arabic back and an
-// editor's punctuation is not a difference in coverage.
+// editor's punctuation is not a difference in coverage. (A Gemini segment no
+// longer echoes it: the app fills it in from the pieces the segment names,
+// translation/sourceUnits.ts, so there a piece the reply skipped is what
+// shows as missing.)
 // ---------------------------------------------------------------------------
 
 export interface Coverage {
