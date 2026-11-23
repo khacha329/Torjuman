@@ -50,7 +50,10 @@ import type { HttpClient } from '../src/platform/http/HttpClient';
 import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
 import {
   enrichSegments,
+  HADITH_KEY_WOULD_HELP,
+  HADITH_NEEDS_KEY,
   HADITH_QUOTED_IN_PART,
+  hadithImportedMissNote,
   hadithShortAmbiguousNote,
   hadithShortQuoteNote,
 } from '../src/retrieval/enrich';
@@ -791,9 +794,12 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     id: 'qul-short', kind: 'hadith-json', name: 'bukhari', fileName: 'bukhari.json', byteSize: 0,
     entryCount: COUNT, format: 'json', importedAt: 1, collection: 'bukhari',
   };
+  // A Mālik import with no rows, switched on for one S4 case only.
+  let includeMalik = false;
+  const malikResource: QulResource = { ...resource, id: 'qul-malik', name: 'malik', fileName: 'malik.json', entryCount: 0, collection: 'malik' };
   const shortStorage = {
     async listQulResources() {
-      return [resource];
+      return includeMalik ? [resource, malikResource] : [resource];
     },
     async getQulEntries(resourceId: string, keys: string[]) {
       calls++;
@@ -908,6 +914,7 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   // ten neighbours do, so the old exact-number rule still gives 1000's
   // English, under the model's reference and with no short-quotation note.
   put(withQuote(1000));
+  expect('S3: (the setup: the short search alone is ambiguous here)', (await search(1000)).result.status === 'ambiguous');
   const exactHolds = await card('bukhari:1000');
   expect(
     'S3: ambiguous in the collection, but the old exact-number rule holds: its English',
@@ -916,17 +923,18 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   );
   put(row(1000, [...chain, ...words(20)]));
 
+  const BUKHARI = 'Ṣaḥīḥ al-Bukhārī';
   put(withQuote(100));
   const ambiguousCard = await card('bukhari:1000');
   expect(
-    'S3: in two ḥadīth of the cited collection: no English, the ambiguity note',
-    ambiguousCard.english === '' && ambiguousCard.note === hadithShortAmbiguousNote('Ṣaḥīḥ al-Bukhārī'),
+    'S4: in two ḥadīth and not at the cited number: no English, the ambiguity note and the key sentence',
+    ambiguousCard.english === '' && ambiguousCard.note === joinNotesForCheck(hadithShortAmbiguousNote(BUKHARI), HADITH_KEY_WOULD_HELP),
     ambiguousCard,
   );
   const alsoMuslim = await card('bukhari:1000; muslim:5');
   expect(
-    'S3: ambiguous while a collection not imported is cited: the reference path runs',
-    alsoMuslim.english === '' && alsoMuslim.note !== hadithShortAmbiguousNote('Ṣaḥīḥ al-Bukhārī') && (alsoMuslim.note ?? '').includes('sunnah.com'),
+    'S4: a collection not imported also cited: the same note (the reference path ran and found nothing)',
+    alsoMuslim.english === '' && alsoMuslim.note === ambiguousCard.note,
     alsoMuslim,
   );
   put(row(100, [...chain, ...words(20)]));
@@ -936,9 +944,53 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   failFullRead = true;
   const failedCard = await card('bukhari:1000');
   failFullRead = false;
-  expect('S3: a failed full read falls back to the reference path, not a thrown card', failedCard.english === '' && (failedCard.note ?? '').includes('sunnah.com'), failedCard);
+  expect('S3: a failed full read counts as not searched: the old key note, not a thrown card', failedCard.english === '' && failedCard.note === HADITH_NEEDS_KEY, failedCard);
+
+  // ---------------------------------------------- step 4: the truthful notes
   const noneNear = await card('bukhari:3000');
-  expect('S3: nothing near the citation: the reference path runs as before', noneNear.english === '' && noneNear.source === undefined, noneNear);
+  expect(
+    'S4: nothing near the cited number: says so, with the key sentence',
+    noneNear.english === '' && noneNear.source === undefined &&
+      noneNear.note === joinNotesForCheck(hadithImportedMissNote({ status: 'none-near', name: BUKHARI, number: '3000', entryCount: COUNT }), HADITH_KEY_WOULD_HELP),
+    noneNear,
+  );
+  expect('S4: …and that note names the number and the file', (noneNear.note ?? '').startsWith(`No ḥadīth of the imported ${BUKHARI} near number 3000 contains these words`), noneNear.note);
+  const tooShort = (await enrichSegments([{ type: 'hadith', arabic: text(quote.slice(0, 2)), english: '', reference: 'bukhari:900' }], deps))[0];
+  expect('S4: two words: too short to identify, in the imported collection', (tooShort.note ?? '').startsWith(`The quotation is too short to identify by its text in the imported ${BUKHARI}.`), tooShort);
+  const long = text(words(20));
+  const different = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:500' }], deps))[0];
+  expect(
+    'S4: a long quotation that matched nothing: the ḥadīth at the cited number and its neighbours are different ones',
+    (different.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and its ḥadīth at number 500 and the 10 either side are different ones.`) && (different.note ?? '').endsWith(HADITH_KEY_WOULD_HELP),
+    different,
+  );
+  const pastTheEnd = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:5000' }], deps))[0];
+  expect('S4: …and past the file’s end: the file has no ḥadīth of that number', (pastTheEnd.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and the file has no ḥadīth numbered 5000.`), pastTheEnd);
+  expect(
+    'S4: too common is its own note',
+    hadithImportedMissNote({ status: 'common', name: BUKHARI, number: '1', entryCount: COUNT }).startsWith(`These words are too common in the imported ${BUKHARI}`),
+  );
+
+  // With a key set, sunnah.com was asked (and failed here): no key sentence.
+  const withKey = {
+    ...deps,
+    sunnahApiKey: 'fake-key-for-check-h',
+    http: { get: async () => ({ ok: false, status: 500, body: '' }) } as unknown as HttpClient,
+  };
+  const keyed = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'bukhari:3000' }], withKey))[0];
+  expect('S4: a key set: the reason, and no key sentence', keyed.note === hadithImportedMissNote({ status: 'none-near', name: BUKHARI, number: '3000', entryCount: COUNT }), keyed);
+
+  // Mālik is never asked of sunnah.com: an imported Mālik miss gets no key sentence.
+  includeMalik = true;
+  const malik = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'malik:900' }], deps))[0];
+  includeMalik = false;
+  expect(
+    'S4: Mālik cited and imported: the reason, and no key sentence',
+    (malik.note ?? '').startsWith('No ḥadīth of the imported') && !(malik.note ?? '').includes(HADITH_KEY_WOULD_HELP),
+    malik,
+  );
+  const nothingImported = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'abudawud:5' }], deps))[0];
+  expect('S4: the cited collection not imported: the old key note, unchanged', nothingImported.note === HADITH_NEEDS_KEY, nothingImported);
 }
 
 // ------------------------------------------------------------------- summary

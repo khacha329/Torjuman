@@ -520,6 +520,22 @@ gains "Quoted in part…", a deliberate change.
   reading shows, so it should be identical. If a capture changes, re-baseline
   that file only and name it.
 
+**As built.** `hadithImportedMissNote(miss)` holds Design 7's table and
+`HADITH_KEY_WOULD_HELP` the key sentence; `enrichHadithByShortQuote` returns
+the first cited, imported collection's miss, and the no-English branch uses
+it after sunnah.com and the number path have failed. `findShortQuote` now
+looks the resource up before judging the phrase, so a long quotation still
+reports the file's length (for "at number N" against "no ḥadīth numbered
+N"). The sixth row reads "and the 10 either side are different ones". A book
+scoped to a collection with nothing cited keeps HADITH_IMPORT_ONLY, which
+already says the import matched nothing. A failed read gives no miss, so
+that card keeps the old note. The ambiguity note now also carries the key
+sentence and the overrun note when they apply. Checks: H 162/162 (the
+notes, the key sentence with and without a key, Mālik, nothing imported);
+P adds `sharh-{gemini,anthropic}-imported-miss` (block 7), the taps differ
+only by its card and the session line; V 1029/1029 unchanged; U shows only
+the six captures that already differ on main.
+
 ### Step 5 — taps and on device
 
 - `HadithSource.ts`: in `lookupHadith`, a short search for a collection

@@ -253,6 +253,8 @@ const SYNTHETIC_COLLECTION = [
 // have.
 const SHORT_QUOTE = 'الماء والزرع والمطر';
 const SHORT_SHARED = 'الكلمات التجريبية في';
+// Step 4: a matn written for this check that no entry above holds.
+const UNMATCHED_MATN = 'جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة';
 function sharhRows() {
   const at = FIXED_NOW - 86_400_000;
   const id = 'qul-p-bukhari';
@@ -1179,6 +1181,10 @@ function sharhGroup(provider) {
     // scenario, so no card here is a cache hit of another.
     await once('short-quote', 'block 6 → Translate: three words of the fourth invented entry, cited «Ṣaḥīḥ al-Bukhārī 200», far past it: found as a short quotation in the whole synthetic collection; its English, "Ṣaḥīḥ al-Bukhārī" with no number, the short-quotation note, "The model cited …" and "quoted in part"; no sunnah.com request', 5, [hadith(SHORT_QUOTE, 'Ṣaḥīḥ al-Bukhārī 200')], { note: 'Identified by a short quotation' });
     await once('short-quote-ambiguous', 'block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, which does not end the card (the owner\'s answer, 2026-11-23): sunnah.com gets its turn (refused by the plain build, as above) and the old exact-number rule finds the words not at 4, so no English and the short-quotation ambiguity note', 11, [hadith(SHORT_SHARED, 'Ṣaḥīḥ al-Bukhārī 4')], { note: 'These few words occur in more than one ḥadīth', sunnahAllowed: true });
+    // Step 4: a long matn the collection does not have, cited at a number it
+    // does: the note says what the import found there, not "a key is
+    // needed" (a key is set in this group, so no key sentence either).
+    await once('imported-miss', 'block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and its ḥadīth at 3 and the ten either side are different ones', 6, [hadith(UNMATCHED_MATN, 'Ṣaḥīḥ al-Bukhārī 3')], { note: 'No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and its ḥadīth at number 3', sunnahAllowed: true });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
 

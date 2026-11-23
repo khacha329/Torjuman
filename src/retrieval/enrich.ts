@@ -67,9 +67,56 @@ export function hadithShortQuoteNote(name: string): string {
   return `Identified by a short quotation: these words occur in only one ḥadīth of ${name}, near the cited number. This dataset’s numbering is not the standard one, so no number is given.`;
 }
 
+const NOT_SUBSTITUTED = 'A model-generated translation is deliberately not substituted.';
+
 /** A short quotation found in more than one ḥadīth of the cited collection. */
 export function hadithShortAmbiguousNote(name: string): string {
-  return `These few words occur in more than one ḥadīth of the imported ${name}, so none is shown. A model-generated translation is deliberately not substituted.`;
+  return `These few words occur in more than one ḥadīth of the imported ${name}, so none is shown. ${NOT_SUBSTITUTED}`;
+}
+
+/**
+ * Appended where a sunnah.com key would make a request it does not make now:
+ * no key is set and a cited collection is one sunnah.com is asked for (Q6).
+ */
+export const HADITH_KEY_WOULD_HELP =
+  'With a sunnah.com key (Settings), the cited number would also be looked up there.';
+
+/** Why a cited, imported collection gave no English (Design 7). */
+export interface ImportedMiss {
+  status: 'ambiguous' | 'common' | 'too-short' | 'empty' | 'too-long' | 'none-near';
+  /** The collection's display name. */
+  name: string;
+  /** The cited number as the model gave it. */
+  number: string;
+  /** How many ḥadīth the imported file holds. */
+  entryCount: number;
+}
+
+/**
+ * The note for a card whose cited collection is imported and still gave no
+ * English, saying which test failed, instead of blaming a missing key alone
+ * (the owner's Bukhārī 6607 card: docs/plans/hadith-short-quote.md, Goal).
+ * A quotation of six words or more (`too-long` here) went through the text
+ * search and the number path's ±NEIGHBOUR_WINDOW check, so the note says
+ * what that check found at the cited number.
+ */
+export function hadithImportedMissNote(miss: ImportedMiss): string {
+  const { name, number } = miss;
+  switch (miss.status) {
+    case 'ambiguous':
+      return hadithShortAmbiguousNote(name);
+    case 'common':
+      return `These words are too common in the imported ${name} to identify one ḥadīth. ${NOT_SUBSTITUTED}`;
+    case 'too-short':
+    case 'empty':
+      return `The quotation is too short to identify by its text in the imported ${name}. ${NOT_SUBSTITUTED}`;
+    case 'none-near':
+      return `No ḥadīth of the imported ${name} near number ${number} contains these words; the file’s numbering may differ from the book’s. ${NOT_SUBSTITUTED}`;
+    case 'too-long':
+      return Number(number) <= miss.entryCount
+        ? `No ḥadīth in the imported ${name} matched this text, and its ḥadīth at number ${number} and the ${NEIGHBOUR_WINDOW} either side are different ones. ${NOT_SUBSTITUTED}`
+        : `No ḥadīth in the imported ${name} matched this text, and the file has no ḥadīth numbered ${number}. ${NOT_SUBSTITUTED}`;
+  }
 }
 
 /**
@@ -179,7 +226,8 @@ async function enrichHadith(
   // (Q5). An ambiguity does not end the card: sunnah.com and the old
   // exact-number rule (`shortQuoteHolds`) still get their turn, and the
   // ambiguity is only the note when they too find nothing (owner's answer,
-  // 2026-11-23, review of 13604c5; Q9: the existing paths stay).
+  // 2026-11-23, review of 13604c5; Q9: the existing paths stay). Any other
+  // miss in an imported collection is kept for the note, too.
   const short = await enrichHadithByShortQuote(segment, references, deps);
   if (short.segment) return short.segment;
 
@@ -215,19 +263,29 @@ async function enrichHadith(
           : segment.reference,
       };
     }
-    if (short.ambiguousIn) {
+    // A cited collection is imported and still gave nothing: say why
+    // (Design 7), and mention the key only where it would make a request
+    // (Q6). Nothing cited is imported: the notes below, as before.
+    if (short.miss) {
       recordRetrieval({
         kind: 'hadith',
         outcome: 'no-match',
         query: segment.arabic.slice(0, 80),
-        summary: `The short quotation occurs in more than one ḥadīth of ${short.ambiguousIn}, and the cited number did not settle it.`,
+        summary: `No English from the imported ${short.miss.name}: ${short.miss.status}.`,
         detail: [['reference', segment.reference ?? '(none)']],
       });
+      const keyWouldHelp =
+        !deps.sunnahApiKey && references.some((ref) => !SUNNAH_COM_SKIPPED.has(ref.collection));
       return {
         ...segment,
         english: '',
         source: undefined,
-        note: joinNotes(segment.note, hadithShortAmbiguousNote(short.ambiguousIn), overrunNote(segment.arabic)),
+        note: joinNotes(
+          segment.note,
+          hadithImportedMissNote(short.miss),
+          keyWouldHelp ? HADITH_KEY_WOULD_HELP : undefined,
+          overrunNote(segment.arabic),
+        ),
       };
     }
     return {
@@ -442,23 +500,21 @@ async function enrichHadithByText(
  * (`findShortQuote`). Without a match the reference path runs.
  *
  * Each reference is tried in the model's order and the first match wins.
- * When none matched and one was ambiguous, `ambiguousIn` names that
- * collection, for the reference path's note if it too finds nothing; it is
- * left null when the model also cited a collection that was not searched
- * (not imported, or its read failed), as the text search does (owner's
- * answer, 2026-11-22), and the old notes stand. A read that fails is logged
- * and counts as no match for that reference.
+ * When none matched, `miss` is why the first cited collection that is
+ * imported gave nothing (ambiguous, too common, too short, nothing near the
+ * number, or a quotation long enough for the text search), for the reference
+ * path's note if it too finds nothing (Design 7). An ambiguity no longer ends
+ * the card (owner's answer, 2026-11-23), so whether another cited collection
+ * was searched changes only the note, which stays true either way. A read
+ * that fails is logged and counts as not searched: it gives no miss.
  */
 async function enrichHadithByShortQuote(
   segment: TranslatedSegment,
   references: readonly HadithReference[],
   deps: EnrichDeps,
-): Promise<{ segment: TranslatedSegment | null; ambiguousIn: string | null }> {
-  const none = { segment: null, ambiguousIn: null };
-  if (segment.arabic.trim() === '' || references.length === 0) return none;
-
-  let ambiguousIn: string | null = null;
-  let unsearchedCitation = false;
+): Promise<{ segment: TranslatedSegment | null; miss: ImportedMiss | null }> {
+  let miss: ImportedMiss | null = null;
+  if (segment.arabic.trim() === '' || references.length === 0) return { segment: null, miss };
   for (const ref of references) {
     const cited = Number(ref.number);
     let search: ShortQuoteSearch;
@@ -472,21 +528,16 @@ async function enrichHadithByShortQuote(
         summary: `The short-quotation search of ${ref.collection} failed; that reference counts as not searched.`,
         detail: [['error', error instanceof Error ? error.message : String(error)]],
       });
-      unsearchedCitation = true;
       continue;
     }
     const { result } = search;
-    if (result.status === 'not-imported') {
-      unsearchedCitation = true;
-      continue;
-    }
+    if (result.status === 'not-imported') continue;
     const collection = hadithJsonCollection(ref.collection);
     const name = collection?.displayName ?? ref.collection;
-    if (result.status === 'ambiguous') {
-      ambiguousIn ??= name;
+    if (result.status !== 'matched') {
+      miss ??= { status: result.status, name, number: ref.number, entryCount: search.entryCount };
       continue;
     }
-    if (result.status !== 'matched') continue;
 
     const english = composeEnglish(result.entry);
     if (english === '') continue;
@@ -524,11 +575,11 @@ async function enrichHadithByShortQuote(
     });
     return {
       segment: { ...segment, english, source: 'hadith-json', reference, note: joinNotes(...notes) },
-      ambiguousIn: null,
+      miss: null,
     };
   }
 
-  return { segment: null, ambiguousIn: unsearchedCitation ? null : ambiguousIn };
+  return { segment: null, miss };
 }
 
 /**

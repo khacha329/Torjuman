@@ -159,6 +159,12 @@ export interface ShortQuoteSearch {
   rowsRead: number;
   /** Wall time of the search, for the retrieval log: the tablet's cost (plan, M). */
   ms: number;
+  /**
+   * How many ḥadīth the imported file holds; 0 when it is not imported. The
+   * card's note tells "a different ḥadīth at N" from "no ḥadīth numbered N"
+   * by it (Design 7).
+   */
+  entryCount: number;
 }
 
 /** Rows per `getQulEntries` in the full read, as the index self-heal reads them. */
@@ -176,7 +182,10 @@ const READ_BATCH = 500;
  * because acceptance needs every entry that holds the phrase (Design 3). No
  * memo of the folded collection is kept (owner's answer Q8) until the
  * tablet's `ms` shows one is needed. A read that throws reaches the caller,
- * which logs it and treats it as no match.
+ * which logs it and counts that reference as not searched.
+ *
+ * The resource is looked up before the phrase is judged, so even a refused
+ * phrase reports whether the collection is imported and how long it is.
  */
 export async function findShortQuote(
   storage: StorageAdapter,
@@ -185,18 +194,18 @@ export async function findShortQuote(
   text: string,
 ): Promise<ShortQuoteSearch> {
   const started = performance.now();
+  const resources = await storage.listQulResources();
+  const resource = resources.find((r) => r.kind === 'hadith-json' && r.collection === collection);
   const done = (result: ShortQuoteResult, rowsRead: number): ShortQuoteSearch => ({
     result,
     rowsRead,
     ms: Math.round(performance.now() - started),
+    entryCount: resource?.entryCount ?? 0,
   });
+  if (!resource) return done({ status: 'not-imported' }, 0);
 
   const phrase = shortQuotePhrase(text);
   if ('refused' in phrase) return done({ status: phrase.refused }, 0);
-
-  const resources = await storage.listQulResources();
-  const resource = resources.find((r) => r.kind === 'hadith-json' && r.collection === collection);
-  if (!resource) return done({ status: 'not-imported' }, 0);
 
   const holds = (row: QulEntry) =>
     row.value.t === 'hadith-json' && containsShortQuote(foldEntry(row.value.arabic), phrase.words);
