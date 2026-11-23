@@ -46,10 +46,11 @@ export interface HadithQuery {
    * and the number the book prints. When the reference does not find the
    * ḥadīth — a sharḥ of one of the six main books, whose numbers are its own,
    * or a Riyāḍ number that does not confirm (Q19) — it is looked for by its
-   * text in this one collection. The number orders what the text found, and
-   * can settle two equally matching ḥadīth when one of them lies within
+   * text in this one collection. The number orders what the text found; for
+   * Riyāḍ and the Forty, whose printed numbers are the dataset's, it can also
+   * settle two near-equally matching ḥadīth when one lies within
    * ±NEIGHBOUR_WINDOW of it and agrees with the text (`findHadithByText`'s one
-   * exception); it never makes a match on its own.
+   * exception). It never makes a match on its own.
    */
   scope?: { collection: string; numberHint?: number };
 }
@@ -275,7 +276,16 @@ async function lookupByText(
     if (loaded.length === 0) return { local: null, text: { status: 'no-match', collection } };
     const result = await searchHadithText(storage, loaded, arabicText, {
       mode: 'segment',
-      hints: scope.numberHint !== undefined ? [{ collection, number: scope.numberHint }] : [],
+      hints:
+        scope.numberHint !== undefined
+          ? [
+              {
+                collection,
+                number: scope.numberHint,
+                inDatasetNumbering: hadithJsonCollection(collection)?.citableNumbers ?? false,
+              },
+            ]
+          : [],
     });
     if (result.ambiguous) return { local: null, text: { status: 'ambiguous', collection } };
     const chosen = result.chosen;

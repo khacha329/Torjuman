@@ -948,6 +948,15 @@ From the review of e23fe93 (step 4b), the owner answered on 2026-11-22:
   reference path, sunnah.com included, instead of ending as "none is shown".
   An ambiguity among collections the citation names still ends the search.
 
+From the review of 78a5be2 (step T1), the owner answered on 2026-11-22:
+- **No tie-break by number in the six main books.** The ±`NEIGHBOUR_WINDOW`
+  exception (Design 3.4) settles two near-equally matching families only
+  when the hint is in the dataset's numbering (`NumberHint.inDatasetNumbering`,
+  true for citable collections: Riyāḍ and the Forty). A printed Bukhārī or
+  Muslim number, or a model's, still orders the copies of one ḥadīth but
+  never chooses between two; those stay ambiguous. Applies to the card path
+  and the sheet alike.
+
 Recorded, not asked: the tiers are not a pure load optimisation (Design 6
 said "cannot change which English wins"). A tier-1 answer can differ from
 one pass over all: a fuller copy in an unsearched collection, a rival family

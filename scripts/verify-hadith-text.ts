@@ -347,23 +347,29 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
 
   const bare = find([indexAlpha], text(repeated));
   expect('repetitions, no isnād, no hint: the lowest number', chosenId(bare) === 'alpha:10', bare);
-  const near30 = find([indexAlpha], text(repeated), { hints: [{ collection: 'alpha', number: 29 }] });
+  const near30 = find([indexAlpha], text(repeated), { hints: [{ collection: 'alpha', number: 29, inDatasetNumbering: true }] });
   expect('repetitions, no isnād: the member nearest the hint', chosenId(near30) === 'alpha:30', near30);
-  const far = find([indexAlpha], text(repeated), { hints: [{ collection: 'alpha', number: 330 }] });
+  const far = find([indexAlpha], text(repeated), { hints: [{ collection: 'alpha', number: 330, inDatasetNumbering: true }] });
   expect('a hint 300 away still orders the family', chosenId(far) === 'alpha:30', far);
-  const otherCollection = find([indexAlpha], text(repeated), { hints: [{ collection: 'beta', number: 29 }] });
+  const otherCollection = find([indexAlpha], text(repeated), { hints: [{ collection: 'beta', number: 29, inDatasetNumbering: true }] });
   expect('a hint for another collection orders nothing here', chosenId(otherCollection) === 'alpha:10', otherCollection);
 }
 {
   const unrelated = text(words(20));
-  const result = find([indexAlpha], unrelated, { hints: [{ collection: 'alpha', number: 11 }] });
+  const result = find([indexAlpha], unrelated, { hints: [{ collection: 'alpha', number: 11, inDatasetNumbering: true }] });
   expect('a hint never makes a no-match a match', result.chosen === null && result.candidates.length === 0, result);
 }
 {
-  const near100 = find([indexAlpha], text(shared), { hints: [{ collection: 'alpha', number: 105 }] });
+  const near100 = find([indexAlpha], text(shared), { hints: [{ collection: 'alpha', number: 105, inDatasetNumbering: true }] });
   expect('ambiguous, one family within ±10 of the hint and agreeing: chosen', chosenId(near100) === 'alpha:100', near100);
-  const between = find([indexAlpha], text(shared), { hints: [{ collection: 'alpha', number: 150 }] });
+  const between = find([indexAlpha], text(shared), { hints: [{ collection: 'alpha', number: 150, inDatasetNumbering: true }] });
   expect('ambiguous, the hint near neither: still ambiguous', between.ambiguous && between.chosen === null, between);
+  // The owner's answer (2026-11-22): a number not in the dataset's numbering
+  // (a printed Bukhārī or Muslim number) never settles two ḥadīth.
+  const printed = find([indexAlpha], text(shared), { hints: [{ collection: 'alpha', number: 105, inDatasetNumbering: false }] });
+  expect('ambiguous, a hint outside the dataset numbering settles nothing', printed.ambiguous && printed.chosen === null, printed);
+  const orders = find([indexAlpha], text(repeated), { hints: [{ collection: 'alpha', number: 29, inDatasetNumbering: false }] });
+  expect('a hint outside the dataset numbering still orders one ḥadīth’s copies', chosenId(orders) === 'alpha:30', orders);
 }
 {
   const result = find([indexBeta, indexGamma], text(matnA));

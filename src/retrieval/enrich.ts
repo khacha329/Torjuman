@@ -56,7 +56,6 @@ export const HADITH_BY_TEXT =
 
 export const HADITH_QUOTED_IN_PART = 'Quoted in part; this is the whole ḥadīth.';
 
-
 /**
  * The ambiguity note, naming the candidates (numbers only where citable). Two
  * candidates in one non-citable collection have the same name, so the names
@@ -283,7 +282,11 @@ async function enrichHadithByText(
   const cited = new Set(references.map((ref) => ref.collection));
   const first = all.filter((slug) => slug === deps.hadithScope || cited.has(slug));
   const tiers = first.length > 0 && first.length < all.length ? [first, all] : [all];
-  const hints = references.map((ref) => ({ collection: ref.collection, number: Number(ref.number) }));
+  const hints = references.map((ref) => ({
+    collection: ref.collection,
+    number: Number(ref.number),
+    inDatasetNumbering: hadithJsonCollection(ref.collection)?.citableNumbers ?? false,
+  }));
 
   for (const tier of tiers) {
     const loaded = await loadHadithIndexes(deps.storage, tier, undefined, (collection, error) =>

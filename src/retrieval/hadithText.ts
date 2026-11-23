@@ -54,7 +54,9 @@ import { agreement, agrees, NEIGHBOUR_WINDOW } from './hadithJson';
 // shipped path already relies on: when two families are ambiguous and exactly
 // one holds a member within ±NEIGHBOUR_WINDOW of the cited number that also
 // passes `agreement`, that family is chosen. That is number plus text, not
-// number alone.
+// number alone — and only where the number is in the dataset's numbering
+// (`NumberHint.inDatasetNumbering`: Riyāḍ and the Forty); for the six main
+// books two such families stay ambiguous (owner, 2026-11-22).
 // ---------------------------------------------------------------------------
 
 /**
@@ -374,6 +376,16 @@ export type MatchMode = 'segment' | 'scan';
 export interface NumberHint {
   collection: string;
   number: number;
+  /**
+   * Whether the number is in the dataset's own numbering — true only for a
+   * collection whose numbers are citable (Riyāḍ, the Forty). Only such a hint
+   * may settle two ḥadīth the text cannot tell apart: Bukhārī's printed
+   * numbers drift up to 286 from the dataset's and Muslim's are unrelated, so
+   * "within ±NEIGHBOUR_WINDOW" would compare numbers that do not line up. Any
+   * hint still orders the copies of one ḥadīth. The owner's answer,
+   * 2026-11-22 (review of 78a5be2).
+   */
+  inDatasetNumbering: boolean;
 }
 
 export interface TextMatchOptions {
@@ -760,12 +772,14 @@ function matchPass(
 
   let chosenFamily: TextCandidate[] | null = top;
   if (contending.length > 1) {
-    // The one exception (header): number plus text, as `chooseCandidate` proves it.
+    // The one exception (header): number plus text, as `chooseCandidate` proves
+    // it — and only for a number in the dataset's own numbering.
     const proved = contending.filter((family) =>
       family.some((member) => {
         const hint = hintFor(member);
         return (
           hint !== undefined &&
+          hint.inDatasetNumbering &&
           Math.abs(member.number - hint.number) <= NEIGHBOUR_WINDOW &&
           agrees(agreement(text, arabic.get(member)!))
         );
