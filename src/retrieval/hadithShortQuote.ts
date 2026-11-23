@@ -22,13 +22,19 @@ import { stripApparatus } from './sharh';
 // WHOLE collection (not only near the number: five times more wrong answers,
 // M3), and that family must have a member in the window around the cited
 // number. Measured with the rule as shipped (`npm run measure:short-quote`,
-// 2026-11-23): under a uniformly random Bukhārī citation, 6 of 1,008
-// accepted three-word phrases from other collections matched the wrong
-// ḥadīth (8 of 1,813 at four words, 4 of 1,864 at five); a real citation is
-// far from random, so that is the pessimistic bound.
+// 2026-11-23): a three-word phrase from another collection's matn, under a
+// uniformly random Bukhārī citation, matched a wrong ḥadīth in 4 of 2,000
+// samples (4 of 1,008 the rule accepted; 7 of 2,000 at four words, 4 of 2,000
+// at five). That is a measurement under a random citation, not a bound: a
+// real wrong citation points near the true ḥadīth, and similar wording
+// clusters in one kitāb, so it may do worse.
 // ---------------------------------------------------------------------------
 
-/** Fewest letters a short quotation must have (M3: removes most 3-word errors). */
+/**
+ * Fewest letters a short quotation must have. The design-time measurement
+ * (plan, M3) had it removing most 3-word errors; the run of the shipped rule
+ * did not re-test that.
+ */
 export const SHORT_QUOTE_MIN_LETTERS = 12;
 
 /** Most folded words: six and more belong to the text search (`MIN_RUN_WORDS`). */
@@ -111,8 +117,9 @@ export type ShortQuoteChoice =
 /**
  * Accept or refuse, given every entry of the collection that holds the phrase.
  *
- * Over MAX_POSTINGS entries is a formula («قال رسول الله»: 490 in Bukhārī),
- * for the reason the text index caps its postings. Two families anywhere in
+ * Over MAX_POSTINGS entries is a formula, for the reason the text index caps
+ * its postings. («قال رسول الله», 490 in Bukhārī, is the obvious one, though
+ * at eleven letters shortQuotePhrase already refuses it before this.) Two families anywhere in
  * the collection are ambiguous, even if only one is near the number: the
  * number never chooses between two (owner's answer Q3). One family with no
  * member in the window is refused. Of the members in the window, the one

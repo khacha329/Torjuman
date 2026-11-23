@@ -109,6 +109,16 @@ function phraseFrom(row: Row, k: number): string[] | null {
   return matn.slice(start, start + k);
 }
 
+/**
+ * Whether the matched family holds the source ḥadīth: any member agreeing
+ * with it, as the design-time M3 counted. `sameFamily` is not transitive, so
+ * testing only the chosen member would count a right family as wrong.
+ */
+function familyHolds(source: Row, hits: readonly HadithJsonEntry[], family: readonly number[]): boolean {
+  const members = new Set(family);
+  return hits.some((entry) => members.has(entry.number) && sameFamily(source.entry.arabic, entry.arabic));
+}
+
 /** What the rule says of these words, or null when shortQuotePhrase refuses them. */
 function accepted(words: string[]): string[] | null {
   const phrase = shortQuotePhrase(words.join(' '));
@@ -148,15 +158,17 @@ if (bukhari) {
     // citation (pessimistic), accepted, and not the source ḥadīth's family.
     let tried = 0;
     let wrong = 0;
-    for (let s = 0; s < 2000; s++) {
+    const attempts = 2000;
+    for (let s = 0; s < attempts; s++) {
       const source = pick(collections.get(pick(others))!);
       const raw = phraseFrom(source, k);
       const words = raw && accepted(raw);
       if (!words) continue;
       tried++;
       const cited = 1 + Math.floor(random() * 7563);
-      const choice = chooseShortQuote(hitsIn('bukhari', words), cited, window);
-      if (choice.status === 'matched' && !sameFamily(source.entry.arabic, choice.entry.arabic)) wrong++;
+      const hits = hitsIn('bukhari', words);
+      const choice = chooseShortQuote(hits, cited, window);
+      if (choice.status === 'matched' && !familyHolds(source, hits, choice.family)) wrong++;
     }
     // Recall: a Bukhārī phrase cited at a modelled standard number (the file
     // drifts to 286 behind by its end: a straight line through the anchors, a
@@ -170,10 +182,11 @@ if (bukhari) {
       if (!words) continue;
       triedR++;
       const cited = source.entry.number + Math.round((286 * source.entry.number) / 7277);
-      const choice = chooseShortQuote(hitsIn('bukhari', words), cited, window);
-      if (choice.status === 'matched' && sameFamily(source.entry.arabic, choice.entry.arabic)) found++;
+      const hits = hitsIn('bukhari', words);
+      const choice = chooseShortQuote(hits, cited, window);
+      if (choice.status === 'matched' && familyHolds(source, hits, choice.family)) found++;
     }
-    console.log(`${k} words: wrong ${wrong} of ${tried} accepted phrases; found ${found} of ${triedR}`);
+    console.log(`${k} words: wrong ${wrong} of ${tried} accepted phrases (${attempts} samples); found ${found} of ${triedR}`);
   }
 }
 
