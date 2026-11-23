@@ -979,6 +979,12 @@ From the review of 78a5be2 (step T1), the owner answered on 2026-11-22:
   or Forty number, printed or given by the model, still may. Applies to the
   card path and the sheet alike.
 
+From the PR (#25), the owner answered on 2026-11-23:
+- **The Q19 rescue on the on-device path too.** Q19 was asked for taps. As
+  built, the on-device translator also searches by text when a Riyāḍ or
+  Forty number does not confirm, so a tap and an on-device card show the
+  same English. The owner answered "yes, keep it".
+
 Recorded, not asked: the tiers are not a pure load optimisation (Design 6
 said "cannot change which English wins"). A tier-1 answer can differ from
 one pass over all: a fuller copy in an unsearched collection, a rival family
