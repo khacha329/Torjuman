@@ -1,6 +1,8 @@
-import type { HadithJsonEntry } from '../types';
+import type { StorageAdapter } from '../platform/storage/StorageAdapter';
+import type { HadithJsonEntry, QulEntry } from '../types';
 import { letterFold } from '../lib/arabic';
-import { BOOK_NUMBER, SHORT_QUOTE_MAX_RAW_WORDS, SHORT_QUOTE_WORDS } from './hadithJson';
+import { delay } from '../lib/delay';
+import { BOOK_NUMBER, SHORT_QUOTE_MAX_RAW_WORDS, SHORT_QUOTE_WORDS, citedWindowFor } from './hadithJson';
 import { MAX_POSTINGS, MIN_RUN_WORDS, foldForMatch, isnadEnd, sameFamily } from './hadithText';
 import { stripApparatus } from './sharh';
 
@@ -142,4 +144,82 @@ export function chooseShortQuote(
     family: hits.map((entry) => entry.number).sort((a, b) => a - b),
     distance: near[0].number - cited,
   };
+}
+
+// -------------------------------------------------------------------- read
+
+export type ShortQuoteResult =
+  | ShortQuoteChoice
+  | { status: 'too-short' | 'too-long' | 'empty' }
+  | { status: 'not-imported' };
+
+export interface ShortQuoteSearch {
+  result: ShortQuoteResult;
+  /** Ḥadīth rows read from storage, for the retrieval log. */
+  rowsRead: number;
+  /** Wall time of the search, for the retrieval log: the tablet's cost (plan, M). */
+  ms: number;
+}
+
+/** Rows per `getQulEntries` in the full read, as the index self-heal reads them. */
+const READ_BATCH = 500;
+
+/**
+ * Search an imported collection for the book's short quotation near a cited
+ * number.
+ *
+ * The window around the cited number is read first, in one call (311 rows
+ * for Bukhārī, 21 elsewhere). When no row there holds the phrase, the answer
+ * is `none-near` and nothing more is read: most misses end here. Only when
+ * the window holds a candidate is the whole collection read, in batches of
+ * READ_BATCH with a yield between them so a card's spinner keeps turning,
+ * because acceptance needs every entry that holds the phrase (Design 3). No
+ * memo of the folded collection is kept (owner's answer Q8) until the
+ * tablet's `ms` shows one is needed. A read that throws reaches the caller,
+ * which logs it and treats it as no match.
+ */
+export async function findShortQuote(
+  storage: StorageAdapter,
+  collection: string,
+  cited: number,
+  text: string,
+): Promise<ShortQuoteSearch> {
+  const started = performance.now();
+  const done = (result: ShortQuoteResult, rowsRead: number): ShortQuoteSearch => ({
+    result,
+    rowsRead,
+    ms: Math.round(performance.now() - started),
+  });
+
+  const phrase = shortQuotePhrase(text);
+  if ('refused' in phrase) return done({ status: phrase.refused }, 0);
+
+  const resources = await storage.listQulResources();
+  const resource = resources.find((r) => r.kind === 'hadith-json' && r.collection === collection);
+  if (!resource) return done({ status: 'not-imported' }, 0);
+
+  const holds = (row: QulEntry) =>
+    row.value.t === 'hadith-json' && containsShortQuote(foldEntry(row.value.arabic), phrase.words);
+
+  const window = citedWindowFor(collection);
+  const near: string[] = [];
+  for (let n = Math.max(1, cited - window.behind); n <= Math.min(resource.entryCount, cited + window.ahead); n++) {
+    near.push(`${collection}:${n}`);
+  }
+  const windowRows = near.length > 0 ? await storage.getQulEntries(resource.id, near) : [];
+  let rowsRead = windowRows.length;
+  if (!windowRows.some(holds)) return done({ status: 'none-near' }, rowsRead);
+
+  const hits: HadithJsonEntry[] = [];
+  for (let from = 1; from <= resource.entryCount; from += READ_BATCH) {
+    if (from > 1) await delay(0);
+    const keys: string[] = [];
+    for (let n = from; n < from + READ_BATCH && n <= resource.entryCount; n++) keys.push(`${collection}:${n}`);
+    const rows = await storage.getQulEntries(resource.id, keys);
+    rowsRead += rows.length;
+    for (const row of rows) {
+      if (row.value.t === 'hadith-json' && holds(row)) hits.push(row.value);
+    }
+  }
+  return done(chooseShortQuote(hits, cited, window), rowsRead);
 }

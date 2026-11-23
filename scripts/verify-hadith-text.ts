@@ -39,6 +39,7 @@ import { citedWindowFor, sharhCollectionFor } from '../src/retrieval/hadithJson'
 import {
   chooseShortQuote,
   containsShortQuote,
+  findShortQuote,
   foldEntry,
   shortQuotePhrase,
 } from '../src/retrieval/hadithShortQuote';
@@ -769,6 +770,78 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   );
   expect('S1: a printed number before the quotation is not counted as a word', refused(`١٢ - ${text(quote)}`) === 'phrase');
   expect('S1: no hits at all is none-near', chooseShortQuote([], 1000, bukhari).status === 'none-near');
+
+  // ------------------------------------------- step 2: the read over storage
+  // A fake store holding one synthetic collection under the slug «bukhari», so
+  // the registry's window applies. Counts rows read and calls made.
+  const COUNT = 1200;
+  const store = new Map<string, QulEntry>();
+  let calls = 0;
+  let rowsServed = 0;
+  let failReads = false;
+  const resource: QulResource = {
+    id: 'qul-short', kind: 'hadith-json', name: 'bukhari', fileName: 'bukhari.json', byteSize: 0,
+    entryCount: COUNT, format: 'json', importedAt: 1, collection: 'bukhari',
+  };
+  const shortStorage = {
+    async listQulResources() {
+      return [resource];
+    },
+    async getQulEntries(resourceId: string, keys: string[]) {
+      calls++;
+      if (failReads) throw new Error('read failed');
+      const out = keys.map((key) => store.get(`${resourceId}|${key}`)).filter((r): r is QulEntry => r !== undefined);
+      rowsServed += out.length;
+      return out;
+    },
+  } as unknown as StorageAdapter;
+  const put = (entry: HadithJsonEntry) =>
+    store.set(`qul-short|bukhari:${entry.number}`, { id: `qul-short|bukhari:${entry.number}`, resourceId: 'qul-short', key: `bukhari:${entry.number}`, value: entry });
+  for (let n = 1; n <= COUNT; n++) put(row(n, [...chain, ...words(20)]));
+  const reset = () => {
+    calls = 0;
+    rowsServed = 0;
+  };
+  const search = (cited: number, quotation = text(quote)) => findShortQuote(shortStorage, 'bukhari', cited, quotation);
+
+  const repeated = words(20);
+  put(withQuote(200, repeated));
+  reset();
+  const notNear = await search(1000);
+  expect('S2: no candidate in the window: only the window is read', notNear.result.status === 'none-near' && calls === 1 && rowsServed === 311 && notNear.rowsRead === 311, { notNear, calls, rowsServed });
+
+  put(withQuote(900, repeated));
+  reset();
+  const found = await search(1000);
+  expect(
+    'S2: a candidate in the window: the family is found over the whole collection',
+    found.result.status === 'matched' && found.result.entry.number === 900 && found.result.family.join() === '200,900' && found.result.distance === -100,
+    found.result,
+  );
+  expect('S2: rows read are the window plus every row, once', rowsServed === 311 + COUNT && found.rowsRead === rowsServed && calls === 1 + Math.ceil(COUNT / 500), { calls, rowsServed });
+
+  put(withQuote(100));
+  const twoFamilies = await search(1000);
+  expect('S2: an unrelated ḥadīth far outside the window with the phrase makes it ambiguous', twoFamilies.result.status === 'ambiguous', twoFamilies.result);
+  put(row(100, [...chain, ...words(20)]));
+
+  reset();
+  const short = await search(1000, text(quote.slice(0, 2)));
+  expect('S2: a refused phrase reads nothing', short.result.status === 'too-short' && calls === 0);
+  const absent = await findShortQuote(shortStorage, 'muslim', 1000, text(quote));
+  expect('S2: a collection not imported reads nothing', absent.result.status === 'not-imported' && calls === 0);
+  const pastEnd = await search(COUNT + 400);
+  expect('S2: a cited number far past the file reads nothing and is not near', pastEnd.result.status === 'none-near' && calls === 0);
+
+  failReads = true;
+  let threw = false;
+  try {
+    await search(1000);
+  } catch {
+    threw = true;
+  }
+  failReads = false;
+  expect('S2: a read that throws reaches the caller', threw);
 }
 
 // ------------------------------------------------------------------- summary

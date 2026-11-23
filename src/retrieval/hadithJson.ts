@@ -95,9 +95,9 @@ export interface HadithJsonCollection {
    * owner's «إنما الأعمال بالخواتيم», the file's 6366; measured for the plan,
    * docs/plans/hadith-short-quote.md, Current state). None of those anchors
    * has the file ahead. So 300 behind covers the end with margin, and 10
-   * ahead covers small local disorder. Muslim's numbering is unrelated to the standard, and the other
-   * six were never measured, so they keep ±10 (owner's answers Q1 and Q13 of
-   * docs/plans/hadith-short-quote.md). The window never chooses between two
+   * ahead covers small local disorder. Muslim's numbering is unrelated to
+   * the standard, and the other six were never measured, so they keep ±10
+   * (owner's answers Q1 and Q13 of docs/plans/hadith-short-quote.md). The window never chooses between two
    * ḥadīth: the phrase must already lie in one family of the whole
    * collection, and the number only refuses that family when it lies far
    * from the citation.

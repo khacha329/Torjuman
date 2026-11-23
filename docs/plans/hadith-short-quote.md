@@ -457,6 +457,11 @@ the takhrīj stripper cuts to three words).
   (callers catch). A collection not imported → `not-imported`, no read.
 - Gap: the tablet's time for the full read (M).
 
+**As built.** No `onProgress`: nothing would show it (the card has no
+progress line, and a tap reads at most one collection), so it is left out
+until the tablet's `ms` says the read is slow. A cited number past the file's
+end reads nothing and is `none-near`.
+
 ### Step 3 — the card
 
 - `enrich.ts`: a block after `if (byText) return byText;` (`:159`), before the
