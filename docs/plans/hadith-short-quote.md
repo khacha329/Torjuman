@@ -588,6 +588,27 @@ sheet states were (PNGs from this PC are not baselined):
 entity narrowed to three words of the seeded matn; the screenshots were read
 at both sizes. H adds 9 cases (174/174); S 30/30, R 70/70.
 
+The review of 677c4df found that on device the lookups were given the
+entity's whole start block (`useTranslator`), not its own words, so a
+three-word quotation inside a paragraph was refused as too long and the
+short search never ran there, while a tap (`entityText`) found it. The
+owner answered "fix it here" (2026-11-23): `useTranslator` now passes
+`entityText(entity, blocks)`, falling back to the block when the entity's
+blocks are not loaded. This also changes what on-device `findLocalHadith`
+and `lookupByText` compare for long matns: the ḥadīth's own words, as a tap
+does. H pins the difference on a synthetic paragraph; the hook itself is
+checked by reading, P's on-device scenarios stay identical, and the tablet
+shows the rest. Also from that review: `common` is its own sheet status and
+sentence; a failed short search is logged under its own name.
+
+Known and left (review of 677c4df, rare): the card runs the short search
+before the number path, the tap after it (the owner's "old rules first"
+keeps the tap's order). Where both accept, they can pick different members
+of one family: the number path takes N+d before N−d on a tie and matches
+`shortQuoteHolds` as a raw substring (chain included); the short search
+takes the lower number and only whole words past the isnād. Same ḥadīth,
+possibly a different copy's English.
+
 ### Step 6 — measure and record
 
 - `scripts/measure-short-quote.ts` and `npm run measure:short-quote`: M1–M5 as

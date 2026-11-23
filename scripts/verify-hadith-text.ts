@@ -45,6 +45,7 @@ import {
 } from '../src/retrieval/hadithShortQuote';
 import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
+import { entityText } from '../src/quran/entityService';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
 import { findShortByReference, lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
@@ -58,7 +59,7 @@ import {
   hadithShortQuoteNote,
 } from '../src/retrieval/enrich';
 import type { QuranLookupOptions } from '../src/retrieval/quran';
-import type { HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
+import type { Block, Entity, HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -1081,6 +1082,26 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const tooCommon = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote));
   expect('S5: in more than MAX_POSTINGS ḥadīth: common, not “no match”', tooCommon.text.status === 'common', tooCommon.text);
   for (let n = 1100; n < 1100 + MAX_POSTINGS; n++) put(row(n, [...chain, ...words(20)]));
+
+  // On device (useTranslator): the matn given to the lookups is now the
+  // entity's own words (entityText), as on a tap, not its whole block. The
+  // block holds the three quoted words inside a longer paragraph (review of
+  // 677c4df; the owner's answer, 2026-11-23).
+  const paragraph = [...words(8), ...quote, ...words(8)];
+  const quoteStart = text(paragraph.slice(0, 8)).length + 1;
+  const block = { id: 'b1', order: 1, text: text(paragraph) } as unknown as Block;
+  const quoteEntity = {
+    id: 'e1', type: 'hadith', reference: 'bukhari:1000',
+    startBlockId: 'b1', startOffset: quoteStart, endBlockId: 'b1', endOffset: quoteStart + text(quote).length,
+  } as unknown as Entity;
+  expect('S5: entityText gives the quoted words', entityText(quoteEntity, [block]) === text(quote), entityText(quoteEntity, [block]));
+  const fromEntity = await findShortByReference(shortStorage, 'bukhari:1000', entityText(quoteEntity, [block]));
+  const fromBlock = await findShortByReference(shortStorage, 'bukhari:1000', block.text);
+  expect(
+    'S5: on device the entity’s words find the card’s ḥadīth; the whole block would not',
+    fromEntity?.local.english === farCard.english && fromBlock === null,
+    { fromEntity, fromBlock },
+  );
 }
 
 // ------------------------------------------------------------------- summary
