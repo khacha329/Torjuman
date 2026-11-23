@@ -40,7 +40,7 @@ import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
-import { lookupHadith } from '../src/retrieval/HadithSource';
+import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
 import type { HadithIndexPart, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
@@ -555,6 +555,22 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     expect('T1: a scope that is not imported says so', absent.text?.status === 'not-imported', absent.text);
     const unscoped = await lookupHadith(http, storage, { reference: 'book-x#11', arabicText: text(matnA) }, options);
     expect('T1: without a scope nothing is searched by text', unscoped.text === undefined && !unscoped.record?.english, unscoped);
+
+    // T2: lookupByText called the way runOffline calls it — the hint read from
+    // the reference with the same pattern, the matn block's whole text — gives
+    // the English the sheet's lookupHadith gives. (The hook's ordering and its
+    // cache map are read-only here; check P cannot reach a finished on-device
+    // card, since it has no model.)
+    {
+      const reference = 'book-x#11';
+      const printed = /[#:](\d+)$/.exec(reference)?.[1];
+      const offline = await lookupByText(storage, { collection: 'alpha', numberHint: printed !== undefined ? Number(printed) : undefined }, text(matnA));
+      expect('T2: the on-device lookup finds what the sheet finds', offline.local?.english === matched.record?.english && offline.local?.english === 'english', offline);
+      const offlineMiss = await lookupByText(storage, { collection: 'alpha' }, text(words(20)));
+      expect('T2: an unknown text gives no English on device', offlineMiss.local === null && offlineMiss.text.status === 'no-match');
+      const offlineAbsent = await lookupByText(storage, { collection: 'zeta-not-imported' }, text(matnA));
+      expect('T2: a collection not imported gives no English on device', offlineAbsent.local === null && offlineAbsent.text.status === 'not-imported');
+    }
 
     // A cached sunnah.com English wins over the text match (withLocalEnglish),
     // so nothing may say the text identified it (review of 78a5be2).

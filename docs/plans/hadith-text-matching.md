@@ -736,6 +736,25 @@ book gets a `hadith` segment with the English and no model call for it.
 Checks: T, B, L, P, S, R. Tablet (M): the on-device translator on a real
 passage.
 
+**As built (b7583a3, and the review of it).**
+- The text search runs for any ḥadīth reference the cache and the number
+  path both miss in a book with a collection, the same as the sheet: so
+  also a Riyāḍ or Forty number that does not confirm (the Q19 rescue,
+  applied to the on-device path as to the tap). Its hint is then in the
+  dataset's numbering and may settle a tie.
+- **P cannot carry the planned scenario:** `translateProse` loads the model
+  even for an empty span list, and P refuses the download, so no on-device
+  card completes there. Replaced by H cases that call `lookupByText` the
+  way `runOffline` does (hint from the reference, the block's whole text):
+  same English as the sheet, a miss, a collection not imported. The hook's
+  ordering and its cache map stay verified by reading, and on the tablet.
+- Unnumbered matns (no reference) are still skipped on device, as before;
+  the sheet searches them. The query is the matn block's whole text: right
+  for today's entities, which span their one block; step 6's inline
+  entities must pass their span instead.
+- M also gains: the first on-device translation in a scoped book may build
+  the index (self-heal) with no progress shown on the card.
+
 ### Step T3 — the copy [NEW]
 
 The `HadithSheet` key-prompt clause (`:282`) and the `HADITH_SOURCES` note

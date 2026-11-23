@@ -242,7 +242,7 @@ export async function lookupHadith(
 }
 
 /** The English laid over a record, from either the reference or the text. */
-export interface LocalEnglish {
+interface LocalEnglish {
   english: string;
   collection: string;
   citable: boolean;
@@ -317,7 +317,7 @@ function recordFailure(collection: string, error: unknown): void {
     kind: 'hadith',
     outcome: 'lookup-failed',
     query: `text search in ${collection}`,
-    summary: 'The text search could not run; the sheet says nothing matched.',
+    summary: 'The text search could not run; the sheet or the on-device card shows no English for it.',
     detail: [['error', error instanceof Error ? error.message : String(error)]],
   });
 }
