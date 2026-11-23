@@ -23,9 +23,9 @@ import { Button, Spinner, SettingsSection } from '../kit';
 //
 // The English of the collections in HADITH_JSON_COLLECTIONS (Riyāḍ, the Forty
 // and the nine books but ad-Dārimī) from the hadith-json dataset, imported
-// from files the user downloads. Nothing is fetched from here
-// and nothing is bundled or committed: the text is sunnah.com's, the repository
-// is public, and how to distribute it legitimately is a later decision.
+// from files the user downloads. Nothing is fetched from here and nothing is
+// bundled or committed: the text is sunnah.com's, the repository is public,
+// and how to distribute it legitimately is a later decision.
 //
 // Two steps, as the QUL import is: what was detected is shown first, with real
 // counts and a real excerpt, and only then is anything written.
@@ -218,10 +218,11 @@ export function HadithJsonResources() {
           </span>
         ))}
         . It is shown under the book’s own Arabic, attributed “
-        {HADITH_JSON_ATTRIBUTION}”. Each ḥadīth is found by its text — the number a book
-        prints or a translation cites only helps choose between copies — so a numbering that
-        has drifted cannot show the wrong ḥadīth; where the text matches none, or more than
-        one, nothing is shown. The files stay on this device.
+        {HADITH_JSON_ATTRIBUTION}”. A ḥadīth’s English is shown only when it agrees with the
+        book’s own text: it is found by its text, or by a number — the one Riyāḍ and the
+        Forty print, or one a translation cites — and then checked against the text. So a
+        numbering that has drifted shows nothing rather than the wrong ḥadīth. The files stay
+        on this device.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
