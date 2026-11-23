@@ -5641,7 +5641,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة الثالثة:\n[2] وفيه بيان لما سبق من القول،\n[3] وليس من كتاب حقيقي.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -5663,9 +5663,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -5689,8 +5693,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
@@ -5791,7 +5805,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة الأولى: هذا نص تجريبي لفحص الترجمة، وليس من كتاب حقيقي.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة الأولى:\n[2] هذا نص تجريبي لفحص الترجمة،\n[3] وليس من كتاب حقيقي.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -5813,9 +5827,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -5839,8 +5857,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
@@ -5990,7 +6018,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nهذا متن ثان تجريبي، وليس من كتاب حقيقي.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nالفقرة الثانية عشرة: آخر نص في هذا الكتاب التجريبي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nهذا متن ثان تجريبي، وليس من كتاب حقيقي.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة العاشرة:\n[2] نص للتجربة يقطع جوابه قبل تمامه.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n\nالفقرة الثانية عشرة: آخر نص في هذا الكتاب التجريبي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -6012,9 +6040,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -6038,8 +6070,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
@@ -6237,7 +6279,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة الرابعة: نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nٱللَّهِ ٱلَّذِي لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ وَوَيۡلࣱ لِّلۡكَٰفِرِينَ مِنۡ عَذَابࣲ شَدِيدٍ\n\nالفقرة الثالثة: وفيه بيان لما سبق من القول، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة الرابعة:\n[2] نص آخر للتجربة يرد عليه خطأ مصطنع من الخادم.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nعن أبي هريرة رضي الله عنه قال: «هذا متن حديث تجريبي لفحص الترجمة، وليس من كتاب حقيقي».\n\nشرح تجريبي أول: هذا شرح لفحص الترجمة، وليس من كتاب حقيقي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -6259,9 +6301,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -6285,8 +6331,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
@@ -6533,7 +6589,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nهذا متن ثان تجريبي، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nشرح تجريبي ثان: وفيه بيان لما سبق، وليس من كتاب حقيقي.\n\nهذا متن ثان تجريبي، وليس من كتاب حقيقي.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة التاسعة:\n[2] نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -6555,9 +6611,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -6581,8 +6641,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
@@ -6876,7 +6946,7 @@
                     "role": "user",
                     "parts": [
                       {
-                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\n\nالفقرة الحادية عشرة: نص للتجربة لا يصل طلبه إلى الخادم.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الثانية عشرة: آخر نص في هذا الكتاب التجريبي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
+                        "text": "<context_before>\nThe passage that comes immediately before the target. Provided only so\nyou can resolve pronouns and follow the argument. DO NOT TRANSLATE IT.\n\nالفقرة التاسعة: نص للتجربة يرفضه الخادم لأن المفتاح لا يصلح.\n\nالفقرة العاشرة: نص للتجربة يقطع جوابه قبل تمامه.\n</context_before>\n\n<target>\nThis — and only this — is the text to translate.\nThe source marks it as: prose.\nIt is given as numbered pieces. For each segment, give the numbers of the first and\nlast piece it covers as from and to, in order, every piece in exactly one segment.\nDo not write the Arabic back: the application already has it.\n\n[1] الفقرة الحادية عشرة:\n[2] نص للتجربة لا يصل طلبه إلى الخادم.\n</target>\n\n<context_after>\nThe passage that follows the target. Provided only for continuity.\nDO NOT TRANSLATE IT.\n\nالفقرة الثانية عشرة: آخر نص في هذا الكتاب التجريبي.\n</context_after>\n\nTranslate the <target> passage according to your instructions.\nRespond with the JSON array only."
                       }
                     ]
                   }
@@ -6898,9 +6968,13 @@
                           ],
                           "description": "What kind of material this segment is."
                         },
-                        "arabic": {
-                          "type": "string",
-                          "description": "The Arabic of this segment."
+                        "from": {
+                          "type": "integer",
+                          "description": "The number of the first piece of the passage this segment covers."
+                        },
+                        "to": {
+                          "type": "integer",
+                          "description": "The number of the last piece this segment covers (the same as from for a single piece)."
                         },
                         "english": {
                           "type": "string",
@@ -6924,8 +6998,18 @@
                       },
                       "required": [
                         "type",
-                        "arabic",
+                        "from",
+                        "to",
                         "english"
+                      ],
+                      "propertyOrdering": [
+                        "type",
+                        "from",
+                        "to",
+                        "english",
+                        "reference",
+                        "note",
+                        "uncertainTerms"
                       ]
                     }
                   },
