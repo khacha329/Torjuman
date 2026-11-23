@@ -35,13 +35,31 @@ import {
   loadHadithIndexes,
   searchHadithText,
 } from '../src/retrieval/hadithTextIndex';
-import { sharhCollectionFor } from '../src/retrieval/hadithJson';
+import { citedWindowFor, sharhCollectionFor } from '../src/retrieval/hadithJson';
+import {
+  chooseShortQuote,
+  containsShortQuote,
+  findShortQuote,
+  foldEntry,
+  shortQuotePhrase,
+} from '../src/retrieval/hadithShortQuote';
 import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
+import { entityText } from '../src/quran/entityService';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
-import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
-import type { HadithIndexPart, HadithRecord, QulEntry, QulResource } from '../src/types';
+import { findShortByReference, lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
+import {
+  enrichSegments,
+  HADITH_KEY_WOULD_HELP,
+  HADITH_NEEDS_KEY,
+  HADITH_QUOTED_IN_PART,
+  hadithImportedMissNote,
+  hadithShortAmbiguousNote,
+  hadithShortQuoteNote,
+} from '../src/retrieval/enrich';
+import type { QuranLookupOptions } from '../src/retrieval/quran';
+import type { Block, Entity, HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -668,6 +686,422 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('4a: then the title (Riyāḍ)', hadithScopeFor(book('شرح رياض الصالحين')) === 'riyadussalihin');
   expect('4a: then the sharḥ rule', hadithScopeFor(book('فتح الباري بشرح البخاري')) === 'bukhari');
   expect('4a: any other book has no scope', hadithScopeFor(book('كتاب المثال في الطهارة', 'الفقه')) === null);
+}
+
+// ------------------------------------------- short quotations: the pure rule
+
+{
+  // docs/plans/hadith-short-quote.md, step 1. Made-up words again; the only
+  // real Arabic is the chain words `isnadEnd` keys on and the honorific.
+  const longWord = () => {
+    let out = '';
+    for (let i = 0; i < 5; i++) out += LETTERS[Math.floor(random() * LETTERS.length)];
+    return out;
+  };
+  const quote = [longWord(), longWord(), longWord()];
+  const chain = ['حدثنا', longWord(), 'عن', longWord(), 'قال', 'رسول', 'الله'];
+  const row = (number: number, arabic: string[]): HadithJsonEntry => ({
+    t: 'hadith-json',
+    number,
+    idInBook: number,
+    chapterId: 1,
+    chapterEnglish: '',
+    narrator: '',
+    text: `english ${number}`,
+    arabic: text(arabic),
+  });
+  const withQuote = (number: number, matn = words(20)) => row(number, [...chain, ...matn.slice(0, 10), ...quote, ...matn.slice(10)]);
+  const scan = (entries: readonly HadithJsonEntry[], phrase: readonly string[]) =>
+    entries.filter((entry) => containsShortQuote(foldEntry(entry.arabic), phrase));
+  const bukhari = citedWindowFor('bukhari');
+  const phrase = shortQuotePhrase(text(quote));
+  const phraseWords = 'words' in phrase ? phrase.words : [];
+  expect('S1: a three-word quotation of fifteen letters is a phrase', phraseWords.length === 3, phrase);
+
+  const others = Array.from({ length: 30 }, (_, i) => row(2000 + i, [...chain, ...words(25)]));
+  const lone = [withQuote(1000), ...others];
+  const choose = (entries: readonly HadithJsonEntry[], cited: number, window = bukhari) =>
+    chooseShortQuote(scan(entries, phraseWords), cited, window);
+
+  const far = choose(lone, 1240);
+  expect('S1: one entry 240 behind the cited number is matched', far.status === 'matched' && far.entry.number === 1000 && far.distance === -240, far);
+  expect('S1: 400 behind is not near', choose(lone, 1400).status === 'none-near');
+  expect('S1: 20 ahead is not near', choose(lone, 980).status === 'none-near');
+  expect('S1: exactly 300 behind is near', choose(lone, 1300).status === 'matched');
+  expect('S1: 301 behind is not', choose(lone, 1301).status === 'none-near');
+  expect('S1: exactly 10 ahead is near', choose(lone, 990).status === 'matched');
+  expect('S1: 11 ahead is not', choose(lone, 989).status === 'none-near');
+  expect('S1: ±10 elsewhere: 240 behind is not near', choose(lone, 1240, citedWindowFor('muslim')).status === 'none-near');
+  expect('S1: Bukhārī’s window is 300 behind and 10 ahead', bukhari.behind === 300 && bukhari.ahead === 10);
+  expect('S1: every other collection keeps ±10', citedWindowFor('muslim').behind === 10 && citedWindowFor('muslim').ahead === 10);
+
+  const twoHadith = [withQuote(1000), withQuote(1100), ...others];
+  const ambiguous = choose(twoHadith, 1240);
+  expect('S1: the phrase in two unrelated ḥadīth is ambiguous', ambiguous.status === 'ambiguous' && ambiguous.families === 2, ambiguous);
+  const farOnly = choose([withQuote(1000), withQuote(5000), ...others], 1240);
+  expect('S1: ambiguous even when only one of the two is near', farOnly.status === 'ambiguous', farOnly);
+
+  const matn = words(20);
+  const copies = [withQuote(1000, matn), withQuote(1100, matn), ...others];
+  const nearer = choose(copies, 1240);
+  expect(
+    'S1: two copies of one matn are one family; the nearer is chosen',
+    nearer.status === 'matched' && nearer.entry.number === 1100 && nearer.family.join() === '1000,1100',
+    nearer,
+  );
+
+  const formula = Array.from({ length: MAX_POSTINGS + 1 }, (_, i) => withQuote(3000 + i));
+  const tooMany = choose(formula, 3010);
+  expect('S1: in more than MAX_POSTINGS entries the phrase is a formula', tooMany.status === 'common' && tooMany.entries === MAX_POSTINGS + 1, tooMany);
+
+  const inChain = row(1000, ['حدثنا', ...quote, 'عن', longWord(), 'قال', 'رسول', 'الله', ...words(20)]);
+  expect('S1: a phrase only in the isnād does not count', !containsShortQuote(foldEntry(inChain.arabic), phraseWords));
+  const fused = row(1000, [...chain, ...words(5), `و${quote[0]}`, quote[1], quote[2], ...words(5)]);
+  expect('S1: «و» fused to the first word on the entry’s side counts', containsShortQuote(foldEntry(fused.arabic), phraseWords));
+  const fusedFa = row(1000, [...chain, ...words(5), `ف${quote[0]}`, quote[1], quote[2], ...words(5)]);
+  expect('S1: «ف» likewise', containsShortQuote(foldEntry(fusedFa.arabic), phraseWords));
+  const fusedMiddle = row(1000, [...chain, ...words(5), quote[0], `و${quote[1]}`, quote[2], ...words(5)]);
+  expect('S1: on a middle word it does not', !containsShortQuote(foldEntry(fusedMiddle.arabic), phraseWords));
+  const partWord = row(1000, [...chain, ...words(5), `${quote[0]}${quote[1]}`, quote[2], ...words(5)]);
+  expect('S1: words must be whole', !containsShortQuote(foldEntry(partWord.arabic), phraseWords));
+
+  const refused = (input: string) => {
+    const result = shortQuotePhrase(input);
+    return 'refused' in result ? result.refused : 'phrase';
+  };
+  expect('S1: two words are too short', refused(text(quote.slice(0, 2))) === 'too-short');
+  expect('S1: three words under twelve letters are too short', refused('بتث جحخ دذر') === 'too-short');
+  expect('S1: the honorific alone is empty', refused('صلى الله عليه وسلم') === 'empty');
+  expect('S1: six words belong to the text search', refused(text(words(6))) === 'too-long');
+  // A long matn the takhrīj stripper cuts back to the three quoted words: only
+  // the raw-word guard (FOUND_ISSUES 74) refuses it.
+  expect(
+    'S1: a long text stripped down to three words is not a short quotation',
+    refused(`${text(quote)} رواه ${text(words(10))}`) === 'too-long' && refused(`${text(quote)} رواه`) === 'phrase',
+  );
+  expect('S1: a printed number before the quotation is not counted as a word', refused(`١٢ - ${text(quote)}`) === 'phrase');
+  expect('S1: no hits at all is none-near', chooseShortQuote([], 1000, bukhari).status === 'none-near');
+
+  // ------------------------------------------- step 2: the read over storage
+  // A fake store holding one synthetic collection under the slug «bukhari», so
+  // the registry's window applies. Counts rows read and calls made.
+  const COUNT = 1200;
+  const store = new Map<string, QulEntry>();
+  let calls = 0;
+  let rowsServed = 0;
+  let failReads = false;
+  let failFullRead = false;
+  let failIndex = false;
+  const resource: QulResource = {
+    id: 'qul-short', kind: 'hadith-json', name: 'bukhari', fileName: 'bukhari.json', byteSize: 0,
+    entryCount: COUNT, format: 'json', importedAt: 1, collection: 'bukhari',
+  };
+  // A Mālik import with no rows, switched on for one S4 case only.
+  let includeMalik = false;
+  const malikResource: QulResource = { ...resource, id: 'qul-malik', name: 'malik', fileName: 'malik.json', entryCount: 0, collection: 'malik' };
+  const shortStorage = {
+    async listQulResources() {
+      return includeMalik ? [resource, malikResource] : [resource];
+    },
+    async getQulEntries(resourceId: string, keys: string[]) {
+      calls++;
+      if (failReads) throw new Error('read failed');
+      if (failFullRead && keys.length === 500) throw new Error('full read failed');
+      if (failIndex && keys.some((key) => key.startsWith('idx:'))) throw new Error('index unreadable');
+      const out = keys.map((key) => store.get(`${resourceId}|${key}`)).filter((r): r is QulEntry => r !== undefined);
+      rowsServed += out.length;
+      return out;
+    },
+    // The text search self-heals the synthetic collection's index on first use.
+    async putQulEntries(entries: QulEntry[]) {
+      if (failIndex) throw new Error('index unwritable');
+      for (const entry of entries) store.set(entry.id, entry);
+    },
+    async getQulEntry(resourceId: string, key: string) {
+      return store.get(`${resourceId}|${key}`);
+    },
+    // The reference path reads the sunnah.com cache first; always empty here.
+    async getHadith() {
+      return undefined;
+    },
+  } as unknown as StorageAdapter;
+  const joinNotesForCheck = (...parts: string[]) => parts.join(' ');
+  const put = (entry: HadithJsonEntry) =>
+    store.set(`qul-short|bukhari:${entry.number}`, { id: `qul-short|bukhari:${entry.number}`, resourceId: 'qul-short', key: `bukhari:${entry.number}`, value: entry });
+  for (let n = 1; n <= COUNT; n++) put(row(n, [...chain, ...words(20)]));
+  // Two unrelated ḥadīth sharing a long run, for a long quotation the text
+  // search finds ambiguous (step 4's review of 15bcf20).
+  const sharedRun = words(14);
+  put(row(600, [...chain, ...words(12), ...sharedRun, ...words(12)]));
+  put(row(700, [...chain, ...words(12), ...sharedRun, ...words(12)]));
+  const reset = () => {
+    calls = 0;
+    rowsServed = 0;
+  };
+  const search = (cited: number, quotation = text(quote)) => findShortQuote(shortStorage, 'bukhari', cited, quotation);
+
+  const repeated = words(20);
+  put(withQuote(200, repeated));
+  reset();
+  const notNear = await search(1000);
+  expect('S2: no candidate in the window: only the window is read', notNear.result.status === 'none-near' && calls === 1 && rowsServed === 311 && notNear.rowsRead === 311, { notNear, calls, rowsServed });
+
+  put(withQuote(900, repeated));
+  reset();
+  const found = await search(1000);
+  expect(
+    'S2: a candidate in the window: the family is found over the whole collection',
+    found.result.status === 'matched' && found.result.entry.number === 900 && found.result.family.join() === '200,900' && found.result.distance === -100,
+    found.result,
+  );
+  expect('S2: rows read are the window plus every row, once', rowsServed === 311 + COUNT && found.rowsRead === rowsServed && calls === 1 + Math.ceil(COUNT / 500), { calls, rowsServed });
+
+  put(withQuote(100));
+  const twoFamilies = await search(1000);
+  expect('S2: an unrelated ḥadīth far outside the window with the phrase makes it ambiguous', twoFamilies.result.status === 'ambiguous', twoFamilies.result);
+  put(row(100, [...chain, ...words(20)]));
+
+  reset();
+  const short = await search(1000, text(quote.slice(0, 2)));
+  expect('S2: a refused phrase reads nothing', short.result.status === 'too-short' && calls === 0);
+  const absent = await findShortQuote(shortStorage, 'muslim', 1000, text(quote));
+  expect('S2: a collection not imported reads nothing', absent.result.status === 'not-imported' && calls === 0);
+  const pastEnd = await search(COUNT + 400);
+  expect('S2: a cited number far past the file reads nothing and is not near', pastEnd.result.status === 'none-near' && calls === 0);
+
+  const lost = store.get('qul-short|bukhari:50')!;
+  store.delete('qul-short|bukhari:50');
+  let refusedShort = false;
+  try {
+    await search(1000);
+  } catch {
+    refusedShort = true;
+  }
+  store.set('qul-short|bukhari:50', lost);
+  expect('S2: a collection with a lost row is not judged (a lost row may hide a second family)', refusedShort);
+
+  failReads = true;
+  let threw = false;
+  try {
+    await search(1000);
+  } catch {
+    threw = true;
+  }
+  failReads = false;
+  expect('S2: a read that throws reaches the caller', threw);
+
+  // --------------------------------------------------- step 3: the card path
+  // enrichSegments over the same store, no sunnah.com key: the text search
+  // finds nothing for three words, so the short quotation decides.
+  const deps = {
+    http: { get: async () => { throw new Error('no network in check H'); } } as unknown as HttpClient,
+    storage: shortStorage,
+    quran: {} as QuranLookupOptions,
+    sunnahApiKey: '',
+    hadithScope: null,
+  };
+  const card = async (reference: string) =>
+    (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference }], deps))[0];
+
+  const farCard = await card('bukhari:1000');
+  expect(
+    'S3: a short quotation 100 behind the citation: its English under the collection’s name',
+    farCard.source === 'hadith-json' && farCard.english === 'english 900' && farCard.reference === 'Ṣaḥīḥ al-Bukhārī',
+    farCard,
+  );
+  expect(
+    'S3: …with the short-quotation note, the model’s citation and “quoted in part”',
+    farCard.note === joinNotesForCheck(hadithShortQuoteNote('Ṣaḥīḥ al-Bukhārī'), 'The model cited bukhari:1000.', HADITH_QUOTED_IN_PART),
+    farCard.note,
+  );
+  const closeCard = await card('bukhari:905');
+  expect('S3: within ten of a family member the model’s citation stands', closeCard.reference === 'bukhari:905' && closeCard.note === HADITH_QUOTED_IN_PART, closeCard);
+
+  // The owner's answer of 2026-11-23 (review of 13604c5): an ambiguity in the
+  // whole collection does not end the card. Here the phrase is in two
+  // families (200/900 and 1000), but the cited 1000 has it and none of its
+  // ten neighbours do, so the old exact-number rule still gives 1000's
+  // English, under the model's reference and with no short-quotation note.
+  put(withQuote(1000));
+  expect('S3: (the setup: the short search alone is ambiguous here)', (await search(1000)).result.status === 'ambiguous');
+  const exactHolds = await card('bukhari:1000');
+  expect(
+    'S3: ambiguous in the collection, but the old exact-number rule holds: its English',
+    exactHolds.english === 'english 1000' && exactHolds.source === 'hadith-json' && exactHolds.reference === 'bukhari:1000' && exactHolds.note === undefined,
+    exactHolds,
+  );
+  put(row(1000, [...chain, ...words(20)]));
+
+  const BUKHARI = 'Ṣaḥīḥ al-Bukhārī';
+  put(withQuote(100));
+  const ambiguousCard = await card('bukhari:1000');
+  expect(
+    'S4: in two ḥadīth and not at the cited number: no English, the ambiguity note and the key sentence',
+    ambiguousCard.english === '' && ambiguousCard.note === joinNotesForCheck(hadithShortAmbiguousNote(BUKHARI), HADITH_KEY_WOULD_HELP),
+    ambiguousCard,
+  );
+  const alsoMuslim = await card('bukhari:1000; muslim:5');
+  expect(
+    'S4: a collection not imported also cited: the same note (the reference path ran and found nothing)',
+    alsoMuslim.english === '' && alsoMuslim.note === ambiguousCard.note,
+    alsoMuslim,
+  );
+  put(row(100, [...chain, ...words(20)]));
+
+  // Only the short search's full read fails: the old number path reads the
+  // same store, and a store that fails every read was never survivable.
+  failFullRead = true;
+  const failedCard = await card('bukhari:1000');
+  failFullRead = false;
+  expect('S3: a failed full read counts as not searched: the old key note, not a thrown card', failedCard.english === '' && failedCard.note === HADITH_NEEDS_KEY, failedCard);
+
+  // ---------------------------------------------- step 4: the truthful notes
+  const noneNear = await card('bukhari:3000');
+  expect(
+    'S4: nothing near the cited number: says so, with the key sentence',
+    noneNear.english === '' && noneNear.source === undefined &&
+      noneNear.note === joinNotesForCheck(hadithImportedMissNote({ status: 'none-near', name: BUKHARI, number: '3000', entryCount: COUNT }), HADITH_KEY_WOULD_HELP),
+    noneNear,
+  );
+  expect('S4: …and that note names the number and the file', (noneNear.note ?? '').startsWith(`No ḥadīth of the imported ${BUKHARI} near number 3000 contains these words`), noneNear.note);
+  const tooShort = (await enrichSegments([{ type: 'hadith', arabic: text(quote.slice(0, 2)), english: '', reference: 'bukhari:900' }], deps))[0];
+  expect('S4: two words: too short to identify, in the imported collection', (tooShort.note ?? '').startsWith(`The quotation is too short to identify by its text in the imported ${BUKHARI}.`), tooShort);
+  const long = text(words(20));
+  const different = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:500' }], deps))[0];
+  expect(
+    'S4: a long quotation that matched nothing: the ḥadīth at the cited number and its neighbours are different ones',
+    (different.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and the ḥadīth at and around number 500 (up to 10 either side) are different ones.`) && (different.note ?? '').endsWith(HADITH_KEY_WOULD_HELP),
+    different,
+  );
+  const pastTheEnd = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:5000' }], deps))[0];
+  expect('S4: …and past the file’s end: the file has no ḥadīth of that number', (pastTheEnd.note ?? '').startsWith(`No ḥadīth in the imported ${BUKHARI} matched this text, and the file has no ḥadīth numbered 5000.`), pastTheEnd);
+  // The review of 15bcf20: the "matched nothing" note only where the text
+  // search really searched the collection and found no candidate, and "the
+  // ḥadīth at N … are different ones" only where the number path compared
+  // text.
+  forgetLoadedIndexes();
+  failIndex = true;
+  const unloaded = (await enrichSegments([{ type: 'hadith', arabic: long, english: '', reference: 'bukhari:500' }], deps))[0];
+  failIndex = false;
+  forgetLoadedIndexes();
+  expect('S4: the index would not load: no claim that nothing matched, the old note', unloaded.note === HADITH_NEEDS_KEY, unloaded);
+  const sharedQuote = text(sharedRun);
+  const ambiguousBeside = (await enrichSegments([{ type: 'hadith', arabic: sharedQuote, english: '', reference: 'bukhari:500; muslim:5' }], deps))[0];
+  expect(
+    'S4: the text search ambiguous beside a citation it did not search: no claim that nothing matched',
+    ambiguousBeside.english === '' && ambiguousBeside.note === HADITH_NEEDS_KEY,
+    ambiguousBeside,
+  );
+  const cutShort = (await enrichSegments([{ type: 'hadith', arabic: `${text(quote)} رواه ${text(words(10))}`, english: '', reference: 'bukhari:500' }], deps))[0];
+  expect(
+    'S4: a long text the stripper cuts to three words: nothing said about the ḥadīth at the number',
+    cutShort.note === joinNotesForCheck(`No ḥadīth in the imported ${BUKHARI} matched this text. A model-generated translation is deliberately not substituted.`, HADITH_KEY_WOULD_HELP),
+    cutShort,
+  );
+  expect(
+    'S4: too common is its own note',
+    hadithImportedMissNote({ status: 'common', name: BUKHARI, number: '1', entryCount: COUNT }).startsWith(`These words are too common in the imported ${BUKHARI}`),
+  );
+
+  // With a key set, sunnah.com was asked (and failed here): no key sentence.
+  const withKey = {
+    ...deps,
+    sunnahApiKey: 'fake-key-for-check-h',
+    http: { get: async () => ({ ok: false, status: 500, body: '' }) } as unknown as HttpClient,
+  };
+  const keyed = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'bukhari:3000' }], withKey))[0];
+  expect('S4: a key set: the reason, and no key sentence', keyed.note === hadithImportedMissNote({ status: 'none-near', name: BUKHARI, number: '3000', entryCount: COUNT }), keyed);
+
+  // Mālik is never asked of sunnah.com: an imported Mālik miss gets no key sentence.
+  includeMalik = true;
+  const malik = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'malik:900' }], deps))[0];
+  includeMalik = false;
+  expect(
+    'S4: Mālik cited and imported: the reason, and no key sentence',
+    (malik.note ?? '').startsWith('No ḥadīth of the imported') && !(malik.note ?? '').includes(HADITH_KEY_WOULD_HELP),
+    malik,
+  );
+  const nothingImported = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'abudawud:5' }], deps))[0];
+  expect('S4: the cited collection not imported: the old key note, unchanged', nothingImported.note === HADITH_NEEDS_KEY, nothingImported);
+
+  // ------------------------------------------ step 5: taps and on device
+  // The sheet (lookupByText, lookupHadith) and the on-device translator
+  // (findShortByReference, then lookupByText) over the same store: the same
+  // ḥadīth as the card for the same quotation and number.
+  const scoped = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote));
+  expect(
+    'S5: a tap in a sharḥ with the book’s number: the card’s ḥadīth, marked a short quotation, quoted in part',
+    scoped.local?.english === farCard.english && scoped.text.status === 'matched' && scoped.text.short === true && scoped.text.partial && scoped.text.repetitions === 1,
+    scoped,
+  );
+  const unnumbered = await lookupByText(shortStorage, { collection: 'bukhari' }, text(quote));
+  expect('S5: with no number the short search cannot run: no match', unnumbered.local === null && unnumbered.text.status === 'no-match', unnumbered.text);
+  const twoWords = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote.slice(0, 2)));
+  expect('S5: two words: too short', twoWords.text.status === 'too-short', twoWords.text);
+  const twoWordsUnnumbered = await lookupByText(shortStorage, { collection: 'bukhari' }, text(quote.slice(0, 2)));
+  expect('S5: …too short with no number as well', twoWordsUnnumbered.text.status === 'too-short', twoWordsUnnumbered.text);
+  const farNumber = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 3000 }, text(quote));
+  expect('S5: nothing near the book’s number: none-near', farNumber.text.status === 'none-near', farNumber.text);
+
+  const byReference = await findShortByReference(shortStorage, 'bukhari:1000', text(quote));
+  expect('S5: on device, by the collection reference: the same English', byReference?.local.english === farCard.english, byReference);
+  expect('S5: a book-scoped reference is not a collection reference', (await findShortByReference(shortStorage, 'book-x#1000', text(quote))) === null);
+  const tapped = await lookupHadith(
+    deps.http,
+    shortStorage,
+    { reference: 'bukhari:1000', arabicText: text(quote) },
+    { online: false, preferred: 'hadith-json', sunnahApiKey: '' },
+  );
+  expect(
+    'S5: a tap on a collection reference: the same English, "identified by a short quotation"',
+    tapped.record?.english === farCard.english && tapped.record?.sourceId === 'hadith-json' && tapped.text?.status === 'matched' && tapped.text.short === true,
+    { record: tapped.record, text: tapped.text },
+  );
+  failFullRead = true;
+  const tapFailed = await findShortByReference(shortStorage, 'bukhari:1000', text(quote));
+  failFullRead = false;
+  expect('S5: a failed read on device is no match, not a thrown translation', tapFailed === null);
+
+  // The review of 677c4df: the tap keeps "old rules first" (findLocalHadith
+  // at the exact number wins over an ambiguous short search), and a phrase in
+  // more than MAX_POSTINGS ḥadīth reads `common` on the sheet, not "no match".
+  put(withQuote(1000));
+  const tapExact = await lookupHadith(
+    deps.http,
+    shortStorage,
+    { reference: 'bukhari:1000', arabicText: text(quote) },
+    { online: false, preferred: 'hadith-json', sunnahApiKey: '' },
+  );
+  expect(
+    'S5: a tap where the short search is ambiguous but the exact number holds: that ḥadīth, not marked short',
+    tapExact.record?.english === 'english 1000' && tapExact.text === undefined,
+    { record: tapExact.record, text: tapExact.text },
+  );
+  put(row(1000, [...chain, ...words(20)]));
+  for (let n = 1100; n < 1100 + MAX_POSTINGS; n++) put(withQuote(n));
+  const tooCommon = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote));
+  expect('S5: in more than MAX_POSTINGS ḥadīth: common, not “no match”', tooCommon.text.status === 'common', tooCommon.text);
+  for (let n = 1100; n < 1100 + MAX_POSTINGS; n++) put(row(n, [...chain, ...words(20)]));
+
+  // On device (useTranslator): the matn given to the lookups is now the
+  // entity's own words (entityText), as on a tap, not its whole block. The
+  // block holds the three quoted words inside a longer paragraph (review of
+  // 677c4df; the owner's answer, 2026-11-23).
+  const paragraph = [...words(8), ...quote, ...words(8)];
+  const quoteStart = text(paragraph.slice(0, 8)).length + 1;
+  const block = { id: 'b1', order: 1, text: text(paragraph) } as unknown as Block;
+  const quoteEntity = {
+    id: 'e1', type: 'hadith', reference: 'bukhari:1000',
+    startBlockId: 'b1', startOffset: quoteStart, endBlockId: 'b1', endOffset: quoteStart + text(quote).length,
+  } as unknown as Entity;
+  expect('S5: entityText gives the quoted words', entityText(quoteEntity, [block]) === text(quote), entityText(quoteEntity, [block]));
+  const fromEntity = await findShortByReference(shortStorage, 'bukhari:1000', entityText(quoteEntity, [block]));
+  const fromBlock = await findShortByReference(shortStorage, 'bukhari:1000', block.text);
+  expect(
+    'S5: on device the entity’s words find the card’s ḥadīth; the whole block would not',
+    fromEntity?.local.english === farCard.english && fromBlock === null,
+    { fromEntity, fromBlock },
+  );
 }
 
 // ------------------------------------------------------------------- summary

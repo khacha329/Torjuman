@@ -247,6 +247,14 @@ const SYNTHETIC_COLLECTION = [
   // entry by text (step T1).
   HADITH_QUOTE.replace(/[«»]/g, ''),
 ];
+// Short quotations (docs/plans/hadith-short-quote.md, step 3), taken from the
+// entries above so the rows, and every earlier scenario, stay as they were:
+// three words only the fourth entry has, and three both shared-wording entries
+// have.
+const SHORT_QUOTE = 'الماء والزرع والمطر';
+const SHORT_SHARED = 'الكلمات التجريبية في';
+// Step 4: a matn written for this check that no entry above holds.
+const UNMATCHED_MATN = 'جملة تجريبية مخترعة لا توجد في المجموعة أبدا ولا يشبهها شيء من نصوصها المصنوعة';
 function sharhRows() {
   const at = FIXED_NOW - 86_400_000;
   const id = 'qul-p-bukhari';
@@ -1168,6 +1176,15 @@ function sharhGroup(provider) {
     await once('other-collection', 'block 4 → Translate: the same matn, the model citing «Ṣaḥīḥ Muslim 9999» (not imported): found by text in Bukhārī all the same, the collection name, and "The model cited …"', 3, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ Muslim 9999')]);
     await once('ambiguous', 'block 9 → Translate: a wording two invented ḥadīth share: no English, the ambiguity note naming the collection (no number: not citable)', 8, [hadith(SYNTHETIC_SHARED, null)]);
     await once('ambiguous-cited-elsewhere', 'block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; the plain build refuses the proxy-only host, and with a proxy set the request is aborted)', 10, [hadith(SYNTHETIC_SHARED, 'Ṣaḥīḥ Muslim 5')], { note: 'No verified English translation was retrieved from sunnah.com', sunnahAllowed: true });
+    // docs/plans/hadith-short-quote.md, step 3: three words, too few for the
+    // text search, found from the citation. Blocks 6 and 12 have no other
+    // scenario, so no card here is a cache hit of another.
+    await once('short-quote', 'block 6 → Translate: three words of the fourth invented entry, cited «Ṣaḥīḥ al-Bukhārī 200», far past it: found as a short quotation in the whole synthetic collection; its English, "Ṣaḥīḥ al-Bukhārī" with no number, the short-quotation note, "The model cited …" and "quoted in part"; no sunnah.com request', 5, [hadith(SHORT_QUOTE, 'Ṣaḥīḥ al-Bukhārī 200')], { note: 'Identified by a short quotation' });
+    await once('short-quote-ambiguous', 'block 12 → Translate: three words the third and fifth invented entries share, cited «Ṣaḥīḥ al-Bukhārī 4»: two ḥadīth hold them, which does not end the card (the owner\'s answer, 2026-11-23): sunnah.com gets its turn (refused by the plain build, as above) and the old exact-number rule finds the words not at 4, so no English and the short-quotation ambiguity note', 11, [hadith(SHORT_SHARED, 'Ṣaḥīḥ al-Bukhārī 4')], { note: 'These few words occur in more than one ḥadīth', sunnahAllowed: true });
+    // Step 4: a long matn the collection does not have, cited at a number it
+    // does: the note says what the import found there, not "a key is
+    // needed" (a key is set in this group, so no key sentence either).
+    await once('imported-miss', 'block 7 → Translate: an invented matn found nowhere in the synthetic Bukhārī, cited «Ṣaḥīḥ al-Bukhārī 3»: no English, and the note that the imported collection matched nothing and the ḥadīth at and around 3 (up to ten either side) are different ones', 6, [hadith(UNMATCHED_MATN, 'Ṣaḥīḥ al-Bukhārī 3')], { note: 'No ḥadīth in the imported Ṣaḥīḥ al-Bukhārī matched this text, and the ḥadīth at and around number 3 (up to 10 either side) are different ones.', sunnahAllowed: true });
     const { hadiths } = await dumpDatabase(page, ['hadiths']);
     if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
 

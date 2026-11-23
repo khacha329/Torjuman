@@ -7,6 +7,7 @@ import { narratorIn } from './narrator';
 import { composeEnglish, findLocalHadith, HADITH_JSON_ATTRIBUTION, hadithJsonCollection } from './hadithJson';
 import { loadHadithIndexes, searchHadithText, type IndexProgress } from './hadithTextIndex';
 import { QUOTED_IN_PART_BELOW } from './hadithText';
+import { findShortQuote, shortQuotePhrase } from './hadithShortQuote';
 import { recordRetrieval } from '../services/retrievalLog';
 
 // The seam between the app and whichever service knows about a ḥadīth.
@@ -57,8 +58,22 @@ export interface HadithQuery {
 
 /** What the text search in the book's collection came to, for the sheet's wording. */
 export type TextLookup =
-  | { status: 'matched'; collection: string; partial: boolean; repetitions: number }
-  | { status: 'no-match' | 'ambiguous' | 'not-imported'; collection: string };
+  | {
+      status: 'matched';
+      collection: string;
+      partial: boolean;
+      repetitions: number;
+      /** Found as a short quotation from a number (docs/plans/hadith-short-quote.md). */
+      short?: true;
+    }
+  | {
+      // `too-short`: under three words or twelve letters, so neither search
+      // can take it; `none-near`: a short quotation that no ḥadīth near the
+      // book's number contains; `common`: a short quotation in more than
+      // MAX_POSTINGS ḥadīth (Design 7, for the sheet).
+      status: 'no-match' | 'ambiguous' | 'not-imported' | 'too-short' | 'none-near' | 'common';
+      collection: string;
+    };
 
 export interface HadithLookupResult {
   record: HadithRecord | null;
@@ -156,6 +171,16 @@ export async function lookupHadith(
       }
     : null;
   let text: TextLookup | undefined;
+  if (!local && query.reference) {
+    // A collection reference whose number did not confirm (a Riyāḍ or Forty
+    // number, say): the same short-quotation search the card runs, so a tap
+    // and a card agree (Q19; docs/plans/hadith-short-quote.md, step 5).
+    const short = await findShortByReference(storage, query.reference, query.arabicText);
+    if (short) {
+      local = short.local;
+      text = short.text;
+    }
+  }
   if (!local && query.scope && query.arabicText.trim() !== '') {
     const found = await lookupByText(storage, query.scope, query.arabicText, options.onIndexProgress);
     local = found.local;
@@ -291,7 +316,27 @@ export async function lookupByText(
     const chosen = result.chosen;
     const entry = chosen ? result.entries.get(`${chosen.collection}:${chosen.number}`) : undefined;
     const english = entry ? composeEnglish(entry) : '';
-    if (!chosen || english === '') return { local: null, text: { status: 'no-match', collection } };
+    if (chosen && english === '') return { local: null, text: { status: 'no-match', collection } };
+    if (!chosen) {
+      // No candidate from the text search (a quotation too short for it, or
+      // one that matched nothing): the short-quotation search, from the
+      // book's printed number, as the card runs it from a cited one. Without
+      // a number it cannot run (a short phrase alone is the wrong ḥadīth as
+      // often as the right one: plan, M2).
+      if (scope.numberHint !== undefined) {
+        try {
+          const short = await shortFromSearch(storage, collection, scope.numberHint, arabicText);
+          if (short.found) return short.found;
+          return { local: null, text: { status: short.miss, collection } };
+        } catch (error) {
+          recordFailure(collection, error, 'short');
+          return { local: null, text: { status: 'no-match', collection } };
+        }
+      }
+      const phrase = shortQuotePhrase(arabicText);
+      const tooShort = 'refused' in phrase && phrase.refused !== 'too-long';
+      return { local: null, text: { status: tooShort ? 'too-short' : 'no-match', collection } };
+    }
     return {
       local: {
         english,
@@ -312,12 +357,77 @@ export async function lookupByText(
   }
 }
 
-function recordFailure(collection: string, error: unknown): void {
+const COLLECTION_REFERENCE = /^([a-z0-9]+):(\d+)$/;
+
+/**
+ * A short quotation found from a collection reference («riyadussalihin:12»),
+ * for the sheet and the on-device translator alike; null when the reference
+ * is not a collection's, nothing matched, or the read failed (logged).
+ */
+export async function findShortByReference(
+  storage: StorageAdapter,
+  reference: string,
+  arabicText: string,
+): Promise<{ local: LocalEnglish; text: TextLookup } | null> {
+  const parsed = COLLECTION_REFERENCE.exec(reference);
+  if (!parsed || !hadithJsonCollection(parsed[1]) || arabicText.trim() === '') return null;
+  try {
+    return (await shortFromSearch(storage, parsed[1], Number(parsed[2]), arabicText)).found;
+  } catch (error) {
+    recordFailure(parsed[1], error, 'short');
+    return null;
+  }
+}
+
+/** One short-quotation search, as the sheet's answer. A read that throws reaches the caller. */
+async function shortFromSearch(
+  storage: StorageAdapter,
+  collection: string,
+  cited: number,
+  arabicText: string,
+): Promise<{
+  found: { local: LocalEnglish; text: TextLookup } | null;
+  miss: 'no-match' | 'too-short' | 'none-near' | 'ambiguous' | 'common';
+}> {
+  const { result } = await findShortQuote(storage, collection, cited, arabicText);
+  if (result.status === 'matched') {
+    const english = composeEnglish(result.entry);
+    if (english !== '') {
+      return {
+        found: {
+          local: {
+            english,
+            collection,
+            citable: hadithJsonCollection(collection)?.citableNumbers ?? false,
+            number: result.entry.number,
+          },
+          // Three to five words of a ḥadīth are always a part of it.
+          text: { status: 'matched', collection, partial: true, repetitions: result.family.length - 1, short: true },
+        },
+        miss: 'no-match',
+      };
+    }
+  }
+  const miss =
+    result.status === 'too-short' || result.status === 'empty'
+      ? 'too-short'
+      : result.status === 'none-near'
+        ? 'none-near'
+        : result.status === 'ambiguous'
+          ? 'ambiguous'
+          : result.status === 'common'
+            ? 'common'
+            : 'no-match';
+  return { found: null, miss };
+}
+
+function recordFailure(collection: string, error: unknown, search: 'text' | 'short' = 'text'): void {
+  const name = search === 'text' ? 'text search' : 'short-quotation search';
   recordRetrieval({
     kind: 'hadith',
     outcome: 'lookup-failed',
-    query: `text search in ${collection}`,
-    summary: 'The text search could not run, so it gives no English for this ḥadīth.',
+    query: `${name} in ${collection}`,
+    summary: `The ${name} could not run, so it gives no English for this ḥadīth.`,
     detail: [['error', error instanceof Error ? error.message : String(error)]],
   });
 }

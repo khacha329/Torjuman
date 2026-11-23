@@ -10,8 +10,9 @@ import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { findLocalHadith } from '../../retrieval/hadithJson';
-import { lookupByText } from '../../retrieval/HadithSource';
+import { findShortByReference, lookupByText } from '../../retrieval/HadithSource';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
+import { entityText } from '../../quran/entityService';
 import {
   applyProseTranslations,
   segmentSelection,
@@ -176,7 +177,17 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             ? Infinity
             : Math.max(startOrder, endOrder);
         if (entityLast < firstOrder || entityFirst > lastOrder) continue;
-        references.set(entity.reference, blockTexts.get(entity.startBlockId) ?? '');
+        // The entity's own words, as a tap gives the sheet (`entityText`, in
+        // ReaderSheets), not its whole start block: a three-word quotation in
+        // a longer paragraph was refused as too long by the short-quotation
+        // search, so on device it never ran while a tap found it (review of
+        // 677c4df; the owner's answer, 2026-11-23). The start block stays the
+        // fallback where the entity's span gives nothing (an end block not in
+        // the book, or an empty range); a missing start block gives '' either way.
+        references.set(
+          entity.reference,
+          entityText(entity, blocks) || (blockTexts.get(entity.startBlockId) ?? ''),
+        );
       }
       // The book's collection, for a ḥadīth its reference does not find (step
       // T2): a sharḥ of one of the six main books, whose references are
@@ -196,6 +207,10 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           if (record?.english) return [reference, record, null] as const;
           const byNumber = await findLocalHadith(storage, reference, matn);
           if (byNumber) return [reference, record, byNumber.english] as const;
+          // A short quotation from its collection reference, as the sheet and
+          // the card find it (docs/plans/hadith-short-quote.md, step 5).
+          const byShort = await findShortByReference(storage, reference, matn);
+          if (byShort) return [reference, record, byShort.local.english] as const;
           if (!scope) return [reference, record, null] as const;
           const printed = /[#:](\d+)$/.exec(reference)?.[1];
           const byText = await lookupByText(

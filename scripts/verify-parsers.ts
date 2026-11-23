@@ -6009,7 +6009,11 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     const bukhari = {
       ...fake,
       async listQulResources() {
-        return [{ id: 'r', kind: 'hadith-json', collection: 'bukhari' }];
+        // entryCount as a real import has it: the short-quotation search
+        // (docs/plans/hadith-short-quote.md) reads by it, and without it saw
+        // an empty window here, so the owner's case below never reached it
+        // (review of 13604c5).
+        return [{ id: 'r', kind: 'hadith-json', collection: 'bukhari', entryCount: bukhariRows.length }];
       },
       async getQulEntries(_id: string, keys: string[]) {
         return bukhariRows.filter((row) => keys.includes(row.key));
@@ -6044,7 +6048,10 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
       [owner.english, owner.source, owner.reference],
       ['Abu Huraira reported: English of 3', 'hadith-json', 'Ṣaḥīḥ al-Bukhārī 3; Ṣaḥīḥ Muslim 1907'],
     );
-    check('  and, found, it carries no note about a quotation running on', owner.note, undefined);
+    // Found now as a short quotation at the cited number (distance 0), so the
+    // model's list stands and the card says the three words are a part: a
+    // deliberate change of step 3, shown to the owner.
+    check('  and, found, its only note is that the quotation is a part', owner.note, 'Quoted in part; this is the whole ḥadīth.');
 
     // The Gemini card before its pieces were cut at quotes: the same segment
     // with commentary after the quotation (synthetic words here). Not found,
