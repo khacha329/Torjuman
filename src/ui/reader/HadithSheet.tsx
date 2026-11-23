@@ -307,7 +307,11 @@ export function HadithSheet({
           <p className="mt-2 text-[10px] text-muted">
             {record.sourceId === 'hadith-json' ? HADITH_JSON_ATTRIBUTION : 'sunnah.com'}
             {text?.status === 'matched' && (
-              <> · {collectionName(text.collection)}, identified by its text</>
+              <>
+                {' · '}
+                {collectionName(text.collection)},{' '}
+                {text.short ? 'identified by a short quotation' : 'identified by its text'}
+              </>
             )}
           </p>
           {text?.status === 'matched' && (text.partial || text.repetitions > 0) && (
@@ -332,6 +336,16 @@ export function HadithSheet({
           )}
           {text.status === 'ambiguous' && (
             <> This text matches more than one ḥadīth in {collectionName(text.collection)}, so none is shown.</>
+          )}
+          {text.status === 'too-short' && (
+            <> The quotation is too short to identify by its text in the imported {collectionName(text.collection)}.</>
+          )}
+          {text.status === 'none-near' && (
+            <>
+              {' '}
+              No ḥadīth of the imported {collectionName(text.collection)} near the number the book gives contains
+              these words; the file’s numbering may differ from the book’s.
+            </>
           )}
           {text.status === 'not-imported' && !readOnly && (
             <>

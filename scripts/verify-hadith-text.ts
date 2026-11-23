@@ -47,7 +47,7 @@ import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
-import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
+import { findShortByReference, lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
 import {
   enrichSegments,
   HADITH_KEY_WOULD_HELP,
@@ -1022,6 +1022,44 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   );
   const nothingImported = (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference: 'abudawud:5' }], deps))[0];
   expect('S4: the cited collection not imported: the old key note, unchanged', nothingImported.note === HADITH_NEEDS_KEY, nothingImported);
+
+  // ------------------------------------------ step 5: taps and on device
+  // The sheet (lookupByText, lookupHadith) and the on-device translator
+  // (findShortByReference, then lookupByText) over the same store: the same
+  // ḥadīth as the card for the same quotation and number.
+  const scoped = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote));
+  expect(
+    'S5: a tap in a sharḥ with the book’s number: the card’s ḥadīth, marked a short quotation, quoted in part',
+    scoped.local?.english === farCard.english && scoped.text.status === 'matched' && scoped.text.short === true && scoped.text.partial && scoped.text.repetitions === 1,
+    scoped,
+  );
+  const unnumbered = await lookupByText(shortStorage, { collection: 'bukhari' }, text(quote));
+  expect('S5: with no number the short search cannot run: no match', unnumbered.local === null && unnumbered.text.status === 'no-match', unnumbered.text);
+  const twoWords = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote.slice(0, 2)));
+  expect('S5: two words: too short', twoWords.text.status === 'too-short', twoWords.text);
+  const twoWordsUnnumbered = await lookupByText(shortStorage, { collection: 'bukhari' }, text(quote.slice(0, 2)));
+  expect('S5: …too short with no number as well', twoWordsUnnumbered.text.status === 'too-short', twoWordsUnnumbered.text);
+  const farNumber = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 3000 }, text(quote));
+  expect('S5: nothing near the book’s number: none-near', farNumber.text.status === 'none-near', farNumber.text);
+
+  const byReference = await findShortByReference(shortStorage, 'bukhari:1000', text(quote));
+  expect('S5: on device, by the collection reference: the same English', byReference?.local.english === farCard.english, byReference);
+  expect('S5: a book-scoped reference is not a collection reference', (await findShortByReference(shortStorage, 'book-x#1000', text(quote))) === null);
+  const tapped = await lookupHadith(
+    deps.http,
+    shortStorage,
+    { reference: 'bukhari:1000', arabicText: text(quote) },
+    { online: false, preferred: 'hadith-json', sunnahApiKey: '' },
+  );
+  expect(
+    'S5: a tap on a collection reference: the same English, "identified by a short quotation"',
+    tapped.record?.english === farCard.english && tapped.record?.sourceId === 'hadith-json' && tapped.text?.status === 'matched' && tapped.text.short === true,
+    { record: tapped.record, text: tapped.text },
+  );
+  failFullRead = true;
+  const tapFailed = await findShortByReference(shortStorage, 'bukhari:1000', text(quote));
+  failFullRead = false;
+  expect('S5: a failed read on device is no match, not a thrown translation', tapFailed === null);
 }
 
 // ------------------------------------------------------------------- summary

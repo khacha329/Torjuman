@@ -450,8 +450,20 @@ const SEARCH_WORD = 'متن';
  * itself, so the sheet finds it by text. No index is seeded: the sheet builds
  * it on first use, as a tablet with an older import does.
  */
+// The short-quotation states (docs/plans/hadith-short-quote.md, step 5): the
+// tapped entity narrowed to three words of the seeded matn. Fifteen letters
+// for a match; ten, under the twelve-letter floor, for "too short". The
+// rows are the "matched" state's, and «none-near» cites number 400, far
+// past the file's two rows.
+const SHORT_STATES = {
+  'short-matched': { words: 'حديث تجريبي للتحقق', number: 1 },
+  'short-too-short': { words: 'هذا متن حديث', number: 1 },
+  'short-none-near': { words: 'حديث تجريبي للتحقق', number: 400 },
+};
+
 function sharhCollectionRows(state) {
   if (state === 'not-imported') return {};
+  if (SHORT_STATES[state]) state = 'matched';
   const at = FIXED_NOW - 7_200_000;
   const quote = READER_HADITH.replace(/[«»]/g, '');
   const rest = (words) => words;
@@ -496,6 +508,7 @@ function seedReader({ compile = false, sharh = null } = {}) {
   });
   const narratorAt = READER_MATN.indexOf(READER_NARRATOR);
   const hadithAt = READER_MATN.indexOf(READER_HADITH);
+  const shortAt = SHORT_STATES[sharh] ? READER_MATN.indexOf(SHORT_STATES[sharh].words) : -1;
   const read = (index) => ({
     id: `mark-read-${index}`, bookId: BOOK, startBlockId: blocks[index].id, startOffset: 0,
     endBlockId: blocks[index].id, endOffset: blocks[index].text.length, kind: 'read', scope: 'block',
@@ -520,10 +533,15 @@ function seedReader({ compile = false, sharh = null } = {}) {
         entity('quran', 'quran', 1, 0, READER_VERSE.length, { reference: '14:2', label: 'إبراهيم 2', textUthmani: READER_VERSE }),
         // In a sharḥ of a non-citable collection the matn's reference is
         // book-scoped (detectEntities' `<bookId>#n`), its number the book's own.
-        entity('hadith', 'hadith', 2, hadithAt, hadithAt + READER_HADITH.length, {
-          reference: sharh ? `${BOOK}#1` : 'riyadussalihin:1',
-          ...(sharh ? { label: 'Ḥadīth 1' } : {}),
-        }),
+        SHORT_STATES[sharh]
+          ? entity('hadith', 'hadith', 2, shortAt, shortAt + SHORT_STATES[sharh].words.length, {
+              reference: `${BOOK}#${SHORT_STATES[sharh].number}`,
+              label: `Ḥadīth ${SHORT_STATES[sharh].number}`,
+            })
+          : entity('hadith', 'hadith', 2, hadithAt, hadithAt + READER_HADITH.length, {
+              reference: sharh ? `${BOOK}#1` : 'riyadussalihin:1',
+              ...(sharh ? { label: 'Ḥadīth 1' } : {}),
+            }),
         entity('narrator', 'narrator', 2, narratorAt, narratorAt + READER_NARRATOR.length, { reference: 'ابي هريره', label: READER_NARRATOR }),
       ],
       marks: [read(10), read(20), read(30)],
@@ -1159,6 +1177,10 @@ async function readerCaptures(fresh, profile, dir) {
     ['no-match', 'matched this text'],
     ['ambiguous', 'more than one ḥadīth'],
     ['not-imported', 'to find this ḥadīth by its text'],
+    // docs/plans/hadith-short-quote.md, step 5 (Q11).
+    ['short-matched', 'identified by a short quotation'],
+    ['short-too-short', 'too short to identify'],
+    ['short-none-near', 'near the number the book gives'],
   ]) {
     page = await open({ reader: { sharh: state } });
     await tap(page, page.locator('[data-entity-id="entity-hadith"]'));

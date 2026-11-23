@@ -99,9 +99,10 @@ export interface ImportedMiss {
  * The note for a card whose cited collection is imported and still gave no
  * English, saying which test failed, instead of blaming a missing key alone
  * (the owner's Bukhārī 6607 card: docs/plans/hadith-short-quote.md, Goal).
- * A quotation of six words or more (`too-long` here) is given a note only
- * where the text search really searched that collection and found no
- * candidate (`noCandidateIn`), and it says what the number path's
+ * A quotation the short search refuses as too long (six words or more, or
+ * a raw text over twelve words that the stripper may cut shorter) is given a
+ * note only where the text search really searched that collection and found
+ * no candidate (`noCandidateIn`), and it says what the number path's
  * ±NEIGHBOUR_WINDOW check found only when that check had text to compare
  * (`numberCompared`).
  */

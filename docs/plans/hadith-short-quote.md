@@ -571,6 +571,23 @@ an ambiguity beside an unsearched citation and the cut-short text.
   container); it is checked by reading and by H on the shared function.
   The tablet (M) shows it.
 
+**As built.** One helper, `findShortByReference(storage, reference, text)`
+in HadithSource.ts, serves the tap (`lookupHadith`, after `findLocalHadith`)
+and the on-device translator (`useTranslator`, after `findLocalHadith`):
+a collection reference («riyadussalihin:12», «bukhari:900») only, a failed
+read logged and no match. `lookupByText` runs the short search after a text
+search with no candidate, from the book's printed number; with no number it
+cannot run, and a too-short phrase reads `too-short` either way.
+`TextLookup` gains `short` on `matched` (always `partial`) and the
+`too-short` and `none-near` statuses; an ambiguous short search reads
+`ambiguous`. The sheet says "identified by a short quotation" and has the
+two new sentences. The P tap scenario turned out to stay identical, as
+planned (its matn is long). U gains three captures, HTML only as the earlier
+sheet states were (PNGs from this PC are not baselined):
+`reader-hadith-sharh-short-{matched,too-short,none-near}`, the tapped
+entity narrowed to three words of the seeded matn; the screenshots were read
+at both sizes. H adds 9 cases (174/174); S 30/30, R 70/70.
+
 ### Step 6 — measure and record
 
 - `scripts/measure-short-quote.ts` and `npm run measure:short-quote`: M1–M5 as
