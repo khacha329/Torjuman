@@ -308,6 +308,8 @@ the list of collections to search (the **scope**):
    also passes `agreement` today (`chooseCandidate`). That is number plus
    text, the proof the shipped path already uses. So when two families are
    ambiguous and exactly one of them holds that candidate, it is chosen.
+   **Since 2026-11-22 only for a hint in the dataset's numbering** (Riyāḍ,
+   the Forty): see the owner's answer to the review of 78a5be2.
 5. Result: `{ chosen, also[], ambiguous, candidates[], chain, coverageOfEntry,
    repetitions }`. `repetitions` is the number of other members of the
    chosen family in the same collection.
@@ -952,10 +954,11 @@ From the review of 78a5be2 (step T1), the owner answered on 2026-11-22:
 - **No tie-break by number in the six main books.** The ±`NEIGHBOUR_WINDOW`
   exception (Design 3.4) settles two near-equally matching families only
   when the hint is in the dataset's numbering (`NumberHint.inDatasetNumbering`,
-  true for citable collections: Riyāḍ and the Forty). A printed Bukhārī or
-  Muslim number, or a model's, still orders the copies of one ḥadīth but
-  never chooses between two; those stay ambiguous. Applies to the card path
-  and the sheet alike.
+  true for citable collections: Riyāḍ and the Forty). A Bukhārī or Muslim
+  number — printed in a sharḥ or given by the model — still orders the copies
+  of one ḥadīth but never chooses between two; those stay ambiguous. A Riyāḍ
+  or Forty number, printed or given by the model, still may. Applies to the
+  card path and the sheet alike.
 
 Recorded, not asked: the tiers are not a pure load optimisation (Design 6
 said "cannot change which English wins"). A tier-1 answer can differ from

@@ -242,7 +242,7 @@ export async function lookupHadith(
 }
 
 /** The English laid over a record, from either the reference or the text. */
-interface LocalEnglish {
+export interface LocalEnglish {
   english: string;
   collection: string;
   citable: boolean;
@@ -258,7 +258,7 @@ interface LocalEnglish {
  * goes to the retrieval log (Settings → Retrieval) as the card path's does.
  * Nothing is cached (the rule at the top of `lookupHadith`).
  */
-async function lookupByText(
+export async function lookupByText(
   storage: StorageAdapter,
   scope: NonNullable<HadithQuery['scope']>,
   arabicText: string,
