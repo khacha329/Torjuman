@@ -715,6 +715,10 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('S1: one entry 240 behind the cited number is matched', far.status === 'matched' && far.entry.number === 1000 && far.distance === -240, far);
   expect('S1: 400 behind is not near', choose(lone, 1400).status === 'none-near');
   expect('S1: 20 ahead is not near', choose(lone, 980).status === 'none-near');
+  expect('S1: exactly 300 behind is near', choose(lone, 1300).status === 'matched');
+  expect('S1: 301 behind is not', choose(lone, 1301).status === 'none-near');
+  expect('S1: exactly 10 ahead is near', choose(lone, 990).status === 'matched');
+  expect('S1: 11 ahead is not', choose(lone, 989).status === 'none-near');
   expect('S1: ±10 elsewhere: 240 behind is not near', choose(lone, 1240, citedWindowFor('muslim')).status === 'none-near');
   expect('S1: Bukhārī’s window is 300 behind and 10 ahead', bukhari.behind === 300 && bukhari.ahead === 10);
   expect('S1: every other collection keeps ±10', citedWindowFor('muslim').behind === 10 && citedWindowFor('muslim').ahead === 10);
@@ -757,8 +761,13 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('S1: three words under twelve letters are too short', refused('بتث جحخ دذر') === 'too-short');
   expect('S1: the honorific alone is empty', refused('صلى الله عليه وسلم') === 'empty');
   expect('S1: six words belong to the text search', refused(text(words(6))) === 'too-long');
-  expect('S1: more than twelve raw words is not a short quotation', refused(text(words(13))) === 'too-long');
-  expect('S1: a printed number before the quotation is dropped', refused(`١٢ - ${text(quote)}`) === 'phrase');
+  // A long matn the takhrīj stripper cuts back to the three quoted words: only
+  // the raw-word guard (FOUND_ISSUES 74) refuses it.
+  expect(
+    'S1: a long text stripped down to three words is not a short quotation',
+    refused(`${text(quote)} رواه ${text(words(10))}`) === 'too-long' && refused(`${text(quote)} رواه`) === 'phrase',
+  );
+  expect('S1: a printed number before the quotation is not counted as a word', refused(`١٢ - ${text(quote)}`) === 'phrase');
   expect('S1: no hits at all is none-near', chooseShortQuote([], 1000, bukhari).status === 'none-near');
 }
 

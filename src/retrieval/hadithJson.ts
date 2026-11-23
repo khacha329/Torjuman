@@ -84,15 +84,18 @@ export interface HadithJsonCollection {
   sharhTitles?: string[];
   /**
    * Where a cited number may land in this dataset, for a short quotation
-   * (`findShortQuote`): from `behind` below the cited number to `ahead` above
-   * it. Absent means ±NEIGHBOUR_WINDOW, the window the number path uses.
+   * (hadithShortQuote.ts): from `behind` below the cited number to `ahead`
+   * above it. Absent means ±NEIGHBOUR_WINDOW, the window the number path uses.
+   * Bukhārī's `ahead` is written as 10, not NEIGHBOUR_WINDOW, because this
+   * table is built before that constant is declared below.
    *
    * Only Bukhārī has one, because only its drift is measured: the file is
-   * behind the standard numbering by 0 at the start, 239 at standard 6406, 241
-   * at 6607 (the owner's «إنما الأعمال بالخواتيم», the file's 6366), 244 at
-   * 6682 and 286 at the end, and never ahead (`citableNumbers` above). So 300
-   * behind covers the end with margin, and 10 ahead covers small local
-   * disorder. Muslim's numbering is unrelated to the standard, and the other
+   * behind the standard numbering by 0 at the start, 239 at standard 6406, 244
+   * at 6682 and 286 at the end (`citableNumbers` above), and 241 at 6607 (the
+   * owner's «إنما الأعمال بالخواتيم», the file's 6366; measured for the plan,
+   * docs/plans/hadith-short-quote.md, Current state). None of those anchors
+   * has the file ahead. So 300 behind covers the end with margin, and 10
+   * ahead covers small local disorder. Muslim's numbering is unrelated to the standard, and the other
    * six were never measured, so they keep ±10 (owner's answers Q1 and Q13 of
    * docs/plans/hadith-short-quote.md). The window never chooses between two
    * ḥadīth: the phrase must already lie in one family of the whole

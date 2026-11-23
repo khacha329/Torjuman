@@ -437,6 +437,14 @@ touched.
   matched, on a middle word → no; a collection with no window → ±10 only.
 - Callers to update: none.
 
+**As built (e305547, and the review of it).** `containsShortQuote` takes a
+`FoldedEntry` (from a new `foldEntry`) so a scan folds each row once;
+`chooseShortQuote(hits, cited, window)` drops the unused phrase argument.
+Bukhārī's `ahead` is the literal 10: the registry is built before
+`NEIGHBOUR_WINDOW` is declared. H also pins the window's edges (300 and 10
+inside, 301 and 11 outside) and the raw-word guard on its own (a long text
+the takhrīj stripper cuts to three words).
+
 ### Step 2 — the read
 
 - `findShortQuote(storage, collection, cited, text, onProgress?)`: resource
