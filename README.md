@@ -204,6 +204,29 @@ needed; collections imported earlier build theirs on first use. The design,
 the measurements and the owner's answers are in
 `docs/plans/hadith-text-matching.md`.
 
+**Short quotations.** A sharḥ often quotes three words of a ḥadīth and names
+it in a footnote («إنما الأعمال بالخواتيم», Bukhārī 6607). That is too short
+for the text search (six words past the isnād) and, for Bukhārī, too far
+from the file's own position for the number path (the file has it at 6366).
+So a third search (`retrieval/hadithShortQuote.ts`) takes three to five words
+of at least twelve letters, and only with a cited or printed number: measured
+on the real files, a short phrase found in one ḥadīth is the wrong ḥadīth
+about as often as the right one, so the number has to carry half the proof.
+The phrase must lie, as whole words past the isnād (a «و» or «ف» fused to the
+first word allowed), in exactly one family of the *whole* collection, in no
+more than 25 ḥadīth, and that family must have a member near the cited
+number: up to 300 below and 10 above for Bukhārī, whose file runs behind the
+standard numbering, ±10 everywhere else. The number never chooses between
+two families. On a card a match comes before sunnah.com; an ambiguity does
+not end the card, and sunnah.com and the old number check still get their
+turn. Taps and on-device translation run the same search, and on device the
+lookups get the ḥadīth's own words, as a tap does. When a cited collection
+is imported and nothing matched, the card says why (too short, too common,
+nothing near the number, a different ḥadīth at it) instead of only asking
+for a sunnah.com key, which it mentions only where a key would make a
+request. `npm run measure:short-quote` re-measures the rule on the owner's
+PC; the plan is `docs/plans/hadith-short-quote.md`.
+
 ### Dependencies beyond the spec's list
 
 Three, all flagged rather than assumed:

@@ -181,8 +181,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         // ReaderSheets), not its whole start block: a three-word quotation in
         // a longer paragraph was refused as too long by the short-quotation
         // search, so on device it never ran while a tap found it (review of
-        // 677c4df; the owner's answer, 2026-11-23). The block stays the
-        // fallback for an entity whose blocks are not loaded.
+        // 677c4df; the owner's answer, 2026-11-23). The start block stays the
+        // fallback where the entity's span gives nothing (an end block not in
+        // the book, or an empty range); a missing start block gives '' either way.
         references.set(
           entity.reference,
           entityText(entity, blocks) || (blockTexts.get(entity.startBlockId) ?? ''),

@@ -21,8 +21,11 @@ import { stripApparatus } from './sharh';
 // other half of the proof: the phrase must lie in exactly one family of the
 // WHOLE collection (not only near the number: five times more wrong answers,
 // M3), and that family must have a member in the window around the cited
-// number. With the matn-only and twelve-letter rules below, about 1 in 2,900
-// three-word quotations under a wrong citation was accepted.
+// number. Measured with the rule as shipped (`npm run measure:short-quote`,
+// 2026-11-23): under a uniformly random Bukhārī citation, 6 of 1,008
+// accepted three-word phrases from other collections matched the wrong
+// ḥadīth (8 of 1,813 at four words, 4 of 1,864 at five); a real citation is
+// far from random, so that is the pessimistic bound.
 // ---------------------------------------------------------------------------
 
 /** Fewest letters a short quotation must have (M3: removes most 3-word errors). */

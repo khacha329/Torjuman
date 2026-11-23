@@ -604,10 +604,11 @@ sentence; a failed short search is logged under its own name.
 Known and left (review of 677c4df, rare): the card runs the short search
 before the number path, the tap after it (the owner's "old rules first"
 keeps the tap's order). Where both accept, they can pick different members
-of one family: the number path takes N+d before N−d on a tie and matches
-`shortQuoteHolds` as a raw substring (chain included); the short search
-takes the lower number and only whole words past the isnād. Same ḥadīth,
-possibly a different copy's English.
+of one family: the number path takes N+d before N−d on a tie (only for four
+or five words, which shingle; three words it accepts only at N itself) and
+matches `shortQuoteHolds` over the unstripped Arabic (chain included); the
+short search takes the lower number and only whole words past the isnād.
+Same ḥadīth, possibly a different copy's English.
 
 ### Step 6 — measure and record
 
@@ -620,6 +621,28 @@ possibly a different copy's English.
   family, the notes.
 - This plan: a "measured" record from the script.
 - The owner: `npm run verify` (V), the script, and the tablet (M).
+
+**Measured (2026-11-23, this PC, `npm run measure:short-quote`, the rule as
+shipped; seeded).** Counts only.
+- M5: fold times as before (Bukhārī 279 ms, Muslim 232 ms); one phrase over
+  folded Bukhārī 4.4 ms.
+- M4: the owner's case matched at 6366, distance −241. «إنما الأعمال
+  بالنيات» matched at 1 when cited at 1 and is `none-near` cited at 6607.
+  «قال رسول الله» is refused before any search as too short (eleven letters:
+  the letter floor, not the 25-entry cap, stops it). The honorific alone is
+  refused as empty. 125 Mālik rows have no Arabic; 15 Bukhārī rows read as
+  all isnād.
+- M1, one family among phrases the rule accepts (3 / 4 / 5 words): Bukhārī
+  108/169, 218/280, 225/287; Muslim 106/156, 225/277, 242/272; the rest in
+  between (the script prints all ten).
+- M3, Bukhārī, the whole rule under a uniformly random citation: wrong 6 of
+  1,008 accepted 3-word phrases, 8 of 1,813 at 4, 4 of 1,864 at 5. Recall
+  with the modelled drift: 217 of 332, 412 of 552, 460 of 573. The denominator
+  here is phrases the rule accepts (a 3-word phrase under twelve letters is
+  not counted); the design-time M3 above counted every sample, so its "1 in
+  ~2,900" and this 6 in 1,008 are not the same ratio. About 1 in 170 accepted
+  3-word quotations under a random citation is the wrong ḥadīth; a real
+  citation is far from random, so this is the pessimistic bound.
 
 ## Checks
 
