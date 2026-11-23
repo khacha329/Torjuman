@@ -1060,6 +1060,27 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const tapFailed = await findShortByReference(shortStorage, 'bukhari:1000', text(quote));
   failFullRead = false;
   expect('S5: a failed read on device is no match, not a thrown translation', tapFailed === null);
+
+  // The review of 677c4df: the tap keeps "old rules first" (findLocalHadith
+  // at the exact number wins over an ambiguous short search), and a phrase in
+  // more than MAX_POSTINGS ḥadīth reads `common` on the sheet, not "no match".
+  put(withQuote(1000));
+  const tapExact = await lookupHadith(
+    deps.http,
+    shortStorage,
+    { reference: 'bukhari:1000', arabicText: text(quote) },
+    { online: false, preferred: 'hadith-json', sunnahApiKey: '' },
+  );
+  expect(
+    'S5: a tap where the short search is ambiguous but the exact number holds: that ḥadīth, not marked short',
+    tapExact.record?.english === 'english 1000' && tapExact.text === undefined,
+    { record: tapExact.record, text: tapExact.text },
+  );
+  put(row(1000, [...chain, ...words(20)]));
+  for (let n = 1100; n < 1100 + MAX_POSTINGS; n++) put(withQuote(n));
+  const tooCommon = await lookupByText(shortStorage, { collection: 'bukhari', numberHint: 1000 }, text(quote));
+  expect('S5: in more than MAX_POSTINGS ḥadīth: common, not “no match”', tooCommon.text.status === 'common', tooCommon.text);
+  for (let n = 1100; n < 1100 + MAX_POSTINGS; n++) put(row(n, [...chain, ...words(20)]));
 }
 
 // ------------------------------------------------------------------- summary

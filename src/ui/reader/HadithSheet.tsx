@@ -347,6 +347,9 @@ export function HadithSheet({
               these words; the file’s numbering may differ from the book’s.
             </>
           )}
+          {text.status === 'common' && (
+            <> These words are too common in the imported {collectionName(text.collection)} to identify one ḥadīth.</>
+          )}
           {text.status === 'not-imported' && !readOnly && (
             <>
               {' '}

@@ -69,8 +69,9 @@ export type TextLookup =
   | {
       // `too-short`: under three words or twelve letters, so neither search
       // can take it; `none-near`: a short quotation that no ḥadīth near the
-      // book's number contains (Design 7, for the sheet).
-      status: 'no-match' | 'ambiguous' | 'not-imported' | 'too-short' | 'none-near';
+      // book's number contains; `common`: a short quotation in more than
+      // MAX_POSTINGS ḥadīth (Design 7, for the sheet).
+      status: 'no-match' | 'ambiguous' | 'not-imported' | 'too-short' | 'none-near' | 'common';
       collection: string;
     };
 
@@ -317,14 +318,20 @@ export async function lookupByText(
     const english = entry ? composeEnglish(entry) : '';
     if (chosen && english === '') return { local: null, text: { status: 'no-match', collection } };
     if (!chosen) {
-      // Too short for the text search: the short-quotation search, from the
+      // No candidate from the text search (a quotation too short for it, or
+      // one that matched nothing): the short-quotation search, from the
       // book's printed number, as the card runs it from a cited one. Without
       // a number it cannot run (a short phrase alone is the wrong ḥadīth as
       // often as the right one: plan, M2).
       if (scope.numberHint !== undefined) {
-        const short = await shortFromSearch(storage, collection, scope.numberHint, arabicText);
-        if (short.found) return short.found;
-        return { local: null, text: { status: short.miss, collection } };
+        try {
+          const short = await shortFromSearch(storage, collection, scope.numberHint, arabicText);
+          if (short.found) return short.found;
+          return { local: null, text: { status: short.miss, collection } };
+        } catch (error) {
+          recordFailure(collection, error, 'short');
+          return { local: null, text: { status: 'no-match', collection } };
+        }
       }
       const phrase = shortQuotePhrase(arabicText);
       const tooShort = 'refused' in phrase && phrase.refused !== 'too-long';
@@ -367,7 +374,7 @@ export async function findShortByReference(
   try {
     return (await shortFromSearch(storage, parsed[1], Number(parsed[2]), arabicText)).found;
   } catch (error) {
-    recordFailure(parsed[1], error);
+    recordFailure(parsed[1], error, 'short');
     return null;
   }
 }
@@ -378,7 +385,10 @@ async function shortFromSearch(
   collection: string,
   cited: number,
   arabicText: string,
-): Promise<{ found: { local: LocalEnglish; text: TextLookup } | null; miss: 'no-match' | 'too-short' | 'none-near' | 'ambiguous' }> {
+): Promise<{
+  found: { local: LocalEnglish; text: TextLookup } | null;
+  miss: 'no-match' | 'too-short' | 'none-near' | 'ambiguous' | 'common';
+}> {
   const { result } = await findShortQuote(storage, collection, cited, arabicText);
   if (result.status === 'matched') {
     const english = composeEnglish(result.entry);
@@ -405,16 +415,19 @@ async function shortFromSearch(
         ? 'none-near'
         : result.status === 'ambiguous'
           ? 'ambiguous'
-          : 'no-match';
+          : result.status === 'common'
+            ? 'common'
+            : 'no-match';
   return { found: null, miss };
 }
 
-function recordFailure(collection: string, error: unknown): void {
+function recordFailure(collection: string, error: unknown, search: 'text' | 'short' = 'text'): void {
+  const name = search === 'text' ? 'text search' : 'short-quotation search';
   recordRetrieval({
     kind: 'hadith',
     outcome: 'lookup-failed',
-    query: `text search in ${collection}`,
-    summary: 'The text search could not run, so it gives no English for this ḥadīth.',
+    query: `${name} in ${collection}`,
+    summary: `The ${name} could not run, so it gives no English for this ḥadīth.`,
     detail: [['error', error instanceof Error ? error.message : String(error)]],
   });
 }

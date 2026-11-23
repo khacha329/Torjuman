@@ -443,6 +443,17 @@ const CACHED_WORD = 'تجريبي';
 const UNCACHED_WORD = 'الفقرة';
 const SEARCH_WORD = 'متن';
 
+// The short-quotation states (docs/plans/hadith-short-quote.md, step 5): the
+// tapped entity narrowed to three words of the seeded matn. Sixteen letters
+// for a match; ten, under the twelve-letter floor, for "too short". The
+// rows are the "matched" state's, and «none-near» cites number 400, far
+// past the file's three rows.
+const SHORT_STATES = {
+  'short-matched': { words: 'حديث تجريبي للتحقق', number: 1 },
+  'short-too-short': { words: 'هذا متن حديث', number: 1 },
+  'short-none-near': { words: 'حديث تجريبي للتحقق', number: 400 },
+};
+
 /**
  * The hadith-json rows for a reader seeded as a sharḥ of Bukhārī (step T1 of
  * docs/plans/hadith-text-matching.md), one state per capture. Invented
@@ -450,17 +461,6 @@ const SEARCH_WORD = 'متن';
  * itself, so the sheet finds it by text. No index is seeded: the sheet builds
  * it on first use, as a tablet with an older import does.
  */
-// The short-quotation states (docs/plans/hadith-short-quote.md, step 5): the
-// tapped entity narrowed to three words of the seeded matn. Fifteen letters
-// for a match; ten, under the twelve-letter floor, for "too short". The
-// rows are the "matched" state's, and «none-near» cites number 400, far
-// past the file's two rows.
-const SHORT_STATES = {
-  'short-matched': { words: 'حديث تجريبي للتحقق', number: 1 },
-  'short-too-short': { words: 'هذا متن حديث', number: 1 },
-  'short-none-near': { words: 'حديث تجريبي للتحقق', number: 400 },
-};
-
 function sharhCollectionRows(state) {
   if (state === 'not-imported') return {};
   if (SHORT_STATES[state]) state = 'matched';
