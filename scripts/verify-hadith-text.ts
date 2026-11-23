@@ -48,6 +48,13 @@ import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
 import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
+import {
+  enrichSegments,
+  HADITH_QUOTED_IN_PART,
+  hadithShortAmbiguousNote,
+  hadithShortQuoteNote,
+} from '../src/retrieval/enrich';
+import type { QuranLookupOptions } from '../src/retrieval/quran';
 import type { HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
@@ -779,6 +786,7 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   let calls = 0;
   let rowsServed = 0;
   let failReads = false;
+  let failFullRead = false;
   const resource: QulResource = {
     id: 'qul-short', kind: 'hadith-json', name: 'bukhari', fileName: 'bukhari.json', byteSize: 0,
     entryCount: COUNT, format: 'json', importedAt: 1, collection: 'bukhari',
@@ -790,11 +798,24 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     async getQulEntries(resourceId: string, keys: string[]) {
       calls++;
       if (failReads) throw new Error('read failed');
+      if (failFullRead && keys.length === 500) throw new Error('full read failed');
       const out = keys.map((key) => store.get(`${resourceId}|${key}`)).filter((r): r is QulEntry => r !== undefined);
       rowsServed += out.length;
       return out;
     },
+    // The text search self-heals the synthetic collection's index on first use.
+    async putQulEntries(entries: QulEntry[]) {
+      for (const entry of entries) store.set(entry.id, entry);
+    },
+    async getQulEntry(resourceId: string, key: string) {
+      return store.get(`${resourceId}|${key}`);
+    },
+    // The reference path reads the sunnah.com cache first; always empty here.
+    async getHadith() {
+      return undefined;
+    },
   } as unknown as StorageAdapter;
+  const joinNotesForCheck = (...parts: string[]) => parts.join(' ');
   const put = (entry: HadithJsonEntry) =>
     store.set(`qul-short|bukhari:${entry.number}`, { id: `qul-short|bukhari:${entry.number}`, resourceId: 'qul-short', key: `bukhari:${entry.number}`, value: entry });
   for (let n = 1; n <= COUNT; n++) put(row(n, [...chain, ...words(20)]));
@@ -833,6 +854,17 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   const pastEnd = await search(COUNT + 400);
   expect('S2: a cited number far past the file reads nothing and is not near', pastEnd.result.status === 'none-near' && calls === 0);
 
+  const lost = store.get('qul-short|bukhari:50')!;
+  store.delete('qul-short|bukhari:50');
+  let refusedShort = false;
+  try {
+    await search(1000);
+  } catch {
+    refusedShort = true;
+  }
+  store.set('qul-short|bukhari:50', lost);
+  expect('S2: a collection with a lost row is not judged (a lost row may hide a second family)', refusedShort);
+
   failReads = true;
   let threw = false;
   try {
@@ -842,6 +874,57 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   }
   failReads = false;
   expect('S2: a read that throws reaches the caller', threw);
+
+  // --------------------------------------------------- step 3: the card path
+  // enrichSegments over the same store, no sunnah.com key: the text search
+  // finds nothing for three words, so the short quotation decides.
+  const deps = {
+    http: { get: async () => { throw new Error('no network in check H'); } } as unknown as HttpClient,
+    storage: shortStorage,
+    quran: {} as QuranLookupOptions,
+    sunnahApiKey: '',
+    hadithScope: null,
+  };
+  const card = async (reference: string) =>
+    (await enrichSegments([{ type: 'hadith', arabic: text(quote), english: '', reference }], deps))[0];
+
+  const farCard = await card('bukhari:1000');
+  expect(
+    'S3: a short quotation 100 behind the citation: its English under the collection’s name',
+    farCard.source === 'hadith-json' && farCard.english === 'english 900' && farCard.reference === 'Ṣaḥīḥ al-Bukhārī',
+    farCard,
+  );
+  expect(
+    'S3: …with the short-quotation note, the model’s citation and “quoted in part”',
+    farCard.note === joinNotesForCheck(hadithShortQuoteNote('Ṣaḥīḥ al-Bukhārī'), 'The model cited bukhari:1000.', HADITH_QUOTED_IN_PART),
+    farCard.note,
+  );
+  const closeCard = await card('bukhari:905');
+  expect('S3: within ten of a family member the model’s citation stands', closeCard.reference === 'bukhari:905' && closeCard.note === HADITH_QUOTED_IN_PART, closeCard);
+
+  put(withQuote(100));
+  const ambiguousCard = await card('bukhari:1000');
+  expect(
+    'S3: in two ḥadīth of the cited collection: no English, the ambiguity note',
+    ambiguousCard.english === '' && ambiguousCard.note === hadithShortAmbiguousNote('Ṣaḥīḥ al-Bukhārī'),
+    ambiguousCard,
+  );
+  const alsoMuslim = await card('bukhari:1000; muslim:5');
+  expect(
+    'S3: ambiguous while a collection not imported is cited: the reference path runs',
+    alsoMuslim.english === '' && alsoMuslim.note !== hadithShortAmbiguousNote('Ṣaḥīḥ al-Bukhārī') && (alsoMuslim.note ?? '').includes('sunnah.com'),
+    alsoMuslim,
+  );
+  put(row(100, [...chain, ...words(20)]));
+
+  // Only the short search's full read fails: the old number path reads the
+  // same store, and a store that fails every read was never survivable.
+  failFullRead = true;
+  const failedCard = await card('bukhari:1000');
+  failFullRead = false;
+  expect('S3: a failed full read falls back to the reference path, not a thrown card', failedCard.english === '' && (failedCard.note ?? '').includes('sunnah.com'), failedCard);
+  const noneNear = await card('bukhari:3000');
+  expect('S3: nothing near the citation: the reference path runs as before', noneNear.english === '' && noneNear.source === undefined, noneNear);
 }
 
 // ------------------------------------------------------------------- summary

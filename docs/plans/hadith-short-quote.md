@@ -459,8 +459,12 @@ the takhrīj stripper cuts to three words).
 
 **As built.** No `onProgress`: nothing would show it (the card has no
 progress line, and a tap reads at most one collection), so it is left out
-until the tablet's `ms` says the read is slow. A cited number past the file's
-end reads nothing and is `none-near`.
+until the tablet's `ms` says the read is slow. A cited number far enough past
+the file's end that its window is empty (for Bukhārī, more than 300 past)
+reads nothing and is `none-near`; one closer reads the tail of the window
+and may match. In step 3 (review of 14be66d) the full read refuses a
+shortfall of rows, as `readEntries` does, since a lost row could hide a
+second family.
 
 ### Step 3 — the card
 

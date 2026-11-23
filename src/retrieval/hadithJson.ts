@@ -97,10 +97,10 @@ export interface HadithJsonCollection {
    * has the file ahead. So 300 behind covers the end with margin, and 10
    * ahead covers small local disorder. Muslim's numbering is unrelated to
    * the standard, and the other six were never measured, so they keep ±10
-   * (owner's answers Q1 and Q13 of docs/plans/hadith-short-quote.md). The window never chooses between two
-   * ḥadīth: the phrase must already lie in one family of the whole
-   * collection, and the number only refuses that family when it lies far
-   * from the citation.
+   * (owner's answers Q1 and Q13 of docs/plans/hadith-short-quote.md). The
+   * window never chooses between two ḥadīth: the phrase must already lie in
+   * one family of the whole collection, and the number only refuses that
+   * family when it lies far from the citation.
    */
   citedNumberWindow?: { behind: number; ahead: number };
 }

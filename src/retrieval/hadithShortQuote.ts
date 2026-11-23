@@ -221,5 +221,16 @@ export async function findShortQuote(
       if (row.value.t === 'hadith-json' && holds(row)) hits.push(row.value);
     }
   }
+  // The importer numbers a collection 1…entryCount, so a shortfall means
+  // rows were lost, and a lost row may have held a second family: judging
+  // what is left could turn an ambiguous answer into a match (review of
+  // 14be66d). Fail as the index's read-back does (`readEntries`); the caller
+  // logs it and shows no match.
+  const fullRows = rowsRead - windowRows.length;
+  if (fullRows !== resource.entryCount) {
+    throw new Error(
+      `${collection}: ${fullRows} of ${resource.entryCount} ḥadīth rows found; the short quotation was not searched. Re-import the file.`,
+    );
+  }
   return done(chooseShortQuote(hits, cited, window), rowsRead);
 }

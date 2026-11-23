@@ -14,6 +14,7 @@ import {
   type LocalHadith,
 } from './hadithJson';
 import { loadHadithIndexes, searchHadithText } from './hadithTextIndex';
+import { findShortQuote, type ShortQuoteSearch } from './hadithShortQuote';
 import { QUOTED_IN_PART_BELOW } from './hadithText';
 import { hadithQuotationOverrun, quotationOverrunNote } from './quotationOverrun';
 
@@ -56,6 +57,20 @@ export const HADITH_BY_TEXT =
   'Identified by its text; this dataset’s numbering is not the standard one, so no number is given.';
 
 export const HADITH_QUOTED_IN_PART = 'Quoted in part; this is the whole ḥadīth.';
+
+/**
+ * A short quotation's match (retrieval/hadithShortQuote.ts), in place of
+ * HADITH_BY_TEXT so the card does not say "identified" twice. `name` is the
+ * collection's display name.
+ */
+export function hadithShortQuoteNote(name: string): string {
+  return `Identified by a short quotation: these words occur in only one ḥadīth of ${name}, near the cited number. This dataset’s numbering is not the standard one, so no number is given.`;
+}
+
+/** A short quotation found in more than one ḥadīth of the cited collection. */
+export function hadithShortAmbiguousNote(name: string): string {
+  return `These few words occur in more than one ḥadīth of the imported ${name}, so none is shown. A model-generated translation is deliberately not substituted.`;
+}
 
 /**
  * The ambiguity note, naming the candidates (numbers only where citable). Two
@@ -157,6 +172,12 @@ async function enrichHadith(
     });
   }
   if (byText) return byText;
+
+  // A quotation too short for the text search, proved by the cited number
+  // and the whole collection (docs/plans/hadith-short-quote.md). Before
+  // sunnah.com because it is a text proof, like the search above (Q5).
+  const byShortQuote = await enrichHadithByShortQuote(segment, references, deps);
+  if (byShortQuote) return byShortQuote;
 
   let record: HadithRecord | null = null;
   for (const reference of references) {
@@ -393,6 +414,105 @@ async function enrichHadithByText(
       reference,
       note: joinNotes(...notes),
     };
+  }
+  return null;
+}
+
+/**
+ * The imported English for a short quotation, proved by a cited number
+ * (`findShortQuote`); null to let the reference path run.
+ *
+ * Each reference is tried in the model's order and the first match wins.
+ * When none matched and one was ambiguous, the card ends there with the
+ * ambiguity note, unless the model also cited a collection that is not
+ * imported, which then gets the old path, sunnah.com included: the rule the
+ * owner chose for the text search (2026-11-22), kept for this one (Design 5).
+ * A read that fails is logged and counts as no match for that reference.
+ */
+async function enrichHadithByShortQuote(
+  segment: TranslatedSegment,
+  references: readonly HadithReference[],
+  deps: EnrichDeps,
+): Promise<TranslatedSegment | null> {
+  if (segment.arabic.trim() === '' || references.length === 0) return null;
+
+  let ambiguousIn: string | null = null;
+  let unsearchedCitation = false;
+  for (const ref of references) {
+    const cited = Number(ref.number);
+    let search: ShortQuoteSearch;
+    try {
+      search = await findShortQuote(deps.storage, ref.collection, cited, segment.arabic);
+    } catch (error) {
+      recordRetrieval({
+        kind: 'hadith',
+        outcome: 'lookup-failed',
+        query: segment.arabic.slice(0, 80),
+        summary: `The short-quotation search of ${ref.collection} failed; the reference was tried instead.`,
+        detail: [['error', error instanceof Error ? error.message : String(error)]],
+      });
+      unsearchedCitation = true;
+      continue;
+    }
+    const { result } = search;
+    if (result.status === 'not-imported') {
+      unsearchedCitation = true;
+      continue;
+    }
+    const collection = hadithJsonCollection(ref.collection);
+    const name = collection?.displayName ?? ref.collection;
+    if (result.status === 'ambiguous') {
+      ambiguousIn ??= name;
+      continue;
+    }
+    if (result.status !== 'matched') continue;
+
+    const english = composeEnglish(result.entry);
+    if (english === '') continue;
+
+    // Labelled as a text match is (enrichHadithByText): the matched number
+    // where it is citable; the model's citation where a member of the family
+    // lies within NEIGHBOUR_WINDOW of it; otherwise the collection's name.
+    const notes: (string | undefined)[] = [segment.note];
+    let reference: string | undefined;
+    if (collection?.citableNumbers) {
+      reference = `${ref.collection}:${result.entry.number}`;
+    } else if (segment.reference && result.family.some((n) => Math.abs(n - cited) <= NEIGHBOUR_WINDOW)) {
+      reference = segment.reference;
+    } else {
+      reference = name;
+      notes.push(hadithShortQuoteNote(name));
+      if (segment.reference) notes.push(`The model cited ${segment.reference}.`);
+    }
+    // Three to five words of a ḥadīth are always a part of it.
+    notes.push(HADITH_QUOTED_IN_PART);
+
+    recordRetrieval({
+      kind: 'hadith',
+      outcome: 'hit',
+      query: segment.arabic.slice(0, 80),
+      summary: `Identified by a short quotation in ${name}.`,
+      detail: [
+        ['matched', `${ref.collection} position ${result.entry.number}`],
+        ['distance from the cited number', String(result.distance)],
+        ['family', result.family.join(', ')],
+        ['rows read', String(search.rowsRead)],
+        ['ms', String(search.ms)],
+        ['reference', segment.reference ?? '(none)'],
+      ],
+    });
+    return { ...segment, english, source: 'hadith-json', reference, note: joinNotes(...notes) };
+  }
+
+  if (ambiguousIn && !unsearchedCitation) {
+    recordRetrieval({
+      kind: 'hadith',
+      outcome: 'no-match',
+      query: segment.arabic.slice(0, 80),
+      summary: `The short quotation occurs in more than one ḥadīth of ${ambiguousIn}.`,
+      detail: [['reference', segment.reference ?? '(none)']],
+    });
+    return { ...segment, english: '', source: undefined, note: joinNotes(segment.note, hadithShortAmbiguousNote(ambiguousIn)) };
   }
   return null;
 }
