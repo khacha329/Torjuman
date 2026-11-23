@@ -650,7 +650,7 @@ function accepted(candidate: TextCandidate, mode: MatchMode): boolean {
   return candidate.matchedWords / (candidate.queryEnd - candidate.queryStart) >= MIN_DENSITY;
 }
 
-function sameFamily(a: string, b: string): boolean {
+export function sameFamily(a: string, b: string): boolean {
   return agrees(agreement(a, b)) || agrees(agreement(b, a));
 }
 

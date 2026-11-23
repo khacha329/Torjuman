@@ -35,13 +35,19 @@ import {
   loadHadithIndexes,
   searchHadithText,
 } from '../src/retrieval/hadithTextIndex';
-import { sharhCollectionFor } from '../src/retrieval/hadithJson';
+import { citedWindowFor, sharhCollectionFor } from '../src/retrieval/hadithJson';
+import {
+  chooseShortQuote,
+  containsShortQuote,
+  foldEntry,
+  shortQuotePhrase,
+} from '../src/retrieval/hadithShortQuote';
 import { hadithScopeFor } from '../src/ui/reader/hadithScope';
 import { letterFold } from '../src/lib/arabic';
 import type { StorageAdapter } from '../src/platform/storage/StorageAdapter';
 import type { HttpClient } from '../src/platform/http/HttpClient';
 import { lookupByText, lookupHadith } from '../src/retrieval/HadithSource';
-import type { HadithIndexPart, HadithRecord, QulEntry, QulResource } from '../src/types';
+import type { HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -668,6 +674,92 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
   expect('4a: then the title (Riyāḍ)', hadithScopeFor(book('شرح رياض الصالحين')) === 'riyadussalihin');
   expect('4a: then the sharḥ rule', hadithScopeFor(book('فتح الباري بشرح البخاري')) === 'bukhari');
   expect('4a: any other book has no scope', hadithScopeFor(book('كتاب المثال في الطهارة', 'الفقه')) === null);
+}
+
+// ------------------------------------------- short quotations: the pure rule
+
+{
+  // docs/plans/hadith-short-quote.md, step 1. Made-up words again; the only
+  // real Arabic is the chain words `isnadEnd` keys on and the honorific.
+  const longWord = () => {
+    let out = '';
+    for (let i = 0; i < 5; i++) out += LETTERS[Math.floor(random() * LETTERS.length)];
+    return out;
+  };
+  const quote = [longWord(), longWord(), longWord()];
+  const chain = ['حدثنا', longWord(), 'عن', longWord(), 'قال', 'رسول', 'الله'];
+  const row = (number: number, arabic: string[]): HadithJsonEntry => ({
+    t: 'hadith-json',
+    number,
+    idInBook: number,
+    chapterId: 1,
+    chapterEnglish: '',
+    narrator: '',
+    text: `english ${number}`,
+    arabic: text(arabic),
+  });
+  const withQuote = (number: number, matn = words(20)) => row(number, [...chain, ...matn.slice(0, 10), ...quote, ...matn.slice(10)]);
+  const scan = (entries: readonly HadithJsonEntry[], phrase: readonly string[]) =>
+    entries.filter((entry) => containsShortQuote(foldEntry(entry.arabic), phrase));
+  const bukhari = citedWindowFor('bukhari');
+  const phrase = shortQuotePhrase(text(quote));
+  const phraseWords = 'words' in phrase ? phrase.words : [];
+  expect('S1: a three-word quotation of fifteen letters is a phrase', phraseWords.length === 3, phrase);
+
+  const others = Array.from({ length: 30 }, (_, i) => row(2000 + i, [...chain, ...words(25)]));
+  const lone = [withQuote(1000), ...others];
+  const choose = (entries: readonly HadithJsonEntry[], cited: number, window = bukhari) =>
+    chooseShortQuote(scan(entries, phraseWords), cited, window);
+
+  const far = choose(lone, 1240);
+  expect('S1: one entry 240 behind the cited number is matched', far.status === 'matched' && far.entry.number === 1000 && far.distance === -240, far);
+  expect('S1: 400 behind is not near', choose(lone, 1400).status === 'none-near');
+  expect('S1: 20 ahead is not near', choose(lone, 980).status === 'none-near');
+  expect('S1: ±10 elsewhere: 240 behind is not near', choose(lone, 1240, citedWindowFor('muslim')).status === 'none-near');
+  expect('S1: Bukhārī’s window is 300 behind and 10 ahead', bukhari.behind === 300 && bukhari.ahead === 10);
+  expect('S1: every other collection keeps ±10', citedWindowFor('muslim').behind === 10 && citedWindowFor('muslim').ahead === 10);
+
+  const twoHadith = [withQuote(1000), withQuote(1100), ...others];
+  const ambiguous = choose(twoHadith, 1240);
+  expect('S1: the phrase in two unrelated ḥadīth is ambiguous', ambiguous.status === 'ambiguous' && ambiguous.families === 2, ambiguous);
+  const farOnly = choose([withQuote(1000), withQuote(5000), ...others], 1240);
+  expect('S1: ambiguous even when only one of the two is near', farOnly.status === 'ambiguous', farOnly);
+
+  const matn = words(20);
+  const copies = [withQuote(1000, matn), withQuote(1100, matn), ...others];
+  const nearer = choose(copies, 1240);
+  expect(
+    'S1: two copies of one matn are one family; the nearer is chosen',
+    nearer.status === 'matched' && nearer.entry.number === 1100 && nearer.family.join() === '1000,1100',
+    nearer,
+  );
+
+  const formula = Array.from({ length: MAX_POSTINGS + 1 }, (_, i) => withQuote(3000 + i));
+  const tooMany = choose(formula, 3010);
+  expect('S1: in more than MAX_POSTINGS entries the phrase is a formula', tooMany.status === 'common' && tooMany.entries === MAX_POSTINGS + 1, tooMany);
+
+  const inChain = row(1000, ['حدثنا', ...quote, 'عن', longWord(), 'قال', 'رسول', 'الله', ...words(20)]);
+  expect('S1: a phrase only in the isnād does not count', !containsShortQuote(foldEntry(inChain.arabic), phraseWords));
+  const fused = row(1000, [...chain, ...words(5), `و${quote[0]}`, quote[1], quote[2], ...words(5)]);
+  expect('S1: «و» fused to the first word on the entry’s side counts', containsShortQuote(foldEntry(fused.arabic), phraseWords));
+  const fusedFa = row(1000, [...chain, ...words(5), `ف${quote[0]}`, quote[1], quote[2], ...words(5)]);
+  expect('S1: «ف» likewise', containsShortQuote(foldEntry(fusedFa.arabic), phraseWords));
+  const fusedMiddle = row(1000, [...chain, ...words(5), quote[0], `و${quote[1]}`, quote[2], ...words(5)]);
+  expect('S1: on a middle word it does not', !containsShortQuote(foldEntry(fusedMiddle.arabic), phraseWords));
+  const partWord = row(1000, [...chain, ...words(5), `${quote[0]}${quote[1]}`, quote[2], ...words(5)]);
+  expect('S1: words must be whole', !containsShortQuote(foldEntry(partWord.arabic), phraseWords));
+
+  const refused = (input: string) => {
+    const result = shortQuotePhrase(input);
+    return 'refused' in result ? result.refused : 'phrase';
+  };
+  expect('S1: two words are too short', refused(text(quote.slice(0, 2))) === 'too-short');
+  expect('S1: three words under twelve letters are too short', refused('بتث جحخ دذر') === 'too-short');
+  expect('S1: the honorific alone is empty', refused('صلى الله عليه وسلم') === 'empty');
+  expect('S1: six words belong to the text search', refused(text(words(6))) === 'too-long');
+  expect('S1: more than twelve raw words is not a short quotation', refused(text(words(13))) === 'too-long');
+  expect('S1: a printed number before the quotation is dropped', refused(`١٢ - ${text(quote)}`) === 'phrase');
+  expect('S1: no hits at all is none-near', chooseShortQuote([], 1000, bukhari).status === 'none-near');
 }
 
 // ------------------------------------------------------------------- summary

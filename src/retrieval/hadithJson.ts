@@ -82,6 +82,24 @@ export interface HadithJsonCollection {
    * have none yet (owner's answer to Q16).
    */
   sharhTitles?: string[];
+  /**
+   * Where a cited number may land in this dataset, for a short quotation
+   * (`findShortQuote`): from `behind` below the cited number to `ahead` above
+   * it. Absent means ±NEIGHBOUR_WINDOW, the window the number path uses.
+   *
+   * Only Bukhārī has one, because only its drift is measured: the file is
+   * behind the standard numbering by 0 at the start, 239 at standard 6406, 241
+   * at 6607 (the owner's «إنما الأعمال بالخواتيم», the file's 6366), 244 at
+   * 6682 and 286 at the end, and never ahead (`citableNumbers` above). So 300
+   * behind covers the end with margin, and 10 ahead covers small local
+   * disorder. Muslim's numbering is unrelated to the standard, and the other
+   * six were never measured, so they keep ±10 (owner's answers Q1 and Q13 of
+   * docs/plans/hadith-short-quote.md). The window never chooses between two
+   * ḥadīth: the phrase must already lie in one family of the whole
+   * collection, and the number only refuses that family when it lies far
+   * from the citation.
+   */
+  citedNumberWindow?: { behind: number; ahead: number };
 }
 
 export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
@@ -112,6 +130,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     length: 7277,
     citableNumbers: false,
     sharhTitles: ['البخاري'],
+    citedNumberWindow: { behind: 300, ahead: 10 },
   },
   {
     slug: 'muslim',
@@ -201,6 +220,13 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
 
 export function hadithJsonCollection(slug: string): HadithJsonCollection | undefined {
   return HADITH_JSON_COLLECTIONS.find((collection) => collection.slug === slug);
+}
+
+/** The window around a cited number where a short quotation's ḥadīth may lie. */
+export function citedWindowFor(slug: string): { behind: number; ahead: number } {
+  return (
+    hadithJsonCollection(slug)?.citedNumberWindow ?? { behind: NEIGHBOUR_WINDOW, ahead: NEIGHBOUR_WINDOW }
+  );
 }
 
 /**
@@ -403,7 +429,7 @@ export function composeEnglish(entry: Pick<HadithJsonEntry, 'narrator' | 'text'>
  * knows only the first form, and the second would otherwise put digits into a
  * shingle that the dataset's Arabic cannot contain.
  */
-const BOOK_NUMBER = /^\s*[٠-٩0-9]+\s*(?:\/\s*[٠-٩0-9]+\s*)?[-ـ–—]\s*/u;
+export const BOOK_NUMBER = /^\s*[٠-٩0-9]+\s*(?:\/\s*[٠-٩0-9]+\s*)?[-ـ–—]\s*/u;
 
 /** Neighbouring numbers tried by text when the numbered one does not agree. */
 export const NEIGHBOUR_WINDOW = 10;
