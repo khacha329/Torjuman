@@ -119,8 +119,8 @@ export type ShortQuoteChoice =
  *
  * Over MAX_POSTINGS entries is a formula, for the reason the text index caps
  * its postings. («قال رسول الله», 490 in Bukhārī, is the obvious one, though
- * at eleven letters shortQuotePhrase already refuses it before this.) Two families anywhere in
- * the collection are ambiguous, even if only one is near the number: the
+ * at eleven letters shortQuotePhrase already refuses it before this.) Two
+ * families anywhere in the collection are ambiguous, even if only one is near the number: the
  * number never chooses between two (owner's answer Q3). One family with no
  * member in the window is refused. Of the members in the window, the one
  * nearest the cited number is chosen, then the lowest number, as the text

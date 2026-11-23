@@ -155,7 +155,9 @@ if (bukhari) {
   const window = citedWindowFor('bukhari');
   for (const k of [3, 4, 5]) {
     // Wrong: a phrase from another collection's matn, a uniformly random
-    // citation (pessimistic), accepted, and not the source ḥadīth's family.
+    // citation (a model, not a bound: a real wrong citation points near the
+    // true ḥadīth), accepted, and no member of the matched family agreeing
+    // with the source (familyHolds).
     let tried = 0;
     let wrong = 0;
     const attempts = 2000;

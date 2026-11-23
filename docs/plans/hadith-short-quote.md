@@ -173,7 +173,9 @@ with those words. So the cited number must carry half the proof, as
 in the window around the cited number. Rule R2: exactly one family among the
 entries *in the window* (cheaper: no full read). Wrong accepts are phrases
 from another collection whose hit is not their family, with a uniformly random
-citation (a pessimistic model of a wrong citation), ~2,900 samples per row.
+citation (called here a pessimistic model of a wrong citation; the run of
+the shipped rule in step 6 withdraws that: it is not a bound), ~2,900
+samples per row.
 Recall is a Bukhārī phrase cited at a modelled standard number (dataset
 number + 286 × n / 7277: a straight line through the measured anchors, my
 model, not a measurement), ~390–590 samples per row.
@@ -626,9 +628,11 @@ Same ḥadīth, possibly a different copy's English.
 shipped; seeded).** Counts only.
 - M5: fold times as before (Bukhārī 279 ms, Muslim 232 ms); one phrase over
   Bukhārī folded once, with a prefilter, 4.4 ms. That is not the shipped
-  read's cost: `findShortQuote` folds every row on each search and has no
-  prefilter (no memo, Q8), so its cost is nearer the fold time plus the
-  IndexedDB read, which only the tablet's logged `ms` shows.
+  read's cost. `findShortQuote` reads and folds the cited window first (311
+  rows for Bukhārī) and stops there when no row holds the phrase, as most
+  misses do; only a candidate in the window leads to the full read, which
+  folds every row with no prefilter (no memo, Q8), so its cost is nearer the
+  fold time plus the IndexedDB read. Only the tablet's logged `ms` shows it.
 - M4: the owner's case matched at 6366, distance −241. «إنما الأعمال
   بالنيات» matched at 1 when cited at 1 and is `none-near` cited at 6607.
   «قال رسول الله» is refused before any search as too short (eleven letters:
@@ -647,10 +651,12 @@ shipped; seeded).** Counts only.
   modelled drift: 217 of 332, 412 of 552, 460 of 573 (the modelled drift
   always lies inside the window, so this measures uniqueness and the cap).
 - **The 3-word rate is worse than designed.** Per sample it is 4 in 2,000
-  (1 in 500) against the design-time 1 in about 2,900; at 4 and 5 words the
-  two runs agree (7 vs 10 of ~2,900, 4 vs 4). The cause is not known: the
-  design-time copy of the rule may have differed from the shipped one, and
-  at these counts sampling explains part of it. Neither figure is a bound: a
+  (1 in 500) against the design-time 1 in about 2,900. At 4 words the rates
+  agree (1 in 286 against 1 in 290); at 5 words the run is somewhat worse (1
+  in 500 against 1 in about 725). The cause is not known. Sampling alone is
+  unlikely to explain the 3-word gap (at 1 in 2,900, four or more in 2,000 is
+  about a 0.5% chance); the design-time copy of the rule may have differed
+  from the shipped one. Neither figure is a bound: a
   real wrong citation points near the true ḥadīth, and similar wording
   clusters in one kitāb, so the random-citation model may understate it.
 
@@ -694,8 +700,8 @@ show it identical if the reviewer asks.
   1 in 2,900 wrong-cited 3-word quotations, 1 in 300 at 4 words, 1 in 700 at
   5 under the chosen rule. Superseded by the run of the shipped rule (step 6,
   "Measured"): 1 in 500 at 3 words, about 1 in 300 at 4, 1 in 500 at 5, under
-  a random citation, which is not a bound. Caught by: H's adversarial cases (shared phrases, isnād-only
-  hits, far numbers); the retrieval log's distance; the owner's review of the
+  a random citation, which is not a bound. Caught by: H's adversarial cases
+  (shared phrases, isnād-only hits, far numbers); the retrieval log's distance; the owner's review of the
   first real matches. Mitigation if needed: the 12-letter floor raised for 4
   words, or R1's window narrowed.
 - **R2. The drift is not what the anchors suggest** (not monotone, or over
