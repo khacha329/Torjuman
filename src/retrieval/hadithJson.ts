@@ -1,7 +1,7 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { HadithJsonEntry, QulEntry, QulResource } from '../types';
-import { letterFold } from '../lib/arabic';
-import { matnShingles, stripApparatus } from './sharh';
+import { letterFold, normalize } from '../lib/arabic';
+import { COMMENTARY_CATEGORY, matnShingles, stripApparatus } from './sharh';
 
 // The hadith-json dataset (github.com/AhmedBaset/hadith-json, scraped from
 // sunnah.com) as a local ḥadīth source.
@@ -74,6 +74,14 @@ export interface HadithJsonCollection {
    * printed as a citation. Measured with `npm run measure:hadith-corpus`.
    */
   citableNumbers: boolean;
+  /**
+   * Title fragments a commentary on this collection carries («فتح الباري بشرح
+   * البخاري»), for `sharhCollectionFor`. Only on the six main books whose
+   * numbers are not citable: Riyāḍ and the Forty are recognised by
+   * `hadithCollectionFor` and keep their number-first path. Mālik and Aḥmad
+   * have none yet (owner's answer to Q16).
+   */
+  sharhTitles?: string[];
 }
 
 export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
@@ -103,6 +111,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'bukhari.json',
     length: 7277,
     citableNumbers: false,
+    sharhTitles: ['البخاري'],
   },
   {
     slug: 'muslim',
@@ -112,6 +121,8 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'muslim.json',
     length: 7459,
     citableNumbers: false,
+    // Not «مسلم» alone: it is in hundreds of titles that are not about this book.
+    sharhTitles: ['صحيح مسلم', 'مسلم بن الحجاج'],
   },
   // The rest of the nine books, measured on 2026-11-22 with
   // `npm run measure:hadith-corpus`. Every file's `idInBook` is unique and
@@ -132,6 +143,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'abudawud.json',
     length: 5276,
     citableNumbers: false,
+    sharhTitles: ['أبي داود', 'أبى داود'],
   },
   {
     slug: 'tirmidhi',
@@ -141,6 +153,7 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'tirmidhi.json',
     length: 4053,
     citableNumbers: false,
+    sharhTitles: ['الترمذي'],
   },
   {
     slug: 'nasai',
@@ -150,6 +163,8 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'nasai.json',
     length: 5768,
     citableNumbers: false,
+    // «المجتبى» is the Sunan's own title (al-Mujtabā), which its commentaries name.
+    sharhTitles: ['النسائي', 'المجتبى'],
   },
   {
     slug: 'ibnmajah',
@@ -159,6 +174,8 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
     fileName: 'ibnmajah.json',
     length: 4345,
     citableNumbers: false,
+    // `normalize` folds ة to ه, so «ابن ماجة» is covered too.
+    sharhTitles: ['ابن ماجه'],
   },
   {
     slug: 'malik',
@@ -184,6 +201,31 @@ export const HADITH_JSON_COLLECTIONS: HadithJsonCollection[] = [
 
 export function hadithJsonCollection(slug: string): HadithJsonCollection | undefined {
   return HADITH_JSON_COLLECTIONS.find((collection) => collection.slug === slug);
+}
+
+/**
+ * The collection a book comments on, when it is a sharḥ of one of the six main
+ * books; null otherwise.
+ *
+ * A book qualifies by Shamela's own «شروح الحديث» category — tested with
+ * `includes`, as `isCommentaryWork` does; the hadith-commentary structure that
+ * types its matns is given only to an exact match (parseBook.ts), so a book
+ * that merely contains the words passes here and finds nothing — AND
+ * exactly one collection's title fragment in its `normalize`d title: a title
+ * naming two — a zawāʾid or a comparison — is no one collection's sharḥ. The
+ * answer is a scope for the text search, never a proof: a book recognised
+ * wrongly searches one collection, finds nothing and says so, because the text
+ * must still match (plan, Design 8).
+ */
+export function sharhCollectionFor(book: { title: string; category: string }): string | null {
+  if (!book.category.includes(COMMENTARY_CATEGORY)) return null;
+  const title = normalize(book.title);
+  const named = HADITH_JSON_COLLECTIONS.filter(
+    (collection) =>
+      !collection.citableNumbers &&
+      collection.sharhTitles?.some((fragment) => title.includes(normalize(fragment))),
+  );
+  return named.length === 1 ? named[0].slug : null;
 }
 
 /** The attribution shown under the English. */

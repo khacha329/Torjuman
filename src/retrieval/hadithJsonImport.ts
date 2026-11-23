@@ -2,6 +2,7 @@ import { newId } from '../lib/id';
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { QulResource } from '../types';
 import { HadithJsonFormatError, readHadithJson, type HadithJsonReading } from './hadithJson';
+import { writeHadithIndex, type IndexProgress } from './hadithTextIndex';
 
 // Importing a hadith-json file: inspect, then commit.
 //
@@ -35,10 +36,16 @@ export async function inspectHadithJsonFile(file: File): Promise<HadithJsonInspe
  * so an interrupted import leaves rows nothing reads rather than a collection
  * that half-answers; on a failed write the partial rows are removed. The old
  * copy is deleted only after the new one is complete.
+ *
+ * The text index (retrieval/hadithTextIndex.ts) is built from the entries
+ * already in memory and written with the rows, before the resource row, so it
+ * follows the same rule; onProgress reports the build, which on Bukhārī is
+ * the slow part.
  */
 export async function commitHadithJsonImport(
   storage: StorageAdapter,
   inspection: HadithJsonInspection,
+  onProgress?: (progress: IndexProgress) => void,
 ): Promise<QulResource> {
   const id = newId('qul');
 
@@ -55,6 +62,13 @@ export async function commitHadithJsonImport(
         })),
       );
     }
+    await writeHadithIndex(
+      storage,
+      id,
+      inspection.collection.slug,
+      inspection.entries.map((entry) => entry.value),
+      onProgress,
+    );
   } catch (error) {
     await storage.deleteQulResource(id);
     throw error;

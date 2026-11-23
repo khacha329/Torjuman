@@ -157,12 +157,52 @@ rendering of a verse is never substituted.
 
 `api.sunnah.com` returns 403 without one; there is no open public tier, and
 Riyāḍ aṣ-Ṣāliḥīn is not on any open mirror. Put a key in Settings when you have
-one. Without it, hadith segments show the Arabic with an explicit note that no
+one. Without it, and without an imported hadith-json file that covers the
+ḥadīth (below), hadith segments show the Arabic with an explicit note that no
 verified English translation was retrieved — again, never a model-generated one.
 
 The sharḥ's hadith numbering maps directly: `١/٤١٢ ـ` means hadith 1 of the bāb /
 412 of the book, and the parser captures **412**, which is what sunnah.com
 indexes by.
+
+### Ḥadīth English from hadith-json, found by text
+
+sunnah.com's English is also available as the hadith-json dataset, which the
+owner downloads and imports in Settings → Ḥadīth English: Riyāḍ, Nawawī's Forty
+and the nine books but ad-Dārimī (its file has no English). Nothing of it is
+bundled or committed. Mālik and Aḥmad are never asked of sunnah.com: their
+editions' numbers differ too much to trust a cited number there.
+
+Only Riyāḍ's and the Forty's dataset numbers are the numbers a book prints
+(`citableNumbers`); Bukhārī's drift 286 behind by the end and Muslim's follow
+neither the standard nor sunnah.com's. So a number is never trusted alone —
+an imported English is shown only when it agrees with the book's own text
+(sunnah.com's own English, fetched with a key, is shown by its reference as
+before):
+
+- **Cards (cloud translation, Claude or Gemini alike):** the `hadith` segment
+  is first looked for by its text in the imported collections — the book's own
+  and the ones the model cited, then all of them — and when the text finds
+  nothing (or fails, or is ambiguous while the model cited a collection that
+  was not searched) the old path runs (sunnah.com, then the cited number
+  checked against the text). For Riyāḍ and the Forty the reference shown is
+  the matched number; for the other collections it is the collection's name
+  with no number, unless the model's number is within ten of the match.
+- **Taps and on-device translation:** Riyāḍ and the Forty go by their printed
+  number first, then by text if it does not confirm; a sharḥ of one of the six
+  main books (recognised by Shamela's «شروح الحديث» category and a title
+  fragment) has book-scoped references, so its matns are found by text in that
+  one collection.
+- **Ambiguity is never guessed:** two different ḥadīth matching the text
+  equally well show the Arabic and say so (on a card, unless the model cited a
+  collection that was not searched: then the old path is tried). A printed or
+  cited number may settle it only for Riyāḍ and the Forty.
+
+The text index (four-word windows, hashed, per collection) is built at import
+and stored beside the ḥadīth in the QUL entry store, so no schema change was
+needed; collections imported earlier build theirs on first use. The design,
+the measurements and the owner's answers are in
+`docs/plans/hadith-text-matching.md`.
 
 ### Dependencies beyond the spec's list
 

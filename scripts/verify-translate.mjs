@@ -226,7 +226,46 @@ const TYPES = ['body', 'body', 'body', 'body', 'hadith_matn', 'sharh', 'sharh', 
 const HADITH_NUMBERS = { 4: '1', 7: '2' };
 const blockId = (index) => `${BOOK}:p${Math.floor(index / PER_PAGE) + 1}:${index}`;
 
-function bookRows({ profiles = [], settings = {} } = {}) {
+// The sharḥ groups (step 4b of docs/plans/hadith-text-matching.md): the same
+// book, titled and categorised as a sharḥ of Bukhārī, with a synthetic
+// hadith-json collection under the slug `bukhari` beside it. Every matn is
+// written for this check — invented sentences, not ḥadīth — and so is the
+// English. No index is seeded: the first translation builds it from the rows
+// (the self-heal path a tablet with an older import takes).
+const SHARH_TITLE = 'شرح تجريبي على صحيح البخاري';
+const SHARH_CATEGORY = 'شروح الحديث';
+const SYNTHETIC_MATN = 'كان الرجل التجريبي يمشي في السوق الكبير فيلقى أصحابه ويسلم عليهم ثم يعود إلى بيته قبل المغرب بقليل';
+const SYNTHETIC_SHARED = 'من حفظ هذه الكلمات التجريبية في صدره وعمل بها في يومه وليلته';
+const SYNTHETIC_COLLECTION = [
+  'هذه جملة تجريبية أولى لا علاقة لها بما بعدها في هذا الملف المصنوع للفحص',
+  SYNTHETIC_MATN,
+  `قال الراوي التجريبي الأول إن ${SYNTHETIC_SHARED} فقد أصاب خيرا كثيرا في دنياه وآخرته عند الناس`,
+  'وهذه جملة أخرى للتجربة تتحدث عن الماء والزرع والمطر في أرض بعيدة عن المدينة',
+  `وفي خبر آخر مختلف عن الأول تماما ${SYNTHETIC_SHARED} كان له نور يوم يلقى ربه بين الخلائق`,
+  'وآخر جملة في هذه المجموعة التجريبية عن السفر والطريق والرفقة الصالحة في الليل',
+  // The book's own matn (block 5's quotation), so a tap on it finds this
+  // entry by text (step T1).
+  HADITH_QUOTE.replace(/[«»]/g, ''),
+];
+function sharhRows() {
+  const at = FIXED_NOW - 86_400_000;
+  const id = 'qul-p-bukhari';
+  return {
+    qulResources: [{
+      id, kind: 'hadith-json', name: 'Synthetic Bukhārī (check P)', fileName: 'bukhari.json', byteSize: 4096,
+      entryCount: SYNTHETIC_COLLECTION.length, format: 'json', importedAt: at, collection: 'bukhari',
+    }],
+    qulEntries: SYNTHETIC_COLLECTION.map((arabic, i) => ({
+      id: `${id}|bukhari:${i + 1}`, resourceId: id, key: `bukhari:${i + 1}`,
+      value: {
+        t: 'hadith-json', number: i + 1, idInBook: i + 1, chapterId: 0, chapterEnglish: '',
+        narrator: 'Narrated (synthetic):', text: `Synthetic English ${i + 1}, written for check P; not a ḥadīth.`, arabic,
+      },
+    })),
+  };
+}
+
+function bookRows({ profiles = [], settings = {}, sharh = false } = {}) {
   const at = FIXED_NOW - 86_400_000;
   const pages = Math.ceil(TEXTS.length / PER_PAGE);
   const hadithAt = TEXTS[4].indexOf(HADITH_QUOTE);
@@ -237,8 +276,8 @@ function bookRows({ profiles = [], settings = {} } = {}) {
   return {
     rows: {
       books: [{
-        id: BOOK, shamelaId: 616161, title: 'كتاب فحص الترجمة', author: 'مؤلف تجريبي', publisher: '', edition: '',
-        volumeCount: 1, category: '', structureProfile: 'generic', importedAt: at, importStatus: 'complete',
+        id: BOOK, shamelaId: 616161, title: sharh ? SHARH_TITLE : 'كتاب فحص الترجمة', author: 'مؤلف تجريبي', publisher: '', edition: '',
+        volumeCount: 1, category: sharh ? SHARH_CATEGORY : '', structureProfile: 'generic', importedAt: at, importStatus: 'complete',
         totalPages: pages, fetchedPages: pages, volumeStarts: [1], hadithCollection: null, role: 'reading',
         nameIndexSize: 0,
       }],
@@ -253,9 +292,14 @@ function bookRows({ profiles = [], settings = {} } = {}) {
       })),
       entities: [
         entity('quran', 'quran', 1, 0, VERSE.length, { reference: '14:2', label: 'إبراهيم 2', textUthmani: VERSE }),
-        entity('hadith', 'hadith', 4, hadithAt, hadithAt + HADITH_QUOTE.length, { reference: 'riyadussalihin:1' }),
+        // In a sharḥ of a non-citable collection the matn's reference is
+        // book-scoped (detectEntities' `<bookId>#n`), its number the book's own.
+        entity('hadith', 'hadith', 4, hadithAt, hadithAt + HADITH_QUOTE.length, {
+          reference: sharh ? `${BOOK}#1` : 'riyadussalihin:1',
+        }),
       ],
       profiles,
+      ...(sharh ? sharhRows() : {}),
     },
     // panelScope 'all' so the panel shows every card in book order, whatever
     // is scrolled into view: the record must not depend on where the page sits.
@@ -558,7 +602,7 @@ async function centre(page, target) {
  * the key written (or not), the book opened. The model host's requests are
  * held in `pending` until a scenario answers them.
  */
-async function group(browser, base, name, { keys = ['gemini'], profile = null } = {}, run) {
+async function group(browser, base, name, { keys = ['gemini'], profile = null, sharh = false } = {}, run) {
   console.log(`\n=== ${name} ===`);
   step(`${name}: opening a context`);
   const context = await within(60_000, `${name}: opening a context`, browser.newContext({
@@ -704,7 +748,7 @@ async function group(browser, base, name, { keys = ['gemini'], profile = null } 
     step(`${name}: seeding`);
     ({ profiles: [defaultProfile] } = await dumpDatabase(page, ['profiles']));
     const profiles = profile ? [{ ...defaultProfile, ...profile }] : [];
-    const seed = bookRows({ profiles, settings: profile ? { activeProfileId: profile.id } : {} });
+    const seed = bookRows({ profiles, settings: profile ? { activeProfileId: profile.id } : {}, sharh });
     await writeRows(page, seed.rows);
     await patchSettings(page, seed.settings);
     step(`${name}: opening the book`);
@@ -1073,6 +1117,80 @@ async function offlineGroup(scenario, { page, nextLoad, network }) {
   });
 }
 
+/**
+ * A sharḥ of Bukhārī with a synthetic collection imported, translated three
+ * times; once with canned Gemini answers and once with canned Claude ones,
+ * the same segments, so the two records side by side are the proof that the
+ * card path cannot tell the providers apart (plan, R16). Each answer has one
+ * `hadith` segment: (a) a matn with no reference; (b) the same matn cited as
+ * «Ṣaḥīḥ al-Bukhārī 9999», far from where the dataset has it; (b2) cited as
+ * «Ṣaḥīḥ al-Bukhārī 5», within ten of it; (b3) cited from a collection not
+ * imported («Ṣaḥīḥ Muslim 9999»); (c) a wording two invented ḥadīth share,
+ * no reference; (c2) the same wording citing «Ṣaḥīḥ Muslim 5», which was not
+ * searched, so the old reference path runs (owner's answers of 2026-11-22).
+ * The sunnah.com key is set throughout, and none of (a)–(c) may reach it.
+ * (c2) may: its fallback is checked on the card instead, as the sunnah.com note
+ * the reference path writes when a key is set. In the plain build no request is
+ * sent at all (WebHttpClient refuses the proxy-only host before fetching,
+ * ProxyUnavailableError, and fetchHadith returns null); a shell with
+ * VITE_PROXY_URL or PROXY_URL set would send one, which the route aborts. The
+ * `hadiths` store stays empty.
+ */
+function sharhGroup(provider) {
+  const respond = (segments) => (provider === 'anthropic'
+    ? emitTool(segments, { input: 1100, output: 260, cacheRead: 1024, cacheWrite: 0 })
+    : answer(segments, { prompt: 620, candidates: 110 }));
+  const hadith = (arabic, reference) => ({ type: 'hadith', arabic, english: '', reference });
+  return async (scenario, { page, context }) => {
+    const sunnahRequests = [];
+    context.on('request', (request) => { if (isSunnahUrl(request.url())) sunnahRequests.push(request.url()); });
+    const once = async (id, through, blockIndex, segments, { note = null, sunnahAllowed = false } = {}) => {
+      const sunnahBefore = sunnahRequests.length;
+      await scenario(`sharh-${provider}-${id}`, through, async (p) => {
+        const before = await cardsOf(page);
+        await select(page, ...wholeBlock(blockIndex));
+        await railTranslate(page).click();
+        const held = await p.request('the translation');
+        await held.respond(respond([prose(TEXTS[blockIndex], 'A test sentence (check P, sharḥ group).'), ...segments]));
+        await untilCards(page, 'the card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+        if (note) {
+          const card = newCards(before, await cardsOf(page)).find((row) => row.status === 'complete');
+          const segment = card?.segments?.find((s) => s.type === 'hadith');
+          if (!segment?.note?.startsWith(note)) harnessFail(`sharh-${provider}-${id}`, `the ḥadīth's note is not the reference path's: ${segment?.note}`);
+        }
+      });
+      const asked = sunnahRequests.length - sunnahBefore;
+      if (asked !== 0 && !sunnahAllowed) harnessFail(`sharh-${provider}-${id}`, `${asked} request(s) reached sunnah.com`);
+    };
+    await once('no-reference', 'block 3 → Translate: a ḥadīth segment with no reference, found by its text in the synthetic Bukhārī (self-healing its index): its English, "Ṣaḥīḥ al-Bukhārī" with no number and the by-text note', 2, [hadith(SYNTHETIC_MATN, null)]);
+    await once('wrong-number', 'block 1 → Translate: the same matn cited «Ṣaḥīḥ al-Bukhārī 9999», far from its place in the dataset: the English by text, "Ṣaḥīḥ al-Bukhārī" with no number, and "The model cited …"', 0, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ al-Bukhārī 9999')]);
+    await once('near-number', 'block 10 → Translate: the same matn cited «Ṣaḥīḥ al-Bukhārī 5», within ten of its place: the English by text under the model\'s citation, no by-text note', 9, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ al-Bukhārī 5')]);
+    await once('other-collection', 'block 4 → Translate: the same matn, the model citing «Ṣaḥīḥ Muslim 9999» (not imported): found by text in Bukhārī all the same, the collection name, and "The model cited …"', 3, [hadith(SYNTHETIC_MATN, 'Ṣaḥīḥ Muslim 9999')]);
+    await once('ambiguous', 'block 9 → Translate: a wording two invented ḥadīth share: no English, the ambiguity note naming the collection (no number: not citable)', 8, [hadith(SYNTHETIC_SHARED, null)]);
+    await once('ambiguous-cited-elsewhere', 'block 11 → Translate: the same wording citing «Ṣaḥīḥ Muslim 5», not searched: the ambiguity does not end it, the old reference path runs and gives the sunnah.com note (a key is set; the plain build refuses the proxy-only host, and with a proxy set the request is aborted)', 10, [hadith(SYNTHETIC_SHARED, 'Ṣaḥīḥ Muslim 5')], { note: 'No verified English translation was retrieved from sunnah.com', sunnahAllowed: true });
+    const { hadiths } = await dumpDatabase(page, ['hadiths']);
+    if ((hadiths ?? []).length > 0) harnessFail(`sharh-${provider}`, `${hadiths.length} row(s) in the hadiths store: the imported English must never be cached there`);
+
+    // Step T1: the matn tapped. Its book-scoped reference finds nothing by
+    // number, so the sheet looks for it by text in the book's collection and
+    // shows that English. dorar's lookup (aborted) still writes its row, and
+    // that row must carry no English: the import is never cached.
+    await scenario(`sharh-${provider}-tap`, 'the matn tapped: the sheet finds it by text in the synthetic Bukhārī and shows its English, "identified by its text"; the hadiths row dorar\'s lookup writes carries no English', async () => {
+      const matn = page.locator('[data-entity-id="entity-hadith"]');
+      await centre(page, matn);
+      await matn.click();
+      const sheet = page.getByRole('dialog').last();
+      await within(20_000, 'the sheet\'s English', sheet.getByText('identified by its text').waitFor());
+      const shown = await sheet.innerText();
+      if (!shown.includes(`Synthetic English ${SYNTHETIC_COLLECTION.length}`)) harnessFail(`sharh-${provider}-tap`, 'the sheet does not show the matched entry\'s English');
+      const { hadiths: rows } = await dumpDatabase(page, ['hadiths']);
+      if ((rows ?? []).some((row) => row.english)) harnessFail(`sharh-${provider}-tap`, 'a hadiths row carries English: the import was cached');
+      await sheet.getByRole('button', { name: /close/i }).first().click();
+      await within(10_000, 'the sheet closed', sheet.waitFor({ state: 'detached' }));
+    });
+  };
+}
+
 // How a Gemini reply ends, through the reader: added with the change that
 // names every finishReason, stops asking Gemini to echo the Arabic (each
 // segment names the numbered pieces of the passage it covers, and the app
@@ -1243,6 +1361,15 @@ try {
     keys: ['anthropic'],
     profile: { id: 'profile-p-check-claude', name: 'P: Claude', providerId: 'anthropic', model: CLAUDE_MODEL },
   }, claudeGroup));
+  groups.push(await group(browser, base, 'a sharḥ of Bukhārī, Gemini', { keys: ['gemini', 'sunnah'], sharh: true }, sharhGroup('gemini')));
+  groups.push(await group(browser, base, 'a sharḥ of Bukhārī, Claude', {
+    keys: ['anthropic', 'sunnah'],
+    // The Claude group's own profile id, so the first card's cacheKey can be
+    // compared with claude-translate's: the same block, profile, glossary,
+    // provider and model, and a collection now imported.
+    profile: { id: 'profile-p-check-claude', name: 'P: Claude', providerId: 'anthropic', model: CLAUDE_MODEL },
+    sharh: true,
+  }, sharhGroup('anthropic')));
   groups.push(await group(browser, base, 'a profile on the device', {
     keys: [],
     profile: { id: 'profile-p-check-offline', name: 'P: on device', providerId: 'offline', model: 'opus-mt-ar-en' },
@@ -1256,6 +1383,15 @@ try {
 }
 
 const scenarios = groups.flatMap((entry) => entry.scenarios);
+
+// Importing a collection must not change a card's cacheKey (trap 5): the
+// same block on the same Claude profile, without and with the collection.
+{
+  const keyOf = (id) => scenarios.find((entry) => entry.id === id)?.cards?.find((row) => row.status === 'complete')?.cacheKey;
+  const without = keyOf('claude-translate');
+  const withImport = keyOf('sharh-anthropic-no-reference');
+  if (!without || without !== withImport) harnessFail('cacheKey', `block 3 on the Claude profile: ${without} without the collection, ${withImport} with it`);
+}
 const requestCount = scenarios.reduce((sum, entry) => sum + entry.requests.length, 0);
 const recordFile = {
   check: 'P — the translate pipeline through the reader, recorded (scripts/verify-translate.mjs)',

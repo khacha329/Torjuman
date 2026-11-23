@@ -14,16 +14,18 @@ import {
   type MissReason,
   type UnmatchedHadith,
 } from '../../retrieval/hadithJsonReport';
+import { hadithIndexStatus, type IndexProgress, type IndexStatus } from '../../retrieval/hadithTextIndex';
 import { hadithCollectionFor } from '../../quran/detectEntities';
 import type { Book, QulResource } from '../../types';
 import { Button, Spinner, SettingsSection } from '../kit';
 
 // Settings → Ḥadīth English (hadith-json).
 //
-// The English of Riyāḍ aṣ-Ṣāliḥīn and Nawawī's Forty from the hadith-json
-// dataset, imported from files the user downloads. Nothing is fetched from here
-// and nothing is bundled or committed: the text is sunnah.com's, the repository
-// is public, and how to distribute it legitimately is a later decision.
+// The English of the collections in HADITH_JSON_COLLECTIONS (Riyāḍ, the Forty
+// and the nine books but ad-Dārimī) from the hadith-json dataset, imported
+// from files the user downloads. Nothing is fetched from here and nothing is
+// bundled or committed: the text is sunnah.com's, the repository is public,
+// and how to distribute it legitimately is a later decision.
 //
 // Two steps, as the QUL import is: what was detected is shown first, with real
 // counts and a real excerpt, and only then is anything written.
@@ -51,6 +53,17 @@ function reportText(report: DeviceMatchReport): string {
   ].join('\n');
 }
 
+/** The collection's text index in one line. */
+function describeIndex(status: IndexStatus): string {
+  if (!status.built) {
+    return status.reason === 'stale'
+      ? 'Text index: from an older version — rebuilt on first use.'
+      : 'Text index: not built yet — built on first use.';
+  }
+  const time = status.builtMs === null ? '' : `, built in ${(status.builtMs / 1000).toFixed(1)} s`;
+  return `Text index: ${status.positions.toLocaleString()} positions${time}.`;
+}
+
 export function HadithJsonResources() {
   const { storage } = useApp();
   const [resources, setResources] = useState<QulResource[]>([]);
@@ -59,6 +72,12 @@ export function HadithJsonResources() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The text index: its build during an import, and each collection's state.
+  // The "built in N s" line is how the owner reads the tablet's build time,
+  // which nothing on the PC can measure — when the tablet built it: after a
+  // whole-tablet transfer the parts, and so the time, are the other device's.
+  const [indexing, setIndexing] = useState<IndexProgress | null>(null);
+  const [indexStatus, setIndexStatus] = useState<Record<string, IndexStatus>>({});
 
   // The match report: which imported book, running state, result.
   const [books, setBooks] = useState<Book[]>([]);
@@ -79,7 +98,11 @@ export function HadithJsonResources() {
   };
 
   const refresh = useCallback(async () => {
-    setResources(await listHadithJsonResources(storage));
+    const listed = await listHadithJsonResources(storage);
+    setResources(listed);
+    const statuses: Record<string, IndexStatus> = {};
+    for (const resource of listed) statuses[resource.id] = await hadithIndexStatus(storage, resource);
+    setIndexStatus(statuses);
   }, [storage]);
 
   useEffect(() => {
@@ -143,7 +166,7 @@ export function HadithJsonResources() {
     if (!pending) return;
     setBusy(true);
     try {
-      const resource = await commitHadithJsonImport(storage, pending);
+      const resource = await commitHadithJsonImport(storage, pending, setIndexing);
       setPending(null);
       setStatus(
         `Imported ${resource.name} — ${resource.entryCount.toLocaleString()} ḥadīth. ` +
@@ -154,6 +177,7 @@ export function HadithJsonResources() {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setBusy(false);
+      setIndexing(null);
     }
   };
 
@@ -194,9 +218,11 @@ export function HadithJsonResources() {
           </span>
         ))}
         . It is shown under the book’s own Arabic, attributed “
-        {HADITH_JSON_ATTRIBUTION}”. Each ḥadīth is found by its number and then checked
-        against the book’s text, so a numbering that has drifted shows nothing rather than
-        the wrong ḥadīth. The files stay on this device.
+        {HADITH_JSON_ATTRIBUTION}”. A ḥadīth’s English is shown only when it agrees with the
+        book’s own text: it is found by its text, or by a number — the one Riyāḍ and the
+        Forty print, or one a translation cites — and then checked against the text. So a
+        numbering that has drifted shows nothing rather than the wrong ḥadīth. The files stay
+        on this device.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +240,15 @@ export function HadithJsonResources() {
             event.target.value = '';
           }}
         />
-        {busy && <Spinner label="Working…" />}
+        {busy && (
+          <Spinner
+            label={
+              indexing
+                ? `Building the text index: ${indexing.stage === 'reading' ? 'reading ' : ''}${indexing.done.toLocaleString()} of ${indexing.total.toLocaleString()}…`
+                : 'Working…'
+            }
+          />
+        )}
       </div>
 
       {error && (
@@ -263,6 +297,11 @@ export function HadithJsonResources() {
               <Button variant="danger" onClick={() => void remove(resource)}>
                 Remove
               </Button>
+              {indexStatus[resource.id] && (
+                <span className="basis-full text-[11px] text-muted">
+                  {describeIndex(indexStatus[resource.id])}
+                </span>
+              )}
             </div>
           ))}
         </div>

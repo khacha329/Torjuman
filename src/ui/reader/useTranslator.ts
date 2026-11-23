@@ -10,6 +10,7 @@ import { providerFor } from '../../translation/providers/registry';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { findLocalHadith } from '../../retrieval/hadithJson';
+import { lookupByText } from '../../retrieval/HadithSource';
 import { loadQuranEnglish, loadQuranIndex } from '../../quran/quranIndex';
 import {
   applyProseTranslations,
@@ -17,6 +18,7 @@ import {
 } from '../../translation/offline/segmentSelection';
 import { translateProse } from '../../translation/offline/OfflineProvider';
 import type { SelectionAnchor } from './selection';
+import { hadithScopeFor } from './hadithScope';
 import {
   cacheAnchorFor,
   failedCard,
@@ -176,13 +178,32 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         if (entityLast < firstOrder || entityFirst > lastOrder) continue;
         references.set(entity.reference, blockTexts.get(entity.startBlockId) ?? '');
       }
+      // The book's collection, for a ḥadīth its reference does not find (step
+      // T2): a sharḥ of one of the six main books, whose references are
+      // book-scoped (`<bookId>#n`), or a Riyāḍ number that does not confirm.
+      // The same text search the sheet runs (`lookupByText`), so a tap and an
+      // on-device translation show the same English.
+      const scope = await storage
+        .getBook(bookId)
+        .then((book) => (book ? hadithScopeFor(book) : null))
+        .catch(() => null);
       const records = await Promise.all(
         [...references].map(async ([reference, matn]) => {
           const record = await storage.getHadith(reference);
           // A cached English (sunnah.com's own) wins; otherwise the imported
-          // hadith-json collection, if the match against the matn holds.
-          const local = record?.english ? null : await findLocalHadith(storage, reference, matn);
-          return [reference, record, local] as const;
+          // hadith-json collection, if the match against the matn holds — by
+          // number first, then by text in the book's collection.
+          if (record?.english) return [reference, record, null] as const;
+          const byNumber = await findLocalHadith(storage, reference, matn);
+          if (byNumber) return [reference, record, byNumber.english] as const;
+          if (!scope) return [reference, record, null] as const;
+          const printed = /[#:](\d+)$/.exec(reference)?.[1];
+          const byText = await lookupByText(
+            storage,
+            { collection: scope, numberHint: printed !== undefined ? Number(printed) : undefined },
+            matn,
+          );
+          return [reference, record, byText.local?.english ?? null] as const;
         }),
       );
       const cache = new Map<
@@ -195,7 +216,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         } else if (local) {
           // The book's own matn stays the Arabic; segmentSelection falls back to
           // the selected text when this is empty.
-          cache.set(reference, { arabic: '', english: local.english, source: 'hadith-json' });
+          cache.set(reference, { arabic: '', english: local, source: 'hadith-json' });
         }
       }
 
@@ -239,7 +260,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         costUsd: 0,
       };
     },
-    [blocks, entities, glossary, storage],
+    [blocks, bookId, entities, glossary, storage],
   );
 
   /** A card is stale when the key it was made with no longer matches today's. */
@@ -433,6 +454,13 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             },
             sunnahApiKey: secrets.getSunnahKey(),
             knownQuranRefs: known.quran,
+            // Read per translation, not held: a book is one IndexedDB get, and
+            // nothing about the scope is stored (hadithScope.ts).
+            // A failed read means no scope, never a failed card.
+            hadithScope: await storage
+              .getBook(bookId)
+              .then((book) => (book ? hadithScopeFor(book) : null))
+              .catch(() => null),
           }),
         };
 
