@@ -364,7 +364,7 @@ export function HadithSheet({
               >
                 add it in Settings
               </button>
-              , or import the hadith-json files there for Riyāḍ aṣ-Ṣāliḥīn and Nawawī’s Forty.
+              , or import there the hadith-json file for the collection this book comments on.
             </>
           )}
         </p>

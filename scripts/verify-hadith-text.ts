@@ -565,7 +565,7 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       const reference = 'book-x#11';
       const printed = /[#:](\d+)$/.exec(reference)?.[1];
       const offline = await lookupByText(storage, { collection: 'alpha', numberHint: printed !== undefined ? Number(printed) : undefined }, text(matnA));
-      expect('T2: the on-device lookup finds what the sheet finds', offline.local?.english === matched.record?.english && offline.local?.english === 'english', offline);
+      expect('T2: the on-device lookup finds what the sheet finds, the same row', offline.local?.english === matched.record?.english && offline.local?.number === 11 && matched.text?.status === 'matched', offline);
       const offlineMiss = await lookupByText(storage, { collection: 'alpha' }, text(words(20)));
       expect('T2: an unknown text gives no English on device', offlineMiss.local === null && offlineMiss.text.status === 'no-match');
       const offlineAbsent = await lookupByText(storage, { collection: 'zeta-not-imported' }, text(matnA));

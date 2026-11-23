@@ -21,8 +21,9 @@ import { Button, Spinner, SettingsSection } from '../kit';
 
 // Settings → Ḥadīth English (hadith-json).
 //
-// The English of Riyāḍ aṣ-Ṣāliḥīn and Nawawī's Forty from the hadith-json
-// dataset, imported from files the user downloads. Nothing is fetched from here
+// The English of the collections in HADITH_JSON_COLLECTIONS (Riyāḍ, the Forty
+// and the nine books but ad-Dārimī) from the hadith-json dataset, imported
+// from files the user downloads. Nothing is fetched from here
 // and nothing is bundled or committed: the text is sunnah.com's, the repository
 // is public, and how to distribute it legitimately is a later decision.
 //
@@ -217,9 +218,10 @@ export function HadithJsonResources() {
           </span>
         ))}
         . It is shown under the book’s own Arabic, attributed “
-        {HADITH_JSON_ATTRIBUTION}”. Each ḥadīth is found by its number and then checked
-        against the book’s text, so a numbering that has drifted shows nothing rather than
-        the wrong ḥadīth. The files stay on this device.
+        {HADITH_JSON_ATTRIBUTION}”. Each ḥadīth is found by its text — the number a book
+        prints or a translation cites only helps choose between copies — so a numbering that
+        has drifted cannot show the wrong ḥadīth; where the text matches none, or more than
+        one, nothing is shown. The files stay on this device.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

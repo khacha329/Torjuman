@@ -107,7 +107,7 @@ export const HADITH_SOURCES: HadithSourceDescriptor[] = [
     displayName: 'hadith-json (local)',
     providesEnglish: true,
     needsKey: false,
-    note: `English from files you import in Settings — Riyāḍ aṣ-Ṣāliḥīn and Nawawī’s Forty, attributed “${HADITH_JSON_ATTRIBUTION}”. Works offline, needs no key, and is always tried first once imported; choosing it here only stops the sunnah.com key being spent on a ḥadīth it already covers.`,
+    note: `English from files you import in Settings — Riyāḍ aṣ-Ṣāliḥīn, Nawawī’s Forty and the nine books but ad-Dārimī, attributed “${HADITH_JSON_ATTRIBUTION}”. Works offline, needs no key, and is always tried first once imported; choosing it here only stops the sunnah.com key being spent on a ḥadīth it already covers.`,
   },
 ];
 
@@ -317,7 +317,7 @@ function recordFailure(collection: string, error: unknown): void {
     kind: 'hadith',
     outcome: 'lookup-failed',
     query: `text search in ${collection}`,
-    summary: 'The text search could not run; the sheet or the on-device card shows no English for it.',
+    summary: 'The text search could not run, so it gives no English for this ḥadīth.',
     detail: [['error', error instanceof Error ? error.message : String(error)]],
   });
 }
