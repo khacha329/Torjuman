@@ -77,6 +77,14 @@ export interface TranslationCard extends CardBase {
   model: string;
   /** Set when a fallback model answered in place of the profile's (CardFallback). */
   fallback?: CardFallback;
+  /**
+   * On a failed retranslation: the cards it was meant to replace, the one
+   * retranslated first, then whatever that one was itself meant to replace.
+   * When a Retry of this card succeeds they go too, so retranslating A,
+   * failing as F, then a successful Retry on F leaves one card, not A beside
+   * the new one (FOUND_ISSUES 57.2). Absent everywhere else.
+   */
+  replacesCardIds?: string[];
   cacheKey: string;
   status: CardStatus;
   /** Token counts as the provider reported them. */

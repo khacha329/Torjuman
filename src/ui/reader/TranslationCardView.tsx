@@ -24,6 +24,7 @@ export function TranslationCardView({
   onFocus,
   onToggleCollapse,
   onRetranslate,
+  retranslating = false,
   onTranslateRest,
   onDelete,
   onAddGlossaryTerm,
@@ -37,6 +38,11 @@ export function TranslationCardView({
   onFocus: () => void;
   onToggleCollapse: () => void;
   onRetranslate: (options?: { providerId?: ProviderId; model?: string }) => void;
+  /**
+   * A retranslation of this card is in flight: Retranslate and Retry are off
+   * until it ends, one at a time (FOUND_ISSUES 57.3).
+   */
+  retranslating?: boolean;
   /** A partial card's "Translate the rest". */
   onTranslateRest?: () => void;
   onDelete: () => void;
@@ -148,7 +154,7 @@ export function TranslationCardView({
       )}
 
       {card.status === 'error' && (
-        <ErrorPanel card={card} onRetry={() => onRetranslate()} />
+        <ErrorPanel card={card} onRetry={() => onRetranslate()} retrying={retranslating} />
       )}
 
       {/* An answer that stopped early is well-formed and looks finished. The
@@ -240,9 +246,12 @@ export function TranslationCardView({
           <div className="relative">
             <button
               onClick={() => setShowRetranslateMenu((open) => !open)}
-              className="rounded px-2 py-1 text-muted hover:bg-rule"
+              disabled={retranslating}
+              // The dimming class only while disabled, so the button's markup
+              // is unchanged otherwise (check U).
+              className={`rounded px-2 py-1 text-muted hover:bg-rule${retranslating ? ' opacity-40' : ''}`}
             >
-              Retranslate ▾
+              {retranslating ? 'Retranslating…' : 'Retranslate ▾'}
             </button>
             {showRetranslateMenu && (
               <RetranslateMenu
@@ -409,7 +418,16 @@ function CostLabel({ card }: { card: TranslationCard }) {
  * specifically rather than as a generic failure, and the raw text is persisted
  * so it survives navigating away.
  */
-function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => void }) {
+function ErrorPanel({
+  card,
+  onRetry,
+  retrying,
+}: {
+  card: TranslationCard;
+  onRetry: () => void;
+  /** Its Retry is a retranslation already in flight (FOUND_ISSUES 57.3). */
+  retrying: boolean;
+}) {
   const kind = card.errorKind;
   const soft =
     kind === 'rate-limit' ||
@@ -464,9 +482,10 @@ function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => v
           event.stopPropagation();
           onRetry();
         }}
-        className="mt-1 rounded-md border border-current/30 bg-white/70 px-3 py-1 text-xs font-medium hover:bg-white"
+        disabled={retrying}
+        className={`mt-1 rounded-md border border-current/30 bg-white/70 px-3 py-1 text-xs font-medium hover:bg-white${retrying ? ' opacity-40' : ''}`}
       >
-        Retry
+        {retrying ? 'Retrying…' : 'Retry'}
       </button>
 
       {card.rawResponse && card.rawResponse.trim() !== '' && (

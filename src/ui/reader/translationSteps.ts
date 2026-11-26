@@ -64,6 +64,24 @@ export function cacheAnchorFor(
 }
 
 /**
+ * Whether two cards are of one passage: the same anchor and the same text,
+ * whatever provider, model or profile made them. A dictionary entry's card
+ * shares its block's anchor but not its text, so it is never the block's.
+ */
+export function samePassage(
+  a: Pick<TranslationCard, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'>,
+  b: Pick<TranslationCard, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'>,
+): boolean {
+  return (
+    a.startBlockId === b.startBlockId &&
+    a.startOffset === b.startOffset &&
+    a.endBlockId === b.endBlockId &&
+    a.endOffset === b.endOffset &&
+    a.sourceText === b.sourceText
+  );
+}
+
+/**
  * Whether a card translates a text of its own (a dictionary entry), not the
  * passage it is anchored on.
  *

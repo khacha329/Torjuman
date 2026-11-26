@@ -953,6 +953,8 @@ change). Lane D material. Left unfixed.
 
 ## 57. Consequences of 41 and 42 as decided (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "57." on `claude/lane-b2-translation`; DECISIONS, lane B2: all three change).
+
 Found by the review of lane B, for the owner to know; each follows from
 DECISIONS 41 and 42, none is a defect of the fix:
 
