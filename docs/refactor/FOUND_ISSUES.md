@@ -310,7 +310,7 @@ to the visitor's own database (`:330`, `:356`, `:397`); only the work backup and
 the five whole-tablet calls throw (`:474-507`). Check D's `share-adapter`
 scenario records all three kinds. Docs only. Design §6 B.
 
-## 18. Compiled QUL views are in no work backup (2026-11-16, measured)
+## 18. Compiled QUL views are in no work backup (2026-11-16, measured, fixed in lane C)
 
 `qulCompilations` — "the one generated thing in the QUL feature"
 (`StorageAdapter.ts:195`), each made by a paid model call — is not in
@@ -318,6 +318,14 @@ scenario records all three kinds. Docs only. Design §6 B.
 new device brings none of them; they travel only in the whole-tablet transfer.
 Check D's `work-backup`: the export's source has one compilation, the restored
 database none. For the owner to decide. Design §6 C.
+
+**Fixed in lane C**, the owner having put 18 on the lane's list. `qulCompilations`
+is a `WorkBundle` field (optional: absent on a backup from before) and the last
+`WORK_STORES` entry, so every earlier field keeps its place in the file. A
+compilation is keyed by āyah, resources, provider and model, so it binds where
+those resources are installed and is unused where they are not. Settings counts
+them ("compiled verse views"). Check D's `work-backup`: the file now carries the
+one compilation and the restored database has it.
 
 ## 19. Share records outlive their book (2026-11-16, measured)
 

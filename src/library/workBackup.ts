@@ -63,6 +63,7 @@ const COUNTED: [field: keyof WorkBundle, one: string, many: string][] = [
   ['marks', 'mark or note', 'marks and notes'],
   ['glossary', 'glossary entry', 'glossary entries'],
   ['wordGlosses', 'word gloss', 'word glosses'],
+  ['qulCompilations', 'compiled verse view', 'compiled verse views'],
 ];
 
 /** "3 translation cards, 1 explanation, …" — every counted field, zeros included. */

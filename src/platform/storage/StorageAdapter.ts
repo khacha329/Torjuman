@@ -75,6 +75,16 @@ export interface WorkBundle {
    * Provider API keys are a different thing entirely and are still never here.
    */
   shareRecords?: ShareRecord[];
+  /**
+   * Compiled verse views: the one generated thing in the QUL feature, each a
+   * paid model call. In no work backup until lane C (FOUND_ISSUES 18), so a
+   * restore onto a new device brought none of them back. Keyed by a cache key
+   * of āyah, resources, provider and model, so a row binds wherever those
+   * resources are installed and is simply unused where they are not.
+   *
+   * Absent on a bundle written before lane C, hence optional.
+   */
+  qulCompilations?: QulCompilation[];
   settings: AppSettings | null;
 }
 

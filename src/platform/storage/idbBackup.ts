@@ -32,6 +32,9 @@ const WORK_STORES = [
   'hadiths',
   // Absent on a backup written before shares existed, which `write` handles.
   'shareRecords',
+  // Last, so a file keeps every earlier field where it was. Absent on a
+  // backup written before lane C (FOUND_ISSUES 18), which `write` handles.
+  'qulCompilations',
 ] as const;
 
 type WorkStore = (typeof WORK_STORES)[number];
