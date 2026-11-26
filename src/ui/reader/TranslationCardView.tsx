@@ -382,7 +382,9 @@ function CostLabel({ card }: { card: TranslationCard }) {
   // they can act on. The provider badge stays: whether a rendering came from a
   // model at all is something a reader genuinely needs to know.
   if (readOnly) return null;
-  if (card.status !== 'complete' || !card.usage) return null;
+  // A failed card shows what was billed before it failed, a Claude research
+  // pass say (FOUND_ISSUES 64); a failure that billed nothing has no usage.
+  if (card.status === 'loading' || !card.usage) return null;
 
   const cached = card.usage.cacheReadTokens > 0;
 
