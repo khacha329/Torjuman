@@ -64,6 +64,34 @@ export function cacheAnchorFor(
 }
 
 /**
+ * Whether a card translates a text of its own (a dictionary entry), not the
+ * passage it is anchored on.
+ *
+ * True for a card marked `standalone`. Also true for an entry card stored
+ * before FOUND_ISSUES 26 was fixed, which has no flag and holds the visible
+ * block's cache key (FOUND_ISSUES 53). Such a card is recognised as the
+ * entry action made it: anchored on one whole block, from offset 0 to the
+ * block's end, with text that is not in that block. A selection's text is
+ * always its blocks' own text, so no real selection matches. The block must be
+ * among `blocks`; when it is not, nothing is claimed. Stored cards are left as
+ * they are (DECISIONS, lane B2).
+ */
+export function isEntryCard(
+  card: Pick<
+    TranslationCard,
+    'standalone' | 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
+  >,
+  blocks: Block[],
+): boolean {
+  if (card.standalone === true) return true;
+  if (card.startBlockId !== card.endBlockId || card.startOffset !== 0) return false;
+  const block = blocks.find((entry) => entry.id === card.startBlockId);
+  if (!block || card.endOffset !== block.text.length) return false;
+  const text = card.sourceText.trim();
+  return text !== '' && !block.text.includes(text);
+}
+
+/**
  * A standalone text's passage: nothing around it, nothing known in it. A
  * function, so every call gets its own empty arrays and nothing downstream can
  * change a shared object.

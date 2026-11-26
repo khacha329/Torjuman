@@ -28,6 +28,7 @@ import { hadithScopeFor } from './hadithScope';
 import {
   cacheAnchorFor,
   failedCard,
+  isEntryCard,
   loadingCard,
   passageFor,
   remainderAnchor,
@@ -383,7 +384,11 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
       if (!force) {
         const cached = await storage.getCardByCacheKey(cacheKey);
-        if (cached) {
+        // An entry card made before FOUND_ISSUES 26 was fixed holds the
+        // block's key: it is never served as the block's translation
+        // (FOUND_ISSUES 53). The block is then translated afresh.
+        const oldEntry = cached && !standalone && isEntryCard(cached, blocks);
+        if (cached && !oldEntry) {
           upsert(cached);
           return cached;
         }
@@ -567,9 +572,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         model: options.model,
         force: true,
         replaces: card,
-        standalone: card.standalone === true,
+        // An entry card from before FOUND_ISSUES 26 has no flag: it is
+        // recognised, so it is retranslated alone and under an entry's key,
+        // not with the block's context and key again (FOUND_ISSUES 53).
+        standalone: isEntryCard(card, blocks),
       }),
-    [translate],
+    [blocks, translate],
   );
 
   /**
@@ -580,7 +588,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
    */
   const translateRest = useCallback(
     async (card: TranslationCard) => {
-      const anchor = remainderAnchor(blocks, card);
+      // An old entry card's rest is the rest of its own text (FOUND_ISSUES 53).
+      const entry = isEntryCard(card, blocks);
+      const anchor = remainderAnchor(blocks, entry ? { ...card, standalone: true } : card);
       if (!anchor) {
         setNotice(
           'The rest of this passage could not be found in the book. Select it and translate it.',
@@ -591,7 +601,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         anchor,
         providerId: card.providerId,
         model: card.model,
-        standalone: card.standalone === true,
+        standalone: entry,
       });
     },
     [blocks, translate],

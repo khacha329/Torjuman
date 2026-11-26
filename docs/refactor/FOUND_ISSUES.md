@@ -908,6 +908,8 @@ old one.
 
 ## 53. Dictionary-entry cards made before the fix to 26 keep the block's key (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "53." on `claude/lane-b2-translation`; DECISIONS, lane B2: recognised on use).
+
 Found by the review of lane B. A "Translate this entry" card stored before
 FOUND_ISSUES 26 was fixed has no `standalone` flag and holds the visible
 block's cache key, so a later Translate of that whole block, or Translate
