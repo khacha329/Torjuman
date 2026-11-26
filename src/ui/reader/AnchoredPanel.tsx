@@ -77,7 +77,7 @@ export function AnchoredPanel({
   // would turn it back, and a panel that changed between popover and sheet
   // as the page scrolled would jump under the finger. The change remounts
   // the panel's children (the two branches are different trees), so state
-  // inside them is lost: FOUND_ISSUES 77.
+  // inside them is lost: FOUND_ISSUES 84.
   const [tooTight, setTooTight] = useState(false);
   const asSheet = useLayoutMode() === 'sheet' || preferSheet || tooTight;
 

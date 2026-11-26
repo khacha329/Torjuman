@@ -95,7 +95,7 @@ which files import `services/secrets.ts` (today: `App.tsx`,
 `ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
 settings files). For the owner to decide.
 
-## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured)
+## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured, fixed in lane C)
 
 `LibraryScreen.tsx` (~180): "Resume import" navigates to `#/import` first and
 starts the crawler second, and `ImportScreen` picks its stage once, on mount,
@@ -105,6 +105,13 @@ import is running. Reproduced at both tablet sizes while building check U, which
 therefore waits on the Library for "Importing…" before opening `#/import`. Not
 seen on the owner's tablet yet, as far as is known. Left as is. Found in Phase 2
 step 2a.
+
+**Fixed in lane C.** `ImportScreen` also subscribes to the crawler: a crawl
+that starts while the input form is showing takes the screen, as one already
+running at mount does (only from the form, never from a preview). Check U's
+capture now waits for the crawl panel on the screen Resume import opens, rather
+than going back to the Library and reopening Add book; `import-crawling` is
+unchanged at both sizes.
 
 ## 7. "N pending of 3 bundled resources" counts resources that are not bundled (2026-11-15, measured; first version withdrawn)
 
@@ -292,7 +299,7 @@ Exposed by check Q's second-round scenarios, recorded in
    too, and the SDK used its own backoff (`…429-no-retry-headers`). Pinned;
    not clearly a bug.
 
-## 16. README's work-backup list is short (2026-11-16, measured)
+## 16. README's work-backup list is short (2026-11-16, measured, fixed in lane C)
 
 `README.md:380-381` says the work backup holds "cards, explanations, marks,
 notes, glossary, profiles, positions, the gloss cache". It also carries sharḥ
@@ -300,6 +307,10 @@ cards, the Qurʾān-verse and ḥadīth caches, share records (with their
 decryption keys) and settings (`IdbStorageAdapter.ts:996-1007`; check D's
 `work-backup` → `export`, the `exportWork` value). Docs only. Phase 4 plan,
 Design §6 A.
+
+**Fixed in lane C.** README's list names every store the backup carries —
+sharḥ cards, the verse and ḥadīth caches, share records with their keys,
+settings, and the compiled QUL views 18 added — and points at `WORK_STORES`.
 
 ## 17. RESTRUCTURE §4 T-e says `ShareStorageAdapter` throws on write (2026-11-16, measured)
 
@@ -310,7 +321,7 @@ to the visitor's own database (`:330`, `:356`, `:397`); only the work backup and
 the five whole-tablet calls throw (`:474-507`). Check D's `share-adapter`
 scenario records all three kinds. Docs only. Design §6 B.
 
-## 18. Compiled QUL views are in no work backup (2026-11-16, measured)
+## 18. Compiled QUL views are in no work backup (2026-11-16, measured, fixed in lane C)
 
 `qulCompilations` — "the one generated thing in the QUL feature"
 (`StorageAdapter.ts:195`), each made by a paid model call — is not in
@@ -319,13 +330,34 @@ new device brings none of them; they travel only in the whole-tablet transfer.
 Check D's `work-backup`: the export's source has one compilation, the restored
 database none. For the owner to decide. Design §6 C.
 
-## 19. Share records outlive their book (2026-11-16, measured)
+**Fixed in lane C**, the owner having put 18 on the lane's list. `qulCompilations`
+is a `WorkBundle` field (optional: absent on a backup from before) and the last
+`WORK_STORES` entry, so every earlier field keeps its place in the file.
+Settings counts them ("compiled verse views"). Check D's `work-backup`: the file
+now carries the one compilation and the restored database has it; a new phase,
+`import-without-qulCompilations`, restores a backup written before.
+
+The limit, put to the owner after review and accepted (DECISIONS.md): a
+compilation's cache key includes the ids of the resources installed when it
+was made (`compileCacheKey`, `qul/compile.ts`), and a resource imported by hand
+gets a random id (`importResource.ts`). So a restored compilation is found
+again on the same tablet, after a whole-tablet transfer, or for a seeded
+resource, and on a new tablet whose tafsīrs were imported afresh almost
+never.
+
+## 19. Share records outlive their book (2026-11-16, measured, fixed in lane C)
 
 `ShareRecord` has a `bookId` (`types/share.ts:31`) but `deleteBook`
 (`IdbStorageAdapter.ts:399-416`) leaves the record: check D's `delete-book`,
 "listShareRecords (outlives its book)". Probably right — a published link still
 works for others, and its key exists only in the link and this record — but
 nothing says so. Design §6 D.
+
+**Fixed in lane C** by saying so, the owner's choice (2026-11-26; DECISIONS.md):
+the records stay. `deleteBook` (`idbLibrary.ts`) says why, README's work-backup
+entry says it, and the Library's delete confirm adds, for a book with a
+published chapter, that the chapter keeps working and stays under Settings →
+Published chapters. No data change; check D's `delete-book` is unchanged.
 
 ## 20. Databases from before v7 cannot be checked (2026-11-16, by design)
 
@@ -339,7 +371,7 @@ indexes is unknown. Every database from v7 on has them (the fresh branch at
 today's indexes, and v7–v10; the owner named no device with an older database
 (Phase 4 Q2). Design §6 E.
 
-## 21. The three QUL stores share one upgrade guard (2026-11-16, measured)
+## 21. The three QUL stores share one upgrade guard (2026-11-16, measured, fixed in lane C)
 
 `qulResources`, `qulEntries` and `qulCompilations` are created together when
 `qulResources` is missing (`IdbStorageAdapter.ts:233-239`). So a database with
@@ -354,12 +386,25 @@ and, since the 4j follow-up, a third, `harness/odd-v10-without-qulCompilations`
 (opens, never gets `qulCompilations`).
 Design §6 F.
 
-## 22. A work backup is not a snapshot (2026-11-16, by reading)
+**Fixed in lane C.** Each `if-missing` store is guarded by its own name; the
+`createdWith` field is gone from `STORES`. All three odd databases now open
+and get the store they lack, every row kept. No `DB_VERSION` bump: no
+database the app creates changes, since every one from v7 on has all three
+stores. Check D's three `harness/odd-v10-without-*` scenarios are
+re-recorded.
+
+## 22. A work backup is not a snapshot (2026-11-16, by reading, fixed in lane C)
 
 `exportWork` reads each store in its own transaction
 (`IdbStorageAdapter.ts:996-1006`), so a card saved while the export runs can be
 in one store's read and its sibling's not. Minor; check D cannot show a race.
 Design §6 G.
+
+**Fixed in lane C.** `exportWork` reads `books`, every `WORK_STORES` store and
+`settings` in one read-only transaction (`idbBackup.ts`), so the file is one
+moment's state. Settings are read inside it as `getSettings` reads them
+(`SETTINGS_KEY` is now exported from `idbWork.ts` for that). Check D's
+`work-backup` → `export` is unchanged: same rows, same file.
 
 ## 23. `importWork` ignores the backup's version (2026-11-16, by reading)
 
@@ -369,7 +414,7 @@ the fields this one knows and drops the rest without a word. By design — block
 ids are deterministic, so the rows bind wherever they land — but unstated.
 Design §6 H.
 
-## 24. Replacing a book from a Library transfer file deletes its cards and marks (2026-11-16, measured)
+## 24. Replacing a book from a Library transfer file deletes its cards and marks (2026-11-16, measured, fixed in lane C)
 
 Found while building check D (Phase 4 step 4a). When a per-book file is
 imported for a book already on the device, `ui/settings/LibraryTransfer.tsx:58-63`
@@ -398,13 +443,35 @@ survives only in a work backup or a whole-tablet file made beforehand.
 phase).** A fix — keep the user's work on a replacement, or say plainly that
 it goes — is the owner's call, in its own change.
 
-## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured)
+**Fixed in lane C**, as DECISIONS.md has it. The incoming copy is written
+under staged ids (`stagedId`, `STAGING_PREFIX` in `StorageAdapter.ts`) and
+becomes the book only once the whole file is in and its counts check out:
+`adoptStagedBook` (`idbLibrary.ts`), one IndexedDB transaction, removes the old
+text and what is derived from it and moves the staged rows to their real ids.
+The marks, cards, explanation and sharḥ cards and the position are not in that
+transaction. A failure before or in it removes only the staged rows. The
+dialog now says the work is kept and that a file that cannot be read in full
+leaves the book as it is. Rebuilding the derived index is the one step after
+adoption; if it stops, the screen says the book was imported
+(`BookIndexingError`), not that the import failed. Check D's `book-transfer` → `import-conflict`: "after onConflict true" keeps
+the five work rows; after the cut-short replacement, `getBook A` is the book,
+with its work, and no staged row remains. The costs: until it is adopted the
+staged copy takes room beside the old one (and briefly more while the swap
+commits); the swap is one readwrite transaction, so reads of those stores wait
+for it and the progress line sits on its last message meanwhile; and an import
+that never finishes leaves its staged rows (77).
+
+## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured, fixed in lane C)
 
 `importWork` reports `restoredCards` as translation cards plus explanation
 cards (`IdbStorageAdapter.ts:1054`); sharḥ cards are restored but not counted.
 Check D's `work-backup` → `import-fresh`: `restoredCards` 3 for two translation
 cards and one explanation, with the one sharḥ card restored beside them.
 Cosmetic.
+
+**Fixed in lane C.** `restoredCards` counts translation, explanation and sharḥ
+cards (`idbBackup.ts`), so "Restored N card(s)" counts every card written.
+Check D's `work-backup` restores now report one more card for the sharḥ card.
 
 ## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
 
@@ -523,7 +590,7 @@ order under the second book's id. A remount resets only what going through
 the Library already reset. R's "a second book opened by its URL restores its
 own position" guards it: on the old code the second book opened at block 0.
 
-## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
+## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading, fixed in lane C)
 
 `ui/settings/BackupSection.tsx:26-39`: `exportWork` sets "Preparing…" and
 then awaits `storage.exportWork()` and `saveFile` with no `try`, so a failure
@@ -532,6 +599,13 @@ said. Its success message counts translation cards, explanations, marks and
 glossary entries, but not sharḥ cards or word glosses, which the backup does
 carry (`WorkBundle`, `platform/storage/StorageAdapter.ts:48-60`) — like the
 restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
+
+**Fixed in lane C.** Making the file is in a `try`: a failure says "Export
+failed, so no backup was made" and why; each route after it (save, proxy,
+share sheet) has its own `try` and message ("Could not save the file: …").
+Its message counts every kind of card and note the file carries, commentary
+cards, word glosses and compiled verse views included (`describeWorkBundle`,
+`library/workBackup.ts`).
 
 ## 33. When Meaning is offered (2026-11-16, by reading)
 
@@ -1294,7 +1368,75 @@ and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
 
-## 76. A popover whose anchor is unmounted without a scroll stays open (2026-11-26, by reading)
+## 76. A failed fresh book import deleted work restored for that book (2026-11-26, by reading, fixed in lane C with 24)
+
+Found while fixing 24. A work backup restores fine before its books are on the
+device ("it will bind correctly once that book is imported", `idbBackup.ts`),
+so cards and marks can be waiting for a book that is not there yet. A per-book
+import that then failed part way rolled back with `deleteBook(bookId)`
+(`library/transfer.ts`), which purges every `BOOK_STORES` store and the
+position for that id — the waiting work among them. Not a replacement, so
+not 24 as written. The fix to 24 covers it: every import is staged, and the
+rollback removes only staged rows. Check D has no scenario with work waiting
+for a book; `import-one-block-short` (no work) is unchanged.
+
+## 77. An import that never finishes leaves its staged rows (2026-11-26, by reading; caused by the fix to 24)
+
+Found by the review of lane C's fix to 24. A per-book import writes its copy
+under staged ids (`stagedId`) until it is adopted. If the tab is closed or the
+tablet sleeps before then, the staged rows stay: no screen lists them, Library
+→ Remove does not clear them (`deleteBook(id)` never touches `stagedId(id)`),
+and only the next import of the same book removes them, at its start. The
+whole-tablet transfer copies them raw and counts them among its "paragraphs
+of text". Before the fix such an import left a visible in-progress book.
+Harmless to the reader and to the user's work; it costs room, up to one
+book's text. Left as is: clearing them on `deleteBook`, or on boot, is the
+owner's call.
+
+## 78. A per-book file saved uncompressed cannot be imported (2026-11-26, by reading)
+
+Found by the review of lane C. Where the browser cannot gzip, `exportBook`
+(`library/transfer.ts`) returns NDJSON uncompressed (`application/x-ndjson`),
+but `LibraryTransfer` saves every book file under `exportFilename`'s
+`.hashiya.gz`, and `importBookFile` decides to gunzip from the name alone
+(`file.name.endsWith('.gz')`), so that file fails to import on any device.
+`deviceTransfer.ts` tells the two apart by content instead. Pre-existing;
+left as is.
+
+## 79. A quick second tap on Send through the proxy starts a second upload (2026-11-26, by reading)
+
+Found by the review of lane C. `DeviceTransfer.relay` disables its buttons
+only once `sendViaRelay` reports its first piece, which comes after the code's
+id and key are derived, so a second tap in that gap starts a second upload
+under another code. The work backup's copy of the route (lane C) is busy from
+the tap; the tablet transfer's is left as is: it is not one of lane C's issues
+(LANES.md rule 1).
+
+## 80. A crawl whose start throws keeps saying it is running (2026-11-26, by reading)
+
+Found by the review of lane C. `Crawler.start` (`ingest/crawler.ts`) sets
+`progress` with status `'running'` before its work, and if anything in it
+throws (`saveState`, `putBook`, entity or root-index building) its `finally`
+clears only `running`: `progress.status` stays `'running'`. The Library then
+shows "Importing…" for that book and hides Resume import until a reload.
+(`ImportScreen`'s listener from the fix to 6 checks `isRunning` too, so it is
+not misled.) Pre-existing; left as is.
+
+## 81. Adding a book while a catalog batch crawls never crawls it (2026-11-26, by reading)
+
+Found by the review of lane C. While a catalog batch import is crawling,
+confirming a preview on Add book calls `crawler.start`, which returns at once
+(`if (this.running) return`). The new book is created but never crawled, and
+its panel says "Starting import…" for good. Pre-existing; left as is.
+
+## 82. Settings' work-backup description is still the short list (2026-11-26, by reading)
+
+Found by the review of lane C. 16 fixed README's list of what a work backup
+carries; `BackupSection`'s own description still says "translation cards,
+explanations, marks, notes, glossary and profiles". Not 16 as written (README
+only); left as is.
+
+## 83. A popover whose anchor is unmounted without a scroll stays open (2026-11-26, by reading)
 
 `AnchoredPanel` closes when its anchor is no longer connected, but only from
 `reposition`, which runs on a scroll, a resize, a change of the panel's size,
@@ -1305,7 +1447,7 @@ row after a re-measure, say) leaves the popover open over nothing until the
 next scroll closes it. The same before 49. No concrete trigger was found.
 Found by the review of lane A2's 49. Left unfixed.
 
-## 77. A popover that becomes the sheet remounts its content (2026-11-26, by reading)
+## 84. A popover that becomes the sheet remounts its content (2026-11-26, by reading)
 
 Since lane A2's fix for 47, `AnchoredPanel` can turn from a popover into the
 bottom sheet while it is open: when content grows and the larger side of
@@ -1318,3 +1460,8 @@ the middle of a compile — showing "Compile" again while the paid call is
 still in flight. Unlikely: the flip follows growth of the content, which a
 compile's busy state alone barely changes. Found by the review of lane A2's
 47. Left unfixed.
+
+Lane A2's two new entries were numbered 76 and 77 on its branch. Lane C,
+merged first, took 76–82, so they were renumbered 83 and 84 when main was
+merged into lane A2. Commit subjects keep the old numbers: "Record
+FOUND_ISSUES 76" is 83, and "record FOUND_ISSUES 77" in a 47 commit is 84.

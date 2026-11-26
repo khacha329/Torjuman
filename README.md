@@ -507,10 +507,25 @@ ID, a re-parse produces the same IDs by construction.
 Backups are split accordingly, because one monolithic file is impractical —
 9260's stored HTML alone runs to tens of megabytes:
 
-- **Work backup** (`Settings → Work backup`) — cards, explanations, marks,
-  notes, glossary, profiles, positions, the gloss cache. Small and
-  irreplaceable. It records which books it references by Shamela ID and reports
-  any that are missing on restore.
+- **Work backup** (`Settings → Work backup`) — translation cards,
+  explanations, sharḥ cards, marks and notes, the glossary, profiles, reading
+  positions, the word-gloss cache, the Qurʾān-verse and ḥadīth caches, share
+  records (with their decryption keys: besides the link itself, the record is
+  the only place a published chapter's key is kept), compiled QUL views (which
+  bind again only where the same QUL resource ids exist: the same tablet, a
+  whole-tablet transfer, or a seeded resource), and settings — every store in
+  `WORK_STORES` (`platform/storage/idbBackup.ts`) plus the settings row. A
+  share record outlives its book on purpose: removing a book leaves the
+  chapters published from it working, and listed under `Settings → Published
+  chapters`, since apart from the link the record is the only place its key
+  is kept. Small and irreplaceable. It records which books it references by
+  Shamela ID and reports any that are missing on restore. It leaves by the whole-tablet transfer's
+  routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`
+  where the browser accepts a JSON file. Saving was once the only one, and on
+  the owner's tablet it produced nothing (CLAUDE.md trap 8). A relayed or
+  shared backup lands on the receive screen, which tells it from a tablet file
+  by its bytes (gzip or not; `library/workBackup.ts`) and, on a yes, adds it to
+  that tablet's work as `Restore from a work backup` does — nothing is emptied.
 - **Library transfer** (`Settings → Library transfer`) — one file per book,
   `.hashiya.gz`.
 
@@ -586,9 +601,27 @@ UTF-8, which matters: Arabic escaped as `\uXXXX` costs six bytes per character
 instead of two.
 
 The header carries a format version and the block count, so a truncated
-transfer is rejected rather than read as a short book. An import that fails
-partway rolls back to no book — a half-imported book looks valid and reads as
-though pages were missing.
+transfer is rejected rather than read as a short book. The incoming copy is
+written under staged ids (`staging:` before each key, `stagedId` in
+`StorageAdapter.ts`) and becomes the book only once the whole file is in and
+its counts check out, in one IndexedDB transaction (`adoptStagedBook`). So an
+import that fails before then — a file cut short, a newer format, a quota
+error, the tab closed — leaves the device as it was: a new book is not
+added — a half-imported book looks valid and reads as though pages were
+missing — and a book being **replaced** keeps its old copy. Only rebuilding
+the derived index can fail after it, and that says the book was imported
+(`BookIndexingError`): a reading book's entities are rebuilt when it is
+opened, a dictionary's root index from `Settings → Reference works`. A
+replacement swaps the text and what is derived from it (entities, dictionary and
+biography entries, a Taqrīb's narrator profiles) and keeps the user's work on
+the book — marks, translation, explanation and sharḥ cards, the reading
+position — which anchors to block ids that are the same in both copies. Until
+it is adopted the staged copy takes room beside the old one, and while the
+swap commits briefly more. An import that never finishes (the tab closed)
+leaves its staged rows until the same book is imported again (FOUND_ISSUES
+77). It once deleted the old
+copy first, work and all, and a replacement cut short left no copy
+(FOUND_ISSUES 24).
 
 ## Structured output
 
