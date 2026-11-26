@@ -902,7 +902,7 @@ the panel back to 432 px and the pointerup ended the drag (the mouse's
 later moves did nothing); with the fix the panel stays at 375 px, the drag
 goes on to 335 px, and that width is stored on release.
 
-## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading)
+## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading, fixed in lane A2)
 
 The divider's `onPointerDown` sets `body` `user-select: none`, and only the
 drag's `pointerup` or `pointercancel` restores it; the window listeners'
@@ -911,6 +911,16 @@ does not restore `user-select`. A navigation away while a drag is under way
 leaves text unselectable on the next screen until a reload. Since lane A's 27
 such an unmount also loses the width reached (it is stored on release).
 Pre-existing; found by the review of lane A's 27. Left unfixed.
+
+**Fixed in lane A2:** `usePanelControls` ends a drag still under way when the
+reader unmounts, as a pointercancel does: `user-select` back on, and the width
+reached stored (the settings live above the reader, so the write is safe
+after it). The unmount effect has no dependencies and reads the latest
+`updateSettings` through a ref, so a change of `updateSettings` mid-drag
+does not end the drag. R's new scenario "leaving the reader in the middle of
+a divider drag" changes the hash to the Library with the mouse button still
+down: on the old code `user-select` stayed "none" and no width was stored;
+with the fix it is "" and the 355 px reached is stored.
 
 ## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading)
 

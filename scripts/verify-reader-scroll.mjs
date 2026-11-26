@@ -31,8 +31,9 @@
 //     divider dragged with a mouse; a divider drag ended by pointercancel
 //     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
 //     the reader renders (FOUND_ISSUES 48); a second pointer during a divider
-//     drag (FOUND_ISSUES 50); the divider dragged with a finger (its width
-//     reported, its end judged)
+//     drag (FOUND_ISSUES 50); leaving the reader mid-drag (FOUND_ISSUES
+//     51); the divider dragged with a finger (its width reported, its end
+//     judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
 //     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
@@ -1302,6 +1303,46 @@ async function landscapeControls(browser, base, profile) {
     check(
       '  and the dragging pointer then still resizes it, and its release stores the width',
       afterMouseMove < during && released.aside === afterMouseMove && released.stored === released.aside && released.userSelect === '',
+      detail,
+    );
+  });
+
+  // Leaving the reader in the middle of a divider drag (FOUND_ISSUES 51):
+  // the drag starts with the mouse, and with the button still down the hash
+  // changes to the Library, which unmounts the reader. Text selection must be
+  // back on on the next screen, and the width the drag reached stored. On
+  // the old code `user-select` stayed "none" until a reload, and the width
+  // was lost.
+  await scenario(browser, base, profile, 'leaving the reader in the middle of a divider drag', async (page) => {
+    const divider = page.getByRole('separator', { name: 'Resize card panel' });
+    const box = await divider.boundingBox();
+    const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
+    const start = (await panelState(page)).aside;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 80, from.y, { steps: 4 });
+    await settle(page, 200);
+    const during = {
+      aside: (await panelState(page)).aside,
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+    };
+    await page.evaluate(() => { location.hash = '#/'; });
+    await page.waitForFunction(() => document.querySelector('[data-block-id]') === null, null, { timeout: 10_000 });
+    await settle(page, 400);
+    const left = {
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+      stored: (await storedSettings(page))?.panelWidth ?? null,
+    };
+    await page.mouse.up();
+    const detail = `panel ${start} → ${during.aside} in the drag (user-select ${JSON.stringify(during.userSelect)}); after leaving, user-select ${JSON.stringify(left.userSelect)}, stored width ${left.stored}`;
+    check(
+      'leaving the reader mid-drag turns text selection back on',
+      during.userSelect === 'none' && left.userSelect === '',
+      detail,
+    );
+    check(
+      '  and stores the width the drag reached',
+      during.aside < start && left.stored === during.aside,
       detail,
     );
   });

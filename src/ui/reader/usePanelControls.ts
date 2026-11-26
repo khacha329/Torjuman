@@ -58,6 +58,13 @@ export function usePanelControls({
   const dragWidthRef = useRef<number | null>(null);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
 
+  // The latest `updateSettings`, for the unmount below, whose effect must not
+  // re-run (and so end a drag under way) when it changes.
+  const updateSettingsRef = useRef(updateSettings);
+  useEffect(() => {
+    updateSettingsRef.current = updateSettings;
+  });
+
   /** Called by the divider's onPointerDown: the drag starts, for this pointer only. */
   const beginDrag = useCallback((pointerId: number) => {
     if (dragPointer.current !== null) return false;
@@ -93,6 +100,25 @@ export function usePanelControls({
       window.removeEventListener('pointercancel', stop);
     };
   }, [updateSettings]);
+
+  // Leaving the reader while a drag is under way (a navigation, say) ends the
+  // drag as a cancel does: text selection back on, and the width reached
+  // stored. Only the drag's pointerup or pointercancel used to restore
+  // `user-select`, and after an unmount no listener was left to hear them, so
+  // the next screen's text stayed unselectable until a reload (FOUND_ISSUES
+  // 51). The settings live above the reader, so storing after it unmounts is
+  // safe.
+  useEffect(
+    () => () => {
+      if (dragPointer.current === null) return;
+      const width = dragWidthRef.current;
+      dragPointer.current = null;
+      dragWidthRef.current = null;
+      document.body.style.userSelect = '';
+      if (width !== null) void updateSettingsRef.current({ panelWidth: width });
+    },
+    [],
+  );
 
   return { beginDrag, dragWidth };
 }
