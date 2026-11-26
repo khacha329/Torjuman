@@ -30,7 +30,8 @@
 //     settled in a few passes (FOUND_ISSUES 40); double-tap opening the
 //     dictionary; the restored position applied once; a second book opened
 //     by its URL at its own position (FOUND_ISSUES 31); an open popover's
-//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); an
+//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); a
+//     popover that fits on neither side of its anchor (FOUND_ISSUES 47); an
 //     open popover following its anchor moved without a scroll (FOUND_ISSUES
 //     49); the divider dragged with a mouse; a divider drag ended by pointercancel
 //     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
@@ -501,6 +502,13 @@ const LISTENER_ANCHOR_Y = 450;
 /** Where the verse sits, and how far it is moved, for the popover that follows it (FOUND_ISSUES 49). */
 const MOVED_ANCHOR_Y = 150;
 const MOVED_ANCHOR_PX = 40;
+/**
+ * Where the verse sits for a popover that fits on neither side of it
+ * (FOUND_ISSUES 47): at 960×600 the verse's middle is then at the middle of
+ * the screen, with about 257 px of room above it and below it, and the grown
+ * Qurʾān popover is taller (297 px in the container, 274 on the owner's PC).
+ */
+const SQUEEZED_ANCHOR_Y = 277;
 const LISTENER_SCROLL_STEPS = 8;
 const LISTENER_SCROLL_PX = 35;
 /** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
@@ -1129,6 +1137,61 @@ async function landscapeControls(browser, base, profile) {
       'an open popover is placed again when its anchor moves without a scroll',
       moved.anchorTop - before.anchorTop >= MOVED_ANCHOR_PX - 2 && moved.scrollY === before.scrollY && moved.panelTop !== before.panelTop && moved.panelTop === replaced.panelTop,
       detail,
+    );
+  });
+
+  // A popover that fits on neither side of its anchor (FOUND_ISSUES 47, the
+  // owner's decision of 2026-11-26): it goes on the side with more room, its
+  // height capped to that room, its body scrolling, and it never covers the
+  // anchor. The verse is put where the grown Qurʾān popover fits neither
+  // below nor above it. On the old code the popover was clamped to the top of
+  // the screen at its full height, over the verse. SCREENSHOT_DIR, if set,
+  // receives a screenshot of it.
+  await scenario(browser, base, profile, 'a popover that fits on neither side of its anchor', async (page) => {
+    // Only the app's own server: the popover shows the bundled translation
+    // and nothing from the network replaces it, so its height is the same on
+    // every run (and the screenshot holds only committed text).
+    const own = new URL(base).host;
+    await page.route('**/*', (route) => (new URL(route.request().url()).host === own ? route.continue() : route.abort()));
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: SQUEEZED_ANCHOR_Y });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
+    await settle(page, 500);
+    const found = await page.evaluate((id) => {
+      const panel = document.querySelector('[role="dialog"]');
+      const body = panel.querySelector('.panel-body');
+      const p = panel.getBoundingClientRect();
+      const a = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`).getBoundingClientRect();
+      return {
+        panel: { top: Math.round(p.top), bottom: Math.round(p.bottom) },
+        anchor: { top: Math.round(a.top), bottom: Math.round(a.bottom) },
+        body: { scrollHeight: body.scrollHeight, clientHeight: body.clientHeight },
+        viewport: window.innerHeight,
+      };
+    }, blockId(VERSE_BLOCK));
+    if (shots) await page.screenshot({ path: `${shots}/landscape-960x600-popover-squeezed.png` });
+    const clear = found.panel.bottom <= found.anchor.top || found.panel.top >= found.anchor.bottom;
+    const roomBelow = found.viewport - found.anchor.bottom;
+    const roomAbove = found.anchor.top;
+    const largerSide = roomBelow >= roomAbove ? found.panel.top >= found.anchor.bottom : found.panel.bottom <= found.anchor.top;
+    const onScreen = found.panel.top >= 0 && found.panel.bottom <= found.viewport;
+    const scrolls = found.body.scrollHeight > found.body.clientHeight;
+    check(
+      'a popover that fits on neither side of its verse sits on the side with more room, clear of the verse and on screen',
+      clear && largerSide && onScreen,
+      JSON.stringify(found),
+    );
+    check(
+      '  with its height capped and its body scrolling',
+      scrolls,
+      `body scrollHeight ${found.body.scrollHeight}, clientHeight ${found.body.clientHeight}`,
     );
   });
 

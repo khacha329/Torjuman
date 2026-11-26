@@ -842,7 +842,7 @@ compared before and after on the owner's PC, where both marks touched the
 label before and are clear after. Its baseline is re-recorded in lane A2's
 last commit, after main is merged in.
 
-## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
+## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured, fixed in lane A2)
 
 `AnchoredPanel`'s `reposition` (`ui/reader/AnchoredPanel.tsx`) puts the
 popover below its anchor if it fits, and otherwise at
@@ -855,6 +855,19 @@ measure its real height (before, it placed itself at its 138 px loading height
 and ran off the bottom instead). The placement rule itself is unchanged by
 37. A product choice (cover the anchor, run off the screen, or shrink the
 panel to the larger side). Left unfixed.
+
+**Fixed in lane A2, by the owner's decision (DECISIONS.md, 2026-11-26:
+"larger side, scroll"):** `reposition` measures the popover's natural height
+(header, footer, and the body's `scrollHeight` up to the 60vh its CSS
+allows) and puts it below the anchor if it fits, above if it fits there, and
+otherwise on the side with more room, with `maxHeight` capped to that room;
+the body has `min-h-0`, so it shrinks and scrolls. It never covers the
+anchor. The README's popover paragraph says so. R's new scenario "a popover
+that fits on neither side of its anchor" (landscape; portrait shows sheets)
+puts the verse at the middle of the screen with requests other than the
+app's own blocked, so the bundled translation is shown and stays: on the old
+code the popover sat at 12–286 over the verse at 270–315; with the fix it
+sits at 323–588 below it, its body 175 px of 184 and scrolling.
 
 ## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 

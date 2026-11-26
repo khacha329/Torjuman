@@ -49,7 +49,13 @@ export function AnchoredPanel({
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{
+    left: number;
+    top: number;
+    /** Set only when the popover fits on neither side of its anchor (47). */
+    maxHeight: number | null;
+  } | null>(null);
 
   // The same decision as the card panel's, so the two never disagree: where
   // the panel sits beside the text there is room for a popover, and where it
@@ -97,14 +103,42 @@ export function AnchoredPanel({
       window.innerWidth - POPOVER_WIDTH - MARGIN,
     );
 
-    const panelHeight = panelRef.current?.offsetHeight ?? 280;
-    const below = rect.bottom + 8;
-    const top =
-      below + panelHeight + MARGIN <= window.innerHeight
-        ? below
-        : Math.max(MARGIN, rect.top - 8 - panelHeight);
+    // The popover's own height, as its content would make it: header and
+    // footer, and the body at its full height up to the 60vh the body's CSS
+    // allows. Measured from the body's scrollHeight, not the panel's
+    // offsetHeight, which a cap set by an earlier placement would shrink.
+    const panel = panelRef.current;
+    const body = bodyRef.current;
+    const panelHeight =
+      panel && body
+        ? panel.offsetHeight -
+          body.offsetHeight +
+          Math.min(body.scrollHeight, window.innerHeight * 0.6)
+        : 280;
 
-    setPosition({ left, top });
+    // Below the anchor if it fits, above it if it fits there. If it fits on
+    // neither side, it goes on the side with more room, its height capped to
+    // that room, and its body scrolls; by the owner's decision on
+    // FOUND_ISSUES 47 it never covers the anchor. It used to be clamped to
+    // the top of the screen at its full height, over the anchored text.
+    const below = rect.bottom + 8;
+    const roomBelow = window.innerHeight - MARGIN - below;
+    const roomAbove = rect.top - 8 - MARGIN;
+    let top: number;
+    let maxHeight: number | null = null;
+    if (panelHeight <= roomBelow) {
+      top = below;
+    } else if (panelHeight <= roomAbove) {
+      top = rect.top - 8 - panelHeight;
+    } else if (roomBelow >= roomAbove) {
+      top = below;
+      maxHeight = Math.max(0, roomBelow);
+    } else {
+      maxHeight = Math.max(0, roomAbove);
+      top = MARGIN;
+    }
+
+    setPosition({ left, top, maxHeight });
   }, [anchor, asSheet]);
 
   useLayoutEffect(() => {
@@ -119,9 +153,10 @@ export function AnchoredPanel({
   // put right only by a window scroll or resize, or when something else
   // re-rendered the reader and, by accident, re-ran the effect above
   // (FOUND_ISSUES 37). Placing it moves its
-  // `top` and `left` and never its size (its width is fixed and its height is
-  // its content's), so the observer does not fire again in reply. A sheet is
-  // pinned to the bottom of the screen and is never placed.
+  // `top` and `left`, and changes its size only when it caps its height
+  // (47); the placement that follows such a change measures the same content
+  // and so sets the same cap, and the observer does not fire again. A sheet
+  // is pinned to the bottom of the screen and is never placed.
   useEffect(() => {
     const panel = panelRef.current;
     if (asSheet || !panel) return;
@@ -248,11 +283,16 @@ export function AnchoredPanel({
         left: position?.left ?? -9999,
         top: position?.top ?? -9999,
         width: POPOVER_WIDTH,
+        maxHeight: position?.maxHeight ?? undefined,
         visibility: position ? 'visible' : 'hidden',
       }}
     >
       {header}
-      <div className="panel-body flex-1">{children}</div>
+      {/* min-h-0 lets the body shrink below its content, and so scroll, when
+          the popover's height is capped (FOUND_ISSUES 47). */}
+      <div ref={bodyRef} className="panel-body min-h-0 flex-1">
+        {children}
+      </div>
       {footer && <div className="shrink-0 border-t border-rule px-3 py-2">{footer}</div>}
     </div>
   );
