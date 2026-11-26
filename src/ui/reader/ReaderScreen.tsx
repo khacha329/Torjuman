@@ -116,6 +116,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [middleBlock, setMiddleBlock] = useState<Block | null>(null);
+  const [whollyInView, setWhollyInView] = useState<{ first: number; last: number } | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
@@ -617,6 +618,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         marks={marks}
         visibleBlock={visibleBlock}
         middleBlock={middleBlock}
+        whollyInView={whollyInView}
         listRef={listRef}
         setShowToc={setShowToc}
         setShowSearch={setShowSearch}
@@ -712,6 +714,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               match={match}
               onVisibleBlockChange={setVisibleBlock}
               onMiddleBlockChange={setMiddleBlock}
+              onWhollyInViewChange={setWhollyInView}
               onVisibleRangeChange={setVisibleRange}
               onMarkerClick={handleMarkerClick}
               handleRef={listRef}

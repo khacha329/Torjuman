@@ -25,7 +25,8 @@
 //   - landscape: Ctrl+\ and the header's Hide cards with the edge tab; a
 //     margin marker opening its card in the panel; a card in the panel
 //     bringing its block to the middle; the read-mark ↑ ↓ and ↓ in turn
-//     (FOUND_ISSUES 39); a centred jump at the middle below the header,
+//     (FOUND_ISSUES 39); read marks near the ends of the book reached
+//     (FOUND_ISSUES 52); a centred jump at the middle below the header,
 //     settled in a few passes (FOUND_ISSUES 40); double-tap opening the
 //     dictionary; the restored position applied once; a second book opened
 //     by its URL at its own position (FOUND_ISSUES 31); an open popover's
@@ -39,7 +40,8 @@
 //     judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
-//     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
+//     and ↓ in turn (FOUND_ISSUES 39); read marks near the ends (FOUND_ISSUES
+//     52); the centred jump (FOUND_ISSUES 40);
 //     double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
@@ -802,6 +804,76 @@ async function readMarkJumps(page) {
   console.log(`  report: ${JSON.stringify({ readMarkDown: { from: READ_MARKS[1], next: READ_MARKS[2], atMiddle: landed } })}`);
 }
 
+/** Read marks too near either end of the book to be centred (FOUND_ISSUES 52). */
+const EDGE_READ_MARKS = [1, BLOCKS - 1];
+
+/**
+ * A read mark that cannot be centred counts as reached once it is wholly on
+ * screen (FOUND_ISSUES 52, the owner's decision of 2026-11-26). Two more
+ * marks are seeded, one near the top of the book and one near its end. At the
+ * top, block 1's mark is on screen, so ↓ goes past it to the first of the
+ * others; ↑ from there jumps to block 1 (centred as far as the top of the
+ * page allows) and is then off. Past the middle marks, ↓ jumps to the mark
+ * near the end (clamped at the bottom in portrait; whether the page reached
+ * its bottom is reported) and is then off. On the old code
+ * ↓ at the top offered block 1 and did not move, and after each clamped jump
+ * the arrow still offered the same mark.
+ */
+async function readMarkEdges(page) {
+  const read = (index) => ({
+    id: `mark-read-${index}`, bookId: BOOK, startBlockId: blockId(index), startOffset: 0,
+    endBlockId: blockId(index), endOffset: textOf(index).length, kind: 'read', scope: 'block',
+    note: null, createdAt: 1 + index, collapsed: false,
+  });
+  await putRows(page, 'seeding the edge read marks', { marks: EDGE_READ_MARKS.map(read) });
+  await page.reload();
+  await page.locator(`[data-block-id="${blockId(0)}"]`).waitFor();
+  await settle(page);
+  const next = page.getByTitle('Next passage marked to read');
+  const previous = page.getByTitle('Previous passage marked to read');
+  const scrollY = () => page.evaluate(() => Math.round(window.scrollY));
+  const whollyShown = (index) => page.evaluate((id) => {
+    const rect = document.querySelector(`[data-block-id="${id}"]`)?.getBoundingClientRect();
+    const headerBottom = document.querySelector('header').getBoundingClientRect().bottom;
+    return rect ? rect.top >= headerBottom - 1 && rect.bottom <= window.innerHeight + 1 : false;
+  }, blockId(index));
+
+  const atTop = { scrollY: await scrollY(), previousOff: await previous.isDisabled() };
+  await next.click();
+  await settle(page, 900);
+  const first = await atMiddle(page, READ_MARKS[0]);
+  check(
+    `at the top, ↓ goes past the read mark on screen (block ${EDGE_READ_MARKS[0]}) to block ${READ_MARKS[0]}`,
+    atTop.scrollY === 0 && atTop.previousOff && first.ok,
+    `at the top: scrollY ${atTop.scrollY}, ↑ off ${atTop.previousOff}; after ↓: ${JSON.stringify(first)}`,
+  );
+  await previous.click();
+  await settle(page, 900);
+  const back = { shown: await whollyShown(EDGE_READ_MARKS[0]), scrollY: await scrollY(), previousOff: await previous.isDisabled(), nextOn: !(await next.isDisabled()) };
+  check(
+    `  ↑ from there brings block ${EDGE_READ_MARKS[0]} wholly on screen near the top, and is then off`,
+    back.shown && back.scrollY < 200 && back.previousOff && back.nextOn,
+    JSON.stringify(back),
+  );
+
+  // Past the middle marks, ↓ goes to the one near the end.
+  await jumpToPrinted(page, PAST_READ_MARKS);
+  const pastOn = !(await next.isDisabled());
+  if (pastOn) await next.click();
+  await settle(page, 900);
+  const end = {
+    shown: await whollyShown(EDGE_READ_MARKS[1]),
+    atBottom: await page.evaluate(() => Math.round(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 2),
+    nextOff: await next.isDisabled(),
+    previousOn: !(await previous.isDisabled()),
+  };
+  check(
+    `near the end, ↓ jumps to the last mark (block ${EDGE_READ_MARKS[1]}), wholly shown, and is then off`,
+    pastOn && end.shown && end.nextOff && end.previousOn,
+    `↓ on past the middle marks ${pastOn}; after: ${JSON.stringify(end)}`,
+  );
+}
+
 /** Double-tap a word: the dictionary sheet opens and the selection is gone. */
 async function doubleTap(page) {
   const point = await page.evaluate(({ id, word }) => {
@@ -948,6 +1020,7 @@ async function landscapeControls(browser, base, profile) {
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
   await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
+  await scenario(browser, base, profile, 'read marks near the ends of the book count as reached', readMarkEdges);
   await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_LANDSCAPE));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 
@@ -1509,6 +1582,7 @@ async function portraitControls(browser, base, profile) {
 
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
   await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
+  await scenario(browser, base, profile, 'read marks near the ends of the book count as reached', readMarkEdges);
   await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_PORTRAIT));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }

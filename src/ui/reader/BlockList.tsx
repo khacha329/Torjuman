@@ -94,6 +94,12 @@ interface BlockListProps {
    * jump lands it (settleOn): the read-mark arrows count from here.
    */
   onMiddleBlockChange: (block: Block | null) => void;
+  /**
+   * The orders of the first and last blocks wholly in view below the header
+   * (null when none is): a read mark there counts as reached, and the arrows
+   * pass over it (FOUND_ISSUES 52).
+   */
+  onWhollyInViewChange: (range: { first: number; last: number } | null) => void;
   onVisibleRangeChange: (range: VisibleRange) => void;
   onMarkerClick: (marker: CardMarker, anchor: HTMLElement) => void;
   handleRef: Ref<BlockListHandle>;
@@ -127,6 +133,7 @@ export function BlockList({
   match,
   onVisibleBlockChange,
   onMiddleBlockChange,
+  onWhollyInViewChange,
   onVisibleRangeChange,
   onMarkerClick,
   handleRef,
@@ -305,6 +312,16 @@ export function BlockList({
   // 39); counted from the top block, it was still "next".
   const viewMiddle = (viewTop - 2 + viewBottom) / 2;
   const middleIndex = onScreen.find((item) => item.start <= viewMiddle && item.end > viewMiddle)?.index;
+  // The blocks wholly in view, top and bottom both inside what the header
+  // leaves visible (a pixel either way, for rounding). A read mark in one of
+  // them is on screen and counts as reached, by the owner's decision on
+  // FOUND_ISSUES 52: a mark too near either end of the book to be centred
+  // stayed after or before the middle block, and its arrow kept offering it,
+  // a tap that did nothing. Wholly, not merely showing: a mark whose block
+  // shows only a sliver at an edge is still worth a tap.
+  const whole = onScreen.filter((item) => item.start >= viewTop - 3 && item.end <= viewBottom + 1);
+  const wholeFirst = whole[0] === undefined ? undefined : blocks[whole[0].index]?.order;
+  const wholeLast = whole.length === 0 ? undefined : blocks[whole[whole.length - 1]!.index]?.order;
 
   useEffect(() => {
     onVisibleBlockChange(topIndex === undefined ? null : (blocks[topIndex] ?? null));
@@ -313,6 +330,12 @@ export function BlockList({
   useEffect(() => {
     onMiddleBlockChange(middleIndex === undefined ? null : (blocks[middleIndex] ?? null));
   }, [middleIndex, blocks, onMiddleBlockChange]);
+
+  useEffect(() => {
+    onWhollyInViewChange(
+      wholeFirst === undefined || wholeLast === undefined ? null : { first: wholeFirst, last: wholeLast },
+    );
+  }, [wholeFirst, wholeLast, onWhollyInViewChange]);
 
   useEffect(() => {
     if (topIndex === undefined || bottomIndex === undefined) return;

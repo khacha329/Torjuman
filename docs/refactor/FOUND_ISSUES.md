@@ -944,7 +944,7 @@ a divider drag" changes the hash to the Library with the mouse button still
 down: on the old code `user-select` stayed "none" and no width was stored;
 with the fix it is "" and the 355 px reached is stored.
 
-## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading)
+## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading, fixed in lane A2)
 
 `ReadMarkNav` (`ui/reader/ReaderHeader.tsx`) counts "previous" and "next" from
 the block at the middle of the area below the header (39) and centres the mark
@@ -956,6 +956,21 @@ screen all along. Before 39 the same happened from the top block (↓ to a mark
 near the top of the book stayed on it). Whether such a mark should count as
 reached, or the arrow be off, is a product choice. Found while fixing 39.
 Minor. Left unfixed.
+
+**Fixed in lane A2, by the owner's decision (DECISIONS.md, 2026-11-26:
+"count as reached"):** a read mark whose block is wholly on screen below the
+header counts as reached, and `ReadMarkNav` passes over it: ↑ and ↓ go on to
+the next mark not on screen, or are off if there is none. `BlockList`
+reports the first and last blocks wholly in view (`onWhollyInViewChange`).
+Wholly, not merely showing, so a mark whose block shows only a sliver at an
+edge is still offered. R's new scenario "read marks near the ends of the
+book count as reached" seeds marks at blocks 1 and 1499: at the top ↓ goes
+past block 1 to 400 and ↑ is off; ↑ from 400 brings block 1 back and is then
+off; past the middle marks ↓ goes to 1499 and is then off. On the old code
+the portrait run failed all three (↑ stayed on at the top and after the jump
+to block 1, ↓ stayed on after the jump to 1499); in landscape the old code
+passed, because at the top of the book at 960×600 block 1 is itself the
+block at the middle, so it was never offered.
 
 Lane B's entries were numbered 44–64 on its branch; on the owner's word
 (2026-11-18) they were renumbered 53–73, after lane A's 44–52, so the two
