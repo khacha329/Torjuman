@@ -68,7 +68,8 @@ export async function deleteBook(
   // so its link keeps working for everyone it was given to after the book is
   // gone; and apart from the link itself, the record is the only place its key
   // is kept. Removing it would leave that link out there with no way to find
-  // it again, send it again or back it up. Settings → Published chapters keeps listing it.
+  // it again, send it again or back it up. Settings → Published chapters keeps
+  // listing it.
 
   // The book row goes last. An interrupted removal then still lists the book,
   // so pressing Remove again finishes the job; deleting the row first would

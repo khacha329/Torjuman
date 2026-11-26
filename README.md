@@ -518,8 +518,8 @@ Backups are split accordingly, because one monolithic file is impractical —
   share record outlives its book on purpose: removing a book leaves the
   chapters published from it working, and listed under `Settings → Published
   chapters`, since apart from the link the record is the only place its key
-  is kept. Small and irreplaceable. It records which books it references by Shamela ID and reports
-  any that are missing on restore. It leaves by the whole-tablet transfer's
+  is kept. Small and irreplaceable. It records which books it references by
+  Shamela ID and reports any that are missing on restore. It leaves by the whole-tablet transfer's
   routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`
   where the browser accepts a JSON file. Saving was once the only one, and on
   the owner's tablet it produced nothing (CLAUDE.md trap 8). A relayed or

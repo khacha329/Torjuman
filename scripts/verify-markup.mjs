@@ -61,8 +61,8 @@
 //
 // Where a state is reached differently from §9's table, the capture says why:
 // settings--offline-downloading answers the model's size probes and one small
-// file, not config.json alone. And share-error (#/share/x/y) shows the malformed-key error: the key is checked
-// before any bundle is fetched.
+// file, not config.json alone. And share-error (#/share/x/y) shows the
+// malformed-key error: the key is checked before any bundle is fetched.
 //
 // Added in Phase 3 step 3b (docs/refactor/plans/phase3-provider-seams.md,
 // Design §6), on the old code, as manifest lines added after the 2a ones, all
