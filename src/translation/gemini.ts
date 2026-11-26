@@ -1,4 +1,4 @@
-import { GEMINI_BASE } from './models';
+import { GEMINI_BASE, GEMINI_MODELS, SUPERSEDED_GEMINI_MODELS } from './models';
 import { retryAfterSeconds } from './retryAfter';
 import { TranslationError } from './TranslationProvider';
 
@@ -37,14 +37,33 @@ export function readRetryAfter(response: Response): number | null {
   return retryAfterSeconds(response.headers.get('retry-after'));
 }
 
+/** A Gemini model's short name ("Flash 3.8"), or its ID when it has no label. */
+export function geminiModelName(model: string): string {
+  const option = [...GEMINI_MODELS, ...SUPERSEDED_GEMINI_MODELS].find((entry) => entry.id === model);
+  return option ? option.label.split(' — ')[0] : model;
+}
+
+/**
+ * Gemini's wording for a model closed to the key: the docs' ("no longer
+ * available", "limited to users who have actively used them in the past")
+ * and the 404 the API gave for earlier retired models ("This model models/…
+ * is no longer available to new users"). The response for the 2.5 models was
+ * not captured from a key here; check Q's retired-model scenario is written
+ * from that earlier wording. Read before the key check: such a message is
+ * about the model, and it must not be shown as a rejected key.
+ */
+const CLOSED_TO_KEY = /no longer available|not available to new|limited to (existing )?users/i;
+
 /**
  * A non-OK Gemini response as a TranslationError, read from its JSON error
- * body: a rejected key (401, 403, PERMISSION_DENIED, or a message naming the
- * key, since Gemini reports a bad key as a 400), a model the key is not
- * offered, or any other API error with Gemini's own message. Moved from
- * providers/GeminiProvider.ts for FOUND_ISSUES 11, so compile maps the same.
+ * body: a model closed to new keys or retired, a rejected key (401, 403,
+ * PERMISSION_DENIED, or a message naming the key, since Gemini reports a bad
+ * key as a 400), a model the key is not offered, an overloaded or failing
+ * service (503, 500), or any other API error with Gemini's own message. Moved
+ * from providers/GeminiProvider.ts for FOUND_ISSUES 11, so compile maps the
+ * same. `model`, where the caller knows it, names the model in the message.
  */
-export async function geminiHttpError(response: Response): Promise<TranslationError> {
+export async function geminiHttpError(response: Response, model?: string): Promise<TranslationError> {
   let message = `HTTP ${response.status}`;
   let status = '';
   try {
@@ -55,6 +74,18 @@ export async function geminiHttpError(response: Response): Promise<TranslationEr
     status = payload.error?.status ?? '';
   } catch {
     // Keep the status-code message.
+  }
+  const name = model ? geminiModelName(model) : 'this model';
+
+  // The 2.5 models are refused to keys that never used them; the owner's key
+  // is one (2026-11-26). Said plainly, with Gemini's own words after it.
+  if (CLOSED_TO_KEY.test(message)) {
+    return new TranslationError(
+      'api',
+      `Google no longer offers ${name} to new API keys, so this key cannot use it. ` +
+        `Pick another Gemini model in Settings. Gemini said: “${message}”`,
+      { condition: 'model-unavailable' },
+    );
   }
 
   if (
@@ -69,10 +100,24 @@ export async function geminiHttpError(response: Response): Promise<TranslationEr
     );
   }
 
-  if (response.status === 400 && /not found|not supported/i.test(message)) {
+  // A 404 too: an ID the API does not know is a 404 NOT_FOUND, which read as
+  // a bare "Gemini API error" until lane B2.
+  if ((response.status === 400 || response.status === 404) && /not found|not supported/i.test(message)) {
     return new TranslationError(
       'api',
       `Gemini does not offer this model to your key: ${message}. Pick a different model in Settings.`,
+      { condition: 'model-unavailable' },
+    );
+  }
+
+  // "This model is currently experiencing high demand" (503 UNAVAILABLE), or
+  // an internal error (500). Not the key and not the request: the same call
+  // may well succeed in a moment, or on another model.
+  if (response.status === 503 || response.status === 500) {
+    return new TranslationError(
+      'api',
+      `Gemini ${model ? `${name} ` : ''}is busy (HTTP ${response.status}): ${message}`,
+      { condition: 'overloaded' },
     );
   }
 

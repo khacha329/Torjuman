@@ -2,7 +2,26 @@
 // Re-exported by index.ts: outside types/, import them from `types`.
 
 import type { TranslatedSegment } from './entities';
-import type { ProviderId, TranslationErrorKind, TranslationUsage } from './translation';
+import type {
+  CloudProviderId,
+  ProviderId,
+  TranslationErrorKind,
+  TranslationUsage,
+} from './translation';
+
+/**
+ * Why a card's model is not the one its profile asked for: that model was
+ * busy (Gemini 503 or 500, Claude 529 or 500) after its retries, and a
+ * fallback model answered (translation/providers/fallback.ts). The card's own
+ * `providerId` and `model` are the ones that answered; these name the one
+ * asked for, which the cache key and the staleness check still use.
+ */
+export interface CardFallback {
+  fromProviderId: CloudProviderId;
+  fromModel: string;
+  /** What the card says, e.g. "Flash Lite 3.5 was busy, so Flash 3.8 answered." */
+  note: string;
+}
 
 /**
  * Fields shared by everything that can appear in the right-hand panel.
@@ -56,6 +75,8 @@ export interface TranslationCard extends CardBase {
    */
   providerId: ProviderId;
   model: string;
+  /** Set when a fallback model answered in place of the profile's (CardFallback). */
+  fallback?: CardFallback;
   cacheKey: string;
   status: CardStatus;
   /** Token counts as the provider reported them. */

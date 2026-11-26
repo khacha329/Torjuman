@@ -58,10 +58,10 @@ export function textOf(message: Anthropic.Message): string {
  */
 export function withRaw(error: TranslationError, raw: string): TranslationError {
   if (error.raw || raw === '') return error;
-  return new TranslationError(error.kind, error.message, {
-    retryAfterSeconds: error.retryAfterSeconds,
-    raw,
-  });
+  // Every other field carried over, the condition included: an overload
+  // mid-reply stays an overload, and its raw text keeps the fallback from
+  // discarding what was paid for (providers/fallback.ts).
+  return error.with({ raw });
 }
 
 /**
@@ -137,6 +137,7 @@ export function toTranslationError(error: unknown): TranslationError {
     return new TranslationError(
       'network',
       'Could not reach api.anthropic.com. Check the network connection.',
+      { condition: 'unreachable' },
     );
   }
   if (error instanceof Anthropic.BadRequestError) {
@@ -154,10 +155,21 @@ export function toTranslationError(error: unknown): TranslationError {
         return new TranslationError(
           'api',
           `Anthropic reported an error mid-reply: ${inner.message}${inner.type ? ` (${inner.type})` : ''}.`,
+          // An overload can come as a stream event as well as a 529.
+          inner.type === 'overloaded_error' ? { condition: 'overloaded' } : {},
         );
       }
     }
-    return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
+    // 529 (overloaded_error) and 500 (api_error), after the SDK's own two
+    // retries: Claude is failing for everyone, not for this key or request.
+    // The one Claude condition the fallback starts on (lane B2), as Gemini's
+    // 503 and 500 are on that side.
+    const overloaded = error.status === 529 || error.status === 500;
+    return new TranslationError(
+      'api',
+      `Anthropic API error ${error.status}: ${error.message}`,
+      overloaded ? { condition: 'overloaded' } : {},
+    );
   }
   // fetch reports a connection that drops while the body is read as a
   // TypeError. messages.create (the key check, gloss, compile) passes it

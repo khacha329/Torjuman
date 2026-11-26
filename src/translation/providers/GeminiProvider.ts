@@ -52,6 +52,21 @@ import {
 
 const MAX_RETRIES = 3;
 
+/**
+ * Retries of a 503 ("This model is currently experiencing high demand") or a
+ * 500, before the fallback (providers/fallback.ts) asks another model. The
+ * SDK's own policy for Claude's 529, so both providers wait alike: two
+ * retries, the wait doubling from 1 s, each cut by up to a quarter at random
+ * so that many clients turned away together do not all come back together.
+ * Short on purpose: a busy model is usually busy for longer than a few
+ * seconds, and the next model in the chain is the better bet.
+ */
+const SERVER_RETRIES = 2;
+
+function serverRetryWaitMs(retry: number): number {
+  return 1000 * 2 ** retry * (1 - Math.random() * 0.25);
+}
+
 /** Shared with the Anthropic tool definition so both shapes cannot drift. */
 const RESPONSE_SCHEMA = GEMINI_RESPONSE_SCHEMA;
 
@@ -257,6 +272,7 @@ export class GeminiProvider implements TranslationProvider {
     let blockReason: string | undefined;
     let budget = maxTokensFor(request.targetText);
     let truncationRetried = false;
+    let serverRetries = 0;
     const usage: TranslationUsage = {
       inputTokens: 0,
       outputTokens: 0,
@@ -294,7 +310,15 @@ export class GeminiProvider implements TranslationProvider {
         throw new TranslationError(
           'network',
           'Could not reach the Gemini API. Check the network connection.',
+          { condition: 'unreachable' },
         );
+      }
+
+      if ((response.status === 503 || response.status === 500) && serverRetries < SERVER_RETRIES) {
+        await delay(serverRetryWaitMs(serverRetries));
+        serverRetries++;
+        attempt--; // The retry is for the server, not for rate limiting.
+        continue;
       }
 
       if (response.status === 429) {
@@ -314,7 +338,7 @@ export class GeminiProvider implements TranslationProvider {
       }
 
       if (!response.ok) {
-        throw await geminiHttpError(response);
+        throw await geminiHttpError(response, request.model);
       }
 
       if (!response.body) {
