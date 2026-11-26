@@ -106,14 +106,18 @@ export function AnchoredPanel({
     // The popover's own height, as its content would make it: header and
     // footer, and the body at its full height up to the 60vh the body's CSS
     // allows. Measured from the body's scrollHeight, not the panel's
-    // offsetHeight, which a cap set by an earlier placement would shrink.
+    // offsetHeight, which a cap set by an earlier placement would shrink. The
+    // 60vh is read from the computed style rather than worked out from
+    // innerHeight: in a browser tab on Android, vh is measured without the
+    // URL bar and innerHeight with it.
     const panel = panelRef.current;
     const body = bodyRef.current;
+    const bodyCap = body ? parseFloat(getComputedStyle(body).maxHeight) : NaN;
     const panelHeight =
       panel && body
         ? panel.offsetHeight -
           body.offsetHeight +
-          Math.min(body.scrollHeight, window.innerHeight * 0.6)
+          Math.min(body.scrollHeight, Number.isNaN(bodyCap) ? Infinity : bodyCap)
         : 280;
 
     // Below the anchor if it fits, above it if it fits there. If it fits on
