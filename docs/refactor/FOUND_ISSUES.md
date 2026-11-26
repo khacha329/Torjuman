@@ -1369,6 +1369,19 @@ explains, which is commentary and should be translated, so cutting every
 `quote` span would keep that from the model too. Left unfixed: the owner asked for it to be recorded only (2026-11-26;
 DECISIONS, "Answered for lane B3").
 
+## 79. The check scripts do not typecheck, and T does not see them (2026-11-26, measured)
+
+Found while adding lane B3's cases to check H. `tsc -b` covers `src/` and
+`vite.config.ts` only (`tsconfig.app.json`, `tsconfig.node.json`), and
+Vite's SSR build strips types without checking them, so `scripts/*.ts` are
+never typechecked. Each typechecked on its own with a scratch tsconfig
+extending `tsconfig.app.json` with `types: ["node"]`, on main (5e72107):
+`scripts/verify-hadith-text.ts` has 3 errors (~963, ~1003, ~1013: calls to
+`hadithImportedMissNote` without `ImportedMiss.numberCompared`, added after
+the cases were written; at run time the field is `undefined`, read as false,
+so the cases still mean what they say) and `scripts/verify-parsers.ts` has
+27. Lane B3 adds none to either. Left unfixed.
+
 ## 80. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
 
 Found while fixing 75. `normalize` (`lib/arabic.ts`) removes U+0610–U+061A
@@ -1382,3 +1395,41 @@ null range for it. Since 75 the same marks inside a takhrīj or isnād formula
 keep `stripApparatus` from matching it. Not measured, and not known to occur
 in an imported book. Pre-existing for the search; left as it was by 75, which
 moved the pattern without changing it. Left unfixed.
+
+## 81. The on-device verse note credits Khattab, but Pickthall is bundled (2026-11-26, by reading)
+
+Found while fixing 69 (check H prints the note). `QURAN_OFFLINE_NOTE` in
+`translation/offline/segmentSelection.ts` reads "English: Dr. Mustafa
+Khattab, The Clear Qurʾān (bundled)." and is the note on every verse segment
+of an on-device card. The bundled English is Pickthall (1930): README, "The
+bundled translation is Pickthall, and why", `quran/quranIndex.ts` ~417, and
+V's licensing check on `public/quran/english.json`. So every offline card
+names the wrong translator, and one README says is not shipped.
+`ui/settings/OfflineCapabilities.tsx` ~21 says the same ("The muṣḥaf and
+Khattab’s translation ship with the app"; lane UI-1's area). A fix changes
+card text only, not cache keys; stored cards keep the old note. Left unfixed.
+
+## 82. A whitespace-only ḥadīth piece becomes a segment (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 71. `pushProse` drops a span that is
+only whitespace; `pushEntity` does not, so a ḥadīth piece clipped to
+whitespace (a selection ending just past a matn's last word, or since 71 the
+gap after a stored entity that stops short of trailing whitespace) is an
+empty-looking ḥadīth segment with the no-offline-source note. Display only;
+nothing reaches the model. Left unfixed.
+
+## 83. On a Windows checkout with `core.autocrlf`, the recorded checks fail on line endings (2026-11-26, measured)
+
+Found while running lane B3's checks on a Windows PC (Git for Windows, which
+sets `core.autocrlf=true` in its system gitconfig). The checkout's text files
+are CRLF, the records the checks compare against with them, and the checks
+write LF: Q reported "FAIL: 1 entry differs … (every entry is equal; the
+header or the formatting differs)" on an unchanged tree, and passed once the
+clone was set to `core.autocrlf=false` and its files converted back to LF.
+The repository has no `.gitattributes`. On the same PC, U fails on unchanged
+main too, 143 of 294 files matching (127 screenshots and 6 DOM files:
+`reader-retranslate`, `settings--offline-downloading` and
+`settings--offline-translation` at both sizes), so U's record holds only on
+the machine it was recorded on. A fix could add a `.gitattributes`
+(`* text=auto eol=lf`) or make the comparisons ignore CR; U's dependence on
+the renderer is a separate question. Left unfixed.
