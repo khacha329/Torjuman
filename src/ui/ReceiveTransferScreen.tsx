@@ -17,7 +17,7 @@ import {
   type RelayProgress,
 } from '../library/relayTransfer';
 import { describeRestore, describeWorkBundle, readWorkBackup } from '../library/workBackup';
-import type { WorkBundle } from '../platform/storage/StorageAdapter';
+import type { WorkBundle, WorkRestoreReport } from '../platform/storage/StorageAdapter';
 import { Button, inputClass, TopBar, ProgressBar } from './kit';
 import { percentOf } from '../lib/format';
 
@@ -152,12 +152,9 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
 
   const restoreWork = async (bundle: WorkBundle, relayCode?: string) => {
     setState({ step: 'restoring', progress: null });
+    let report: WorkRestoreReport;
     try {
-      const report = await storage.importWork(bundle);
-      await reload();
-      await discardIncomingTransfer();
-      if (relayCode) await forgetRelay(relayCode);
-      setState({ step: 'restored-work', message: describeRestore(report) });
+      report = await storage.importWork(bundle);
     } catch (error) {
       setState({
         step: 'failed',
@@ -165,7 +162,19 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
           `The restore stopped part way: ${error instanceof Error ? error.message : String(error)} ` +
           'Nothing on this tablet was removed. Restoring the same backup again is safe.',
       });
+      return;
     }
+    // The work is in. What follows only tidies up, so a failure here is said
+    // beside the result, not as a restore that stopped.
+    let note = '';
+    try {
+      await reload();
+      await discardIncomingTransfer();
+      if (relayCode) await forgetRelay(relayCode);
+    } catch (error) {
+      note = ` The app could not refresh afterwards (${error instanceof Error ? error.message : String(error)}); reopen it to see the work.`;
+    }
+    setState({ step: 'restored-work', message: describeRestore(report) + note });
   };
 
   const cancel = async () => {

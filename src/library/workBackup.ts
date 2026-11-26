@@ -39,13 +39,19 @@ export function isWorkBundle(value: unknown): value is WorkBundle {
 /**
  * The file as a work backup, or null if it is not one.
  *
- * A tablet transfer file and a per-book file are gzip, so the first two bytes
- * settle those without reading a library-sized file as text. Anything else is
- * parsed whole: a work backup is one JSON document, and small.
+ * Decided from the first bytes where it can be, so a library-sized file is
+ * never read whole as text just to be turned down. A tablet transfer file and
+ * a per-book file are gzip — two magic bytes — or, where the browser cannot
+ * compress, the same NDJSON uncompressed, whose first line opens
+ * `{"kind":"header"` (`deviceTransfer.ts`, `transfer.ts`). A work backup is one
+ * JSON object, small, and opens with its own fields; only what is left is
+ * parsed whole.
  */
 export async function readWorkBackup(file: Blob): Promise<WorkBundle | null> {
-  const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
   if (head[0] === 0x1f && head[1] === 0x8b) return null;
+  const opening = new TextDecoder().decode(head).trimStart();
+  if (!opening.startsWith('{') || /^\{\s*"kind"\s*:/.test(opening)) return null;
   let parsed: unknown;
   try {
     parsed = JSON.parse(await file.text());

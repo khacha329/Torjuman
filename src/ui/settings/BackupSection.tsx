@@ -108,6 +108,9 @@ export function BackupSection() {
   const relay = async () => {
     if (!file) return;
     setRelayCode(null);
+    // Busy from the tap, not from the first piece: deriving the code's key
+    // comes first, and a second tap in that gap would start a second upload.
+    setRelayProgress({ done: 0, total: 1, message: 'Preparing to send…' });
     try {
       setRelayCode(await sendViaRelay(file, { onProgress: setRelayProgress }));
     } catch (caught) {
