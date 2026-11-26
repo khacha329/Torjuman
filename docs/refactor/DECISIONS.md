@@ -102,6 +102,21 @@ lane B found.
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
 
+## Decided for lane C, 2026-11-26
+
+- **19. Share records outlive their book.** Keep them, and say so. A
+  removed book's share records stay: the chapter's link keeps working for
+  others, and the record holds the only copy of its key besides the link.
+  The code, README and the remove-book confirm say so. (The owner's answer
+  to lane C's question; the alternative was deleting them with the book.)
+- **18. Compiled QUL views in the work backup.** Keep them in it, knowing
+  the limit: a compilation's cache key includes the ids of the resources
+  installed when it was made, and a hand-imported resource gets a random id,
+  so on a new tablet whose tafsīrs are imported afresh a restored
+  compilation is almost never found. It comes back on the same tablet, after
+  a whole-tablet transfer, or for a seeded resource. (The owner's answer to
+  lane C's question after review; the alternative was leaving them out.)
+
 ## Lane UI-1 (Settings), 2026-11-26
 
 The owner's answers to the two questions lane UI-1 asked.
@@ -113,6 +128,11 @@ The owner's answers to the two questions lane UI-1 asked.
   `lib/format.ts` ("512 B", "300 KB", "2.5 MB") with a gigabyte step added
   ("1.4 GB"), so a tablet's free space does not read "52345.6 MB". The
   "not enough space" message stops rounding up. Sizes elsewhere were not
-  part of the question (FOUND_ISSUES 79).
+  part of the question (FOUND_ISSUES 86).
 - **Where "What works offline" goes.** The brief's five Settings tabs did
   not place it. It goes in About, above "This build" and "Retrieval".
+
+Not a question, recorded so the history reads right: **9** (the import
+screen's and the batch translation bar's own progress bars) was fixed under
+the owner's brief for this lane ("Fix FOUND_ISSUES 8 and 9"), which
+supersedes the Phase 2 Q5 answer to keep the two bars' own markup.

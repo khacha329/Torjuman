@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import {
+  BookIndexingError,
   exportBook,
   exportFilename,
   importBookFile,
@@ -59,8 +60,10 @@ export function LibraryTransfer() {
         onConflict: async (existing) =>
           window.confirm(
             `"${existing.title}" is already on this device.\n\n` +
-              'Replace it with the contents of this file? Its translation cards and marks ' +
-              'are kept — they anchor to block IDs, which are the same either way.',
+              'Replace it with the contents of this file? Its translation cards, explanations, ' +
+              'commentary cards, marks and reading position are kept — they anchor to block IDs, ' +
+              'which are the same either way. The book is replaced only once the whole file has ' +
+              'been read and checked; if the file cannot be read in full, the book stays as it is.',
           ),
       });
       await refresh();
@@ -71,7 +74,15 @@ export function LibraryTransfer() {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setStatus(message === 'CANCELLED' ? 'Import cancelled — nothing was changed.' : `Import failed: ${message}`);
+      setStatus(
+        message === 'CANCELLED'
+          ? 'Import cancelled — nothing was changed.'
+          : // The book is in; only its index stopped, which is no failed import.
+            error instanceof BookIndexingError
+            ? message
+            : `Import failed: ${message}`,
+      );
+      if (error instanceof BookIndexingError) await reload();
       await refresh();
     } finally {
       setProgress(null);

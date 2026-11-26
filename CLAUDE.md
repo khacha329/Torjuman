@@ -202,7 +202,7 @@ Things that have already gone wrong once. Most have a README section; 5, 6,
    branches of `upgradeDatabase` read the one `STORES` table there: a fresh
    install creates every entry; an existing database takes one snapshot of
    its store names first, then acts on each entry's `onUpgrade` (`recreate`,
-   `if-missing`, `assumed`; `createdWith` for the QUL trio's shared guard).
+   `if-missing`, `assumed`), each store guarded by its own name.
    A new store needs: its `Schema` type and `STORES` entry; its
    `StorageAdapter` methods (functions in its group's `idb*.ts` file, a
    delegate in `IdbStorageAdapter`) and `ShareStorageAdapter` (it implements

@@ -11,6 +11,10 @@ import { PROXY_URL } from '../platform/http/proxyUrl';
 // other tablet fetches them back. Nothing here changes what the file is or how
 // it is checked and restored; it only replaces "save, carry, open".
 //
+// Since lane C the work backup (library/workBackup.ts) travels the same way:
+// any file can, and the receive screen looks at what arrived to tell a work
+// backup from a tablet transfer file.
+//
 // Everything the Worker stores is ciphertext. One code, shown on the sending
 // tablet and typed on the receiving one, yields both:
 //
@@ -275,7 +279,11 @@ export async function receiveViaRelay(code: string, options: RelayOptions = {}):
     parts.push(await open(key, id, String(index), new Uint8Array(await response.arrayBuffer())));
   }
 
-  const file = new File(parts, manifest.name, { type: 'application/gzip' });
+  // The type follows the name the sender gave it: a tablet transfer file is
+  // gzip, a work backup is JSON. Nothing reads the type to decide what the
+  // file is (the receive screen looks at its bytes); it is only kept honest.
+  const type = manifest.name.endsWith('.json') ? 'application/json' : 'application/gzip';
+  const file = new File(parts, manifest.name, { type });
   if (file.size !== manifest.bytes) {
     throw new Error('The transfer arrived incomplete. Send it again from the other tablet.');
   }

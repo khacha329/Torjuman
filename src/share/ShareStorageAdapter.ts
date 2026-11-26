@@ -127,6 +127,7 @@ export class ShareStorageAdapter implements StorageAdapter {
 
   putBook = ignored;
   deleteBook = ignored;
+  adoptStagedBook = ignored;
 
   // ------------------------------------------------------------------ toc
 

@@ -61,10 +61,8 @@
 //
 // Where a state is reached differently from §9's table, the capture says why:
 // settings--offline-downloading answers the model's size probes and one small
-// file, not config.json alone; import-crawling opens Add book after the crawl
-// is running rather than landing there from "Resume import" (a race). And
-// share-error (#/share/x/y) shows the malformed-key error: the key is checked
-// before any bundle is fetched.
+// file, not config.json alone. And share-error (#/share/x/y) shows the
+// malformed-key error: the key is checked before any bundle is fetched.
 //
 // Added in Phase 3 step 3b (docs/refactor/plans/phase3-provider-seams.md,
 // Design §6), on the old code, as manifest lines added after the 2a ones, all
@@ -1416,22 +1414,14 @@ async function proxyCaptures(browser, base, profile, dir) {
   page = await fresh();
   await go(page, '#/');
   await page.getByRole('button', { name: 'Resume import' }).click();
-  // "Resume import" navigates first and starts the crawler second, and
-  // ImportScreen picks its stage once, on mount, from crawler.isRunning — which
-  // the crawler sets only after a few IndexedDB reads. So the screen it lands
-  // on is a race (in this harness it is usually the empty input form). Left as
-  // it is (a refactor does not fix it); to reach the crawl panel every time,
-  // the capture waits on the Library for the crawl to be running and then
-  // opens Add book, which mounts ImportScreen with the crawler already running.
-  if (process.env.VERIFY_MARKUP_DEBUG) {
-    await page.getByText('Import a book from the Shamela digital library').waitFor();
-    await page.waitForTimeout(1500);
-    const landed = (await page.getByText('Fetching page 41 of 100').count()) > 0 ? 'crawl panel' : 'input form';
-    console.log(`    after Resume import, ImportScreen shows the ${landed}`);
-  }
-  await go(page, '#/');
-  await page.getByText('Importing…').waitFor();
-  await go(page, '#/import');
+  // "Resume import" navigates first and starts the crawler second, and the
+  // crawler is running only after a few IndexedDB reads. ImportScreen used to
+  // pick its stage once, on mount, so the screen it landed on was a race (in
+  // this harness usually the empty input form: FOUND_ISSUES 6), and this
+  // capture went back to the Library to wait for the crawl and reopened Add
+  // book. Since lane C the screen also listens for a crawl starting, so the
+  // capture waits for the crawl panel on the screen Resume import opens — the
+  // fix is what this wait proves.
   await page.getByText('Fetching page 41 of 100').waitFor();
   await capture(page, dir, 'import-crawling');
   await page.context().close();
