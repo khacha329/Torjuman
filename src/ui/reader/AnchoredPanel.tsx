@@ -31,6 +31,15 @@ import { useLayoutMode } from '../useLayoutMode';
 
 const POPOVER_WIDTH = 400;
 const MARGIN = 12;
+/**
+ * The least part of its own height a capped popover must show. Where the
+ * larger side of the anchor has room for less, the content opens as the
+ * bottom sheet instead (FOUND_ISSUES 47, the owner's decision: "under half
+ * its content"). Capped to less, a popover is a narrow window onto its
+ * content, and beside a tall anchor (a long ḥadīth in landscape) a strip a
+ * few pixels high.
+ */
+const MIN_SHOWN_FRACTION = 0.5;
 
 export function AnchoredPanel({
   anchor,
@@ -50,6 +59,7 @@ export function AnchoredPanel({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{
     left: number;
     top: number;
@@ -60,7 +70,15 @@ export function AnchoredPanel({
   // The same decision as the card panel's, so the two never disagree: where
   // the panel sits beside the text there is room for a popover, and where it
   // is a sheet, so is this. See src/ui/useLayoutMode.ts.
-  const asSheet = useLayoutMode() === 'sheet' || preferSheet;
+  //
+  // `tooTight` is set by a placement that finds room for less than
+  // MIN_SHOWN_FRACTION of the popover on both sides of the anchor, and stays
+  // set while the panel is open: a sheet
+  // is not placed, so nothing would turn it back, and a panel that changed
+  // between popover and sheet as the page scrolled would jump under the
+  // finger.
+  const [tooTight, setTooTight] = useState(false);
+  const asSheet = useLayoutMode() === 'sheet' || preferSheet || tooTight;
 
   // The latest `onClose`, read by the effects and callbacks below instead of
   // listing it as a dependency. Every caller passes an inline arrow, new on
@@ -123,8 +141,10 @@ export function AnchoredPanel({
     // Below the anchor if it fits, above it if it fits there. If it fits on
     // neither side, it goes on the side with more room, its height capped to
     // that room, and its body scrolls; by the owner's decision on
-    // FOUND_ISSUES 47 it never covers the anchor. It used to be clamped to
-    // the top of the screen at its full height, over the anchored text.
+    // FOUND_ISSUES 47 it never covers the anchor. If that side cannot show
+    // half of it, the content opens as the bottom sheet instead. It used to
+    // be clamped to the top of the screen at its full height, over the
+    // anchored text.
     const below = rect.bottom + 8;
     const roomBelow = window.innerHeight - MARGIN - below;
     const roomAbove = rect.top - 8 - MARGIN;
@@ -134,6 +154,9 @@ export function AnchoredPanel({
       top = below;
     } else if (panelHeight <= roomAbove) {
       top = rect.top - 8 - panelHeight;
+    } else if (Math.max(roomBelow, roomAbove) < panelHeight * MIN_SHOWN_FRACTION) {
+      setTooTight(true);
+      return;
     } else if (roomBelow >= roomAbove) {
       top = below;
       maxHeight = Math.max(0, roomBelow);
@@ -161,11 +184,17 @@ export function AnchoredPanel({
   // (47); the placement that follows such a change measures the same content
   // and so sets the same cap, and the observer does not fire again. A sheet
   // is pinned to the bottom of the screen and is never placed.
+  //
+  // The content inside the body is observed too: once a placement has capped
+  // the popover's height (47), its content can grow without the popover
+  // changing size, and the next placement must see it (it may now need the
+  // sheet, or no longer fit where it is).
   useEffect(() => {
     const panel = panelRef.current;
     if (asSheet || !panel) return;
     const observer = new ResizeObserver(() => reposition());
     observer.observe(panel);
+    if (contentRef.current) observer.observe(contentRef.current);
     return () => observer.disconnect();
   }, [asSheet, reposition]);
 
@@ -295,7 +324,7 @@ export function AnchoredPanel({
       {/* min-h-0 lets the body shrink below its content, and so scroll, when
           the popover's height is capped (FOUND_ISSUES 47). */}
       <div ref={bodyRef} className="panel-body min-h-0 flex-1">
-        {children}
+        <div ref={contentRef}>{children}</div>
       </div>
       {footer && <div className="shrink-0 border-t border-rule px-3 py-2">{footer}</div>}
     </div>

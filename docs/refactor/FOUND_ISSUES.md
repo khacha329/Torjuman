@@ -869,6 +869,22 @@ app's own blocked, so the bundled translation is shown and stays: on the old
 code the popover sat at 12–286 over the verse at 270–315; with the fix it
 sits at 323–588 below it, its body 175 px of 184 and scrolling.
 
+The review of that fix found that, read literally, the rule left a popover
+a few pixels tall beside an anchor nearly as tall as the screen (a long
+ḥadīth in landscape). On the owner's follow-up decision (DECISIONS.md, the
+same day), where the larger side cannot show half of the popover, the
+content opens as the bottom sheet instead, and stays a sheet while it is
+open. The placement now also observes the content inside the body: a
+popover capped while its content was still loading did not change size as
+the content grew, so nothing placed it again. The body's 60vh is read from
+its computed style, as on Android vh and innerHeight differ. R's new
+scenario "a popover with too little room on either side opens as the
+sheet" makes the window 960×340 (the panel still beside the text) and
+centres the verse: before this follow-up the popover was capped beside it;
+now it opens as the sheet. In U, the landscape ḥadīth popover (about 450 px,
+with about 200 px beside the ḥadīth) is now the sheet, and the Qurʾān
+popovers capped beside their verse.
+
 ## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 
 The pattern of 34, in `ui/reader/MarginMenu.tsx:29-43`: its effect depends on

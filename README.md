@@ -866,7 +866,8 @@ when the anchored text actually leaves the viewport. Scrolling the Arabic to see
 what came before a passage while its translation stays open is precisely what
 this is for. The popover sits below its anchor, or above it if it fits only
 there; where it fits on neither side it takes the side with more room, its
-height capped to that room and its body scrolling, and never covers the anchor
+height capped to that room and its body scrolling, and never covers the anchor;
+where that side cannot show half of it, it opens as the bottom sheet instead
 (the owner's decision on FOUND_ISSUES 47). Long content (a full passage
 translation, or several cards) opens as a bottom sheet instead, which can go
 near-full-height without covering the anchor and carries an obvious drag

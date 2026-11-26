@@ -31,7 +31,8 @@
 //     dictionary; the restored position applied once; a second book opened
 //     by its URL at its own position (FOUND_ISSUES 31); an open popover's
 //     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); a
-//     popover that fits on neither side of its anchor (FOUND_ISSUES 47); an
+//     popover that fits on neither side of its anchor, and one with too
+//     little room on either side, opened as the sheet (FOUND_ISSUES 47); an
 //     open popover following its anchor moved without a scroll (FOUND_ISSUES
 //     49); the divider dragged with a mouse; a divider drag ended by pointercancel
 //     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
@@ -510,6 +511,8 @@ const MOVED_ANCHOR_PX = 40;
  * Qurʾān popover is taller (297 px in the container, 274 on the owner's PC).
  */
 const SQUEEZED_ANCHOR_Y = 277;
+/** A window short enough that a popover cannot show half of itself beside the verse (47). */
+const SHORT_VIEWPORT = 340;
 const LISTENER_SCROLL_STEPS = 8;
 const LISTENER_SCROLL_PX = 35;
 /** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
@@ -1228,6 +1231,50 @@ async function landscapeControls(browser, base, profile) {
       '  with its height capped and its body scrolling',
       scrolls,
       `body scrollHeight ${found.body.scrollHeight}, clientHeight ${found.body.clientHeight}`,
+    );
+  });
+
+  // Where even the larger side of the anchor cannot show half of the
+  // popover, its content opens as the bottom sheet instead (FOUND_ISSUES 47,
+  // the owner's follow-up decision of 2026-11-26). The synthetic book's verse
+  // is short, so the window is made 340 px tall (still the side-by-side
+  // layout at 960 px wide) and the verse put at its middle: about 128 px on
+  // each side, under half of the grown Qurʾān popover. Capped to that side
+  // instead, the popover showed a sliver of its content.
+  await scenario(browser, base, profile, 'a popover with too little room on either side opens as the sheet', async (page) => {
+    const own = new URL(base).host;
+    await page.route('**/*', (route) => (new URL(route.request().url()).host === own ? route.continue() : route.abort()));
+    await page.setViewportSize({ width: 960, height: SHORT_VIEWPORT });
+    await settle(page, 500);
+    const aside = (await panelState(page)).aside;
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      const rect = element.getBoundingClientRect();
+      window.scrollBy(0, rect.top + rect.height / 2 - window.innerHeight / 2);
+    }, { id: blockId(VERSE_BLOCK) });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
+    await settle(page, 500);
+    const found = await page.evaluate(() => {
+      const panel = document.querySelector('[role="dialog"]');
+      const rect = panel.getBoundingClientRect();
+      return {
+        sheet: panel.classList.contains('inset-x-0') && panel.classList.contains('bottom-0'),
+        left: Math.round(rect.left),
+        bottom: Math.round(rect.bottom),
+        width: Math.round(rect.width),
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      };
+    });
+    if (shots) await page.screenshot({ path: `${shots}/landscape-960x340-popover-as-sheet.png` });
+    check(
+      'a popover with room for under half of it on either side of its verse opens as the bottom sheet',
+      aside !== null && found.sheet && found.left === 0 && found.width === found.viewport.width && found.bottom === found.viewport.height,
+      `card panel beside the text ${aside}; ${JSON.stringify(found)}`,
     );
   });
 
