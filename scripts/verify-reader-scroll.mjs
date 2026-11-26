@@ -232,6 +232,9 @@ async function runProfile(browser, base, name, options, layout, screenshot) {
   });
   const page = await context.newPage();
   page.on('pageerror', (error) => console.log(`  pageerror: ${error.message}`));
+  // Its popover check waits for the bundled translation, as the controls
+  // scenarios below do.
+  await ownHostOnly(page, base);
 
   step(`${name}: loading the app`);
   await page.goto(base);
@@ -955,6 +958,19 @@ async function doubleTap(page) {
 const MARGIN_MENU_BLOCK = 1;
 
 /**
+ * Requests to anything but the app's own server are aborted. The Qurʾān
+ * popover shows the bundled translation, and on a machine with a network
+ * quran.com's could arrive and replace it: a wait for "(bundled)" then ran
+ * out (about one run in four on the owner's PC), and a popover's height
+ * depended on the network. Registered before any route of a scenario's own,
+ * which then takes precedence for its URLs.
+ */
+async function ownHostOnly(page, base) {
+  const own = new URL(base).host;
+  await page.route('**/*', (route) => (new URL(route.request().url()).host === own ? route.continue() : route.abort()));
+}
+
+/**
  * Count the document's pointerdown registrations from here on, in
  * `window.__pointerdownAdds`: an outside-tap listener removed and added back
  * shows as one more registration.
@@ -1100,6 +1116,7 @@ async function landscapeControls(browser, base, profile) {
   // no scroll, no resize, no tap — so only the popover's own size change can
   // place it again, not the reader re-rendering it.
   await scenario(browser, base, profile, 'a popover is placed again when its content grows', async (page) => {
+    await ownHostOnly(page, base);
     let held = 0;
     await page.route('**/quran/english.json', async (route) => {
       held++;
@@ -1146,6 +1163,7 @@ async function landscapeControls(browser, base, profile) {
   // so the check does not depend on which side it lands. On the old code it
   // stayed where it was until that scroll.
   await scenario(browser, base, profile, 'an open popover follows its anchor when layout moves it without a scroll', async (page) => {
+    await ownHostOnly(page, base);
     const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
     await verse.waitFor({ timeout: 10_000 });
     await page.evaluate(({ id, y }) => {
@@ -1187,11 +1205,8 @@ async function landscapeControls(browser, base, profile) {
   // the screen at its full height, over the verse. SCREENSHOT_DIR, if set,
   // receives a screenshot of it.
   await scenario(browser, base, profile, 'a popover that fits on neither side of its anchor', async (page) => {
-    // Only the app's own server: the popover shows the bundled translation
-    // and nothing from the network replaces it, so its height is the same on
-    // every run (and the screenshot holds only committed text).
-    const own = new URL(base).host;
-    await page.route('**/*', (route) => (new URL(route.request().url()).host === own ? route.continue() : route.abort()));
+    // The screenshot holds only committed text.
+    await ownHostOnly(page, base);
     const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
     await verse.waitFor({ timeout: 10_000 });
     await page.evaluate(({ id, y }) => {
@@ -1242,8 +1257,7 @@ async function landscapeControls(browser, base, profile) {
   // each side, under half of the grown Qurʾān popover. Capped to that side
   // instead, the popover showed a sliver of its content.
   await scenario(browser, base, profile, 'a popover with too little room on either side opens as the sheet', async (page) => {
-    const own = new URL(base).host;
-    await page.route('**/*', (route) => (new URL(route.request().url()).host === own ? route.continue() : route.abort()));
+    await ownHostOnly(page, base);
     await page.setViewportSize({ width: 960, height: SHORT_VIEWPORT });
     await settle(page, 500);
     const aside = (await panelState(page)).aside;
@@ -1286,6 +1300,7 @@ async function landscapeControls(browser, base, profile) {
   // back a tick later, and a tap in that tick was not seen as an outside tap.
   // Counted rather than tapped: the tick is too short to hit on purpose.
   await scenario(browser, base, profile, 'an open popover keeps its outside-tap listener while the page scrolls', async (page) => {
+    await ownHostOnly(page, base);
     await page.evaluate(() => {
       window.__pointerdownAdds = 0;
       const add = document.addEventListener.bind(document);
