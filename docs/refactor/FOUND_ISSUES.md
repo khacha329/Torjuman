@@ -1109,6 +1109,23 @@ unfixed.
 
 ## 71. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
 
+**Fixed in lane B3** (commit "71." on `claude/lane-b3-offline-text`, at the
+owner's word in the lane brief, 2026-11-26; checked by H, which reproduced it
+first: with no entities the whole matn was the one prose span). The first of
+the two fixes below: `segmentSelection` cuts a `hadith_matn` block by its
+type. Every part of the block's selected share that no ḥadīth entity covers
+becomes a ḥadīth piece with no reference: Arabic plus the no-offline-source
+note, nothing looked up. With the detector's entity, which spans the whole
+block, nothing changes. Not changed: `ReaderScreen`'s load still has no
+rejection handler (lane A2's file); it no longer matters to the invariant.
+
+A consequence the owner should know: an on-device card made before the
+entities load shows such a ḥadīth with the note even where a verified
+English is cached, and it is made under the same cache key as one made after,
+so the cache serves it until it is retranslated. That is the safe side of
+the trade; refusing the translation until the entities are in would not have
+covered a shared chapter that carries none.
+
 Found by the review of lane B's fix to 68. **A risk to the ḥadīth
 invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
 entity marks it, and the reader's `entities` start as `[]`

@@ -12,6 +12,11 @@
 // The matcher sees letters, not meaning, so made-up words exercise exactly the
 // same code a real matn does; what they cannot show is the thresholds' fit to
 // real data, which is step 5's report on the owner's PC.
+//
+// Since lane B3 it also holds the on-device cut (`segmentSelection`), the one
+// place the ḥadīth invariant is enforced, so that it is checked without
+// fixtures and without downloading a model: the cut is pure, and the model
+// only ever receives what the cut calls prose.
 
 import {
   buildHadithIndex,
@@ -59,7 +64,22 @@ import {
   hadithShortQuoteNote,
 } from '../src/retrieval/enrich';
 import type { QuranLookupOptions } from '../src/retrieval/quran';
-import type { Block, Entity, HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
+import {
+  HADITH_NO_OFFLINE_SOURCE,
+  segmentSelection,
+  type SegmentedSelection,
+} from '../src/translation/offline/segmentSelection';
+import { QuranEnglish, QuranIndex } from '../src/quran/quranIndex';
+import type {
+  Block,
+  BlockType,
+  Entity,
+  HadithIndexPart,
+  HadithJsonEntry,
+  HadithRecord,
+  QulEntry,
+  QulResource,
+} from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -1102,6 +1122,125 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     fromEntity?.local.english === farCard.english && fromBlock === null,
     { fromEntity, fromBlock },
   );
+}
+
+// ------------------------------------------- the on-device cut (lane B3)
+//
+// `segmentSelection` decides what the on-device model may see: only the spans
+// it returns as `prose`. Every case below asserts that first. Blocks and
+// entities are built here as the parser and the detector build them; the
+// Qurʾān index and its English are two made-up āyāt, so nothing from the
+// bundled muṣḥaf is needed either.
+{
+  const seg = {
+    quran: new QuranIndex({ edition: 'synthetic', counts: [2], ayat: [text(words(5)), text(words(5))] }),
+    english: new QuranEnglish({ translation: 'synthetic', ayat: ['Synthetic āyah one.', 'Synthetic āyah two.'] }),
+  };
+  const blockOf = (
+    id: string,
+    order: number,
+    type: BlockType,
+    body: string,
+    extra: Partial<Block> = {},
+  ): Block => ({
+    id,
+    bookId: 'seg',
+    pageId: 'seg:p1',
+    order,
+    type,
+    text: body,
+    normalized: body,
+    contentHash: '',
+    hadithNumber: null,
+    tocNodeId: null,
+    spans: [],
+    anchor: null,
+    ...extra,
+  });
+  /** As the detector marks a matn block: the whole block, numbered or not. */
+  const matnEntity = (block: Block, reference: string, extra: Partial<Entity> = {}): Entity => ({
+    id: `ent-${block.id}`,
+    bookId: 'seg',
+    startBlockId: block.id,
+    startOffset: 0,
+    endBlockId: block.id,
+    endOffset: block.text.length,
+    type: 'hadith',
+    reference,
+    matchQuality: reference ? 'exact' : 'unresolved',
+    detectedAt: 0,
+    ...extra,
+  });
+  const cut = (
+    blocks: Block[],
+    entities: Entity[],
+    from: [string, number],
+    to: [string, number],
+    hadithLookup: (reference: string) => { arabic: string; english: string; source?: 'sunnah.com' | 'hadith-json' } | null = () => null,
+  ): SegmentedSelection =>
+    segmentSelection({
+      blocks,
+      entities,
+      startBlockId: from[0],
+      startOffset: from[1],
+      endBlockId: to[0],
+      endOffset: to[1],
+      ...seg,
+      hadithLookup,
+    });
+  /** Whether any whole word of `body` is in the text handed to the model. */
+  const reachesModel = (segmented: SegmentedSelection, body: string): boolean => {
+    const offered = new Set(segmented.prose.flatMap((span) => span.text.split(/\s+/)));
+    return body.split(' ').some((part) => offered.has(part));
+  };
+  const types = (segmented: SegmentedSelection) => segmented.segments.map((segment) => segment.type);
+
+  // FOUND_ISSUES 71. The reader's entities start as [] and load afterwards
+  // (or never: a failed load, a shared chapter without them). The cut must
+  // not depend on them: a matn block is ḥadīth by its type.
+  {
+    const before = text(words(8));
+    const matn = text(words(14));
+    const after = text(words(8));
+    const blocks = [
+      blockOf('s1', 1, 'sharh', before),
+      blockOf('m1', 2, 'hadith_matn', matn, { hadithNumber: '12' }),
+      blockOf('s2', 3, 'sharh', after),
+    ];
+    const looked: string[] = [];
+    const lookup = (reference: string) => {
+      looked.push(reference);
+      return null;
+    };
+
+    const unloaded = cut(blocks, [], ['s1', 0], ['s2', after.length], lookup);
+    expect('71: no entities yet: THE MATN NEVER REACHES THE MODEL', !reachesModel(unloaded, matn), unloaded.prose);
+    expect('71: …prose, ḥadīth, prose', JSON.stringify(types(unloaded)) === '["prose","hadith","prose"]', types(unloaded));
+    expect('71: …the ḥadīth in the book’s Arabic', unloaded.segments[1]?.arabic === matn, unloaded.segments[1]);
+    expect('71: …with the no-offline-source note and no English', unloaded.segments[1]?.note === HADITH_NO_OFFLINE_SOURCE && unloaded.segments[1]?.english === '', unloaded.segments[1]);
+    expect('71: …and nothing is looked up: there is no reference to look up', looked.length === 0, looked);
+    expect('71: …the commentary on both sides is still offered', reachesModel(unloaded, before) && reachesModel(unloaded, after), unloaded.prose);
+
+    const midway = cut(blocks, [], ['m1', matn.indexOf(' ') + 1], ['m1', matn.length]);
+    expect('71: no entities, a selection inside the matn: all ḥadīth, nothing offered', JSON.stringify(types(midway)) === '["hadith"]' && midway.prose.length === 0, midway);
+
+    // Once they load, the detector's entity covers the block and the cut is
+    // the same, now with the reference looked up.
+    const loaded = cut(blocks, [matnEntity(blocks[1], 'seg#12')], ['s1', 0], ['s2', after.length], lookup);
+    expect('71: entities loaded: the same cut', JSON.stringify(types(loaded)) === JSON.stringify(types(unloaded)) && !reachesModel(loaded, matn), loaded);
+    expect('71: …and its reference is looked up', looked.join() === 'seg#12', looked);
+
+    // An entity that covers only part of its matn block (stored before a
+    // re-parse moved the text): the rest of the block is ḥadīth too.
+    const shortEntity = matnEntity(blocks[1], 'seg#12', { endOffset: matn.indexOf(' ') });
+    const partial = cut(blocks, [shortEntity], ['s1', 0], ['s2', after.length]);
+    expect('71: an entity short of its matn block: no word of the matn is offered', !reachesModel(partial, matn), partial.prose);
+    expect(
+      '71: …and the block’s text is all in ḥadīth segments, once',
+      partial.segments.filter((segment) => segment.type === 'hadith').map((segment) => segment.arabic).join('') === matn,
+      partial.segments,
+    );
+  }
 }
 
 // ------------------------------------------------------------------- summary

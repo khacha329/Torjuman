@@ -44,16 +44,21 @@ export const HADITH_NO_OFFLINE_SOURCE =
 
 export const QURAN_OFFLINE_NOTE = 'English: Dr. Mustafa Khattab, The Clear Qurʾān (bundled).';
 
-interface Piece {
-  start: number;
-  end: number;
-  entity?: Entity;
-}
+/**
+ * One block's share of a verse or ḥadīth. `entity` is the verse or ḥadīth it
+ * is a share of; a ḥadīth piece has none when it is the part of a
+ * `hadith_matn` block that no ḥadīth entity covers (FOUND_ISSUES 71).
+ */
+type Piece = { start: number; end: number } & (
+  | { type: 'quran'; entity: Entity }
+  | { type: 'hadith'; entity?: Entity }
+);
 
 /**
  * Cut the selected text at the boundaries of the verses and ḥadīth it
  * contains, resolved or not (FOUND_ISSUES 68). Marked names (`narrator`,
- * `person`) cut nothing (FOUND_ISSUES 61).
+ * `person`) cut nothing (FOUND_ISSUES 61). A `hadith_matn` block is ḥadīth
+ * by its type, whether or not an entity marks it (FOUND_ISSUES 71).
  *
  * Offsets are block-relative, so the selection is walked block by block and the
  * entity ranges intersecting it are projected onto the selected substring.
@@ -120,9 +125,28 @@ export function segmentSelection(options: {
       const overlapStart = Math.max(entityStart, from);
       const overlapEnd = Math.min(entityEnd, to);
       if (overlapEnd > overlapStart) {
-        covering.push({ start: overlapStart, end: overlapEnd, entity });
+        const share = { start: overlapStart, end: overlapEnd, entity };
+        covering.push(entity.type === 'quran' ? { ...share, type: 'quran' } : { ...share, type: 'hadith' });
       }
     }
+
+    // A matn block is ḥadīth by its type, not because an entity says so.
+    // Until FOUND_ISSUES 71 the cut relied on entities alone, and the
+    // reader's entities start as [] and load afterwards — or never, when the load
+    // fails or a shared chapter carries none — so a translation run in that
+    // window put every matn block into the prose, where the model translated
+    // it. Every part of the block's share that no ḥadīth entity covers becomes
+    // a ḥadīth piece of its own: with no entities, the whole share; with the
+    // detector's entity, which spans the whole block, nothing is added. Such a
+    // piece has no reference, so nothing is looked up for it and it carries
+    // the no-offline-source note — the honest output for a ḥadīth the cut
+    // cannot name.
+    //
+    // This is what keeps the invariant structural here: the ḥadīth pieces of a
+    // matn block now cover its share end to end, and the walk below emits
+    // prose only where no piece covers the text, so a matn block yields no
+    // prose at all, whatever the entities are.
+    if (block.type === 'hadith_matn') covering.push(...uncoveredMatn(covering, from, to));
 
     // At one start, the longer piece first, so a verse quoted inside a ḥadīth
     // that begins at the same offset is inside the ḥadīth, not before it. On
@@ -131,7 +155,7 @@ export function segmentSelection(options: {
     // the verse would be emitted and the ḥadīth skipped as lying inside it —
     // its segment, note and any verified English missing from the card
     // (FOUND_ISSUES 72; the skip is 61's).
-    const rank = (piece: Piece) => (piece.entity?.type === 'hadith' ? 0 : 1);
+    const rank = (piece: Piece) => (piece.type === 'hadith' ? 0 : 1);
     covering.sort((a, b) => a.start - b.start || b.end - a.end || rank(a) - rank(b));
 
     // Walk the block's share, emitting prose between entities. A piece that
@@ -150,7 +174,7 @@ export function segmentSelection(options: {
       if (start > cursor) {
         pushProse(block.text.slice(cursor, start));
       }
-      pushEntity(piece.entity!, block.text.slice(start, piece.end));
+      pushEntity(piece, block.text.slice(start, piece.end));
       cursor = piece.end;
     }
     if (cursor < to) pushProse(block.text.slice(cursor, to));
@@ -196,8 +220,9 @@ export function segmentSelection(options: {
     prose.push({ slot, text });
   }
 
-  function pushEntity(entity: Entity, sourceText: string): void {
-    if (entity.type === 'quran') {
+  function pushEntity(piece: Piece, sourceText: string): void {
+    if (piece.type === 'quran') {
+      const { entity } = piece;
       // Retrieved from the bundled muṣḥaf, never generated.
       const range = quran.flatRangeOf(entity.reference);
       const englishText = range ? english.range(range[0], range[1]) : '';
@@ -216,18 +241,40 @@ export function segmentSelection(options: {
     // ---- the invariant ----------------------------------------------------
     // A hadith is emitted here and NOWHERE else, and it is never added to
     // `prose`. Whether a verified translation exists only decides what English
-    // it carries; it never decides whether a model gets to see it.
-    const verified = entity.reference ? options.hadithLookup(entity.reference) : null;
+    // it carries; it never decides whether a model gets to see it. A piece
+    // with no entity (the uncovered part of a matn block, FOUND_ISSUES 71)
+    // has no reference, so it is never looked up.
+    const reference = piece.entity?.reference ?? '';
+    const verified = reference ? options.hadithLookup(reference) : null;
 
     segments.push({
       type: 'hadith',
       arabic: verified?.arabic || sourceText,
       english: verified?.english ?? '',
       source: verified ? (verified.source ?? 'sunnah.com') : undefined,
-      reference: entity.reference || undefined,
+      reference: reference || undefined,
       note: verified ? undefined : HADITH_NO_OFFLINE_SOURCE,
     });
   }
+}
+
+/**
+ * The parts of a matn block's share [from, to) that no ḥadīth piece covers,
+ * as ḥadīth pieces with no entity (FOUND_ISSUES 71). Verses are not counted
+ * as cover: a verse quoted in a matn is inside the ḥadīth (FOUND_ISSUES 61),
+ * so a piece added here around it reads it in the ḥadīth's Arabic, as the
+ * detector's whole-block entity does.
+ */
+function uncoveredMatn(pieces: readonly Piece[], from: number, to: number): Piece[] {
+  const hadith = pieces.filter((piece) => piece.type === 'hadith').sort((a, b) => a.start - b.start);
+  const gaps: Piece[] = [];
+  let at = from;
+  for (const piece of hadith) {
+    if (piece.start > at) gaps.push({ start: at, end: piece.start, type: 'hadith' });
+    at = Math.max(at, piece.end);
+  }
+  if (at < to) gaps.push({ start: at, end: to, type: 'hadith' });
+  return gaps;
 }
 
 const QURAN_UNRESOLVED_NOTE =
