@@ -4459,7 +4459,14 @@ console.log('\n=== Claude model upgrade: no forced tool use, strict schemas, pri
   check('a Haiku 4.5 profile moves to Haiku 5.5', models.successorModel('claude-haiku-4-5'), 'claude-haiku-5-5');
   check('an Opus 5 profile moves to Opus 5.5', models.successorModel('claude-opus-5'), 'claude-opus-5-5');
   check('a current model is left alone', models.successorModel('claude-opus-5-5'), 'claude-opus-5-5');
-  check('a Gemini model is left alone', models.successorModel('gemini-3.7-flash'), 'gemini-3.7-flash');
+  // Lane B2: a retired Gemini model moves to where Google routes it, so the
+  // old "a Gemini model is left alone" (on gemini-3.7-flash) no longer holds.
+  check('a Flash 3.7 profile moves to Flash 3.8', models.successorModel('gemini-3.7-flash'), 'gemini-3.8-flash');
+  check('a Pro 2.5 profile moves to Flash 3.8', models.successorModel('gemini-2.5-pro'), 'gemini-3.8-flash');
+  check('a Flash 2.5 profile moves to Flash Lite 3.5', models.successorModel('gemini-2.5-flash'), 'gemini-3.5-flash-lite');
+  check('a current Gemini model is left alone', models.successorModel('gemini-3.5-flash-lite'), 'gemini-3.5-flash-lite');
+  check('a new profile runs on Flash Lite 3.5', models.GEMINI_DEFAULT_MODEL, 'gemini-3.5-flash-lite');
+  check('an old Flash 3.7 card still shows which model wrote it', findModelOption('gemini', 'gemini-3.7-flash')?.label, 'Flash 3.7');
   check(
     'an old card still shows which model wrote it',
     findModelOption('anthropic', 'claude-sonnet-5')?.label,

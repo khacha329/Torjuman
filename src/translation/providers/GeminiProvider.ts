@@ -12,6 +12,7 @@ import {
   GEMINI_MODELS,
   MAX_TOKENS_CEILING,
   maxTokensFor,
+  SUPERSEDED_GEMINI_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
 import { coerceSegments, parseSegmentRecords, parseSegments } from '../parseSegments';
@@ -74,7 +75,7 @@ export class GeminiProvider implements TranslationProvider {
   readonly id = 'gemini' as const;
   readonly displayName = 'Gemini';
   readonly availableModels: ModelOption[] = GEMINI_MODELS;
-  readonly knownModels: ModelOption[] = GEMINI_MODELS;
+  readonly knownModels: ModelOption[] = [...GEMINI_MODELS, ...SUPERSEDED_GEMINI_MODELS];
   readonly defaultModel = GEMINI_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://aistudio.google.com/apikey';
   readonly keyPlaceholder = 'AIza…';

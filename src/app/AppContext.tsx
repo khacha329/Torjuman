@@ -135,7 +135,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // default provider, which would leave a Claude model pinned to Gemini.
       //
       // A profile pinned to a superseded Claude model moves to that model's
-      // successor (Sonnet 5 → Sonnet 5.5, and so on). Only the profile moves:
+      // successor (Sonnet 5 → Sonnet 5.5, and so on), and one on a retired
+      // Gemini model to where Google routes it (Flash 3.7 → Flash 3.8; see
+      // GEMINI_SUCCESSORS in translation/models.ts). Only the profile moves:
       // cards keep the model that wrote them, since that is history.
       const migrated = await Promise.all(
         allProfiles.map(async (profile) => {
