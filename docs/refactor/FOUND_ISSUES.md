@@ -792,7 +792,7 @@ web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
 
-## 44. The selection comment still names the bottom bar (2026-11-17, by reading)
+## 44. The selection comment still names the bottom bar (2026-11-17, by reading, fixed in lane A2)
 
 `ui/reader/ReaderScreen.tsx:338` ("Track whether a selection exists, so the
 bottom bar can show.") names the bottom bar of Amendment 10. README "Selection
@@ -804,6 +804,11 @@ also stores `shortSelection` and `centerY`. A fix corrects both sentences. The
 rest of the comment (why `selectionchange` and not `pointerup`, why debounced)
 still holds. Found while moving the comment for 30; the second sentence by the
 review of 30. Docs only. Left unfixed.
+
+**Fixed in lane A2:** the comment's first line names the selection rail, and
+the debounce paragraph's last sentence lists everything `peekSelection` keeps
+(whether a selection exists, one word, short enough for a name, its text, its
+vertical centre). The rest of the comment is unchanged. No code changed.
 
 ## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
 

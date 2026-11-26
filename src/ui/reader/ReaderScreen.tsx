@@ -342,7 +342,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   }, [storage]);
 
   /**
-   * Track whether a selection exists, so the bottom bar can show.
+   * Track whether a selection exists, so the selection rail can show.
    *
    * `selectionchange` on `document`, not `pointerup` on the reader: on Android
    * the selection handles are native UI drawn above the WebView, so dragging
@@ -351,7 +351,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
    * during handle drags, which makes it the only correct signal here.
    *
    * Debounced because it fires continuously during a drag. Nothing is resolved
-   * or stored — only whether a selection exists and whether it is one word.
+   * against the stored blocks here: `peekSelection` keeps only what the rail
+   * needs to show, choose its actions and place itself — whether a selection
+   * exists, whether it is one word or short enough to be a name, its text, and
+   * its vertical centre.
    */
   useEffect(() => {
     let timer: number;
