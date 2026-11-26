@@ -53,6 +53,8 @@ export class AnthropicProvider implements TranslationProvider {
   readonly keyPlaceholder = 'sk-ant-…';
   readonly isFree = false;
   readonly fitFor = 'For passages you intend to teach from.';
+  /** The research pass offers the web-search tool (`research`). */
+  readonly canSearch = true;
 
   private client(key: string): Anthropic {
     return anthropicClient(key);

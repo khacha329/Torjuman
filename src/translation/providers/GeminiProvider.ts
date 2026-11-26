@@ -101,6 +101,8 @@ export class GeminiProvider implements TranslationProvider {
   readonly isFree = true;
   readonly fitFor =
     'Good for reading along and checking passages you would otherwise skip.';
+  /** No search tool is offered here (DECISIONS 43: Gemini gains no search). */
+  readonly canSearch = false;
 
   /**
    * models.list with the key: a rejection says the key is bad, and the list

@@ -190,6 +190,13 @@ export interface TranslationProvider {
   readonly isFree: boolean;
   /** One line describing what this provider is fit for. */
   readonly fitFor: string;
+  /**
+   * Whether a translation on it can search the web. A card says "web search"
+   * only when its provider can and its own result says a search ran
+   * (FOUND_ISSUES 43): a capability, so the card names no provider
+   * (FOUND_ISSUES 66).
+   */
+  readonly canSearch: boolean;
 
   /**
    * Test a key. Throws a TranslationError when the key could not be tested

@@ -67,10 +67,14 @@ export function providerIdForModel(model: string): CloudProviderId {
   return isClaudeModel(model) ? 'anthropic' : 'gemini';
 }
 
-/** How a card labels the thing that produced it. */
-export function badgeFor(id: ProviderId): { displayName: string; isFree: boolean } {
-  if (!isCloudProvider(id)) return { displayName: 'On device', isFree: true };
-  return { displayName: PROVIDERS[id].displayName, isFree: PROVIDERS[id].isFree };
+/** How a card labels the thing that produced it, and whether it could search. */
+export function badgeFor(id: ProviderId): { displayName: string; isFree: boolean; canSearch: boolean } {
+  if (!isCloudProvider(id)) return { displayName: 'On device', isFree: true, canSearch: false };
+  return {
+    displayName: PROVIDERS[id].displayName,
+    isFree: PROVIDERS[id].isFree,
+    canSearch: PROVIDERS[id].canSearch,
+  };
 }
 
 export function allProviders(): TranslationProvider[] {

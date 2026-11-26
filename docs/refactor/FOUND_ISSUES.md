@@ -1044,6 +1044,8 @@ happen through 57.2, 57.3 or a failed `dropReplaced`. Left unfixed.
 
 ## 66. The "web search" badge names a provider (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "66." on `claude/lane-b2-translation`; the lane B2 work order: a provider capability).
+
 Found by the review of lane B. FOUND_ISSUES 43's fix shows the badge only
 when `card.providerId === 'anthropic'` (`ui/reader/TranslationCardView.tsx`),
 for cards stored before the fix. That is a new place in the UI that names a

@@ -339,10 +339,12 @@ function ProviderBadge({ card }: { card: TranslationCard }) {
       )}
       {!offline && badge.isFree && <span className="text-[10px] text-muted">free tier</span>}
       <CostLabel card={card} />
-      {/* Only Claude can search. Cards made before FOUND_ISSUES 43 carry the
-          profile's setting instead of what ran, so a stored Gemini card can
-          still say true; the provider check keeps it from claiming a search. */}
-      {card.usedExternalLookup && card.providerId === 'anthropic' && (
+      {/* Only a provider that can search may say so. Cards made before
+          FOUND_ISSUES 43 carry the profile's setting instead of what ran, so
+          a stored Gemini card can still say true; its provider's canSearch
+          keeps it from claiming a search, without the card naming a provider
+          (FOUND_ISSUES 66). */}
+      {card.usedExternalLookup && badge.canSearch && (
         <span className="text-[10px] text-muted">· web search</span>
       )}
       {/* The badge above names the model that answered; when that is not
