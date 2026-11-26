@@ -101,3 +101,24 @@ lane B found.
   no-offline-source note, and nothing is looked up for it. No detector
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
+
+## Answered for lane B3, 2026-11-26
+
+The owner's answers to lane B3's questions, asked in its session because the
+fixes needed decisions not recorded above.
+
+- **71. The ḥadīth invariant before the entities load.** Keep the fix as
+  made: `segmentSelection` cuts a `hadith_matn` block as ḥadīth by its type,
+  whatever the entities are, rather than refusing an on-device translation
+  until they load. Accepted cost: a card made before the entities load shows
+  the no-offline-source note even where a verified English is cached, under
+  the same cache key, until it is retranslated.
+- **73. Part of a verified ḥadīth on device.** When the selection holds only
+  part of a ḥadīth whose verified English is cached, the segment shows the
+  book's selected words, the whole ḥadīth's English, and the card path's note
+  «Quoted in part; this is the whole ḥadīth.» — as Q5 of
+  `docs/plans/hadith-text-matching.md` decided for the card path. The whole
+  ḥadīth selected still shows the verified Arabic and English.
+- **77 and 78. Verses without an entity, and ḥadīth quoted in a `quote`
+  span, reaching the on-device model.** Recorded only; not fixed in lane B3.
+  Each needs a rule for spans the parser only guesses at, in its own change.

@@ -1158,7 +1158,8 @@ made in that window before this fix holds a prose segment with the model's
 English for the matn; its cache key is unchanged (correctly: trap 5), so
 nothing marks it stale, and it stays, in backups and shares too, until
 retranslated. Verses have the same gap and are not fixed by this: FOUND_ISSUES
-77.
+77. The owner kept this fix over refusing until the entities load
+(2026-11-26; DECISIONS, "Answered for lane B3").
 
 Found by the review of lane B's fix to 68. **A risk to the ḥadīth
 invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
@@ -1333,7 +1334,8 @@ with the existing QURAN_UNRESOLVED_NOTE, as 71 does for a matn. That needs
 the owner's word: the parser's `quran` span kind is a guess (a citation
 follows, or the text is densely vowelled: `shamela/parsePage.ts` ~251), so an
 unresolved one is not always a verse, and cutting it would keep commentary
-from the model too. Left unfixed.
+from the model too. Left unfixed: the owner asked for it to be recorded only (2026-11-26;
+DECISIONS, "Answered for lane B3").
 
 ## 78. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
 
@@ -1349,7 +1351,8 @@ this is the remaining way ḥadīth text reaches the on-device model. Not
 measured. Pre-existing; not caused by lane B3. A fix needs the owner's word,
 as 77's case 3 does: the `quote` kind also covers a lemma the commentary
 explains, which is commentary and should be translated, so cutting every
-`quote` span would keep that from the model too. Left unfixed.
+`quote` span would keep that from the model too. Left unfixed: the owner asked for it to be recorded only (2026-11-26;
+DECISIONS, "Answered for lane B3").
 
 ## 80. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
 
