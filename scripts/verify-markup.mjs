@@ -775,8 +775,10 @@ async function serialize(page, element) {
     // bundled QUL seed and the muṣḥaf load — so which comes first is a race
     // (found while taking the 2a baseline). The rows are kept, markup and all,
     // and only put in a fixed order; in screenshots the list is painted over.
+    // The section's first h2 at any depth: since lane UI-1 a foldable section
+    // holds its heading inside the fold's heading row, not as a direct child.
     const sections = [clone, ...clone.querySelectorAll('section')].filter(
-      (el) => el.tagName === 'SECTION' && el.querySelector(':scope > h2')?.textContent === 'Retrieval',
+      (el) => el.tagName === 'SECTION' && el.querySelector('h2')?.textContent === 'Retrieval',
     );
     for (const list of sections.flatMap((el) => [...el.querySelectorAll('ul')])) {
       const rows = [...list.children].sort((a, b) => (a.outerHTML < b.outerHTML ? -1 : a.outerHTML > b.outerHTML ? 1 : 0));
@@ -786,8 +788,9 @@ async function serialize(page, element) {
   }, element === null);
   return (
     html
-      // React useId ids, in each React version's spelling. None exist today;
-      // without this a later one would make the check flaky.
+      // React useId ids, in each React version's spelling. The first came with
+      // lane UI-1 (a foldable Settings section's body id); without this its
+      // number, which depends on render order, would make the check flaky.
       .replace(/«r[0-9a-z]+»/g, '«r»')
       .replace(/:r[0-9a-z]+:/g, ':r:')
       .replace(/_r_[0-9a-z]+_/g, '_r_')

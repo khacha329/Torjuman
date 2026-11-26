@@ -27,8 +27,8 @@ export type Route =
   /**
    * Settings, open on one of its tabs. With no `tab` the screen opens on the
    * tab it was last left on, so a plain "Settings" button does not always
-   * land on the first one; a pointer elsewhere in the app ("Settings → Data →
-   * Library transfer") names its tab.
+   * land on the first one; a pointer elsewhere in the app to a particular
+   * section can name the tab that holds it.
    */
   | { name: 'settings'; tab?: SettingsTab };
 

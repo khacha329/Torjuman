@@ -54,10 +54,11 @@ const TAB_LABELS: Record<SettingsTab, string> = {
 };
 
 // The tab Settings was last left on, so the Library's plain "Settings" button
-// comes back to it. Per device, in localStorage with the app's prefix like the
-// onboarding flags in App.tsx: it is a fact about how this tablet was last
-// used, not part of the user's work, so it stays out of AppSettings and the
-// work backup.
+// comes back to it. In localStorage with the app's prefix, like the onboarding
+// flags in App.tsx: it is a fact about how this tablet was last used, not part
+// of the user's work, so it stays out of AppSettings and the work backup. Like
+// those flags it travels in a whole-tablet transfer (library/deviceTransfer.ts
+// copies every entry with the prefix), which is harmless.
 const LAST_TAB_KEY = 'shamela-reader.settings-tab';
 
 function lastTab(): SettingsTab | null {
@@ -76,6 +77,110 @@ function rememberTab(tab: SettingsTab): void {
     // Non-fatal: Settings opens on its first tab next time.
   }
 }
+
+// What each tab holds, in order. Built once, at module level: the elements
+// never change, so a tab tap re-renders the bar and the panels' `hidden`
+// and none of the 22 sections inside them.
+const PANELS: Record<SettingsTab, ReactNode> = {
+  // The Translation section first: the profile editor's own comment says
+  // provider and model are edited "in the Translation section above".
+  translation: (
+    <>
+      <Collapsible>
+        <TranslationSection />
+      </Collapsible>
+      <Collapsible>
+        <ProfileEditor />
+      </Collapsible>
+      <Collapsible>
+        <KeysSection />
+      </Collapsible>
+      {/* Folded by default: it grows by a row per term, and is looked up
+          far more often than read through, which is what its search is
+          for. Its heading carries the term count, so folded it still says
+          what it holds. */}
+      <Collapsible defaultOpen={false}>
+        <GlossaryTable />
+      </Collapsible>
+      <Collapsible>
+        <OfflineTranslation />
+      </Collapsible>
+    </>
+  ),
+  reading: (
+    <>
+      <Collapsible>
+        <ReadingSection />
+      </Collapsible>
+      <Collapsible>
+        <DisplaySection />
+      </Collapsible>
+      <Collapsible>
+        <QuranSection />
+      </Collapsible>
+      <Collapsible>
+        <HadithSourceSection />
+      </Collapsible>
+      <Collapsible>
+        <EntitySection />
+      </Collapsible>
+    </>
+  ),
+  library: (
+    <>
+      <Collapsible>
+        <CatalogSection />
+      </Collapsible>
+      <Collapsible>
+        <ReferenceWorks />
+      </Collapsible>
+      <Collapsible>
+        <QulResources />
+      </Collapsible>
+      <Collapsible>
+        <HadithJsonResources />
+      </Collapsible>
+      <Collapsible>
+        <NarratorSources />
+      </Collapsible>
+    </>
+  ),
+  // The order the single column had for these three, which their own text
+  // relies on: the work backup points to "Move to another tablet above" and
+  // "Library transfer below", and Library transfer to "the work backup
+  // above".
+  data: (
+    <>
+      <Collapsible>
+        <DeviceTransfer />
+      </Collapsible>
+      <Collapsible>
+        <BackupSection />
+      </Collapsible>
+      <Collapsible>
+        <LibraryTransfer />
+      </Collapsible>
+      <Collapsible>
+        <PublishedShares />
+      </Collapsible>
+    </>
+  ),
+  about: (
+    <>
+      <Collapsible>
+        <OfflineCapabilities />
+      </Collapsible>
+      {/* Next to each other on purpose: a bug report is the version plus
+          what retrieval actually did, and they get copied together. */}
+      <Collapsible>
+        <BuildSection />
+      </Collapsible>
+      <Collapsible>
+        <RetrievalSection />
+      </Collapsible>
+    </>
+  ),
+};
 
 export function SettingsScreen({ tab: routeTab }: { tab?: SettingsTab }) {
   const tab = routeTab ?? lastTab() ?? SETTINGS_TABS[0];
@@ -104,107 +209,6 @@ export function SettingsScreen({ tab: routeTab }: { tab?: SettingsTab }) {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     replaceRoute({ name: 'settings', tab: next });
-  };
-
-  const panels: Record<SettingsTab, ReactNode> = {
-    // The Translation section first: the profile editor's own comment says
-    // provider and model are edited "in the Translation section above".
-    translation: (
-      <>
-        <Collapsible>
-          <TranslationSection />
-        </Collapsible>
-        <Collapsible>
-          <ProfileEditor />
-        </Collapsible>
-        <Collapsible>
-          <KeysSection />
-        </Collapsible>
-        {/* Folded by default: it grows by a row per term, and is looked up
-            far more often than read through, which is what its search is
-            for. Its heading carries the term count, so folded it still says
-            what it holds. */}
-        <Collapsible defaultOpen={false}>
-          <GlossaryTable />
-        </Collapsible>
-        <Collapsible>
-          <OfflineTranslation />
-        </Collapsible>
-      </>
-    ),
-    reading: (
-      <>
-        <Collapsible>
-          <ReadingSection />
-        </Collapsible>
-        <Collapsible>
-          <DisplaySection />
-        </Collapsible>
-        <Collapsible>
-          <QuranSection />
-        </Collapsible>
-        <Collapsible>
-          <HadithSourceSection />
-        </Collapsible>
-        <Collapsible>
-          <EntitySection />
-        </Collapsible>
-      </>
-    ),
-    library: (
-      <>
-        <Collapsible>
-          <CatalogSection />
-        </Collapsible>
-        <Collapsible>
-          <ReferenceWorks />
-        </Collapsible>
-        <Collapsible>
-          <QulResources />
-        </Collapsible>
-        <Collapsible>
-          <HadithJsonResources />
-        </Collapsible>
-        <Collapsible>
-          <NarratorSources />
-        </Collapsible>
-      </>
-    ),
-    // The order the single column had for these three, which their own text
-    // relies on: the work backup points to "Move to another tablet above" and
-    // "Library transfer below", and Library transfer to "the work backup
-    // above".
-    data: (
-      <>
-        <Collapsible>
-          <DeviceTransfer />
-        </Collapsible>
-        <Collapsible>
-          <BackupSection />
-        </Collapsible>
-        <Collapsible>
-          <LibraryTransfer />
-        </Collapsible>
-        <Collapsible>
-          <PublishedShares />
-        </Collapsible>
-      </>
-    ),
-    about: (
-      <>
-        <Collapsible>
-          <OfflineCapabilities />
-        </Collapsible>
-        {/* Next to each other on purpose: a bug report is the version plus
-            what retrieval actually did, and they get copied together. */}
-        <Collapsible>
-          <BuildSection />
-        </Collapsible>
-        <Collapsible>
-          <RetrievalSection />
-        </Collapsible>
-      </>
-    ),
   };
 
   return (
@@ -247,7 +251,7 @@ export function SettingsScreen({ tab: routeTab }: { tab?: SettingsTab }) {
             hidden={id !== tab}
             className="mx-auto flex max-w-3xl flex-col gap-6"
           >
-            {panels[id]}
+            {PANELS[id]}
           </div>
         ))}
       </div>

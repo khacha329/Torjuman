@@ -112,7 +112,7 @@ export function GlossaryTable() {
   // The search folds Arabic as the import's matching does (normalize: ة/ه,
   // ى/ي, hamza seats, ḥarakāt), so "الاخلاص" finds الإخلاص; English and
   // notes ignore case. It only narrows the table: the prompt, the hash and
-  // the token estimate below are always the whole glossary.
+  // the token estimate are always the whole glossary.
   const needle = query.trim();
   const arabicNeedle = normalize(needle);
   const latinNeedle = needle.toLowerCase();

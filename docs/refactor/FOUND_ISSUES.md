@@ -1177,3 +1177,25 @@ Found by the same review. The regexes run on the raw block text, before
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
+
+## 76. The Qurʾān sheet sends a missing QUL resource to Reference works (2026-11-26, by reading)
+
+Found by the review of lane UI-1's tabs. `MissingResource`
+(`ui/reader/QuranTabs.tsx` ~224) tells the reader, under the Qurʾān sheet's
+QUL tabs, to "Download one from QUL in a browser and import it in Settings →
+Reference works." QUL files are imported in the QUL resources section
+(`ui/settings/QulResources.tsx`); Reference works holds dictionaries and
+commentaries and says nothing of QUL. Its only caller is `QuranSheet.tsx`,
+for a QUL resource. Both sections are on Settings' Library tab, so the
+button lands on the right tab either way. Pre-existing. Left unfixed.
+
+## 77. Check U's screenshots of a tall Settings section are cut off (2026-11-26, measured)
+
+Found by the same review. A section taller than the visible part of
+Settings' scrolling area comes out of an element screenshot clipped at that
+area's bottom edge; the .html is whole. On main the cut is at about 542 CSS
+px at 960×600 (`settings--translation-profiles`, the glossary). Lane UI-1's
+tab bar, above the scrolling area, moves it up to about 496 px, so such
+PNGs show about 46 px less. The "Not captured" list in
+`scripts/verify-markup.mjs` already records the case for
+`settings--translation-profiles--claude.png`. Left as it is.
