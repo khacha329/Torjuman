@@ -1184,16 +1184,40 @@ selected slice. Not measured; pre-existing. Left unfixed.
 
 ## 74. `stripApparatus` cuts inside words (2026-11-20, by reading)
 
-**Fixed in lane B3** (commit "74." on `claude/lane-b3-offline-text`; checked
-by H, which reproduced all three fragments first). `TAKHRIJ` starts at a word's
-edge and takes a written-on «و» or «ف» with «رواه», «أخرجه» and «متفق عليه»,
-so the cut falls one letter earlier, at the conjunction; preceded by any other
-letter a formula no longer cuts. The closer «أنه قال» ends at a word's edge,
-so «قالوا» no longer closes the isnād; a colon after it still does. The edge
-is a lookaround over `\p{L}\p{M}`, since `\b` sees no Arabic letters. What is
-cut is otherwise unchanged: a matn whose own text holds «فأخرجه» (he took him
-out) is still cut there, as before. The comments that cited this entry
-(`SHORT_QUOTE_MAX_RAW_WORDS`, the report's `over-stripped`) now say so.
+**Fixed in lane B3** (commit "74." on `claude/lane-b3-offline-text`, with
+its review fixes; checked by H, which reproduced the fragments first).
+`TAKHRIJ` starts at a word's edge and takes a written-on «و» or «ف» with
+«رواه», «أخرجه» and «متفق عليه», so the cut falls one letter earlier, at the
+conjunction. The closer «أنه قال» (or «أن قال») ends at a word's edge, so
+«قالوا», «قالت», «قالا» or «قاله» no longer closes the isnād there and leaves
+no «وا», «ت», «ا» or «ه». The edge is a lookaround over `\p{L}\p{M}`, since
+`\b` sees no Arabic letters. What else changes, from the fix's review:
+
+- A formula right after any other letter, a combining mark, a tatweel or ﷺ
+  («كرواه», «المتفق عليه», a part-vowelled «وَرواه») no longer cuts there;
+  the cut moves to the next formula at a word's start, if any, and
+  `queryPasses` (`hadithText.ts`) then runs one pass, not two. The
+  part-vowelled case is 75's, and its fix takes it.
+- After «قالوا» with no colon or «؛» in the next 40 characters, the isnād
+  search moves on: it closes at a later closer (possibly a «فقال:» inside the
+  matn) or not at all, and then the chain stays in the shingles. Rare.
+- Everything that read the fragment reads clean text: a «» ورواه مسلم» after a
+  closing mark no longer folds to «و», so `quotationOverrun` no longer shows
+  a false "words after the quotation" note; a three-word quotation followed
+  by «ورواه…» can now match a short quotation, which leaves
+  `SHORT_QUOTE_MAX_RAW_WORDS` the only guard against a cut-down long matn
+  (its comment says so); `enrich.ts`'s `numberCompared` can flip for three
+  words plus a fragment; `scripts/hadithMatch.ts` reports count fewer
+  over-stripped.
+
+Comments and checks that cite 74: `SHORT_QUOTE_MAX_RAW_WORDS`
+(`hadithJson.ts`) and the report's `over-stripped` (`hadithJsonReport.ts`) are
+rewritten; `enrich.ts` ~578 and H's raw-word guard (~798) are still true; V's
+"over-stripped (agrees only unstripped)" case (`verify-parsers.ts` ~6126)
+now passed by the word-count branch, so it has a longer prefix, an entry that
+holds only the tail, and pins `wordsAfter`. Still cut as before, as the
+review noted: a bare «أخرجه» (he took him out) or «فأخرجه» in a matn's own
+words, and a spaced «و رواه» still leaves «و».
 
 Found by the review of 17ac63a (hadith text matching, step 0b).
 `TAKHRIJ` and `ISNAD_CLOSER` in `retrieval/sharh.ts` are not word-anchored:
