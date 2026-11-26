@@ -1027,7 +1027,13 @@ FOUND_ISSUES 33: `glossWord`'s "No API key is set" branch is now reachable
 only if the key is removed while the rail is open; it stays as a guard.
 Left unfixed.
 
-Since the fix (lane B2), by the review of the lane: only the reader's cloud translations report, as the owner decided. An assumption of offline is cleared by a cloud translation that gets any response, the browser's `online` event (reliable since 76, fixed with this one), or a reload. Until then the catalog's Import and the on-device model's download stay disabled and offer no way back of their own, and an on-device profile's Translate reports nothing: a cloud Translate in the reader is the way back.
+Since the fix (lane B2), by the review of the lane: only the reader's cloud
+translations report, as the owner decided. An assumption of offline is
+cleared by a cloud translation that gets any response, the browser's
+`online` event (reliable since 76, fixed with this one), or a reload. Until
+then the catalog's Import and the on-device model's download stay disabled
+and offer no way back of their own, and an on-device profile's Translate
+reports nothing: a cloud Translate in the reader is the way back.
 
 ## 63. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
 
@@ -1238,3 +1244,42 @@ fails on "the header or the formatting" until the clone is set to
 `core.autocrlf=false` and checked out again. So U can be re-recorded only in
 the Linux container; on the PC it can only be compared with a dump of `main`
 made there (`VERIFY_OUT`, as the script's header describes). Left as it is.
+
+## 78. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
+
+Found by the review of lane B2. The Retranslate menu's "Same provider and
+model" (`ui/reader/TranslationCardView.tsx`) calls `onRetranslate()` with
+no options, and `translate` then uses `providerId ?? activeProfile.providerId`
+and `model ?? activeProfile.model` (`ui/reader/useTranslator.ts`): the
+active profile's provider and model, not the card's. A card made on another
+model, or on another profile, is retranslated on the profile's. Older than
+lane B2; more visible since, as a fallback card names a model the profile
+does not use. Left unfixed.
+
+## 79. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
+
+Found by the review of lane B2. `withCloudRequest` (`ui/reader/useTranslator.ts`)
+counts one request per translation, under the provider that answered. A
+translation's HTTP requests can be more: Gemini's 429 retries, the 503/500
+retries (lane B2), a RECITATION split's halves, and each model the fallback
+asked. On the free tier, where requests are the budget, the session line
+undercounts. Left unfixed.
+
+## 80. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
+
+Found by the review of lane B2. In `GeminiProvider.translate`, when a part
+after a RECITATION split fails before any whole segment has come back, the
+error is thrown without the raw text of the parts before it
+(`translation/providers/GeminiProvider.ts`, the catch around `this.stream`).
+Free tier, so nothing is billed; but the text is lost, and since lane B2 an
+overload there lets another model answer instead. Older than lane B2. Left
+unfixed.
+
+## 81. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
+
+Found by the review of lane B2, as a consequence of its migration, for the
+owner to know. The model is part of the cache key (`cacheKeyFor`), so once a
+profile on Flash 3.7 moves to Flash 3.8, selecting a passage it already
+translated is a cache miss: a new request, and a second complete card beside
+the Flash 3.7 one. The old cards are not stale (their own model is compared)
+and are kept. As intended, not a defect.
