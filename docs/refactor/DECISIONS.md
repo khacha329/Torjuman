@@ -109,3 +109,10 @@ lane B found.
   others, and the record holds the only copy of its key besides the link.
   The code, README and the remove-book confirm say so. (The owner's answer
   to lane C's question; the alternative was deleting them with the book.)
+- **18. Compiled QUL views in the work backup.** Keep them in it, knowing
+  the limit: a compilation's cache key includes the ids of the resources
+  installed when it was made, and a hand-imported resource gets a random id,
+  so on a new tablet whose tafsīrs are imported afresh a restored
+  compilation is almost never found. It comes back on the same tablet, after
+  a whole-tablet transfer, or for a seeded resource. (The owner's answer to
+  lane C's question after review; the alternative was leaving them out.)

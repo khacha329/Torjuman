@@ -382,7 +382,7 @@ const ALL_STORES = Object.keys(syntheticRows());
 
 /** The stores a work backup carries (exportWork's fields, settings included). */
 const WORK_STORES = ['cards', 'explanationCards', 'sharhCards', 'marks', 'glossary', 'profiles', 'positions',
-  'wordGlosses', 'quranVerses', 'hadiths', 'shareRecords', 'settings'];
+  'wordGlosses', 'quranVerses', 'hadiths', 'shareRecords', 'qulCompilations', 'settings'];
 
 const phases: Record<string, Phase> = {
   // -------------------------------------------------- schema and upgrades
@@ -921,6 +921,8 @@ const phases: Record<string, Phase> = {
     }
     const bundle = JSON.parse(input.file as string) as Record<string, unknown>;
     if (input.dropShareRecords) delete bundle.shareRecords;
+    // A backup written before lane C has no compilations (FOUND_ISSUES 18).
+    if (input.dropQulCompilations) delete bundle.qulCompilations;
     if (input.extraReferencedBook) {
       (bundle.referencedBooks as unknown[]).push({ shamelaId: 990999, bookId: 'shamela-990999', title: 'كتاب غائب' });
     }

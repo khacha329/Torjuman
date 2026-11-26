@@ -510,13 +510,15 @@ Backups are split accordingly, because one monolithic file is impractical —
 - **Work backup** (`Settings → Work backup`) — translation cards,
   explanations, sharḥ cards, marks and notes, the glossary, profiles, reading
   positions, the word-gloss cache, the Qurʾān-verse and ḥadīth caches, share
-  records (with their decryption keys: a published link's key exists nowhere
-  else), compiled QUL views, and settings — every store in `WORK_STORES`
-  (`platform/storage/idbBackup.ts`) plus the settings row. A share record
-  outlives its book on purpose: removing a book leaves the chapters published
-  from it working, and listed under `Settings → Published chapters`, since
-  the record holds the only copy of the link's key. Small and
-  irreplaceable. It records which books it references by Shamela ID and reports
+  records (with their decryption keys: besides the link itself, the record is
+  the only place a published chapter's key is kept), compiled QUL views (which
+  bind again only where the same QUL resource ids exist: the same tablet, a
+  whole-tablet transfer, or a seeded resource), and settings — every store in
+  `WORK_STORES` (`platform/storage/idbBackup.ts`) plus the settings row. A
+  share record outlives its book on purpose: removing a book leaves the
+  chapters published from it working, and listed under `Settings → Published
+  chapters`, since apart from the link the record is the only place its key
+  is kept. Small and irreplaceable. It records which books it references by Shamela ID and reports
   any that are missing on restore. It leaves by the whole-tablet transfer's
   routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`
   where the browser accepts a JSON file. Saving was once the only one, and on
@@ -608,8 +610,9 @@ error, the tab closed — leaves the device as it was: a new book is not
 added — a half-imported book looks valid and reads as though pages were
 missing — and a book being **replaced** keeps its old copy. Only rebuilding
 the derived index can fail after it, and that says the book was imported
-(`BookIndexingError`); the reader rebuilds entities when the book is opened. A replacement
-swaps the text and what is derived from it (entities, dictionary and
+(`BookIndexingError`): a reading book's entities are rebuilt when it is
+opened, a dictionary's root index from `Settings → Reference works`. A
+replacement swaps the text and what is derived from it (entities, dictionary and
 biography entries, a Taqrīb's narrator profiles) and keeps the user's work on
 the book — marks, translation, explanation and sharḥ cards, the reading
 position — which anchors to block ids that are the same in both copies. Until

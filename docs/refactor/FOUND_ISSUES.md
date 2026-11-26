@@ -332,11 +332,18 @@ database none. For the owner to decide. Design §6 C.
 
 **Fixed in lane C**, the owner having put 18 on the lane's list. `qulCompilations`
 is a `WorkBundle` field (optional: absent on a backup from before) and the last
-`WORK_STORES` entry, so every earlier field keeps its place in the file. A
-compilation is keyed by āyah, resources, provider and model, so it binds where
-those resources are installed and is unused where they are not. Settings counts
-them ("compiled verse views"). Check D's `work-backup`: the file now carries the
-one compilation and the restored database has it.
+`WORK_STORES` entry, so every earlier field keeps its place in the file.
+Settings counts them ("compiled verse views"). Check D's `work-backup`: the file
+now carries the one compilation and the restored database has it; a new phase,
+`import-without-qulCompilations`, restores a backup written before.
+
+The limit, put to the owner after review and accepted (DECISIONS.md): a
+compilation's cache key includes the ids of the resources installed when it
+was made (`compileCacheKey`, `qul/compile.ts`), and a resource imported by hand
+gets a random id (`importResource.ts`). So a restored compilation is found
+again on the same tablet, after a whole-tablet transfer, or for a seeded
+resource, and on a new tablet whose tafsīrs were imported afresh almost
+never.
 
 ## 19. Share records outlive their book (2026-11-16, measured, fixed in lane C)
 
@@ -1286,5 +1293,29 @@ Found by the review of lane C. `DeviceTransfer.relay` disables its buttons
 only once `sendViaRelay` reports its first piece, which comes after the code's
 id and key are derived, so a second tap in that gap starts a second upload
 under another code. The work backup's copy of the route (lane C) is busy from
-the tap; the tablet transfer's is left as is (`ui/settings/DeviceTransfer.tsx`,
-another lane's file).
+the tap; the tablet transfer's is left as is: it is not one of lane C's issues
+(LANES.md rule 1).
+
+## 80. A crawl whose start throws keeps saying it is running (2026-11-26, by reading)
+
+Found by the review of lane C. `Crawler.start` (`ingest/crawler.ts`) sets
+`progress` with status `'running'` before its work, and if anything in it
+throws (`saveState`, `putBook`, entity or root-index building) its `finally`
+clears only `running`: `progress.status` stays `'running'`. The Library then
+shows "Importing…" for that book and hides Resume import until a reload.
+(`ImportScreen`'s listener from the fix to 6 checks `isRunning` too, so it is
+not misled.) Pre-existing; left as is.
+
+## 81. Adding a book while a catalog batch crawls never crawls it (2026-11-26, by reading)
+
+Found by the review of lane C. While a catalog batch import is crawling,
+confirming a preview on Add book calls `crawler.start`, which returns at once
+(`if (this.running) return`). The new book is created but never crawled, and
+its panel says "Starting import…" for good. Pre-existing; left as is.
+
+## 82. Settings' work-backup description is still the short list (2026-11-26, by reading)
+
+Found by the review of lane C. 16 fixed README's list of what a work backup
+carries; `BackupSection`'s own description still says "translation cards,
+explanations, marks, notes, glossary and profiles". Not 16 as written (README
+only); left as is.

@@ -37,11 +37,14 @@ export function ImportScreen() {
   // before it and show the empty input form for an import already under way
   // (FOUND_ISSUES 6). So it also listens: a crawl that starts while the form is
   // showing takes the screen, as one already running at mount does. Only from
-  // the form — a preview being read, or a crawl panel, is left alone.
+  // the form — a preview being read, or a crawl panel, is left alone. Both
+  // conditions, as at mount: `subscribe` replays the last progress at once, and
+  // a crawl whose start threw can leave it saying 'running' with nothing
+  // running (FOUND_ISSUES 80), which must not take the screen.
   useEffect(
     () =>
       crawler.subscribe((progress) => {
-        if (progress.status !== 'running') return;
+        if (progress.status !== 'running' || !crawler.isRunning) return;
         setStage((current) =>
           current.name === 'input' ? { name: 'crawling', bookId: progress.bookId } : current,
         );

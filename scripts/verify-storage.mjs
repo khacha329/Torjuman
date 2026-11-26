@@ -357,6 +357,7 @@ const HARNESS_SCENARIOS = [
       { name: 'export', run: 'work-export' },
       { name: 'import-fresh', run: 'work-import', input: (out) => ({ file: out.export.result.file }) },
       { name: 'import-without-shareRecords', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropShareRecords: true }) },
+      { name: 'import-without-qulCompilations', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropQulCompilations: true }) },
       { name: 'import-missing-books', run: 'work-import', input: (out) => ({ file: out.export.result.file, withBook: true, extraReferencedBook: true }) },
       { name: 'import-over-existing', run: 'work-import', input: (out) => ({ file: out.export.result.file, overwrite: true }) },
     ],

@@ -33,7 +33,11 @@ export function LibraryScreen() {
   const remove = async (book: Book) => {
     // A chapter published from the book outlives it (FOUND_ISSUES 19), which
     // is worth saying before the yes, not discovering after.
-    const published = (await storage.listShareRecords()).some((record) => record.bookId === book.id);
+    // A failed read only loses the extra sentence; the delete is still asked.
+    const published = await storage
+      .listShareRecords()
+      .then((records) => records.some((record) => record.bookId === book.id))
+      .catch(() => false);
     const confirmed = window.confirm(
       `Delete "${book.title}"?\n\nThis removes the imported text, and any translation cards anchored to it, from this device. It cannot be undone.` +
         (published

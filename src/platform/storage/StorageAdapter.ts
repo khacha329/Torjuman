@@ -77,10 +77,15 @@ export interface WorkBundle {
   shareRecords?: ShareRecord[];
   /**
    * Compiled verse views: the one generated thing in the QUL feature, each a
-   * paid model call. In no work backup until lane C (FOUND_ISSUES 18), so a
-   * restore onto a new device brought none of them back. Keyed by a cache key
-   * of āyah, resources, provider and model, so a row binds wherever those
-   * resources are installed and is simply unused where they are not.
+   * paid model call. In no work backup until lane C (FOUND_ISSUES 18).
+   *
+   * Kept by the owner's choice knowing the limit (2026-11-26, DECISIONS.md):
+   * a compilation's cache key includes the ids of the resources installed when
+   * it was made, and a resource imported by hand gets a random id. So a
+   * restored compilation is found again on the same tablet, after a
+   * whole-tablet transfer, or for a seeded resource (fixed ids) — and on a new
+   * tablet whose tafsīrs were imported afresh, almost never. Unfound rows cost
+   * a few kilobytes and nothing else.
    *
    * Absent on a bundle written before lane C, hence optional.
    */

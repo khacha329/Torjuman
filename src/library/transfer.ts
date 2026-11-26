@@ -67,8 +67,9 @@ interface BlockLine {
  * The book was imported — its new copy is in place and the old one gone — but
  * rebuilding what is derived from it (verses and ḥadīth, or a dictionary's
  * root index) stopped. Its own class so the screen does not call it a failed
- * import: nothing is rolled back, and the reader rebuilds entities when the
- * book is opened.
+ * import: nothing is rolled back. A reading book's entities are rebuilt when it
+ * is opened (`ensureEntities`); a dictionary's root index from Settings →
+ * Reference works.
  */
 export class BookIndexingError extends Error {
   constructor(cause: unknown) {
