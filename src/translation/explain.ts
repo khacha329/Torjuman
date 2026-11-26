@@ -18,6 +18,7 @@ import {
   textOf,
   toTranslationError,
   WEB_SEARCH_TOOL,
+  withRaw,
 } from './anthropic';
 
 // "What does this phrase mean?" — a research question, not a translation one.
@@ -225,6 +226,11 @@ export async function explainPhrase(options: {
   // Pass 1 — research, free-form, web search on.
   let notes = '';
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: question }];
+  // What the reply in flight has written so far: the research turn's text,
+  // or the structuring pass's tool arguments and text. With the notes, it is
+  // the raw a failure keeps (FOUND_ISSUES 54), as translate keeps its own
+  // (withRaw, FOUND_ISSUES 15.2); Explain threw the mapped error without it.
+  let inFlight = '';
 
   try {
     for (let turn = 0; turn < 4; turn++) {
@@ -251,12 +257,14 @@ export async function explainPhrase(options: {
       });
       stream.on('text', (delta) => {
         turnText += delta;
+        inFlight = turnText;
         options.onProgress?.(joinNotes(notes, turnText));
       });
 
       const message = await stream.finalMessage();
       addUsage(usage, message.usage);
       notes = joinNotes(notes, textOf(message));
+      inFlight = '';
 
       if (message.stop_reason === 'pause_turn') {
         messages.push({ role: 'assistant', content: message.content });
@@ -280,6 +288,12 @@ export async function explainPhrase(options: {
       tools: [EXPLAIN_TOOL],
       tool_choice: { type: 'auto' },
       output_config: outputConfigFor(options.model),
+    });
+    structured.on('inputJson', (delta) => {
+      inFlight += delta;
+    });
+    structured.on('text', (delta) => {
+      inFlight += delta;
     });
 
     const final = await structured.finalMessage();
@@ -331,6 +345,8 @@ export async function explainPhrase(options: {
       costUsd: null,
     };
   } catch (error) {
-    throw toTranslationError(error);
+    // The notes and the reply in flight, unless the error has raw of its own
+    // (the parse error above keeps the unreadable reply, or the notes).
+    throw withRaw(toTranslationError(error), joinNotes(notes, inFlight));
   }
 }

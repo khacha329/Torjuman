@@ -157,6 +157,8 @@ export function useExplanations(bookId: string, blocks: Block[]) {
           status: 'error',
           error: error.message,
           errorKind: error.kind,
+          // The research notes written before a failure (FOUND_ISSUES 54).
+          ...(error.raw ? { rawResponse: error.raw } : {}),
         };
         await storage.putExplanationCard(failed);
         upsert(failed);

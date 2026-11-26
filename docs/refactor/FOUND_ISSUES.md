@@ -919,6 +919,8 @@ from the block's text).
 
 ## 54. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "54." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. FOUND_ISSUES 15.2 was fixed for translate
 (`withRaw` in `providers/AnthropicProvider.ts`); `translation/explain.ts`
 still throws the mapped error without the notes written so far. Its scope

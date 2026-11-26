@@ -206,6 +206,12 @@ export interface ExplanationCard extends CardBase {
   model: string;
   usage?: TranslationUsage;
   costUsd?: number | null;
+  /**
+   * On a failed card, what the model wrote before the failure — the research
+   * notes so far, a reply that could not be read — kept as a translation
+   * card keeps it (FOUND_ISSUES 54). Absent on older cards.
+   */
+  rawResponse?: string;
   error?: string;
   errorKind?: TranslationErrorKind;
 }
