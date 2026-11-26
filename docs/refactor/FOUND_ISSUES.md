@@ -1048,6 +1048,8 @@ owner wants a provider capability instead.
 
 ## 67. Gemini's 429 wait has no cap (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "67." on `claude/lane-b2-translation`; DECISIONS, lane B2: a 60 s cap).
+
 Found by the review of lane B. Gemini translate waits whatever `retry-after`
 asks, number or (since 11) date, before its next attempt, with no upper
 bound, so a far-future value holds the card spinning. Request count is

@@ -1392,6 +1392,11 @@ await scenario(
   [gemini429('Mon, 16 Nov 2026 12:00:30 GMT'), gemini429(), gemini429('3'), geminiOk()],
   translateGemini(geminiRequest()),
 );
+// FOUND_ISSUES 67: a wait up to 60 s is still waited for; a longer one, as a
+// number or as a date far ahead, fails at once with the wait it asked for.
+await scenario('gemini.translate.429-retry-after-30-then-200', [gemini429('30'), geminiOk()], translateGemini(geminiRequest()));
+await scenario('gemini.translate.429-retry-after-120', [gemini429('120')], translateGemini(geminiRequest()));
+await scenario('gemini.translate.429-retry-after-far-date', [gemini429('Mon, 16 Nov 2026 18:00:00 GMT')], translateGemini(geminiRequest()));
 await scenario('gemini.translate.403', [geminiError(403, 'Permission denied.', 'PERMISSION_DENIED')], translateGemini(geminiRequest()));
 await scenario(
   'gemini.translate.prohibited-content',

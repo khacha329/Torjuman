@@ -53,6 +53,9 @@ import {
 
 const MAX_RETRIES = 3;
 
+/** The longest `retry-after` a 429 retry waits for (the owner's 60 s, DECISIONS, lane B2). */
+const MAX_RETRY_AFTER_SECONDS = 60;
+
 /**
  * Retries of a 503 ("This model is currently experiencing high demand") or a
  * 500, before the fallback (providers/fallback.ts) asks another model. The
@@ -370,6 +373,19 @@ export class GeminiProvider implements TranslationProvider {
 
       if (response.status === 429) {
         const retryAfter = readRetryAfter(response);
+        // A wait longer than the cap is not slept through: the card would
+        // spin for as long as the header asked, a date far ahead included
+        // (FOUND_ISSUES 67). It fails at once and says how long Gemini asked
+        // for. Fewer requests than before, never more.
+        if (retryAfter !== null && retryAfter > MAX_RETRY_AFTER_SECONDS) {
+          throw new TranslationError(
+            'rate-limit',
+            `Gemini free-tier rate limit reached, and Gemini asks to wait ${Math.ceil(retryAfter)} s — ` +
+              `longer than this app waits (${MAX_RETRY_AFTER_SECONDS} s). Your key is fine — translate ` +
+              'again later, or check your current limits in Google AI Studio.',
+            { retryAfterSeconds: retryAfter },
+          );
+        }
         if (attempt < MAX_RETRIES) {
           // Exponential backoff: 2s, 4s, 8s — or whatever the API asked for.
           const waitMs = retryAfter !== null ? retryAfter * 1000 : 2000 * 2 ** attempt;
