@@ -11,7 +11,7 @@ import { hrefFor, type Route } from '../../app/router';
 // file was src/ui/common.tsx.
 
 export { ProgressBar } from './ProgressBar';
-export { SettingsSection } from './SettingsSection';
+export { Collapsible, SettingsSection } from './SettingsSection';
 
 export function Button({
   children,

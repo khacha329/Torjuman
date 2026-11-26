@@ -24,7 +24,26 @@ export type Route =
    * Android's share sheet (see public/share-target.js) rather than being picked.
    */
   | { name: 'receive'; shared: boolean }
-  | { name: 'settings' };
+  /**
+   * Settings, open on one of its tabs. With no `tab` the screen opens on the
+   * tab it was last left on, so a plain "Settings" button does not always
+   * land on the first one; a pointer elsewhere in the app ("Settings → Data →
+   * Library transfer") names its tab.
+   */
+  | { name: 'settings'; tab?: SettingsTab };
+
+/**
+ * The Settings tabs, in the order the tab bar shows them. Here rather than in
+ * the screen because the router parses them and every pointer to a section
+ * names one; their labels and contents are the screen's.
+ */
+export const SETTINGS_TABS = ['translation', 'reading', 'library', 'data', 'about'] as const;
+
+export type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+export function isSettingsTab(value: string): value is SettingsTab {
+  return (SETTINGS_TABS as readonly string[]).includes(value);
+}
 
 export function hrefFor(route: Route): string {
   switch (route.name) {
@@ -41,7 +60,7 @@ export function hrefFor(route: Route): string {
     case 'receive':
       return route.shared ? '#/receive/shared' : '#/receive';
     case 'settings':
-      return '#/settings';
+      return route.tab ? `#/settings/${route.tab}` : '#/settings';
   }
 }
 
@@ -49,11 +68,25 @@ export function navigate(route: Route): void {
   window.location.hash = hrefFor(route).slice(1);
 }
 
+/**
+ * Go to `route` without adding a history entry. For moves inside one screen,
+ * such as Settings' tabs: the Android back gesture then leaves the screen
+ * instead of walking back through every tab that was looked at.
+ */
+export function replaceRoute(route: Route): void {
+  window.location.replace(hrefFor(route));
+}
+
 function parseHash(hash: string): Route {
   const path = hash.replace(/^#/, '');
   if (path === '/import') return { name: 'import' };
   if (path === '/catalog') return { name: 'catalog' };
   if (path === '/settings') return { name: 'settings' };
+  // An unknown tab still opens Settings, on the last tab, rather than
+  // dropping the visitor on the library: a link from an older build that
+  // named a tab since renamed should not look like a broken app.
+  const settings = /^\/settings\/([a-z]+)$/.exec(path);
+  if (settings) return isSettingsTab(settings[1]) ? { name: 'settings', tab: settings[1] } : { name: 'settings' };
   if (path === '/receive') return { name: 'receive', shared: false };
   if (path === '/receive/shared') return { name: 'receive', shared: true };
 

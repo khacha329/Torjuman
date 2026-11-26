@@ -99,7 +99,7 @@ function Routes() {
       // (FOUND_ISSUES 31). Going through the Library always remounted it.
       return <ReaderScreen key={route.bookId} bookId={route.bookId} />;
     case 'settings':
-      return <SettingsScreen />;
+      return <SettingsScreen tab={route.tab} />;
     case 'library':
       return <LibraryScreen />;
   }
