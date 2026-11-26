@@ -985,6 +985,15 @@ to block 1, ↓ stayed on after the jump to 1499); in landscape the old code
 passed, because at the top of the book at 960×600 block 1 is itself the
 block at the middle, so it was never offered.
 
+The review of that fix found that in portrait it counted a block under the
+cards handle or the open cards sheet (sticky at the bottom of the screen) as
+on screen, measuring to the bottom of the window, so ↓ passed over a mark the
+reader could not see. `ReaderScreen` now measures that bar, and `BlockList`
+leaves it out of "wholly in view" (`bottomInset`) and of nothing else. R's
+portrait scenario "a read mark under the open cards sheet is not on screen"
+opens the sheet and puts block 400 under it, below the middle: the first
+version's ↓ went to 450, the fix's to 400.
+
 Lane B's entries were numbered 44–64 on its branch; on the owner's word
 (2026-11-18) they were renumbered 53–73, after lane A's 44–52, so the two
 lanes can merge. Each old number is the new one less 9. Commit subjects

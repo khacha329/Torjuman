@@ -41,8 +41,9 @@
 //     judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
-//     and ↓ in turn (FOUND_ISSUES 39); read marks near the ends (FOUND_ISSUES
-//     52); the centred jump (FOUND_ISSUES 40);
+//     and ↓ in turn (FOUND_ISSUES 39); read marks near the ends, and one
+//     under the open cards sheet (FOUND_ISSUES 52); the centred jump
+//     (FOUND_ISSUES 40);
 //     double-tap
 //
 // Like verify-selection.mjs it needs Chromium through Playwright, and is kept
@@ -882,6 +883,41 @@ async function readMarkEdges(page) {
   );
 }
 
+/**
+ * A read mark under the portrait cards sheet is not on screen (FOUND_ISSUES
+ * 52): with the sheet open, the first read mark is put wholly inside the
+ * window but under the sheet, below the middle block, and ↓ must bring it to
+ * the middle. Counted as on screen, as the first version of 52's fix did by
+ * measuring to the bottom of the window, ↓ went past it to the next mark.
+ */
+async function readMarkUnderSheet(page) {
+  await page.getByRole('button', { name: /^▲ Cards/ }).tap();
+  await settle(page, 400);
+  const sheetTop = await page.evaluate(() => Math.round(document.querySelector('div.sticky.bottom-0').getBoundingClientRect().top));
+  await jumpToPrinted(page, pageOf(READ_MARKS[0]));
+  // The mark's block under the sheet, wholly inside the window and below the
+  // middle of the area under the header (where ↓ counts from): its top 80 px
+  // below that middle.
+  await page.evaluate(({ id }) => {
+    const middle = (document.querySelector('header').getBoundingClientRect().bottom + window.innerHeight) / 2;
+    const rect = document.querySelector(`[data-block-id="${id}"]`).getBoundingClientRect();
+    window.scrollBy(0, rect.top - (middle + 80));
+  }, { id: blockId(READ_MARKS[0]) });
+  await settle(page, 500);
+  const under = await page.evaluate(({ id, sheetTop }) => {
+    const rect = document.querySelector(`[data-block-id="${id}"]`).getBoundingClientRect();
+    return { top: Math.round(rect.top), bottom: Math.round(rect.bottom), sheetTop, viewport: window.innerHeight };
+  }, { id: blockId(READ_MARKS[0]), sheetTop });
+  await page.getByTitle('Next passage marked to read').click();
+  await settle(page, 900);
+  const landed = await atMiddle(page, READ_MARKS[0]);
+  check(
+    `with the cards sheet open, ↓ goes to a read mark under the sheet (block ${READ_MARKS[0]})`,
+    under.top > under.sheetTop && under.bottom <= under.viewport && under.top > landed.middle && landed.ok,
+    `under the sheet before: ${JSON.stringify(under)}; after ↓: ${JSON.stringify(landed)}`,
+  );
+}
+
 /** Double-tap a word: the dictionary sheet opens and the selection is gone. */
 async function doubleTap(page) {
   const point = await page.evaluate(({ id, word }) => {
@@ -1646,6 +1682,7 @@ async function portraitControls(browser, base, profile) {
   await scenario(browser, base, profile, 'the read-mark ↑ ↓', readMarkJumps);
   await scenario(browser, base, profile, 'the read-mark ↓ in turn from the top', readMarkSequence);
   await scenario(browser, base, profile, 'read marks near the ends of the book count as reached', readMarkEdges);
+  await scenario(browser, base, profile, 'a read mark under the open cards sheet is not on screen', readMarkUnderSheet);
   await scenario(browser, base, profile, 'a centred jump lands at the middle below the header', (page) => centredJump(page, CENTRED_MAX_JUMPS_PORTRAIT));
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }

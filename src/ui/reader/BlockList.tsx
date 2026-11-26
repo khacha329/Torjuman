@@ -110,6 +110,13 @@ interface BlockListProps {
    * does not count as the one being read.
    */
   topInset: number;
+  /**
+   * Height of what covers the bottom of the page: in portrait, the sticky
+   * cards handle, and the cards sheet when it is open. Only the read marks'
+   * "wholly in view" leaves it out (FOUND_ISSUES 52): a block under the sheet
+   * is not on screen.
+   */
+  bottomInset: number;
 }
 
 function pageIndexOf(block: Block): number {
@@ -138,6 +145,7 @@ export function BlockList({
   onMarkerClick,
   handleRef,
   topInset,
+  bottomInset,
 }: BlockListProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -318,8 +326,12 @@ export function BlockList({
   // FOUND_ISSUES 52: a mark too near either end of the book to be centred
   // stayed after or before the middle block, and its arrow kept offering it,
   // a tap that did nothing. Wholly, not merely showing: a mark whose block
-  // shows only a sliver at an edge is still worth a tap.
-  const whole = onScreen.filter((item) => item.start >= viewTop - 3 && item.end <= viewBottom + 1);
+  // shows only a sliver at an edge is still worth a tap. And above the cards
+  // handle and sheet that cover the bottom of the page in portrait: a block
+  // under them is not on screen.
+  const whole = onScreen.filter(
+    (item) => item.start >= viewTop - 3 && item.end <= viewBottom - bottomInset + 1,
+  );
   const wholeFirst = whole[0] === undefined ? undefined : blocks[whole[0].index]?.order;
   const wholeLast = whole.length === 0 ? undefined : blocks[whole[whole.length - 1]!.index]?.order;
 

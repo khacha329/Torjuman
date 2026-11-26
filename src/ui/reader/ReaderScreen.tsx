@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../services/secrets';
@@ -117,6 +117,11 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [middleBlock, setMiddleBlock] = useState<Block | null>(null);
   const [whollyInView, setWhollyInView] = useState<{ first: number; last: number } | null>(null);
+  // The portrait cards handle and sheet, held to the bottom of the screen,
+  // and their height: a read mark under them is not on screen
+  // (FOUND_ISSUES 52).
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+  const [bottomInset, setBottomInset] = useState(0);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
@@ -539,6 +544,21 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
 
   const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
+  // Measured as the header is: the bar exists only in portrait, once the book
+  // has loaded, and grows when the sheet opens.
+  useLayoutEffect(() => {
+    const bar = bottomBarRef.current;
+    if (!bar) {
+      setBottomInset(0);
+      return;
+    }
+    const update = () => setBottomInset(bar.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [loading, sideBySide]);
+
   /**
    * A side column that stays on screen while the page scrolls: it starts under
    * the sticky header and fills the rest of the screen, scrolling on its own.
@@ -719,6 +739,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               onMarkerClick={handleMarkerClick}
               handleRef={listRef}
               topInset={headerHeight}
+              bottomInset={bottomInset}
             />
           )}
         </div>
@@ -796,7 +817,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           bottom of the screen — the page is as long as the book, and the end
           of it is not where the cards belong. */}
       {!sideBySide && (
-        <div className="sticky bottom-0 z-30 flex flex-col">
+        <div ref={bottomBarRef} className="sticky bottom-0 z-30 flex flex-col">
           <button
             onClick={() => setSheetOpen((open) => !open)}
             className="shrink-0 border-t border-rule bg-white py-2 text-sm text-muted"
