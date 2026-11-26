@@ -206,7 +206,7 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
               Drive. Then open it below, or share it straight to this app.
             </p>
             <p className="mb-4 text-sm text-muted">
-              A work backup from <strong>Settings → Work backup</strong> is received the
+              A work backup from <strong>Settings → Data → Work backup</strong> is received the
               same way. It is added to this tablet's work rather than replacing it.
             </p>
             <Button variant="primary" onClick={() => fileRef.current?.click()}>
