@@ -510,7 +510,13 @@ Backups are split accordingly, because one monolithic file is impractical —
 - **Work backup** (`Settings → Work backup`) — cards, explanations, marks,
   notes, glossary, profiles, positions, the gloss cache. Small and
   irreplaceable. It records which books it references by Shamela ID and reports
-  any that are missing on restore.
+  any that are missing on restore. It leaves by the whole-tablet transfer's
+  routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`
+  where the browser accepts a JSON file. Saving was once the only one, and on
+  the owner's tablet it produced nothing (CLAUDE.md trap 8). A relayed or
+  shared backup lands on the receive screen, which tells it from a tablet file
+  by its bytes (gzip or not; `library/workBackup.ts`) and, on a yes, adds it to
+  that tablet's work as `Restore from a work backup` does — nothing is emptied.
 - **Library transfer** (`Settings → Library transfer`) — one file per book,
   `.hashiya.gz`.
 

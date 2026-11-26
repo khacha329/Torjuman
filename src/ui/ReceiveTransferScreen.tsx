@@ -16,6 +16,8 @@ import {
   receiveViaRelay,
   type RelayProgress,
 } from '../library/relayTransfer';
+import { describeRestore, describeWorkBundle, readWorkBackup } from '../library/workBackup';
+import type { WorkBundle } from '../platform/storage/StorageAdapter';
 import { Button, inputClass, TopBar, ProgressBar } from './kit';
 import { percentOf } from '../lib/format';
 
@@ -25,6 +27,11 @@ import { percentOf } from '../lib/format';
 // is complete (nothing written), show what it holds and what it will replace,
 // and only on an explicit yes empty this tablet and restore. See
 // src/library/deviceTransfer.ts.
+//
+// A work backup arrives here too, since lane C gave it the proxy and the share
+// sheet (Settings → Work backup). It is told apart by its bytes
+// (library/workBackup.ts), shown with what it holds, and on a yes restored as
+// Settings restores one: added to this tablet's work, nothing here emptied.
 
 /** The stores worth naming in the summary, in the order a reader thinks of them. */
 const LABELS: [store: string, one: string, many: string][] = [
@@ -49,11 +56,13 @@ type State =
   | { step: 'fetching'; progress: RelayProgress | null }
   | { step: 'checking'; progress: DeviceTransferProgress | null }
   | { step: 'confirm'; file: File; summary: DeviceTransferSummary; relayCode?: string }
+  | { step: 'confirm-work'; bundle: WorkBundle; relayCode?: string }
   | { step: 'restoring'; progress: DeviceTransferProgress | null }
+  | { step: 'restored-work'; message: string }
   | { step: 'failed'; message: string };
 
 export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
-  const { storage } = useApp();
+  const { storage, reload } = useApp();
   const [state, setState] = useState<State>(
     shared ? { step: 'checking', progress: null } : { step: 'choose' },
   );
@@ -69,6 +78,11 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
   const check = async (file: File, relayCode?: string) => {
     setState({ step: 'checking', progress: null });
     try {
+      const bundle = await readWorkBackup(file);
+      if (bundle) {
+        setState({ step: 'confirm-work', bundle, relayCode });
+        return;
+      }
       const summary = await inspectDeviceFile(file, storage, (progress) =>
         setState({ step: 'checking', progress }),
       );
@@ -136,6 +150,24 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
     }
   };
 
+  const restoreWork = async (bundle: WorkBundle, relayCode?: string) => {
+    setState({ step: 'restoring', progress: null });
+    try {
+      const report = await storage.importWork(bundle);
+      await reload();
+      await discardIncomingTransfer();
+      if (relayCode) await forgetRelay(relayCode);
+      setState({ step: 'restored-work', message: describeRestore(report) });
+    } catch (error) {
+      setState({
+        step: 'failed',
+        message:
+          `The restore stopped part way: ${error instanceof Error ? error.message : String(error)} ` +
+          'Nothing on this tablet was removed. Restoring the same backup again is safe.',
+      });
+    }
+  };
+
   const cancel = async () => {
     await discardIncomingTransfer();
     navigate({ name: 'library' });
@@ -163,6 +195,10 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
               On the other tablet, open <strong>Settings → Move to another tablet</strong>,
               create the transfer file and send it here — with Quick Share, a cable or
               Drive. Then open it below, or share it straight to this app.
+            </p>
+            <p className="mb-4 text-sm text-muted">
+              A work backup from <strong>Settings → Work backup</strong> is received the
+              same way. It is added to this tablet's work rather than replacing it.
             </p>
             <Button variant="primary" onClick={() => fileRef.current?.click()}>
               Open the transfer file
@@ -259,6 +295,39 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
               </Button>
               <Button onClick={() => void cancel()}>Cancel</Button>
             </div>
+          </section>
+        )}
+
+        {state.step === 'confirm-work' && (
+          <section className="rounded-lg border border-rule bg-white p-5">
+            <h2 className="mb-1 font-medium">A work backup</h2>
+            <p className="mb-3 text-xs text-muted">
+              Made {new Date(state.bundle.exportedAt).toLocaleString()}
+            </p>
+            <p className="mb-4 text-sm">{describeWorkBundle(state.bundle)}.</p>
+            <p className="mb-4 rounded-md border border-rule bg-parchment p-3 text-sm">
+              It is added to this tablet's work; nothing here is removed. Where both have the
+              same card, mark or entry, the backup's copy is kept, and this tablet takes the
+              backup's settings.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                onClick={() => void restoreWork(state.bundle, state.relayCode)}
+              >
+                Restore this work
+              </Button>
+              <Button onClick={() => void cancel()}>Cancel</Button>
+            </div>
+          </section>
+        )}
+
+        {state.step === 'restored-work' && (
+          <section className="rounded-lg border border-rule bg-white p-5">
+            <p className="mb-4 text-sm">{state.message}</p>
+            <Button variant="primary" onClick={() => navigate({ name: 'library' })}>
+              Back to the library
+            </Button>
           </section>
         )}
 
