@@ -1027,6 +1027,8 @@ FOUND_ISSUES 33: `glossWord`'s "No API key is set" branch is now reachable
 only if the key is removed while the rail is open; it stays as a guard.
 Left unfixed.
 
+Since the fix (lane B2), by the review of the lane: only the reader's cloud translations report, as the owner decided. An assumption of offline is cleared by a cloud translation that gets any response, the browser's `online` event (reliable since 76, fixed with this one), or a reload. Until then the catalog's Import and the on-device model's download stay disabled and offer no way back of their own, and an on-device profile's Translate reports nothing: a cloud Translate in the reader is the way back.
+
 ## 63. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
 
 **Fixed in lane B2** (commit "63." on `claude/lane-b2-translation`; the lane B2 work order).
@@ -1207,6 +1209,8 @@ Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
 
 ## 76. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+
+**Fixed in lane B2** (commit "76." on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
 
 Found by lane B2 while wiring 62. `subscribe` in `app/useOnline.ts` adds the
 same two functions (`handleOnline`, `emit`) to `window` for every subscriber,
