@@ -1,12 +1,17 @@
-// A byte count for display: "512 B", "300 KB", "2.5 MB". Moved verbatim from
-// ui/reader/ShareChapter.tsx in restructure Phase 2 step 2c;
-// PublishedShares.tsx had an identical copy. Other screens format sizes their
-// own, different ways (FOUND_ISSUES 8) and do not use this.
+// A byte count for display: "512 B", "300 KB", "2.5 MB", "1.4 GB". Moved
+// verbatim from ui/reader/ShareChapter.tsx in restructure Phase 2 step 2c;
+// PublishedShares.tsx had an identical copy. Since FOUND_ISSUES 8 it is the
+// app's one way of writing a size: the tablet transfer file, its "not enough
+// space" message, a book export, the offline model's storage line and its
+// file list each had their own, and now use this. The gigabyte step came with
+// them (the owner's choice, 2026-11-26): a tablet's free space, in the space
+// message, would otherwise read like "52345.6 MB".
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 /**

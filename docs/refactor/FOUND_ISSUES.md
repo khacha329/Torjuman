@@ -124,6 +124,14 @@ Fixed in the check, not the app. Found in Phase 2 step 2a and its review.
 
 ## 8. Byte sizes are written five different ways (2026-11-15, measured)
 
+**Fixed in lane UI-1** (commit "8." on `claude/lane-ui1-settings`; the
+owner's answer of 2026-11-26 in DECISIONS: `formatBytes` everywhere, with a
+gigabyte step). All four places below now use it, and so does a fifth
+found while fixing, the offline model's file list in Settings → Translation
+→ Offline translation → diagnostics (`OfflineTranslation.tsx`, the same
+megabytes-only code as Library transfer's). The "not enough space" message
+no longer rounds up.
+
 Only two of the app's byte formatters were the same; Phase 2 step 2c merged
 those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
 whole kilobytes, one decimal for megabytes). The others differ, so merging

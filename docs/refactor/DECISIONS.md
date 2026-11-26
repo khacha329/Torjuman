@@ -101,3 +101,14 @@ lane B found.
   no-offline-source note, and nothing is looked up for it. No detector
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
+
+## Lane UI-1 (Settings), 2026-11-26
+
+The owner's answers to the two questions lane UI-1 asked.
+
+- **8. Byte sizes.** One format everywhere: `formatBytes` in
+  `lib/format.ts` ("512 B", "300 KB", "2.5 MB"), with a gigabyte step
+  added ("1.4 GB"), so a tablet's free space does not read "52345.6 MB".
+  The "not enough space" message stops rounding up.
+- **Where "What works offline" goes.** The brief's five Settings tabs did
+  not place it. It goes in About, above "This build" and "Retrieval".

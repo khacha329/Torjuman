@@ -8,6 +8,7 @@ import {
   type TransferProgress,
 } from '../../library/transfer';
 import type { Book } from '../../types';
+import { formatBytes } from '../../lib/format';
 import { saveFile } from '../../lib/saveFile';
 import { Button, ProgressBar, SettingsSection } from '../kit';
 import { percentOf } from '../../lib/format';
@@ -39,7 +40,7 @@ export function LibraryTransfer() {
       const blob = await exportBook(storage, book, setProgress);
       await saveFile(blob, exportFilename(book));
       setStatus(
-        `Exported "${book.title}" — ${(blob.size / 1024 / 1024).toFixed(1)} MB compressed.`,
+        `Exported "${book.title}" — ${formatBytes(blob.size)} compressed.`,
       );
     } catch (error) {
       setStatus(`Export failed: ${error instanceof Error ? error.message : String(error)}`);

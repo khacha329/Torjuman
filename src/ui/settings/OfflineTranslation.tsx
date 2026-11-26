@@ -15,6 +15,7 @@ import {
   type OfflineGraphOptimization,
   type OfflineLoadDiagnostics,
 } from '../../translation/offline/OfflineProvider';
+import { formatBytes } from '../../lib/format';
 import { GEMINI_DEFAULT_MODEL } from '../../translation/models';
 import { Button, Field, inputClass, ProgressBar, SettingsSection } from '../kit';
 
@@ -35,7 +36,7 @@ export function OfflineTranslation() {
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [usageMB, setUsageMB] = useState<number | null>(null);
+  const [usageBytes, setUsageBytes] = useState<number | null>(null);
   const [diagnostics, setDiagnostics] = useState<OfflineLoadDiagnostics | null>(null);
   const [cachedFiles, setCachedFiles] = useState<string[]>([]);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -65,9 +66,9 @@ export function OfflineTranslation() {
 
     try {
       const estimate = await navigator.storage?.estimate?.();
-      setUsageMB(estimate?.usage ? estimate.usage / 1024 / 1024 : null);
+      setUsageBytes(estimate?.usage ? estimate.usage : null);
     } catch {
-      setUsageMB(null);
+      setUsageBytes(null);
     }
 
     setCachedFiles(await cachedModelFiles());
@@ -225,9 +226,9 @@ export function OfflineTranslation() {
       )}
 
       {status && <p className="mt-3 text-xs text-muted">{status}</p>}
-      {usageMB !== null && (
+      {usageBytes !== null && (
         <p className="mt-2 text-xs text-muted">
-          This app is currently using about {usageMB.toFixed(0)} MB on this device.
+          This app is currently using about {formatBytes(usageBytes)} on this device.
         </p>
       )}
 
@@ -279,7 +280,7 @@ export function OfflineTranslation() {
                     diagnostics.files.map((entry) => (
                       <li key={entry.file} className="break-all">
                         <strong>{entry.source}</strong> · {entry.file}
-                        {entry.bytes > 0 && ` · ${(entry.bytes / 1048576).toFixed(1)} MB`}
+                        {entry.bytes > 0 && ` · ${formatBytes(entry.bytes)}`}
                       </li>
                     ))
                   )}

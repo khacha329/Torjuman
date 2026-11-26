@@ -162,7 +162,9 @@
 //     path only;
 //   - ShareChapter's sealed state: reached through the share dialog; its
 //     formatBytes is moved verbatim, so the Published chapters capture (all
-//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it;
+//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it (the
+//     gigabyte step FOUND_ISSUES 8 added later is in no capture: nothing
+//     seeded here is that large);
 //   - (3b) the Claude captures in the proxy build: neither screen reads the
 //     proxy setting, and the proxy build's Settings captures are every tab's
 //     whole panel with Gemini chosen;
