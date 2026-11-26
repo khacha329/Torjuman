@@ -443,11 +443,16 @@ becomes the book only once the whole file is in and its counts check out:
 text and what is derived from it and moves the staged rows to their real ids.
 The marks, cards, explanation and sharḥ cards and the position are not in that
 transaction. A failure before or in it removes only the staged rows. The
-dialog now says the work is kept and that a failed import leaves the book as it
-is. Check D's `book-transfer` → `import-conflict`: "after onConflict true" keeps
+dialog now says the work is kept and that a file that cannot be read in full
+leaves the book as it is. Rebuilding the derived index is the one step after
+adoption; if it stops, the screen says the book was imported
+(`BookIndexingError`), not that the import failed. Check D's `book-transfer` → `import-conflict`: "after onConflict true" keeps
 the five work rows; after the cut-short replacement, `getBook A` is the book,
-with its work, and no staged row remains. The cost: until it is adopted the
-staged copy takes room beside the old one.
+with its work, and no staged row remains. The costs: until it is adopted the
+staged copy takes room beside the old one (and briefly more while the swap
+commits); the swap is one readwrite transaction, so reads of those stores wait
+for it and the progress line sits on its last message meanwhile; and an import
+that never finishes leaves its staged rows (77).
 
 ## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured, fixed in lane C)
 
@@ -588,10 +593,12 @@ glossary entries, but not sharḥ cards or word glosses, which the backup does
 carry (`WorkBundle`, `platform/storage/StorageAdapter.ts:48-60`) — like the
 restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
 
-**Fixed in lane C.** The export is in a `try`: a failure says "Export failed,
-so no backup was saved" and why. Its success message counts every kind of
-card and note the file carries, commentary cards and word glosses included
-(`describeWorkBundle`, `library/workBackup.ts`).
+**Fixed in lane C.** Making the file is in a `try`: a failure says "Export
+failed, so no backup was made" and why; each route after it (save, proxy,
+share sheet) has its own `try` and message ("Could not save the file: …").
+Its message counts every kind of card and note the file carries, commentary
+cards, word glosses and compiled verse views included (`describeWorkBundle`,
+`library/workBackup.ts`).
 
 ## 33. When Meaning is offered (2026-11-16, by reading)
 
@@ -1249,3 +1256,35 @@ position for that id — the waiting work among them. Not a replacement, so
 not 24 as written. The fix to 24 covers it: every import is staged, and the
 rollback removes only staged rows. Check D has no scenario with work waiting
 for a book; `import-one-block-short` (no work) is unchanged.
+
+## 77. An import that never finishes leaves its staged rows (2026-11-26, by reading; caused by the fix to 24)
+
+Found by the review of lane C's fix to 24. A per-book import writes its copy
+under staged ids (`stagedId`) until it is adopted. If the tab is closed or the
+tablet sleeps before then, the staged rows stay: no screen lists them, Library
+→ Remove does not clear them (`deleteBook(id)` never touches `stagedId(id)`),
+and only the next import of the same book removes them, at its start. The
+whole-tablet transfer copies them raw and counts them among its "paragraphs
+of text". Before the fix such an import left a visible in-progress book.
+Harmless to the reader and to the user's work; it costs room, up to one
+book's text. Left as is: clearing them on `deleteBook`, or on boot, is the
+owner's call.
+
+## 78. A per-book file saved uncompressed cannot be imported (2026-11-26, by reading)
+
+Found by the review of lane C. Where the browser cannot gzip, `exportBook`
+(`library/transfer.ts`) returns NDJSON uncompressed (`application/x-ndjson`),
+but `LibraryTransfer` saves every book file under `exportFilename`'s
+`.hashiya.gz`, and `importBookFile` decides to gunzip from the name alone
+(`file.name.endsWith('.gz')`), so that file fails to import on any device.
+`deviceTransfer.ts` tells the two apart by content instead. Pre-existing;
+left as is.
+
+## 79. A quick second tap on Send through the proxy starts a second upload (2026-11-26, by reading)
+
+Found by the review of lane C. `DeviceTransfer.relay` disables its buttons
+only once `sendViaRelay` reports its first piece, which comes after the code's
+id and key are derived, so a second tap in that gap starts a second upload
+under another code. The work backup's copy of the route (lane C) is busy from
+the tap; the tablet transfer's is left as is (`ui/settings/DeviceTransfer.tsx`,
+another lane's file).
