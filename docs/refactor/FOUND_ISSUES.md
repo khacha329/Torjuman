@@ -1178,6 +1178,17 @@ selected slice. Not measured; pre-existing. Left unfixed.
 
 ## 74. `stripApparatus` cuts inside words (2026-11-20, by reading)
 
+**Fixed in lane B3** (commit "74." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced all three fragments first). `TAKHRIJ` starts at a word's
+edge and takes a written-on «و» or «ف» with «رواه», «أخرجه» and «متفق عليه»,
+so the cut falls one letter earlier, at the conjunction; preceded by any other
+letter a formula no longer cuts. The closer «أنه قال» ends at a word's edge,
+so «قالوا» no longer closes the isnād; a colon after it still does. The edge
+is a lookaround over `\p{L}\p{M}`, since `\b` sees no Arabic letters. What is
+cut is otherwise unchanged: a matn whose own text holds «فأخرجه» (he took him
+out) is still cut there, as before. The comments that cited this entry
+(`SHORT_QUOTE_MAX_RAW_WORDS`, the report's `over-stripped`) now say so.
+
 Found by the review of 17ac63a (hadith text matching, step 0b).
 `TAKHRIJ` and `ISNAD_CLOSER` in `retrieval/sharh.ts` are not word-anchored:
 «رواه» and «أخرجه» match inside «ورواه», «فرواه», «وأخرجه» and «فأخرجه», and

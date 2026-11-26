@@ -70,6 +70,7 @@ import {
   type SegmentedSelection,
 } from '../src/translation/offline/segmentSelection';
 import { QuranEnglish, QuranIndex } from '../src/quran/quranIndex';
+import { stripApparatus } from '../src/retrieval/sharh';
 import type {
   Block,
   BlockType,
@@ -1241,6 +1242,37 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       partial.segments,
     );
   }
+}
+
+// ------------------------------------------- the apparatus stripper (lane B3)
+//
+// `stripApparatus` (retrieval/sharh.ts) feeds every matcher above. Its
+// formulae are the only real Arabic here besides the honorifics; the narrators
+// and the matn are made-up words, as everywhere in this check.
+{
+  const matn = text(words(10));
+  const tail = text(words(3));
+  const strip = (input: string) => stripApparatus(input);
+
+  // FOUND_ISSUES 74: the cut falls at a word's edge.
+  expect('74: «رواه» cuts the takhrīj tail', strip(`${matn} رواه ${tail}`) === matn, strip(`${matn} رواه ${tail}`));
+  for (const formula of ['ورواه', 'فرواه', 'وأخرجه', 'فأخرجه', 'ومتفق عليه']) {
+    expect(
+      `74: «${formula}» goes with its conjunction: no «${formula[0]}» is left on the matn`,
+      strip(`${matn} ${formula} ${tail}`) === matn,
+      strip(`${matn} ${formula} ${tail}`),
+    );
+  }
+  const insideWord = `${matn} ك${'رواه'} ${tail}`;
+  expect('74: a formula inside a longer word does not cut', strip(insideWord) === insideWord, strip(insideWord));
+
+  const chain = `عن ${text(words(3))} رضي الله عنه`;
+  expect('74: «أنه قال» still closes the isnād', strip(`${chain} أنه قال ${matn}`) === matn, strip(`${chain} أنه قال ${matn}`));
+  expect(
+    '74: «قالوا» is not «قال»: the isnād ends at the colon after it, leaving no «وا»',
+    strip(`${chain} أن قالوا: ${matn}`) === matn,
+    strip(`${chain} أن قالوا: ${matn}`),
+  );
 }
 
 // ------------------------------------------------------------------- summary

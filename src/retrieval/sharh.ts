@@ -109,12 +109,39 @@ export interface SharhPassage {
  */
 const ENTRY_NUMBER = /^\s*[0-9٠-٩]+\s*[-–—]\s*/;
 
-/** The isnād runs to its closer; the matn starts after it. */
-const ISNAD_CLOSER =
-  /^.{0,160}?(?:رضي\s+الله\s+عنه(?:ما|م|ا)?|أن\s+رسول\s+الله|عن\s+النبي)[^:؛.]{0,40}?(?:قال\s*[:؛]|قالت\s*[:؛]|أنه?\s+قال|:)/s;
+// A word's edges. JavaScript's `\b` knows only ASCII word characters, so in
+// Arabic it marks no edge at all; a letter or a combining mark on the far
+// side means the match is inside a word. Until FOUND_ISSUES 74 neither
+// pattern below had an edge: «رواه» matched inside «ورواه» and «فرواه», and
+// «أنه قال» stopped at the start of «قالوا», so the cut left «و», «ف» or «وا»
+// in the edge shingle, which then could not hit.
+const WORD_START = '(?<![\\p{L}\\p{M}])';
+const WORD_END = '(?![\\p{L}\\p{M}])';
 
-/** The takhrīj tail and anything after it. */
-const TAKHRIJ = /(?:رواه|أخرجه|متفق\s+عليه|وفي\s+رواية)[\s\S]*$/;
+/**
+ * The isnād runs to its closer; the matn starts after it. Only where the cut
+ * falls matters, so only the closer that ends the match, «أنه قال», needs an
+ * edge: the phrases before it may sit inside a longer word («وعن النبي») with
+ * no harm, since nothing is cut there.
+ */
+const ISNAD_CLOSER = new RegExp(
+  '^.{0,160}?(?:رضي\\s+الله\\s+عنه(?:ما|م|ا)?|أن\\s+رسول\\s+الله|عن\\s+النبي)[^:؛.]{0,40}?' +
+    `(?:قال\\s*[:؛]|قالت\\s*[:؛]|أنه?\\s+قال${WORD_END}|:)`,
+  'su',
+);
+
+/**
+ * The takhrīj tail and anything after it, from the start of the word that
+ * opens it. «ورواه», «فأخرجه» and «ومتفق عليه» are the same formulae with the
+ * conjunction written on, so the conjunction goes with them rather than being
+ * left behind: the cut falls one letter earlier than it did before 74, at the
+ * conjunction. Any other letter before the formula puts it inside a longer
+ * word, and it no longer cuts there at all.
+ */
+const TAKHRIJ = new RegExp(
+  `${WORD_START}(?:[وف]?(?:رواه|أخرجه|متفق\\s+عليه)|وفي\\s+رواية)[\\s\\S]*$`,
+  'u',
+);
 
 export function stripApparatus(matn: string): string {
   let text = matn.replace(ENTRY_NUMBER, '');
