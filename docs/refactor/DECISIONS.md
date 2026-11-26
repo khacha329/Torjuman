@@ -101,3 +101,46 @@ lane B found.
   no-offline-source note, and nothing is looked up for it. No detector
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
+
+## Lane B2, cloud translation, 2026-11-26
+
+The owner's work order for lane B2, and the owner's answers to the questions
+it left open, given in the lane's session on 2026-11-26.
+
+- **Gemini models.** Offer `gemini-3.8-flash`, `gemini-3.6-flash`,
+  `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`, checked against the
+  API's model page. Default `gemini-3.5-flash-lite` (it works for the owner).
+  Migrate saved profiles off retired IDs. In Test key, call models.list and
+  mark the configured models the key cannot use.
+- **Busy models.** Retry 503 and 500 with backoff and jitter, then fall back
+  through 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite, then to
+  `claude-haiku-5-5` if a Claude key is set and a new Settings switch
+  (default on) allows crossing providers; the same in reverse for Claude's
+  529. The card's badge shows the model that answered, with a note why.
+  Never fall back to the offline model. Map the "retired for new users"
+  error to a clear message.
+  - *Which Gemini models:* every other one, in that order, from the
+    profile's own (so from 3.5 Flash Lite: 3.8, 3.6, 3.1 Flash Lite, then
+    Haiku 5.5). A model the key cannot use is stepped over.
+  - *Claude's 529:* after the SDK's own retries, each cheaper Claude model
+    (never a pricier one), then the Gemini models in the order above.
+  - *The cache:* a card a fallback model answered is stored under the key of
+    the model asked for, so translating the passage again serves it.
+    Retranslate asks again.
+- **67.** Cap Gemini's 429 wait at 60 s. A longer `retry-after` is not slept
+  through: the card fails at once as a rate limit and says how long Gemini
+  asked to wait.
+- **45.** Leaving the reader stops a batch translation after the block in
+  flight, as Stop does. Cards already written stay.
+- **57.** All three change: (1) a success removes the earlier failed cards
+  for the same passage that hold no paid text (failed cards with raw output
+  stay); (2) if retranslating card A fails as F and Retry on F then
+  succeeds, A is removed as well; (3) a card's Retranslate is disabled while
+  a retranslation of that card is running.
+- **62.** Wire the online signal to request outcomes: a cloud translation
+  that cannot connect marks the app offline; any request that gets a
+  response, or the browser's own online event, clears it.
+- **53.** Recognise old "Translate this entry" cards on use: a card with no
+  standalone flag whose text is not its block's text is treated as an entry
+  card — never served for the block, retranslated on its own. Stored data is
+  left alone.
