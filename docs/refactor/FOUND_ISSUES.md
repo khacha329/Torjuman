@@ -95,7 +95,7 @@ which files import `services/secrets.ts` (today: `App.tsx`,
 `ui/OnboardingScreen.tsx`, `library/deviceTransfer.ts`, six reader and
 settings files). For the owner to decide.
 
-## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured)
+## 6. "Resume import" can open the import screen on its input form (2026-11-15, measured, fixed in lane C)
 
 `LibraryScreen.tsx` (~180): "Resume import" navigates to `#/import` first and
 starts the crawler second, and `ImportScreen` picks its stage once, on mount,
@@ -105,6 +105,13 @@ import is running. Reproduced at both tablet sizes while building check U, which
 therefore waits on the Library for "Importing…" before opening `#/import`. Not
 seen on the owner's tablet yet, as far as is known. Left as is. Found in Phase 2
 step 2a.
+
+**Fixed in lane C.** `ImportScreen` also subscribes to the crawler: a crawl
+that starts while the input form is showing takes the screen, as one already
+running at mount does (only from the form, never from a preview). Check U's
+capture now waits for the crawl panel on the screen Resume import opens, rather
+than going back to the Library and reopening Add book; `import-crawling` is
+unchanged at both sizes.
 
 ## 7. "N pending of 3 bundled resources" counts resources that are not bundled (2026-11-15, measured; first version withdrawn)
 
