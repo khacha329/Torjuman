@@ -1,6 +1,6 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book } from '../types';
-import { DISPLAY_MARK_CLASS, displayTextPattern, letterFold, normalize } from '../lib/arabic';
+import { DISPLAY_MARK_CLASS, letterFold, markedPattern } from '../lib/arabic';
 import { recordRetrieval } from '../services/retrievalLog';
 
 // Finding a ḥadīth's commentary in an imported sharḥ, by its own words.
@@ -122,32 +122,35 @@ const WORD_END = '(?![\\p{L}\\p{M}])';
 // 75 they were literal bare letters run over the raw block text, before
 // `normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» never matched and a book
 // printed vowelled kept its takhrīj and isnād in the shingles. Each is now
-// written in its bare form and widened by `displayTextPattern` (lib/arabic.ts,
-// the reader's search highlight uses the same pattern): every letter may
-// carry the marks `normalize` removes and be any variant it folds, so
-// «أن رسول الله» also matches «ان رسول الله» and «رضي» also «رضى», as the
-// shingles they feed already fold them. The text is not normalised itself:
-// the cut is made in the raw text, which every caller expects back.
-const printed = (bare: string) => displayTextPattern(normalize(bare));
+// written as before and widened by `markedPattern` (lib/arabic.ts): every
+// letter may carry its ḥarakāt, superscript alef, Qurʾānic marks or tatweel,
+// and nothing else changes. No letter variant is folded. A first version did
+// fold them, as the reader's search does, and «أن رسول الله» then matched the
+// «ان» at the end of «كان رسول الله», the commonest narrative opening, and
+// opened an isnād there (review of 6e195fd). The cut is made in the raw text,
+// which every caller expects back.
+const printed = markedPattern;
 
-/** Any marks a letter carries, as `displayTextPattern` allows them. */
+/** Any marks a letter carries, as `markedPattern` allows them. */
 const MARKS = `[${DISPLAY_MARK_CLASS}]*`;
 
 /**
  * At most `max` printed letters, lazily, each with whatever marks it carries,
  * so that a window measures a vowelled text as it measures a bare one.
- * Counted in code points, «رَضِيَ اللَّهُ عَنْهُ» is twice as long as «رضي الله
- * عنه», and the isnād's 160 would hold half the chain. A letter is anything
- * but a mark (and but `excluded`), so a run of marks is read one way only.
+ * Counted in code points, «رَضِيَ اللَّهُ عَنْهُ» (21) is nearly twice as long as
+ * «رضي الله عنه» (12), and the isnād's 160 would hold little more than half
+ * the chain. A letter is anything but a mark (and but `excluded`), so a run of
+ * marks is read one way only.
  */
 const letters = (excluded: string, max: number) =>
   `(?:[^${DISPLAY_MARK_CLASS}${excluded}]${MARKS}){0,${max}}?`;
 
 /**
- * The isnād runs to its closer; the matn starts after it. Only where the cut
- * falls matters, so only the closer that ends the match, «أنه قال», needs an
- * edge: the phrases before it may sit inside a longer word («وعن النبي») with
- * no harm, since nothing is cut there.
+ * The isnād runs to its closer; the matn starts after it. Only the closer
+ * that ends the match, «أنه قال», needed an edge, since only it decides where
+ * the cut falls. The phrases that open the isnād are unanchored, as they were
+ * before 74: one inside a longer word («وعن النبي», «بأن رسول الله») still
+ * opens it.
  */
 const ISNAD_CLOSER = new RegExp(
   // Marks before the first letter too, which `.` used to step over.
@@ -158,7 +161,7 @@ const ISNAD_CLOSER = new RegExp(
     letters(':؛.', 40) +
     `(?:${printed('قال')}\\s*[:؛]|${printed('قالت')}\\s*[:؛]` +
     `|${printed('أن')}(?:${printed('ه')})?\\s+${printed('قال')}${WORD_END}|:)`,
-  'su',
+  'u',
 );
 
 /**

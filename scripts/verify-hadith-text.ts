@@ -1492,10 +1492,17 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     { codePoints: longChain.length, letters: longBare },
   );
 
-  // The variants `normalize` folds: no hamza, alif maqṣūra.
+  // Only marks are tolerated, no letter variant (review of 6e195fd): a
+  // variant-folded «أن رسول الله» matched the «ان» at the end of «كان» and cut
+  // the matn after the next «قال:». A narrative opening is not an isnād, bare
+  // or vowelled.
   const name = text(words(2));
-  expect('75: «ان رسول الله» without its hamza closes the isnād', strip(`عن ${name} ان رسول الله قال: ${matn}`) === matn, strip(`عن ${name} ان رسول الله قال: ${matn}`));
-  expect('75: «رضى الله عنه» with alif maqṣūra', strip(`عن ${name} رضى الله عنه قال: ${matn}`) === matn, strip(`عن ${name} رضى الله عنه قال: ${matn}`));
+  const narrative = `${name} كان رسول الله ${text(words(4))} قال: ${text(words(3))}`;
+  expect('75: «كان رسول الله … قال:» opens no isnād', strip(narrative) === narrative, strip(narrative));
+  const vNarrative = `${vowel(name)} كَانَ رَسُولُ اللَّهِ ${vowel(text(words(4)))} قَالَ: ${vowel(text(words(3)))}`;
+  expect('75: …nor vowelled', strip(vNarrative) === vNarrative, strip(vNarrative));
+  const bareAlif = `عن ${name} ان رسول الله قال: ${matn}`;
+  expect('75: a bare «ان رسول الله» is left as before 75 (no variant folding)', strip(bareAlif) === bareAlif, strip(bareAlif));
 
   // A letter is one character and its marks, read one way only. A window
   // that let `.` take a mark too had more ways to divide a vowelled run the

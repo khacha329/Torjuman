@@ -1274,36 +1274,34 @@ as "over-stripped". Not measured; pre-existing. Left unfixed.
 
 ## 75. `stripApparatus` never matches vowelled text (2026-11-20, by reading)
 
-**Fixed in lane B3** (commit "75." on `claude/lane-b3-offline-text`; checked
-by H, which reproduced it first). Each formula is written in its bare form and
-widened by `displayTextPattern`, now exported from `lib/arabic.ts`: it is
-`findInDisplayText`'s pattern, moved out unchanged (the reader's highlight
-builds the same string as before), so every letter may carry the marks in its
-class (ḥarakāt, superscript alef, Qurʾānic marks, tatweel) and be any variant
-`normalize` folds. The cut is still made in the raw text, which every caller
-expects back (`queryPasses` in `hadithText.ts` compares the two). The
-isnād's windows (160 and 40) count letters with their marks, not code points,
-so a vowelled chain is measured as a bare one; a letter is one character
-outside the mark class and the marks after it, so a run of marks is read one
-way only. (A window whose letter could also be a mark ran past a minute on 400
-vowelled letters with no closer, measured in Node while writing the fix; H
-keeps a timing case.)
+**Fixed in lane B3** (commit "75." on `claude/lane-b3-offline-text`, with
+its review fixes; checked by H, which reproduced it first). Each formula is
+written as before and widened by `markedPattern`, new in `lib/arabic.ts`:
+every letter matches as written, followed by any marks of
+`DISPLAY_MARK_CLASS` (ḥarakāt, superscript alef, Qurʾānic marks, tatweel),
+and a space is any whitespace. No letter variant is folded. The first version
+did fold them, through `findInDisplayText`'s pattern, and the review found
+that «أن رسول الله» then matched the «ان» at the end of «كان رسول الله» and
+cut the matn after the next «قال:»; it also took «إن رسول الله», «رواة» and a
+bare «انه قال». H now checks that a narrative «كان رسول الله … قال:», bare or
+vowelled, opens no isnād, and that a bare «ان رسول الله» is left as before.
+The cut is still made in the raw text, which every caller expects back
+(`queryPasses` in `hadithText.ts` compares the two, and now finds a
+difference more often, so it runs its second, stripped pass more often:
+local work, no requests). The isnād's windows (160 and 40) count letters
+with their marks, not code points, so a vowelled chain is measured as a bare
+one; a letter is one character outside the mark class and the marks after
+it, so a run of marks is read one way only. (A window whose letter could
+also be a mark ran past a minute on 400 vowelled letters with no closer,
+measured in Node while writing the fix; H keeps a timing case.)
 
-What else changes, on bare text too:
-- The folded variants match: «ان رسول الله» without its hamza, and also
-  «إن رسول الله», open the isnād as «أن رسول الله» does; «رضى» with alif
-  maqṣūra as «رضي»; «رواية» and «روايه» alike. Inside the first 160 letters
-  and followed by a closer within 40, so an «إن رسول الله … قال:» lead-in is
-  now stripped with the chain before it.
-- A tatweel is a mark: it no longer counts toward a window, and «قـال» or
-  «رواـه» match.
-- A part-vowelled «وَرواه», which 74's edge stopped cutting, cuts again at the
-  «و».
-- Not tolerated inside a formula: the marks outside the class, U+0610–U+061A
-  and U+08D3–U+08FF, which `normalize` removes and `findInDisplayText` never
-  allowed either (FOUND_ISSUES 80).
-
-Whether book 9260's matn blocks carry ḥarakāt is still not checked.
+On bare text the change is the tatweel: it is a mark, so it no longer counts
+toward a window, and «قـال» or «رواـه» match. A part-vowelled «وَرواه», which
+74's edge stopped cutting, cuts again at the «و». Not tolerated inside a
+formula: the marks outside the class, U+0610–U+061A and U+08D3–U+08FF, which
+`normalize` removes and `findInDisplayText` never allowed either
+(FOUND_ISSUES 80). Whether book 9260's matn blocks carry ḥarakāt is still not
+checked.
 
 Found by the same review. The regexes run on the raw block text, before
 `normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» with ḥarakāt never match,
@@ -1387,14 +1385,15 @@ so the cases still mean what they say) and `scripts/verify-parsers.ts` has
 Found while fixing 75. `normalize` (`lib/arabic.ts`) removes U+0610–U+061A
 (the small high signs, honorific signs among them) and U+08D3–U+08FF (Arabic
 Extended-A, where Ḥafṣ Uthmānī writes its open tanwīn) besides the ḥarakāt.
-The pattern `findInDisplayText` builds, and since 75 `displayTextPattern`,
-allows only U+064B–U+065F, U+0670, U+06D6–U+06ED and tatweel between letters.
+The pattern `findInDisplayText` builds, and since 75 `markedPattern`, which
+shares its mark class, allows only U+064B–U+065F, U+0670, U+06D6–U+06ED and
+tatweel after a letter.
 So a search hit whose text carries one of the others is found in
 `Block.normalized` but not located in the display text: `SearchPanel` gets a
 null range for it. Since 75 the same marks inside a takhrīj or isnād formula
 keep `stripApparatus` from matching it. Not measured, and not known to occur
-in an imported book. Pre-existing for the search; left as it was by 75, which
-moved the pattern without changing it. Left unfixed.
+in an imported book. Pre-existing for the search; 75 reuses the class without
+changing it. Left unfixed.
 
 ## 81. The on-device verse note credits Khattab, but Pickthall is bundled (2026-11-26, by reading)
 
@@ -1433,3 +1432,16 @@ main too, 143 of 294 files matching (127 screenshots and 6 DOM files:
 the machine it was recorded on. A fix could add a `.gitattributes`
 (`* text=auto eol=lf`) or make the comparisons ignore CR; U's dependence on
 the renderer is a separate question. Left unfixed.
+
+## 84. The overrun check strips apparatus from sharḥ prose (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 75. `hadithQuotationOverrun`
+(`retrieval/quotationOverrun.ts` ~80) runs `stripApparatus` over the
+commentary that follows a quotation's closing mark, before deciding whether
+words run on past it. The plan says the stripper is applied only to a matn
+block or a `hadith` segment, never to sharḥ prose
+(`docs/plans/hadith-text-matching.md`, Design 1). So an isnād-like or
+takhrīj-like phrase in that commentary («عن النبي … قال:», «رواه …») is cut
+away with what follows it, and an overrun it would have shown is missed (a
+miss, not a false alarm). Pre-existing; 75 widens it to the vowelled forms of
+the same phrases. Not measured. Left unfixed.
