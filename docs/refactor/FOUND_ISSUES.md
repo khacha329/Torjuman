@@ -1237,3 +1237,14 @@ Found by the same review. The regexes run on the raw block text, before
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
+
+## 76. A popover whose anchor is unmounted without a scroll stays open (2026-11-26, by reading)
+
+`AnchoredPanel` closes when its anchor is no longer connected, but only from
+`reposition`, which runs on a scroll, a resize, a change of the panel's size,
+or (since lane A2's fix for 49) a move of the anchor's rectangle. The frame
+loop added for 49 reads the rectangle only while the anchor is connected, so
+an anchor taken out of the DOM with no scroll (the virtualizer dropping its
+row after a re-measure, say) leaves the popover open over nothing until the
+next scroll closes it. The same before 49. No concrete trigger was found.
+Found by the review of lane A2's 49. Left unfixed.
