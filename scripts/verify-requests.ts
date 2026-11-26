@@ -625,6 +625,8 @@ const ANTHROPIC_ERROR_TYPES: Record<number, string> = {
   400: 'invalid_request_error',
   401: 'authentication_error',
   403: 'permission_error',
+  // A model the key is not offered (lane B2 steps over it in the fallback).
+  404: 'not_found_error',
   429: 'rate_limit_error',
   500: 'api_error',
   // The overloaded answer's type and status, as the API documents them.
@@ -1745,6 +1747,13 @@ await scenario(
   translateChain('anthropic', SONNET),
 );
 await scenario('fallback.anthropic.haiku-529-switch-off', claude529(), translateChain('anthropic', HAIKU, false));
+// A cheaper Claude model the key is not offered (404, which the SDK does not
+// retry) is stepped over, as a Gemini one is: Opus busy, Sonnet 404, Haiku answers.
+await scenario(
+  'fallback.anthropic.404-stepped-over',
+  [...claude529(), anthropicError(404), emitTool(HAIKU)],
+  translateChain('anthropic', OPUS),
+);
 // An overload part-way through a paid reply: kept on the error, no fallback.
 await scenario(
   'fallback.anthropic.overload-mid-reply-keeps-paid-text',

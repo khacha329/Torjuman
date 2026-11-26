@@ -22,7 +22,7 @@ import { useSyncExternalStore } from 'react';
 // this module's state, never stored). Until one of them, whatever reads the
 // signal shows its offline state — Explain local-only, Meaning hidden, the
 // catalog's Import and the on-device model's download disabled — and those
-// screens offer no way back of their own: Translate in the reader is it.
+// screens offer no way back of their own: a cloud Translate in the reader is it.
 //
 // Everything that needs the network reads this and disables itself with a
 // specific reason. Nothing fails silently.
