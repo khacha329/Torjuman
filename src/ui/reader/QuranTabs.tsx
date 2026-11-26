@@ -51,7 +51,11 @@ export function ArabicVerse({ text, size = 19 }: { text: string; size?: number }
 export function RelatedAyahView({ ayah }: { ayah: RelatedAyah }) {
   return (
     <div className="border-t border-rule pt-2 first:border-t-0 first:pt-0">
-      <p className="mb-1 text-[10px] font-medium tracking-wide text-muted uppercase">
+      {/* mb-3, not mb-1: in the reader font a stacked mark over the verse's
+          first line (the pause marks ۗ and ۚ) rises about 4 px above the line
+          box and touched this label (FOUND_ISSUES 46). The Translation tab's
+          single verse has the tab bar's padding above it and is clear. */}
+      <p className="mb-3 text-[10px] font-medium tracking-wide text-muted uppercase">
         {ayah.label}
         {ayah.match && (
           <span className="ml-2 normal-case">

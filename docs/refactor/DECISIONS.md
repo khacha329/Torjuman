@@ -102,6 +102,24 @@ lane B found.
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
 
+## Decided for lane A2, 2026-11-26
+
+The owner's answers, relayed from the session that started lane A2, each
+picked from the options lane A2 put to him.
+
+- **47. A popover that fits neither below nor above covers its anchor.**
+  "Larger side, scroll." Put the popover on whichever side of its anchor
+  has more room, cap its height to that side, and scroll inside it. Never
+  cover the anchor. Where the larger side cannot show at least half of the
+  popover's content, open the content as the app's bottom sheet instead, as
+  in portrait today. Asked as a follow-up the same day: the owner first
+  chose the sheet below about 160 px of room ("Bottom sheet"), then replaced
+  that fixed threshold with this one ("Under half its content").
+- **52. A read-mark arrow does nothing for a mark that cannot reach the
+  middle.** "Count as reached." A mark that is already on screen counts as
+  reached, so the arrow goes on to the next mark, or turns off if there is
+  none.
+
 ## Decided for lane C, 2026-11-26
 
 - **19. Share records outlive their book.** Keep them, and say so. A
@@ -128,7 +146,7 @@ The owner's answers to the two questions lane UI-1 asked.
   `lib/format.ts` ("512 B", "300 KB", "2.5 MB") with a gigabyte step added
   ("1.4 GB"), so a tablet's free space does not read "52345.6 MB". The
   "not enough space" message stops rounding up. Sizes elsewhere were not
-  part of the question (FOUND_ISSUES 86).
+  part of the question (FOUND_ISSUES 88).
 - **Where "What works offline" goes.** The brief's five Settings tabs did
   not place it. It goes in About, above "This build" and "Retrieval".
 

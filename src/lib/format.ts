@@ -7,7 +7,7 @@
 // build's copied report). The gigabyte step came with them (the owner's
 // choice, 2026-11-26): a tablet's free space, in the space message, would
 // otherwise read like "52345.6 MB". QUL resources and Ḥadīth English still
-// write theirs in two-decimal megabytes (FOUND_ISSUES 86).
+// write theirs in two-decimal megabytes (FOUND_ISSUES 88).
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
