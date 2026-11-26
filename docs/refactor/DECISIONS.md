@@ -101,3 +101,17 @@ lane B found.
   no-offline-source note, and nothing is looked up for it. No detector
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
+
+## Decided for lane A2, 2026-11-26
+
+The owner's answers, relayed from the session that started lane A2, each
+picked from the options lane A2 put to him.
+
+- **47. A popover that fits neither below nor above covers its anchor.**
+  "Larger side, scroll." Put the popover on whichever side of its anchor
+  has more room, cap its height to that side, and scroll inside it. Never
+  cover the anchor.
+- **52. A read-mark arrow does nothing for a mark that cannot reach the
+  middle.** "Count as reached." A mark that is already on screen counts as
+  reached, so the arrow goes on to the next mark, or turns off if there is
+  none.
