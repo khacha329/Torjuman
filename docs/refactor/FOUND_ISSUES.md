@@ -839,7 +839,8 @@ place of `mb-1` (4 px), which clears the stacked marks; a comment beside it
 says why. U's `reader-quran-similar` at both sizes is the only capture whose
 DOM or screenshot changes (the label's class, and the verses 8 px lower);
 compared before and after on the owner's PC, where both marks touched the
-label before and are clear after. Its baseline is re-recorded.
+label before and are clear after. Its baseline is re-recorded in lane A2's
+last commit, after main is merged in.
 
 ## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
 
