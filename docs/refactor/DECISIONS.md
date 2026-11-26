@@ -157,11 +157,29 @@ Answers to the lane's review, the owner's, later on 2026-11-26:
   Claude, Haiku 5.5 gets the request without the research pass: a plain
   translation, as Gemini would have given, and no web search.
 - **62, how far.** Only the reader's cloud translations report outcomes;
-  that is recorded, not widened. FOUND_ISSUES 83 (76 on the lane's branch)
+  that is recorded, not widened. FOUND_ISSUES 85 (76 on the lane's branch)
   is fixed with it: the window listeners are registered once, so the
   browser's online event always clears an assumption of offline.
 - **Check U.** The entries only the Linux container can record are
   re-recorded by a cloud session on the lane's branch before the merge.
+
+## Decided for lane A2, 2026-11-26
+
+The owner's answers, relayed from the session that started lane A2, each
+picked from the options lane A2 put to him.
+
+- **47. A popover that fits neither below nor above covers its anchor.**
+  "Larger side, scroll." Put the popover on whichever side of its anchor
+  has more room, cap its height to that side, and scroll inside it. Never
+  cover the anchor. Where the larger side cannot show at least half of the
+  popover's content, open the content as the app's bottom sheet instead, as
+  in portrait today. Asked as a follow-up the same day: the owner first
+  chose the sheet below about 160 px of room ("Bottom sheet"), then replaced
+  that fixed threshold with this one ("Under half its content").
+- **52. A read-mark arrow does nothing for a mark that cannot reach the
+  middle.** "Count as reached." A mark that is already on screen counts as
+  reached, so the arrow goes on to the next mark, or turns off if there is
+  none.
 
 ## Decided for lane C, 2026-11-26
 

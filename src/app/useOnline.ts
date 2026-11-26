@@ -44,7 +44,7 @@ function handleOnline(): void {
 // `addEventListener` keeps one registration of a given function, so the first
 // subscriber to go (a sheet closing) took both away from every other one, and
 // from then on the browser's `online` event no longer cleared an assumption
-// of offline (FOUND_ISSUES 83). Guarded, so a script that imports this
+// of offline (FOUND_ISSUES 85). Guarded, so a script that imports this
 // module in Node, with no window, does not fail.
 if (typeof window !== 'undefined') {
   window.addEventListener('online', handleOnline);

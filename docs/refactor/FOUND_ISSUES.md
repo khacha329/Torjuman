@@ -866,7 +866,7 @@ web search). Related, by reading: `SessionStats.cacheWriteTokens` is summed
 (`ui/reader/useTranslator.ts:91`) and read nowhere in `src/ui` (the session line shows
 cache reads only, `ui/reader/CardPanel.tsx:371-375`). Left unfixed.
 
-## 44. The selection comment still names the bottom bar (2026-11-17, by reading)
+## 44. The selection comment still names the bottom bar (2026-11-17, by reading, fixed in lane A2)
 
 `ui/reader/ReaderScreen.tsx:338` ("Track whether a selection exists, so the
 bottom bar can show.") names the bottom bar of Amendment 10. README "Selection
@@ -878,6 +878,11 @@ also stores `shortSelection` and `centerY`. A fix corrects both sentences. The
 rest of the comment (why `selectionchange` and not `pointerup`, why debounced)
 still holds. Found while moving the comment for 30; the second sentence by the
 review of 30. Docs only. Left unfixed.
+
+**Fixed in lane A2:** the comment's first line names the selection rail, and
+the debounce paragraph's last sentence lists everything `peekSelection` keeps
+(whether a selection exists, one word, short enough for a name, its text, its
+vertical centre). The rest of the comment is unchanged. No code changed.
 
 ## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
 
@@ -893,7 +898,7 @@ editing the URL kept the reader mounted, so the bar stayed visible (in the
 wrong book); the Library path has always behaved this way. Found by the
 review of lane A's 31. Left unfixed.
 
-## 46. A Similar āyah's high marks touch the label above it (2026-11-17, measured in the container)
+## 46. A Similar āyah's high marks touch the label above it (2026-11-17, measured in the container, fixed in lane A2)
 
 Once the verse draws in the reader font (38), a stacked high mark on the
 first line of a `RelatedAyahView` (`ui/reader/QuranTabs.tsx`) reaches into its
@@ -905,7 +910,15 @@ Translation tab's single verse has the tab bar's padding above it and is
 clear. Before 38 these marks drew as empty boxes inside the line, so the collision
 was hidden. Cosmetic. Left unfixed.
 
-## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
+**Fixed in lane A2:** the label above a Similar āyah has `mb-3` (12 px) in
+place of `mb-1` (4 px), which clears the stacked marks; a comment beside it
+says why. U's `reader-quran-similar` at both sizes is the only capture whose
+DOM or screenshot changes (the label's class, and the verses 8 px lower);
+compared before and after on the owner's PC, where both marks touched the
+label before and are clear after. Its baseline is re-recorded in lane A2's
+last commit, after main is merged in.
+
+## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured, fixed in lane A2)
 
 `AnchoredPanel`'s `reposition` (`ui/reader/AnchoredPanel.tsx`) puts the
 popover below its anchor if it fits, and otherwise at
@@ -919,7 +932,43 @@ and ran off the bottom instead). The placement rule itself is unchanged by
 37. A product choice (cover the anchor, run off the screen, or shrink the
 panel to the larger side). Left unfixed.
 
-## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading)
+**Fixed in lane A2, by the owner's decision (DECISIONS.md, 2026-11-26:
+"larger side, scroll"):** `reposition` measures the popover's natural height
+(header, footer, and the body's `scrollHeight` up to the 60vh its CSS
+allows) and puts it below the anchor if it fits, above if it fits there, and
+otherwise on the side with more room, with `maxHeight` capped to that room;
+the body has `min-h-0`, so it shrinks and scrolls. It never covers the
+anchor. The README's popover paragraph says so. R's new scenario "a popover
+that fits on neither side of its anchor" (landscape; portrait shows sheets)
+puts the verse at the middle of the screen with requests other than the
+app's own blocked, so the bundled translation is shown and stays: on the old
+code the popover sat at 12–286 over the verse at 270–315; with the fix it
+sits at 323–588 below it, its body 175 px of 184 and scrolling.
+
+The review of that fix found that, read literally, the rule left a popover
+a few pixels tall beside an anchor nearly as tall as the screen (a long
+ḥadīth in landscape). On the owner's follow-up decision (DECISIONS.md, the
+same day), where the larger side cannot show half of the popover's
+content (after its header and footer), the content opens as the bottom
+sheet instead, and stays a sheet while it is
+open. The placement now also observes the content inside the body: a
+popover capped while its content was still loading did not change size as
+the content grew, so nothing placed it again. The body's 60vh is read from
+its computed style, as on Android vh and innerHeight differ. R's new
+scenario "a popover with too little room on either side opens as the
+sheet" makes the window 960×340 (the panel still beside the text) and
+centres the verse: before this follow-up the popover was capped beside it;
+now it opens as the sheet. In U at 960×600, measured on the final code
+(the threshold on the content): `reader-hadith`, six of the seven
+`reader-hadith-sharh-*` states and `reader-quran` now open as the sheet;
+`reader-hadith-sharh-short-too-short` stays a popover, capped to 258 px, with
+the content wrapper, and is now U's only landscape popover capture (R still
+covers placement). Those captures are re-baselined in lane A2's U commit,
+whose message describes an earlier threshold's result; this is the
+correct one. Their screenshot hashes are left as recorded (every PNG
+differs on the owner's PC) and need re-recording where PNGs are stable.
+
+## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 
 The pattern of 34, in `ui/reader/MarginMenu.tsx:29-43`: its effect depends on
 `[onClose]`, which `ui/reader/ReaderSheets.tsx:241` passes as an inline arrow
@@ -930,7 +979,17 @@ listener away and adds it back a tick later, and a tap in that tick is not
 seen as an outside tap. MarginMenu is not `AnchoredPanel`, so 34's fix does not
 reach it. Found by the review of 34. Minor. Left unfixed.
 
-## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading)
+**Fixed in lane A2:** `MarginMenu` reads the latest `onClose` through a ref
+updated in a layout effect, as `AnchoredPanel` does since 34, and its
+listeners' effect has no dependencies: the outside-tap and Escape listeners
+are added once, when the menu opens, and removed when it closes. R's new
+scenario "the margin menu keeps its outside-tap listener while the reader
+renders" opens the menu with a finger's long press (CDP touch events), scrolls
+the page in eight small steps, and counts the document's pointerdown
+registrations: on the old code 4 while scrolling, with the fix 0; a tap
+outside it then closes it.
+
+## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading, fixed in lane A2)
 
 Since 34, `AnchoredPanel` places an open popover again only on a scroll, a
 window resize, a change of its own size (37), or a new anchor or sheet mode —
@@ -942,7 +1001,21 @@ shrinking, say). No concrete trigger was found: the virtualizer's own
 corrections move the page by scrolling, which is seen. A possibility, not a
 measured bug. Found by the review of 34. Left unfixed.
 
-## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading)
+**Fixed in lane A2:** while a popover is open, `AnchoredPanel` reads its
+anchor's rectangle once a frame and places the popover again when the
+rectangle has moved; nothing else reports an element's position changing.
+The loop runs only while a popover (not a sheet) is open, and places it only
+on a change, so the size observer of 37 is not set off in a loop. Now
+measured, not only read: R's new scenario "an open popover follows its anchor
+when layout moves it without a scroll" opens the verse's popover, then gives
+the verse's block 40 px of padding above its text by hand (the verse moves
+down, the page does not scroll). On the old code, in a trial run with the
+verse at 200 px, the popover stayed at top 245 over the moved verse (now
+232–277) until a scroll event placed it at 285; with the fix, and the verse
+at the scenario's 150 px, it moves from 203 to 243 at once, where a scroll
+event also puts it.
+
+## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading, fixed in lane A2)
 
 `ui/reader/usePanelControls.ts`: while the divider is dragged, any
 pointer's `pointermove` resizes the panel and any pointer's `pointerup` or
@@ -950,7 +1023,20 @@ pointer's `pointermove` resizes the panel and any pointer's `pointerup` or
 drag moves or ends it. Pre-existing; found by the review of lane A's 27.
 Left unfixed.
 
-## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading)
+**Fixed in lane A2:** the drag belongs to the pointer that started it.
+`usePanelControls` keeps that pointer's `pointerId` (in place of the
+`dragging` flag) and its window listeners ignore every other pointer's
+`pointermove`, `pointerup` and `pointercancel`; the divider's
+`onPointerDown` calls the hook's `beginDrag`, which refuses a second pointer
+while a drag is under way, so it does not take the drag over or capture.
+R's new scenario "a second pointer during a divider drag" dispatches another
+pointer's pointerdown on the divider, pointermove far to the left and
+pointerup in the middle of a mouse drag: on the old code the move resized
+the panel back to 432 px and the pointerup ended the drag (the mouse's
+later moves did nothing); with the fix the panel stays at 375 px, the drag
+goes on to 335 px, and that width is stored on release.
+
+## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading, fixed in lane A2)
 
 The divider's `onPointerDown` sets `body` `user-select: none`, and only the
 drag's `pointerup` or `pointercancel` restores it; the window listeners'
@@ -960,7 +1046,17 @@ leaves text unselectable on the next screen until a reload. Since lane A's 27
 such an unmount also loses the width reached (it is stored on release).
 Pre-existing; found by the review of lane A's 27. Left unfixed.
 
-## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading)
+**Fixed in lane A2:** `usePanelControls` ends a drag still under way when the
+reader unmounts, as a pointercancel does: `user-select` back on, and the width
+reached stored (the settings live above the reader, so the write is safe
+after it). The unmount effect has no dependencies and reads the latest
+`updateSettings` through a ref, so a change of `updateSettings` mid-drag
+does not end the drag. R's new scenario "leaving the reader in the middle of
+a divider drag" changes the hash to the Library with the mouse button still
+down: on the old code `user-select` stayed "none" and no width was stored;
+with the fix it is "" and the 355 px reached is stored.
+
+## 52. A read-mark arrow does nothing for a mark that cannot reach the middle (2026-11-17, by reading, fixed in lane A2)
 
 `ReadMarkNav` (`ui/reader/ReaderHeader.tsx`) counts "previous" and "next" from
 the block at the middle of the area below the header (39) and centres the mark
@@ -972,6 +1068,30 @@ screen all along. Before 39 the same happened from the top block (↓ to a mark
 near the top of the book stayed on it). Whether such a mark should count as
 reached, or the arrow be off, is a product choice. Found while fixing 39.
 Minor. Left unfixed.
+
+**Fixed in lane A2, by the owner's decision (DECISIONS.md, 2026-11-26:
+"count as reached"):** a read mark whose block is wholly on screen below the
+header counts as reached, and `ReadMarkNav` passes over it: ↑ and ↓ go on to
+the next mark not on screen, or are off if there is none. `BlockList`
+reports the first and last blocks wholly in view (`onWhollyInViewChange`).
+Wholly, not merely showing, so a mark whose block shows only a sliver at an
+edge is still offered. R's new scenario "read marks near the ends of the
+book count as reached" seeds marks at blocks 1 and 1499: at the top ↓ goes
+past block 1 to 400 and ↑ is off; ↑ from 400 brings block 1 back and is then
+off; past the middle marks ↓ goes to 1499 and is then off. On the old code
+the portrait run failed all three (↑ stayed on at the top and after the jump
+to block 1, ↓ stayed on after the jump to 1499); in landscape the old code
+passed, because at the top of the book at 960×600 block 1 is itself the
+block at the middle, so it was never offered.
+
+The review of that fix found that in portrait it counted a block under the
+cards handle or the open cards sheet (sticky at the bottom of the screen) as
+on screen, measuring to the bottom of the window, so ↓ passed over a mark the
+reader could not see. `ReaderScreen` now measures that bar, and `BlockList`
+leaves it out of "wholly in view" (`bottomInset`) and of nothing else. R's
+portrait scenario "a read mark under the open cards sheet is not on screen"
+opens the sheet and puts block 400 under it, below the middle: the first
+version's ↓ went to 450, the fix's to 400.
 
 Lane B's entries were numbered 44–64 on its branch; on the owner's word
 (2026-11-18) they were renumbered 53–73, after lane A's 44–52, so the two
@@ -1104,7 +1224,7 @@ Left unfixed.
 Since the fix (lane B2), by the review of the lane: only the reader's cloud
 translations report, as the owner decided. An assumption of offline is
 cleared by a cloud translation that gets any response, the browser's
-`online` event (reliable since 83, fixed with this one), or a reload. Until
+`online` event (reliable since 85, fixed with this one), or a reload. Until
 then the catalog's Import and the on-device model's download stay disabled
 and offer no way back of their own, and an on-device profile's Translate
 reports nothing: a cloud Translate in the reader is the way back.
@@ -1356,15 +1476,46 @@ carries; `BackupSection`'s own description still says "translation cards,
 explanations, marks, notes, glossary and profiles". Not 16 as written (README
 only); left as is.
 
-Lane B2's entries were numbered 76–81 on its branch; they are renumbered
-83–88, after lane C's 76–82, which reached main first, so the two can
-merge. Each old number is the new one less 7. Commit subjects keep the old
-numbers: "76." is 83, and "FOUND_ISSUES 76, 77" and "78–81" are 83, 84 and
-85–88.
+## 83. A popover whose anchor is unmounted without a scroll stays open (2026-11-26, by reading)
 
-## 83. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+`AnchoredPanel` closes when its anchor is no longer connected, but only from
+`reposition`, which runs on a scroll, a resize, a change of the panel's size,
+or (since lane A2's fix for 49) a move of the anchor's rectangle. The frame
+loop added for 49 reads the rectangle only while the anchor is connected, so
+an anchor taken out of the DOM with no scroll (the virtualizer dropping its
+row after a re-measure, say) leaves the popover open over nothing until the
+next scroll closes it. The same before 49. No concrete trigger was found.
+Found by the review of lane A2's 49. Left unfixed.
 
-**Fixed in lane B2** (commit "76." (lane B2's old number for 83) on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
+## 84. A popover that becomes the sheet remounts its content (2026-11-26, by reading)
+
+Since lane A2's fix for 47, `AnchoredPanel` can turn from a popover into the
+bottom sheet while it is open: when content grows and the larger side of
+the anchor can no longer show half of it. The two branches render different
+trees, so the panel's children remount and lose their own state; the
+owner's state (QuranSheet's tab, HadithSheet's record) survives. The one
+child found with state that matters is `CompileTab`, whose `busy` and
+`error` would reset, and its storage read run again, if the flip came in
+the middle of a compile — showing "Compile" again while the paid call is
+still in flight. Unlikely: the flip follows growth of the content, which a
+compile's busy state alone barely changes. Found by the review of lane A2's
+47. Left unfixed.
+
+Lane A2's two new entries were numbered 76 and 77 on its branch. Lane C,
+merged first, took 76–82, so they were renumbered 83 and 84 when main was
+merged into lane A2. Commit subjects keep the old numbers: "Record
+FOUND_ISSUES 76" is 83, and "record FOUND_ISSUES 77" in a 47 commit is 84.
+
+Lane B2's entries were numbered 76–81 on its branch. Lane C reached main
+first with 76–82 and lane A2 next with 83–84, so they are renumbered 85–90
+after them, and the lanes can merge. Each old number is the new one less 9.
+Commit subjects keep the old numbers: "76." is 85, "FOUND_ISSUES 76, 77"
+are 85 and 86, "78–81" are 87–90, and the 83–88 that two later commits
+name (the merge of lane C, the baselines, the review notes) are 85–90.
+
+## 85. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+
+**Fixed in lane B2** (commit "76." (lane B2's old number for 85) on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
 
 Found by lane B2 while wiring 62. `subscribe` in `app/useOnline.ts` adds the
 same two functions (`handleOnline`, `emit`) to `window` for every subscriber,
@@ -1377,7 +1528,7 @@ something re-reads it (the next render reads `navigator.onLine`), but a
 screen left open does not update by itself. Not caused by 62 (the shared
 `emit` behaved the same). Left unfixed.
 
-## 84. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
+## 86. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
 
 Found by lane B2, which ran the checks on the owner's PC (Windows 11, Node
 22.23.1, Playwright 1.63's Chromium 153). On clean `main` (`5e72107`), U
@@ -1393,7 +1544,7 @@ fails on "the header or the formatting" until the clone is set to
 the Linux container; on the PC it can only be compared with a dump of `main`
 made there (`VERIFY_OUT`, as the script's header describes). Left as it is.
 
-## 85. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
+## 87. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
 
 Found by the review of lane B2. The Retranslate menu's "Same provider and
 model" (`ui/reader/TranslationCardView.tsx`) calls `onRetranslate()` with
@@ -1404,7 +1555,7 @@ model, or on another profile, is retranslated on the profile's. Older than
 lane B2; more visible since, as a fallback card names a model the profile
 does not use. Left unfixed.
 
-## 86. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
+## 88. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
 
 Found by the review of lane B2. `withCloudRequest` (`ui/reader/useTranslator.ts`)
 counts one request per translation, under the provider that answered. A
@@ -1413,7 +1564,7 @@ retries (lane B2), a RECITATION split's halves, and each model the fallback
 asked. On the free tier, where requests are the budget, the session line
 undercounts. Left unfixed.
 
-## 87. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
+## 89. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
 
 Found by the review of lane B2. In `GeminiProvider.translate`, when a part
 after a RECITATION split fails before any whole segment has come back, the
@@ -1423,7 +1574,7 @@ Free tier, so nothing is billed; but the text is lost, and since lane B2 an
 overload there lets another model answer instead. Older than lane B2. Left
 unfixed.
 
-## 88. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
+## 90. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
 
 Found by the review of lane B2, as a consequence of its migration, for the
 owner to know. The model is part of the cache key (`cacheKeyFor`), so once a

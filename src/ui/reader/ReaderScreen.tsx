@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { useReadOnly } from '../../app/readOnly';
 import { secrets } from '../../services/secrets';
@@ -116,6 +116,12 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [visibleBlock, setVisibleBlock] = useState<Block | null>(null);
   const [middleBlock, setMiddleBlock] = useState<Block | null>(null);
+  const [whollyInView, setWhollyInView] = useState<{ first: number; last: number } | null>(null);
+  // The portrait cards handle and sheet, held to the bottom of the screen,
+  // and their height: a read mark under them is not on screen
+  // (FOUND_ISSUES 52).
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+  const [bottomInset, setBottomInset] = useState(0);
   const [visibleRange, setVisibleRange] = useState<VisibleRange | null>(null);
   const [match, setMatch] = useState<{ blockId: string; range: [number, number] } | null>(null);
   // The anchoring element is kept, not a rect: the panel follows its anchor as
@@ -342,7 +348,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
   }, [storage]);
 
   /**
-   * Track whether a selection exists, so the bottom bar can show.
+   * Track whether a selection exists, so the selection rail can show.
    *
    * `selectionchange` on `document`, not `pointerup` on the reader: on Android
    * the selection handles are native UI drawn above the WebView, so dragging
@@ -351,7 +357,10 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
    * during handle drags, which makes it the only correct signal here.
    *
    * Debounced because it fires continuously during a drag. Nothing is resolved
-   * or stored — only whether a selection exists and whether it is one word.
+   * against the stored blocks here: `peekSelection` keeps only what the rail
+   * needs to show, choose its actions and place itself — whether a selection
+   * exists, whether it is one word or short enough to be a name, its text, and
+   * its vertical centre.
    */
   useEffect(() => {
     let timer: number;
@@ -531,9 +540,24 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  const { dragging, dragWidth } = usePanelControls({ settings, updateSettings });
+  const { beginDrag, dragWidth } = usePanelControls({ settings, updateSettings });
 
   const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
+
+  // Measured as the header is: the bar exists only in portrait, once the book
+  // has loaded, and grows when the sheet opens.
+  useLayoutEffect(() => {
+    const bar = bottomBarRef.current;
+    if (!bar) {
+      setBottomInset(0);
+      return;
+    }
+    const update = () => setBottomInset(bar.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [loading, sideBySide]);
 
   /**
    * A side column that stays on screen while the page scrolls: it starts under
@@ -614,6 +638,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
         marks={marks}
         visibleBlock={visibleBlock}
         middleBlock={middleBlock}
+        whollyInView={whollyInView}
         listRef={listRef}
         setShowToc={setShowToc}
         setShowSearch={setShowSearch}
@@ -709,10 +734,12 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
               match={match}
               onVisibleBlockChange={setVisibleBlock}
               onMiddleBlockChange={setMiddleBlock}
+              onWhollyInViewChange={setWhollyInView}
               onVisibleRangeChange={setVisibleRange}
               onMarkerClick={handleMarkerClick}
               handleRef={listRef}
               topInset={headerHeight}
+              bottomInset={bottomInset}
             />
           )}
         </div>
@@ -735,8 +762,9 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           <>
             <div
               onPointerDown={(event) => {
-                dragging.current = true;
-                document.body.style.userSelect = 'none';
+                // A second pointer during a drag is not a new drag
+                // (FOUND_ISSUES 50).
+                if (!beginDrag(event.pointerId)) return;
                 // Captured, so a drag that leaves the narrow divider keeps
                 // coming to it; the events still bubble to the window
                 // listeners in usePanelControls, which do the resizing.
@@ -789,7 +817,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           bottom of the screen — the page is as long as the book, and the end
           of it is not where the cards belong. */}
       {!sideBySide && (
-        <div className="sticky bottom-0 z-30 flex flex-col">
+        <div ref={bottomBarRef} className="sticky bottom-0 z-30 flex flex-col">
           <button
             onClick={() => setSheetOpen((open) => !open)}
             className="shrink-0 border-t border-rule bg-white py-2 text-sm text-muted"
