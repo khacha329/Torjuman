@@ -29,8 +29,9 @@
 //     by its URL at its own position (FOUND_ISSUES 31); an open popover's
 //     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); the
 //     divider dragged with a mouse; a divider drag ended by pointercancel
-//     (FOUND_ISSUES 27); the divider dragged with a finger (its width
-//     reported, its end judged)
+//     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
+//     the reader renders (FOUND_ISSUES 48); the divider dragged with a
+//     finger (its width reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
 //     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
@@ -721,6 +722,10 @@ async function jumpToPrinted(page, printed) {
  * failure, named, and the run goes on to the next.
  */
 async function scenario(browser, base, profile, title, run) {
+  // ONLY=<text> runs just the scenarios whose title contains it (and skips
+  // the two profile runs above): for trying one scenario against a build
+  // while working on it. `npm run verify:reader` always runs everything.
+  if (process.env.ONLY && !title.includes(process.env.ONLY)) return;
   const label = `${profile.short}: ${title}`;
   console.log(`  -- ${title}`);
   step(`${label}: opening a context`);
@@ -815,6 +820,42 @@ async function doubleTap(page) {
     rail: document.querySelector('[role="toolbar"]') !== null,
   }));
   check('  and leaves no selection behind (no rail)', selection.collapsed && !selection.rail, JSON.stringify(selection));
+}
+
+/** The block whose margin is long-pressed to open the margin menu. */
+const MARGIN_MENU_BLOCK = 1;
+
+/**
+ * Count the document's pointerdown registrations from here on, in
+ * `window.__pointerdownAdds`: an outside-tap listener removed and added back
+ * shows as one more registration.
+ */
+async function countPointerdownAdds(page) {
+  await page.evaluate(() => {
+    window.__pointerdownAdds = 0;
+    const add = document.addEventListener.bind(document);
+    document.addEventListener = (type, listener, options) => {
+      if (type === 'pointerdown') window.__pointerdownAdds++;
+      return add(type, listener, options);
+    };
+  });
+}
+
+/**
+ * A finger's long press on a block's margin, through CDP touch events, so it
+ * comes as the tablet's would: touchstart, held past the 480 ms the margin
+ * waits, touchend. The margin menu opens.
+ */
+async function longPressMargin(page, context, index) {
+  const target = page.locator(`[data-index="${index}"] [role="button"][aria-label$="skip"]`);
+  const box = await target.boundingBox();
+  if (!box) throw new Error(`block ${index}'s margin is not on screen`);
+  const point = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + Math.min(20, box.height / 2)) };
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.y }] });
+  await page.waitForTimeout(650);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await settle(page, 300);
 }
 
 async function landscapeControls(browser, base, profile) {
@@ -1042,6 +1083,42 @@ async function landscapeControls(browser, base, profile) {
       target !== null && closed,
       `tapped ${target ? `${target.block} at ${target.x},${target.y}` : 'nothing (no block clear of the popover)'}, closed ${closed}`,
     );
+  });
+
+  // The margin menu keeps its one outside-tap listener while the reader
+  // renders under it (FOUND_ISSUES 48), as an open popover does (34 above).
+  // Its `onClose` is an inline arrow in ReaderSheets, new on every reader
+  // render; while the menu's effect depended on it, each render took the
+  // document's pointerdown listener away and added it back a tick later, and
+  // a tap in that tick was not seen as an outside tap. The page is scrolled
+  // to change the top block, which renders the reader. Counted, as in 34's
+  // scenario: the tick is too short to hit on purpose.
+  await scenario(browser, base, profile, 'the margin menu keeps its outside-tap listener while the reader renders', async (page, context) => {
+    await countPointerdownAdds(page);
+    await longPressMargin(page, context, MARGIN_MENU_BLOCK);
+    const menu = page.locator('[role="menu"]');
+    const opened = (await menu.count()) === 1;
+    const addedOnOpening = await page.evaluate(() => window.__pointerdownAdds);
+    const topBefore = await topBlock(page);
+    for (let step = 0; step < LISTENER_SCROLL_STEPS; step++) {
+      await page.evaluate((px) => window.scrollBy(0, px), LISTENER_SCROLL_PX);
+      await settle(page, 150);
+    }
+    const topAfter = await topBlock(page);
+    const added = (await page.evaluate(() => window.__pointerdownAdds)) - addedOnOpening;
+    const stillOpen = (await menu.count()) === 1;
+    check(
+      'a long press on the margin opens the margin menu, which does not re-register its outside-tap listener as the reader renders',
+      opened && stillOpen && topAfter !== topBefore && addedOnOpening >= 1 && added === 0,
+      `opened ${opened}, top block ${topBefore} → ${topAfter}, pointerdown listeners added on opening ${addedOnOpening}, while scrolling ${added}, still open ${stillOpen}`,
+    );
+    // A tap on the text, clear of the menu, closes it.
+    const box = await menu.boundingBox();
+    const tap = { x: box && box.x > 480 ? 160 : 700, y: 400 };
+    await page.touchscreen.tap(tap.x, tap.y);
+    await settle(page, 300);
+    const closed = (await menu.count()) === 0;
+    check('  and a tap on the text outside it then closes it', opened && closed, `tapped ${tap.x},${tap.y}, closed ${closed}`);
   });
 
   // A hash change straight from one book to another (FOUND_ISSUES 31): the
@@ -1292,12 +1369,12 @@ const shots = process.env.SCREENSHOT_DIR;
 
 const browser = await chromium.launch();
 try {
-  await runProfile(
+  if (!process.env.ONLY) await runProfile(
     browser, base, 'Touch tablet, landscape 960×600',
     { viewport: { width: 960, height: 600 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 },
     'beside', shots && `${shots}/landscape-960x600-selection.png`,
   );
-  await runProfile(
+  if (!process.env.ONLY) await runProfile(
     browser, base, 'Touch tablet, portrait 600×960',
     { viewport: { width: 600, height: 960 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 },
     'sheet', shots && `${shots}/portrait-600x960-selection.png`,

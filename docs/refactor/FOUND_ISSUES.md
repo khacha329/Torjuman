@@ -848,7 +848,7 @@ and ran off the bottom instead). The placement rule itself is unchanged by
 37. A product choice (cover the anchor, run off the screen, or shrink the
 panel to the larger side). Left unfixed.
 
-## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading)
+## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 
 The pattern of 34, in `ui/reader/MarginMenu.tsx:29-43`: its effect depends on
 `[onClose]`, which `ui/reader/ReaderSheets.tsx:241` passes as an inline arrow
@@ -858,6 +858,16 @@ its cleanup. So with the margin menu open, each reader render takes the
 listener away and adds it back a tick later, and a tap in that tick is not
 seen as an outside tap. MarginMenu is not `AnchoredPanel`, so 34's fix does not
 reach it. Found by the review of 34. Minor. Left unfixed.
+
+**Fixed in lane A2:** `MarginMenu` reads the latest `onClose` through a ref
+updated in a layout effect, as `AnchoredPanel` does since 34, and its
+listeners' effect has no dependencies: the outside-tap and Escape listeners
+are added once, when the menu opens, and removed when it closes. R's new
+scenario "the margin menu keeps its outside-tap listener while the reader
+renders" opens the menu with a finger's long press (CDP touch events), scrolls
+the page in eight small steps, and counts the document's pointerdown
+registrations: on the old code 4 while scrolling, with the fix 0; a tap
+outside it then closes it.
 
 ## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading)
 
