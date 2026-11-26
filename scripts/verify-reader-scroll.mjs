@@ -1,6 +1,8 @@
 // The reader with the page as its scroller, checked in a real browser.
 //
 //   npm run verify:reader     (builds first; or VERIFY_URL=… node scripts/verify-reader-scroll.mjs)
+//   VERIFY_ONLY=<text> node scripts/verify-reader-scroll.mjs   (only the controls scenarios
+//                             whose title contains <text>, against the last build)
 //
 // BlockList is a window virtualizer: the document scrolls, the header is
 // sticky, and the side panel is a sticky column (or, in portrait, a sheet held
@@ -728,10 +730,12 @@ async function jumpToPrinted(page, printed) {
  * failure, named, and the run goes on to the next.
  */
 async function scenario(browser, base, profile, title, run) {
-  // ONLY=<text> runs just the scenarios whose title contains it (and skips
-  // the two profile runs above): for trying one scenario against a build
-  // while working on it. `npm run verify:reader` always runs everything.
-  if (process.env.ONLY && !title.includes(process.env.ONLY)) return;
+  // VERIFY_ONLY=<text> runs just the scenarios whose title contains it (and
+  // skips the two profile runs above): for trying one scenario against a
+  // build while working on it. Without it, everything runs. A filter is named
+  // in the result line, and one that runs no check fails the run, so a value
+  // left in a shell cannot pass the gate with nothing checked.
+  if (ONLY && !title.includes(ONLY)) return;
   const label = `${profile.short}: ${title}`;
   console.log(`  -- ${title}`);
   step(`${label}: opening a context`);
@@ -1509,6 +1513,8 @@ async function portraitControls(browser, base, profile) {
   await scenario(browser, base, profile, 'double-tap opens the dictionary', doubleTap);
 }
 
+const ONLY = process.env.VERIFY_ONLY ?? '';
+
 const own = process.env.VERIFY_URL
   ? null
   : await preview({ preview: { port: 4175, strictPort: false }, logLevel: 'warn' });
@@ -1517,12 +1523,12 @@ const shots = process.env.SCREENSHOT_DIR;
 
 const browser = await chromium.launch();
 try {
-  if (!process.env.ONLY) await runProfile(
+  if (!ONLY) await runProfile(
     browser, base, 'Touch tablet, landscape 960×600',
     { viewport: { width: 960, height: 600 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 },
     'beside', shots && `${shots}/landscape-960x600-selection.png`,
   );
-  if (!process.env.ONLY) await runProfile(
+  if (!ONLY) await runProfile(
     browser, base, 'Touch tablet, portrait 600×960',
     { viewport: { width: 600, height: 960 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 },
     'sheet', shots && `${shots}/portrait-600x960-selection.png`,
@@ -1546,5 +1552,7 @@ try {
   await within(60_000, 'closing the preview server', own ? own.close() : Promise.resolve());
 }
 
-console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed\n`);
-process.exit(failures === 0 ? 0 : 1);
+const passed = failures === 0 && checks > 0;
+const filter = ONLY ? ` (only scenarios matching ${JSON.stringify(ONLY)})` : '';
+console.log(`\n${passed ? 'PASS' : 'FAIL'} — ${checks - failures}/${checks} checks passed${filter}\n`);
+process.exit(passed ? 0 : 1);
