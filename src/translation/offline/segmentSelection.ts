@@ -1,6 +1,7 @@
 import type { Block, Entity, TranslatedSegment } from '../../types';
 import type { QuranEnglish, QuranIndex } from '../../quran/quranIndex';
 import { renderTakhrij } from '../../lib/takhrij';
+import { HADITH_QUOTED_IN_PART } from '../../retrieval/enrich';
 
 // Splitting a selection into pieces BEFORE any model sees it.
 //
@@ -287,14 +288,38 @@ export function segmentSelection(options: {
     const reference = piece.entity?.reference ?? '';
     const verified = reference ? options.hadithLookup(reference) : null;
 
+    // A verified translation is of the whole ḥadīth, and its Arabic (when it
+    // has one: sunnah.com's) is the whole ḥadīth too. Shown only when the
+    // selection holds the whole of it. A selection of part of it keeps the
+    // book's selected words, with the whole ḥadīth's English and the card
+    // path's note for a partial quotation (FOUND_ISSUES 73; the owner's
+    // answer, 2026-11-26, as Q5 of docs/plans/hadith-text-matching.md is for
+    // the card path). Until 73 a part showed the whole verified Arabic and
+    // English, more than was selected, with nothing saying so.
+    const whole = piece.entity !== undefined && selectsWhole(piece.entity);
+
     segments.push({
       type: 'hadith',
-      arabic: verified?.arabic || sourceText,
+      arabic: (whole && verified?.arabic) || sourceText,
       english: verified?.english ?? '',
       source: verified ? (verified.source ?? 'sunnah.com') : undefined,
       reference: reference || undefined,
-      note: verified ? undefined : HADITH_NO_OFFLINE_SOURCE,
+      note: verified ? (whole ? undefined : HADITH_QUOTED_IN_PART) : HADITH_NO_OFFLINE_SOURCE,
     });
+  }
+
+  /**
+   * Whether the selection runs from the entity's start to its end, or past
+   * both. An entity whose blocks are not in `blocks` is not held whole.
+   */
+  function selectsWhole(entity: Entity): boolean {
+    const first = orderOf.get(entity.startBlockId);
+    const last = orderOf.get(entity.endBlockId);
+    if (first === undefined || last === undefined) return false;
+    const startsByIt =
+      startOrder < first || (startOrder === first && options.startOffset <= entity.startOffset);
+    const endsByIt = endOrder > last || (endOrder === last && options.endOffset >= entity.endOffset);
+    return startsByIt && endsByIt;
   }
 }
 

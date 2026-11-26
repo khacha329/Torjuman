@@ -1372,6 +1372,66 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     );
     expect('70: prose before and after a matn: two spans, not one', withMatn.prose.length === 2 && JSON.stringify(types(withMatn)) === '["prose","hadith","prose"]', withMatn);
   }
+
+  // FOUND_ISSUES 73. A verified translation is of the whole ḥadīth: shown
+  // whole only when the selection holds it; a part keeps the selected words,
+  // with the whole English and the "quoted in part" note (the owner's answer,
+  // 2026-11-26).
+  {
+    const before = text(words(6));
+    const matn = text(words(12));
+    const after = text(words(6));
+    const blocks = [
+      blockOf('h1', 1, 'sharh', before),
+      blockOf('h2', 2, 'hadith_matn', matn, { hadithNumber: '7' }),
+      blockOf('h3', 3, 'sharh', after),
+    ];
+    const entity = matnEntity(blocks[1], 'seg#7');
+    const verifiedArabic = text(words(12));
+    const sunnah = () => ({ arabic: verifiedArabic, english: 'Synthetic verified English 7.' });
+    const dataset = () => ({ arabic: '', english: 'Synthetic dataset English 7.', source: 'hadith-json' as const });
+    const hadithOf = (segmented: SegmentedSelection) => segmented.segments.find((segment) => segment.type === 'hadith');
+    const midway = matn.indexOf(' ', matn.indexOf(' ') + 1) + 1;
+
+    const wholeMatn = hadithOf(cut(blocks, [entity], ['h2', 0], ['h2', matn.length], sunnah));
+    expect(
+      '73: the whole ḥadīth selected: the verified Arabic and English, no note',
+      wholeMatn?.arabic === verifiedArabic && wholeMatn?.english === 'Synthetic verified English 7.' && wholeMatn?.note === undefined,
+      wholeMatn,
+    );
+    const wholeAndMore = hadithOf(cut(blocks, [entity], ['h1', 2], ['h3', 3], sunnah));
+    expect('73: …and with commentary on both sides, still whole', wholeAndMore?.arabic === verifiedArabic && wholeAndMore?.note === undefined, wholeAndMore);
+
+    const fromMidway = cut(blocks, [entity], ['h2', midway], ['h3', after.length], sunnah);
+    const tailPart = hadithOf(fromMidway);
+    expect(
+      '73: part of it selected: the selected words, the whole English, "quoted in part"',
+      tailPart?.arabic === matn.slice(midway) &&
+        tailPart?.english === 'Synthetic verified English 7.' &&
+        tailPart?.note === HADITH_QUOTED_IN_PART &&
+        tailPart?.source === 'sunnah.com' &&
+        tailPart?.reference === 'seg#7',
+      tailPart,
+    );
+    expect('73: …and still not offered', !reachesModel(fromMidway, matn), fromMidway.prose);
+    const headPart = hadithOf(cut(blocks, [entity], ['h1', 0], ['h2', midway - 1], sunnah));
+    expect('73: a selection ending inside it: its opening words, "quoted in part"', headPart?.arabic === matn.slice(0, midway - 1) && headPart?.note === HADITH_QUOTED_IN_PART, headPart);
+
+    // The imported dataset gives English only; the Arabic was the book's
+    // words already, and a part now says so.
+    const datasetPart = hadithOf(cut(blocks, [entity], ['h2', midway], ['h2', matn.length], dataset));
+    expect(
+      '73: hadith-json, part of it: the selected words, its English, "quoted in part"',
+      datasetPart?.arabic === matn.slice(midway) && datasetPart?.source === 'hadith-json' && datasetPart?.note === HADITH_QUOTED_IN_PART,
+      datasetPart,
+    );
+    const datasetWhole = hadithOf(cut(blocks, [entity], ['h2', 0], ['h2', matn.length], dataset));
+    expect('73: hadith-json, all of it: the book’s matn, its English, no note', datasetWhole?.arabic === matn && datasetWhole?.note === undefined, datasetWhole);
+
+    // No verified English: the note is still the no-offline-source one.
+    const unverifiedPart = hadithOf(cut(blocks, [entity], ['h2', midway], ['h2', matn.length]));
+    expect('73: no verified English, part of it: the no-offline-source note', unverifiedPart?.note === HADITH_NO_OFFLINE_SOURCE && unverifiedPart?.english === '', unverifiedPart);
+  }
 }
 
 // ------------------------------------------- the apparatus stripper (lane B3)
