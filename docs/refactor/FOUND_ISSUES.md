@@ -1221,12 +1221,16 @@ is the whole ḥadīth.»), imported from `retrieval/enrich.ts`: a new
 `translation/offline → retrieval` edge, allowed by every layer rule. With
 hadith-json, whose Arabic was already the book's words, a part now gains the
 note. A ḥadīth clipped only by a verse before it, with the whole ḥadīth
-selected, still counts as whole (61's edge case, unchanged). The test is
-exact, while the card path calls a quotation partial only below
-`QUOTED_IN_PART_BELOW` (0.9 of the matn, `retrieval/hadithText.ts`): a hand
-selection one word short of the matn now shows the selected words with the
-note. Translate the surrounding passage and Translate all select whole
-blocks, so they are unaffected (from the fix's review). On-device cards
+selected, still counts as whole (61's edge case, unchanged). The test is on
+the ḥadīth's words, from its first letter to its last: the entry number, a
+closing «.» or «»» and spaces inside the entity's span do not count, so a
+touch selection that leaves them out is the whole ḥadīth (the first version
+counted them, and the review found that a selection short only of the full
+stop read as "quoted in part"). Otherwise the test is exact, while the card
+path calls a quotation partial only below `QUOTED_IN_PART_BELOW` (0.9 of the
+matn, `retrieval/hadithText.ts`): a selection one word short of the matn
+shows the selected words with the note. Translate the surrounding passage
+and Translate all select whole blocks, so they are unaffected. On-device cards
 made before keep the whole verified text until retranslated; cache keys are
 unchanged.
 

@@ -81,6 +81,7 @@ export function segmentSelection(options: {
   const { blocks, entities, quran, english } = options;
 
   const orderOf = new Map(blocks.map((block) => [block.id, block.order]));
+  const textOf = new Map(blocks.map((block) => [block.id, block.text]));
   const startOrder = orderOf.get(options.startBlockId) ?? 0;
   const endOrder = orderOf.get(options.endBlockId) ?? 0;
 
@@ -315,18 +316,41 @@ export function segmentSelection(options: {
   }
 
   /**
-   * Whether the selection runs from the entity's start to its end, or past
-   * both. An entity whose blocks are not in `blocks` is not held whole.
+   * Whether the selection holds the entity's words: from its first letter to
+   * its last, or past both. What lies outside them inside the entity's span
+   * (the entry number before a matn, its closing «.» or «»», a space) is not
+   * the ḥadīth, and a touch selection often leaves it out: counting it made a
+   * selection of the whole matn but its full stop read as "quoted in part"
+   * (review of d3f99d9). An entity whose blocks are not in `blocks` is not
+   * held whole.
    */
   function selectsWhole(entity: Entity): boolean {
     const first = orderOf.get(entity.startBlockId);
     const last = orderOf.get(entity.endBlockId);
     if (first === undefined || last === undefined) return false;
-    const startsByIt =
-      startOrder < first || (startOrder === first && options.startOffset <= entity.startOffset);
-    const endsByIt = endOrder > last || (endOrder === last && options.endOffset >= entity.endOffset);
+    const oneBlock = entity.startBlockId === entity.endBlockId;
+    const startText = textOf.get(entity.startBlockId) ?? '';
+    const endText = textOf.get(entity.endBlockId) ?? '';
+    const wordsStart = firstLetter(startText, entity.startOffset, oneBlock ? entity.endOffset : startText.length);
+    const wordsEnd = pastLastLetter(endText, oneBlock ? entity.startOffset : 0, entity.endOffset);
+    const startsByIt = startOrder < first || (startOrder === first && options.startOffset <= wordsStart);
+    const endsByIt = endOrder > last || (endOrder === last && options.endOffset >= wordsEnd);
     return startsByIt && endsByIt;
   }
+}
+
+const LETTER = /\p{L}/u;
+
+/** The first letter's offset in text[from, to), or `to` if there is none. */
+function firstLetter(text: string, from: number, to: number): number {
+  for (let i = from; i < to; i++) if (LETTER.test(text[i])) return i;
+  return to;
+}
+
+/** The offset just past the last letter in text[from, to), or `from` if there is none. */
+function pastLastLetter(text: string, from: number, to: number): number {
+  for (let i = to - 1; i >= from; i--) if (LETTER.test(text[i])) return i + 1;
+  return from;
 }
 
 /**

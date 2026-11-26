@@ -1447,6 +1447,21 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     // No verified English: the note is still the no-offline-source one.
     const unverifiedPart = hadithOf(cut(blocks, [entity], ['h2', midway], ['h2', matn.length]));
     expect('73: no verified English, part of it: the no-offline-source note', unverifiedPart?.note === HADITH_NO_OFFLINE_SOURCE && unverifiedPart?.english === '', unverifiedPart);
+
+    // What is not the ḥadīth's words does not count (review of d3f99d9): a
+    // matn printed with its entry number and a closing full stop, selected
+    // from its first word to its last, as a touch selection often is.
+    const printedMatn = `١٢ - ${matn}.`;
+    const numbered = [blocks[0], { ...blocks[1], text: printedMatn, normalized: printedMatn }, blocks[2]];
+    const numberedEntity = matnEntity(numbered[1], 'seg#7');
+    const wordsOnly = hadithOf(cut(numbered, [numberedEntity], ['h2', printedMatn.indexOf(matn)], ['h2', printedMatn.length - 1], sunnah));
+    expect(
+      '73: selected from its first word to its last, without the number and the full stop: whole',
+      wordsOnly?.arabic === verifiedArabic && wordsOnly?.note === undefined,
+      wordsOnly,
+    );
+    const lastWordShort = hadithOf(cut(numbered, [numberedEntity], ['h2', printedMatn.indexOf(matn)], ['h2', printedMatn.lastIndexOf(' ')], sunnah));
+    expect('73: …but without its last word: part of it', lastWordShort?.note === HADITH_QUOTED_IN_PART, lastWordShort);
   }
 }
 
