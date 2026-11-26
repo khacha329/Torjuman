@@ -339,7 +339,7 @@ indexes is unknown. Every database from v7 on has them (the fresh branch at
 today's indexes, and v7–v10; the owner named no device with an older database
 (Phase 4 Q2). Design §6 E.
 
-## 21. The three QUL stores share one upgrade guard (2026-11-16, measured)
+## 21. The three QUL stores share one upgrade guard (2026-11-16, measured, fixed in lane C)
 
 `qulResources`, `qulEntries` and `qulCompilations` are created together when
 `qulResources` is missing (`IdbStorageAdapter.ts:233-239`). So a database with
@@ -353,6 +353,13 @@ database can arise from the app's own code. Check D pins both:
 and, since the 4j follow-up, a third, `harness/odd-v10-without-qulCompilations`
 (opens, never gets `qulCompilations`).
 Design §6 F.
+
+**Fixed in lane C.** Each `if-missing` store is guarded by its own name; the
+`createdWith` field is gone from `STORES`. All three odd databases now open
+and get the store they lack, every row kept. No `DB_VERSION` bump: no
+database the app creates changes, since every one from v7 on has all three
+stores. Check D's three `harness/odd-v10-without-*` scenarios are
+re-recorded.
 
 ## 22. A work backup is not a snapshot (2026-11-16, by reading)
 
