@@ -292,7 +292,7 @@ Exposed by check Q's second-round scenarios, recorded in
    too, and the SDK used its own backoff (`…429-no-retry-headers`). Pinned;
    not clearly a bug.
 
-## 16. README's work-backup list is short (2026-11-16, measured)
+## 16. README's work-backup list is short (2026-11-16, measured, fixed in lane C)
 
 `README.md:380-381` says the work backup holds "cards, explanations, marks,
 notes, glossary, profiles, positions, the gloss cache". It also carries sharḥ
@@ -300,6 +300,10 @@ cards, the Qurʾān-verse and ḥadīth caches, share records (with their
 decryption keys) and settings (`IdbStorageAdapter.ts:996-1007`; check D's
 `work-backup` → `export`, the `exportWork` value). Docs only. Phase 4 plan,
 Design §6 A.
+
+**Fixed in lane C.** README's list names every store the backup carries —
+sharḥ cards, the verse and ḥadīth caches, share records with their keys,
+settings, and the compiled QUL views 18 added — and points at `WORK_STORES`.
 
 ## 17. RESTRUCTURE §4 T-e says `ShareStorageAdapter` throws on write (2026-11-16, measured)
 

@@ -507,8 +507,12 @@ ID, a re-parse produces the same IDs by construction.
 Backups are split accordingly, because one monolithic file is impractical —
 9260's stored HTML alone runs to tens of megabytes:
 
-- **Work backup** (`Settings → Work backup`) — cards, explanations, marks,
-  notes, glossary, profiles, positions, the gloss cache. Small and
+- **Work backup** (`Settings → Work backup`) — translation cards,
+  explanations, sharḥ cards, marks and notes, the glossary, profiles, reading
+  positions, the word-gloss cache, the Qurʾān-verse and ḥadīth caches, share
+  records (with their decryption keys: a published link's key exists nowhere
+  else), compiled QUL views, and settings — every store in `WORK_STORES`
+  (`platform/storage/idbBackup.ts`) plus the settings row. Small and
   irreplaceable. It records which books it references by Shamela ID and reports
   any that are missing on restore. It leaves by the whole-tablet transfer's
   routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`
