@@ -80,6 +80,7 @@ export interface WorkBundle {
 
 /** What a work restore found missing. */
 export interface WorkRestoreReport {
+  /** Translation, explanation and sharḥ cards together. */
   restoredCards: number;
   restoredMarks: number;
   missingBooks: { shamelaId: number; title: string }[];

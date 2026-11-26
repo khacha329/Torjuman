@@ -119,7 +119,12 @@ export async function importWork(
   searchIndex.clear();
 
   return {
-    restoredCards: (bundle.cards?.length ?? 0) + (bundle.explanationCards?.length ?? 0),
+    // Every kind of card the restore wrote. Sharḥ cards were restored and left
+    // out of this count (FOUND_ISSUES 25).
+    restoredCards:
+      (bundle.cards?.length ?? 0) +
+      (bundle.explanationCards?.length ?? 0) +
+      (bundle.sharhCards?.length ?? 0),
     restoredMarks: bundle.marks?.length ?? 0,
     missingBooks,
   };

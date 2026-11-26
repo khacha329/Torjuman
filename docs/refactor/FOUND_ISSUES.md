@@ -424,13 +424,17 @@ the five work rows; after the cut-short replacement, `getBook A` is the book,
 with its work, and no staged row remains. The cost: until it is adopted the
 staged copy takes room beside the old one.
 
-## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured)
+## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured, fixed in lane C)
 
 `importWork` reports `restoredCards` as translation cards plus explanation
 cards (`IdbStorageAdapter.ts:1054`); sharḥ cards are restored but not counted.
 Check D's `work-backup` → `import-fresh`: `restoredCards` 3 for two translation
 cards and one explanation, with the one sharḥ card restored beside them.
 Cosmetic.
+
+**Fixed in lane C.** `restoredCards` counts translation, explanation and sharḥ
+cards (`idbBackup.ts`), so "Restored N card(s)" counts every card written.
+Check D's `work-backup` restores now report one more card for the sharḥ card.
 
 ## 26. "Translate this entry" stores a card under the visible block's key (2026-11-16, by reading)
 
