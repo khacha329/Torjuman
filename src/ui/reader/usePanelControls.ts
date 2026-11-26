@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { useApp } from '../../app/AppContext';
 import { clampPanelWidth } from '../useLayoutMode';
 
@@ -8,7 +8,7 @@ import { clampPanelWidth } from '../useLayoutMode';
 // lasts, which the screen shows in place of the stored one. Moved from
 // ReaderScreen.tsx in restructure Phase 5 step 5g4
 // (docs/refactor/plans/phase5-big-ui-files.md); the divider's handling
-// changed for FOUND_ISSUES 27 in lane A.
+// changed for FOUND_ISSUES 27 in lane A, and for 50 and 51 in lane A2.
 
 export function usePanelControls({
   settings,
@@ -53,7 +53,11 @@ export function usePanelControls({
   // events. They used to take any pointer's, so a second finger landing
   // elsewhere during a drag resized the panel to where it was, or ended the
   // drag when it lifted (FOUND_ISSUES 50). A second pointer pressed on the
-  // divider itself does not take the drag over either.
+  // divider itself does not take the drag over either. The price: were the
+  // dragging pointer's own pointerup or pointercancel ever lost, the divider
+  // would refuse every press until the reader remounts, where the old code
+  // recovered on the next press. No path that loses it is known — the
+  // pointer is captured, and nothing in the reader stops either event.
   const dragPointer = useRef<number | null>(null);
   const dragWidthRef = useRef<number | null>(null);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
@@ -61,7 +65,7 @@ export function usePanelControls({
   // The latest `updateSettings`, for the unmount below, whose effect must not
   // re-run (and so end a drag under way) when it changes.
   const updateSettingsRef = useRef(updateSettings);
-  useEffect(() => {
+  useLayoutEffect(() => {
     updateSettingsRef.current = updateSettings;
   });
 
