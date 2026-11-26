@@ -649,7 +649,8 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
   /**
    * "Translate the rest" on a partial card: a new translation of the part of
-   * its passage that did not come back, on the card's own provider and model.
+   * its passage that did not come back, on the card's own provider and model
+   * (for a fallback card, the ones it asked for).
    * The partial card is kept — its segments were paid for, and the rest is a
    * card of its own beside it.
    */
@@ -666,8 +667,11 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       }
       return translate({
         anchor,
-        providerId: card.providerId,
-        model: card.model,
+        // A card a fallback model answered asks the model it asked for, through
+        // the same chain and under that model's key (DECISIONS, lane B2): a
+        // Gemini card Haiku answered goes back to the free model first.
+        providerId: card.fallback?.fromProviderId ?? card.providerId,
+        model: card.fallback?.fromModel ?? card.model,
         standalone: entry,
       });
     },
