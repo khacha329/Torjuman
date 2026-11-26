@@ -1283,6 +1283,60 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       overlapped.segments.map((segment) => segment.arabic),
     );
   }
+
+  // FOUND_ISSUES 69. A verse across a block edge has a share in each block;
+  // it is one segment, not one per share.
+  {
+    const first = text(words(6));
+    const verseA = text(words(3));
+    const verseB = text(words(3));
+    const last = text(words(6));
+    const mushaf = text(words(6));
+    const a = blockOf('v1', 1, 'sharh', `${first} ${verseA}`, { pageId: 'seg:p1' });
+    const b = blockOf('v2', 2, 'sharh', `${verseB} ${last}`, { pageId: 'seg:p2' });
+    const verse = (extra: Partial<Entity> = {}): Entity => ({
+      id: 'ent-verse-across',
+      bookId: 'seg',
+      startBlockId: 'v1',
+      startOffset: first.length + 1,
+      endBlockId: 'v2',
+      endOffset: verseB.length,
+      type: 'quran',
+      reference: '1:1',
+      matchQuality: 'exact',
+      detectedAt: 0,
+      ...extra,
+    });
+    const verses = (segmented: SegmentedSelection) => segmented.segments.filter((segment) => segment.type === 'quran');
+
+    const across = cut([a, b], [verse({ textUthmani: mushaf })], ['v1', 0], ['v2', b.text.length]);
+    expect('69: a verse across a page break: prose, verse, prose', JSON.stringify(types(across)) === '["prose","quran","prose"]', types(across));
+    expect(
+      '69: …its muṣḥaf text and bundled English once',
+      verses(across).length === 1 && verses(across)[0].arabic === mushaf && verses(across)[0].english === 'Synthetic āyah one.',
+      verses(across),
+    );
+    expect('69: …and neither share is offered', !reachesModel(across, verseA) && !reachesModel(across, verseB), across.prose);
+
+    const fromSecond = cut([a, b], [verse({ textUthmani: mushaf })], ['v2', 0], ['v2', b.text.length]);
+    expect('69: a selection holding only the second share: the verse once', verses(fromSecond).length === 1 && verses(fromSecond)[0].arabic === mushaf, fromSecond.segments);
+
+    // With no muṣḥaf text the segment shows the book's words, and the second
+    // share carries them on: by a space across a page break, by a newline
+    // between two paragraphs of one page.
+    const bare = cut([a, b], [verse()], ['v1', 0], ['v2', b.text.length]);
+    expect(
+      '69: a verse with no muṣḥaf text across a page break: one segment, its two shares joined by a space',
+      verses(bare).length === 1 && verses(bare)[0].arabic === `${verseA} ${verseB}`,
+      verses(bare),
+    );
+    const onePage = cut([a, { ...b, pageId: 'seg:p1' }], [verse()], ['v1', 0], ['v2', b.text.length]);
+    expect(
+      '69: …and across two paragraphs of one page, by a newline',
+      verses(onePage).length === 1 && verses(onePage)[0].arabic === `${verseA}\n${verseB}`,
+      verses(onePage),
+    );
+  }
 }
 
 // ------------------------------------------- the apparatus stripper (lane B3)

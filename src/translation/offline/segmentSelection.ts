@@ -85,6 +85,12 @@ export function segmentSelection(options: {
 
   const segments: TranslatedSegment[] = [];
   const prose: ProseSpan[] = [];
+  /**
+   * The segment each verse was emitted as, by entity id, and the block its
+   * text last came from: a verse across a block edge has a share in each
+   * block, and only the first is a segment (FOUND_ISSUES 69).
+   */
+  const verseSegments = new Map<string, { slot: number; block: Block }>();
 
   for (const block of blocks) {
     if (block.order < startOrder || block.order > endOrder) continue;
@@ -174,7 +180,7 @@ export function segmentSelection(options: {
       if (start > cursor) {
         pushProse(block.text.slice(cursor, start));
       }
-      pushEntity(piece, block.text.slice(start, piece.end));
+      pushEntity(piece, block.text.slice(start, piece.end), block);
       cursor = piece.end;
     }
     if (cursor < to) pushProse(block.text.slice(cursor, to));
@@ -220,13 +226,33 @@ export function segmentSelection(options: {
     prose.push({ slot, text });
   }
 
-  function pushEntity(piece: Piece, sourceText: string): void {
+  function pushEntity(piece: Piece, sourceText: string, block: Block): void {
     if (piece.type === 'quran') {
       const { entity } = piece;
+
+      // A later block's share of a verse already in the card. Until
+      // FOUND_ISSUES 69 each share was a segment of its own, and each carried
+      // the whole muṣḥaf text and English, so a verse across a page break
+      // showed twice. The first share's segment already shows the whole
+      // verse; only where the verse has no muṣḥaf text, so the segment shows
+      // the book's words, does this share carry on its Arabic. The walk emits
+      // a verse's share in a block before anything else there (it starts at
+      // the block's offset 0) and leaves it last in the block before (it runs
+      // to the end), so that segment is the last one; the check is a guard.
+      const earlier = verseSegments.get(entity.id);
+      if (earlier) {
+        if (entity.textUthmani === undefined && earlier.slot === segments.length - 1) {
+          segments[earlier.slot].arabic += blockJoin(earlier.block, block) + sourceText;
+          earlier.block = block;
+        }
+        return;
+      }
+
       // Retrieved from the bundled muṣḥaf, never generated.
       const range = quran.flatRangeOf(entity.reference);
       const englishText = range ? english.range(range[0], range[1]) : '';
 
+      verseSegments.set(entity.id, { slot: segments.length, block });
       segments.push({
         type: 'quran',
         arabic: entity.textUthmani ?? sourceText,
@@ -256,6 +282,21 @@ export function segmentSelection(options: {
       note: verified ? undefined : HADITH_NO_OFFLINE_SOURCE,
     });
   }
+}
+
+/**
+ * What stands between two blocks' text where one span runs on from the first
+ * into the second.
+ *
+ * A block is one paragraph of a Shamela page (`shamela/parsePage.ts` makes one
+ * per `<p>`), and a page break is not a paragraph's end: Shamela breaks pages
+ * mid-sentence (the reason `ingest/crawler.ts` detects entities over the
+ * whole book). So two blocks of one page are two paragraphs, and a newline
+ * stands between them; a block that opens the next page may carry on the
+ * sentence before it, and a space does.
+ */
+function blockJoin(previous: Block, next: Block): string {
+  return previous.pageId === next.pageId ? '\n' : ' ';
 }
 
 /**

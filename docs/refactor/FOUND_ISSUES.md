@@ -1083,6 +1083,20 @@ matn in an unmapped book `unresolved`.
 
 ## 69. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
 
+**Fixed in lane B3** (commit "69." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced it first: two verse segments with the same muṣḥaf text
+and English). A verse's later shares make no segment of their own: the first
+share's segment already shows the whole muṣḥaf text and English. Where a verse
+has no `textUthmani`, so its segment shows the book's words, each later share
+carries that Arabic on, joined by a space across a page break and by a newline
+between two paragraphs of one page (`blockJoin`, the join 70 uses; a page
+break is not a paragraph's end in Shamela). Unchanged: 61's edge case, a verse
+whose first share lies inside a ḥadīth and is skipped, is first emitted at its
+next share, so that part still reads twice. Verses only: no ḥadīth entity has
+a second share, since the detector's spans one block. On-device cards made
+before the fix keep both segments until retranslated; cache keys are
+unchanged (trap 5).
+
 Found by the review of lane B's fix to 61. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
