@@ -32,12 +32,12 @@ import { useLayoutMode } from '../useLayoutMode';
 const POPOVER_WIDTH = 400;
 const MARGIN = 12;
 /**
- * The least part of its own height a capped popover must show. Where the
- * larger side of the anchor has room for less, the content opens as the
- * bottom sheet instead (FOUND_ISSUES 47, the owner's decision: "under half
- * its content"). Capped to less, a popover is a narrow window onto its
- * content, and beside a tall anchor (a long ḥadīth in landscape) a strip a
- * few pixels high.
+ * The least part of its content a capped popover must show. Where the larger
+ * side of the anchor has room for less (after the popover's header and
+ * footer), the content opens as the bottom sheet instead (FOUND_ISSUES 47,
+ * the owner's decision: "under half its content"). Capped to less, a popover
+ * is a narrow window onto its content, and beside a tall anchor (a long
+ * ḥadīth in landscape) a strip a few pixels high.
  */
 const MIN_SHOWN_FRACTION = 0.5;
 
@@ -72,11 +72,12 @@ export function AnchoredPanel({
   // is a sheet, so is this. See src/ui/useLayoutMode.ts.
   //
   // `tooTight` is set by a placement that finds room for less than
-  // MIN_SHOWN_FRACTION of the popover on both sides of the anchor, and stays
-  // set while the panel is open: a sheet
-  // is not placed, so nothing would turn it back, and a panel that changed
-  // between popover and sheet as the page scrolled would jump under the
-  // finger.
+  // MIN_SHOWN_FRACTION of the popover's content on both sides of the anchor,
+  // and stays set while the panel is open: a sheet is not placed, so nothing
+  // would turn it back, and a panel that changed between popover and sheet
+  // as the page scrolled would jump under the finger. The change remounts
+  // the panel's children (the two branches are different trees), so state
+  // inside them is lost: FOUND_ISSUES 77.
   const [tooTight, setTooTight] = useState(false);
   const asSheet = useLayoutMode() === 'sheet' || preferSheet || tooTight;
 
@@ -131,11 +132,13 @@ export function AnchoredPanel({
     const panel = panelRef.current;
     const body = bodyRef.current;
     const bodyCap = body ? parseFloat(getComputedStyle(body).maxHeight) : NaN;
+    // Header, footer and borders: what a capped popover shows besides its
+    // content.
+    const chrome = panel && body ? panel.offsetHeight - body.offsetHeight : 0;
+    const contentHeight = body ? body.scrollHeight : 0;
     const panelHeight =
       panel && body
-        ? panel.offsetHeight -
-          body.offsetHeight +
-          Math.min(body.scrollHeight, Number.isNaN(bodyCap) ? Infinity : bodyCap)
+        ? chrome + Math.min(contentHeight, Number.isNaN(bodyCap) ? Infinity : bodyCap)
         : 280;
 
     // Below the anchor if it fits, above it if it fits there. If it fits on
@@ -154,7 +157,7 @@ export function AnchoredPanel({
       top = below;
     } else if (panelHeight <= roomAbove) {
       top = rect.top - 8 - panelHeight;
-    } else if (Math.max(roomBelow, roomAbove) < panelHeight * MIN_SHOWN_FRACTION) {
+    } else if (Math.max(roomBelow, roomAbove) - chrome < contentHeight * MIN_SHOWN_FRACTION) {
       setTooTight(true);
       return;
     } else if (roomBelow >= roomAbove) {

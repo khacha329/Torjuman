@@ -872,8 +872,9 @@ sits at 323–588 below it, its body 175 px of 184 and scrolling.
 The review of that fix found that, read literally, the rule left a popover
 a few pixels tall beside an anchor nearly as tall as the screen (a long
 ḥadīth in landscape). On the owner's follow-up decision (DECISIONS.md, the
-same day), where the larger side cannot show half of the popover, the
-content opens as the bottom sheet instead, and stays a sheet while it is
+same day), where the larger side cannot show half of the popover's
+content (after its header and footer), the content opens as the bottom
+sheet instead, and stays a sheet while it is
 open. The placement now also observes the content inside the body: a
 popover capped while its content was still loading did not change size as
 the content grew, so nothing placed it again. The body's 60vh is read from
@@ -881,9 +882,11 @@ its computed style, as on Android vh and innerHeight differ. R's new
 scenario "a popover with too little room on either side opens as the
 sheet" makes the window 960×340 (the panel still beside the text) and
 centres the verse: before this follow-up the popover was capped beside it;
-now it opens as the sheet. In U, the landscape ḥadīth popover (about 450 px,
-with about 200 px beside the ḥadīth) is now the sheet, and the Qurʾān
-popovers capped beside their verse.
+now it opens as the sheet. In U at 960×600, measured: the ḥadīth popover
+captures (`reader-hadith`, the `reader-hadith-sharh-*` states) now open as
+the sheet, and `reader-quran` stays a popover, capped to 203 px beside its
+verse; every landscape popover capture's DOM also gains the content wrapper.
+Those captures are re-baselined in lane A2's last commit.
 
 ## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 
@@ -1301,3 +1304,17 @@ an anchor taken out of the DOM with no scroll (the virtualizer dropping its
 row after a re-measure, say) leaves the popover open over nothing until the
 next scroll closes it. The same before 49. No concrete trigger was found.
 Found by the review of lane A2's 49. Left unfixed.
+
+## 77. A popover that becomes the sheet remounts its content (2026-11-26, by reading)
+
+Since lane A2's fix for 47, `AnchoredPanel` can turn from a popover into the
+bottom sheet while it is open: when content grows and the larger side of
+the anchor can no longer show half of it. The two branches render different
+trees, so the panel's children remount and lose their own state; the
+owner's state (QuranSheet's tab, HadithSheet's record) survives. The one
+child found with state that matters is `CompileTab`, whose `busy` and
+`error` would reset, and its storage read run again, if the flip came in
+the middle of a compile — showing "Compile" again while the paid call is
+still in flight. Unlikely: the flip follows growth of the content, which a
+compile's busy state alone barely changes. Found by the review of lane A2's
+47. Left unfixed.
