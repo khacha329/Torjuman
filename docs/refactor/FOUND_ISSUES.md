@@ -361,12 +361,18 @@ database the app creates changes, since every one from v7 on has all three
 stores. Check D's three `harness/odd-v10-without-*` scenarios are
 re-recorded.
 
-## 22. A work backup is not a snapshot (2026-11-16, by reading)
+## 22. A work backup is not a snapshot (2026-11-16, by reading, fixed in lane C)
 
 `exportWork` reads each store in its own transaction
 (`IdbStorageAdapter.ts:996-1006`), so a card saved while the export runs can be
 in one store's read and its sibling's not. Minor; check D cannot show a race.
 Design §6 G.
+
+**Fixed in lane C.** `exportWork` reads `books`, every `WORK_STORES` store and
+`settings` in one read-only transaction (`idbBackup.ts`), so the file is one
+moment's state. Settings are read inside it as `getSettings` reads them
+(`SETTINGS_KEY` is now exported from `idbWork.ts` for that). Check D's
+`work-backup` → `export` is unchanged: same rows, same file.
 
 ## 23. `importWork` ignores the backup's version (2026-11-16, by reading)
 

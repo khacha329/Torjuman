@@ -2,7 +2,7 @@ import type { IDBPDatabase } from 'idb';
 import type { WorkBundle, WorkRestoreReport } from './StorageAdapter';
 import { DB_VERSION, type SameUnion, type Schema } from './idbSchema';
 import type { SearchEntry } from './idbLibrary';
-import { getSettings, putSettings } from './idbWork';
+import { putSettings, SETTINGS_KEY } from './idbWork';
 
 // The work backup: export the user's work (and the retrieval cache it leans
 // on) as one bundle, and restore one. Moved verbatim from IdbStorageAdapter.ts
@@ -48,7 +48,13 @@ true satisfies SameUnion<WorkStore, BundleStore>;
 
 export async function exportWork(handle: () => IDBPDatabase<Schema>): Promise<WorkBundle> {
   const db = handle();
-  const books = await db.getAll('books');
+  // One read-only transaction over every store the bundle reads, so the file
+  // is one moment's state (FOUND_ISSUES 22). Each store was read in its own
+  // transaction, so a card saved while an export ran could be in one store's
+  // read and missing from its sibling's. Only IndexedDB reads are awaited
+  // inside it, which keeps it open to the end.
+  const tx = db.transaction(['books', ...WORK_STORES, 'settings'] as const, 'readonly');
+  const books = await tx.objectStore('books').getAll();
 
   // Built in the order the file lists its fields: the three header fields,
   // each store in WORK_STORES order, then settings. JSON keeps insertion
@@ -64,9 +70,17 @@ export async function exportWork(handle: () => IDBPDatabase<Schema>): Promise<Wo
     })),
   } as WorkBundle;
   for (const store of WORK_STORES) {
-    (bundle as unknown as Record<WorkStore, unknown[]>)[store] = await db.getAll(store);
+    (bundle as unknown as Record<WorkStore, unknown[]>)[store] = await tx.objectStore(store).getAll();
   }
-  bundle.settings = (await getSettings(handle)) ?? null;
+  // As idbWork.ts's getSettings reads them, inside this transaction.
+  const stored = await tx.objectStore('settings').get(SETTINGS_KEY);
+  if (stored) {
+    const { key: _key, ...settings } = stored;
+    bundle.settings = settings;
+  } else {
+    bundle.settings = null;
+  }
+  await tx.done;
   return bundle;
 }
 
