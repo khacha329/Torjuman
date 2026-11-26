@@ -1221,7 +1221,12 @@ is the whole ḥadīth.»), imported from `retrieval/enrich.ts`: a new
 `translation/offline → retrieval` edge, allowed by every layer rule. With
 hadith-json, whose Arabic was already the book's words, a part now gains the
 note. A ḥadīth clipped only by a verse before it, with the whole ḥadīth
-selected, still counts as whole (61's edge case, unchanged). On-device cards
+selected, still counts as whole (61's edge case, unchanged). The test is
+exact, while the card path calls a quotation partial only below
+`QUOTED_IN_PART_BELOW` (0.9 of the matn, `retrieval/hadithText.ts`): a hand
+selection one word short of the matn now shows the selected words with the
+note. Translate the surrounding passage and Translate all select whole
+blocks, so they are unaffected (from the fix's review). On-device cards
 made before keep the whole verified text until retranslated; cache keys are
 unchanged.
 
@@ -1387,8 +1392,8 @@ never typechecked. Each typechecked on its own with a scratch tsconfig
 extending `tsconfig.app.json` with `types: ["node"]`, on main (5e72107):
 `scripts/verify-hadith-text.ts` has 3 errors (~963, ~1003, ~1013: calls to
 `hadithImportedMissNote` without `ImportedMiss.numberCompared`, added after
-the cases were written; at run time the field is `undefined`, read as false,
-so the cases still mean what they say) and `scripts/verify-parsers.ts` has
+the cases were written; their statuses, 'none-near' and 'common', never
+read the field, so the cases still mean what they say) and `scripts/verify-parsers.ts` has
 27. Lane B3 adds none to either. Left unfixed.
 
 ## 80. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
@@ -1422,11 +1427,13 @@ card text only, not cache keys; stored cards keep the old note. Left unfixed.
 ## 82. A whitespace-only ḥadīth piece becomes a segment (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 71. `pushProse` drops a span that is
-only whitespace; `pushEntity` does not, so a ḥadīth piece clipped to
-whitespace (a selection ending just past a matn's last word, or since 71 the
-gap after a stored entity that stops short of trailing whitespace) is an
-empty-looking ḥadīth segment with the no-offline-source note. Display only;
-nothing reaches the model. Left unfixed.
+only whitespace; `pushEntity` does not. The parser trims a block and
+collapses its whitespace (`parsePage.ts`, `TextBuilder`), so a piece of
+whitespace alone cannot arise from an imported block; what can is a piece of
+punctuation alone (a selection that starts after a matn's last word but
+before its closing «.» or «»»), shown as a ḥadīth segment of one mark with the
+no-offline-source note. Display only; nothing reaches the model. Left
+unfixed.
 
 ## 83. On a Windows checkout with `core.autocrlf`, the recorded checks fail on line endings (2026-11-26, measured)
 
@@ -1437,10 +1444,13 @@ write LF: Q reported "FAIL: 1 entry differs … (every entry is equal; the
 header or the formatting differs)" on an unchanged tree, and passed once the
 clone was set to `core.autocrlf=false` and its files converted back to LF.
 The repository has no `.gitattributes`. On the same PC, U fails on unchanged
-main too, 143 of 294 files matching (127 screenshots and 6 DOM files:
-`reader-retranslate`, `settings--offline-downloading` and
-`settings--offline-translation` at both sizes), so U's record holds only on
-the machine it was recorded on. A fix could add a `.gitattributes`
+main too, 143 of 294 files matching: 127 screenshots and 6 DOM files differ
+(`reader-retranslate`, `settings--offline-downloading` and
+`settings--offline-translation` at both sizes), and 18 screenshots the run
+took are not in the record, which lists those screens' DOM but not their
+images (`reader-hadith-sharh-*`, `settings--hadith-english-*`; any image
+absent from a record that claims images counts as differing). So U's record
+holds only where it was recorded. A fix could add a `.gitattributes`
 (`* text=auto eol=lf`) or make the comparisons ignore CR; U's dependence on
 the renderer is a separate question. Left unfixed.
 
@@ -1456,3 +1466,15 @@ takhrīj-like phrase in that commentary («عن النبي … قال:», «رو
 away with what follows it, and an overrun it would have shown is missed (a
 miss, not a false alarm). Pre-existing; 75 widens it to the vowelled forms of
 the same phrases. Not measured. Left unfixed.
+
+## 85. A stored matn entity short of its block, with a cached ḥadīth, shows the tail twice (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 73. Since 71, the part of a matn
+block that a stored ḥadīth entity does not cover is a ḥadīth piece of its
+own. When that entity stops short of its block (stored before a re-parse moved
+the text) and its verified ḥadīth is cached, a selection of the whole block
+holds the entity whole: the card shows the whole verified Arabic and English,
+then the block's tail again as a ḥadīth segment with the no-offline-source
+note, so the tail's words read twice. Before 71 the tail went to the model.
+Nothing reaches the model; the detector's entities span their block, so only
+stale entities do this. Not measured. Left unfixed.
