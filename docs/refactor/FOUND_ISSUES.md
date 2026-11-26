@@ -869,7 +869,7 @@ the page in eight small steps, and counts the document's pointerdown
 registrations: on the old code 4 while scrolling, with the fix 0; a tap
 outside it then closes it.
 
-## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading)
+## 49. An open popover is not re-placed if its anchor moves without a scroll (2026-11-17, by reading, fixed in lane A2)
 
 Since 34, `AnchoredPanel` places an open popover again only on a scroll, a
 window resize, a change of its own size (37), or a new anchor or sheet mode —
@@ -880,6 +880,20 @@ no scroll and no change in the panel's size (a block above it growing or
 shrinking, say). No concrete trigger was found: the virtualizer's own
 corrections move the page by scrolling, which is seen. A possibility, not a
 measured bug. Found by the review of 34. Left unfixed.
+
+**Fixed in lane A2:** while a popover is open, `AnchoredPanel` reads its
+anchor's rectangle once a frame and places the popover again when the
+rectangle has moved; nothing else reports an element's position changing.
+The loop runs only while a popover (not a sheet) is open, and places it only
+on a change, so the size observer of 37 is not set off in a loop. Now
+measured, not only read: R's new scenario "an open popover follows its anchor
+when layout moves it without a scroll" opens the verse's popover, then gives
+the verse's block 40 px of padding above its text by hand (the verse moves
+down, the page does not scroll). On the old code, in a trial run with the
+verse at 200 px, the popover stayed at top 245 over the moved verse (now
+232–277) until a scroll event placed it at 285; with the fix, and the verse
+at the scenario's 150 px, it moves from 203 to 243 at once, where a scroll
+event also puts it.
 
 ## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading, fixed in lane A2)
 

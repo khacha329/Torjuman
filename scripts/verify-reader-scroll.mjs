@@ -27,8 +27,9 @@
 //     settled in a few passes (FOUND_ISSUES 40); double-tap opening the
 //     dictionary; the restored position applied once; a second book opened
 //     by its URL at its own position (FOUND_ISSUES 31); an open popover's
-//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); the
-//     divider dragged with a mouse; a divider drag ended by pointercancel
+//     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); an
+//     open popover following its anchor moved without a scroll (FOUND_ISSUES
+//     49); the divider dragged with a mouse; a divider drag ended by pointercancel
 //     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
 //     the reader renders (FOUND_ISSUES 48); a second pointer during a divider
 //     drag (FOUND_ISSUES 50); leaving the reader mid-drag (FOUND_ISSUES
@@ -493,6 +494,9 @@ const CENTRED_MAX_JUMPS_LANDSCAPE = 2;
 const CENTRED_MAX_JUMPS_PORTRAIT = 4;
 /** The verse's place, and the small scrolls, for the outside-tap listener check: the verse stays on screen. */
 const LISTENER_ANCHOR_Y = 450;
+/** Where the verse sits, and how far it is moved, for the popover that follows it (FOUND_ISSUES 49). */
+const MOVED_ANCHOR_Y = 150;
+const MOVED_ANCHOR_PX = 40;
 const LISTENER_SCROLL_STEPS = 8;
 const LISTENER_SCROLL_PX = 35;
 /** How long the bundled translation is held back, and where the verse sits, for the growing popover. */
@@ -1002,6 +1006,52 @@ async function landscapeControls(browser, base, profile) {
       'a popover that grows after opening is placed again, wholly on screen',
       held === 1 && grown.height > loading.height + 100 && grown.top >= 0 && grown.bottom <= grown.viewport,
       `loading ${JSON.stringify(loading)}, grown ${JSON.stringify(grown)}, translation requests held ${held}`,
+    );
+  });
+
+  // An open popover follows its anchor when the anchor moves with no scroll,
+  // no resize and no change in the popover's size (FOUND_ISSUES 49): layout
+  // above it inside the viewport changes. Here the verse's own block gets
+  // 40 px of padding above its text, set by hand on the element, so the verse
+  // moves down while the block's top, below the header, stays put and the
+  // virtualizer has nothing to correct by scrolling. The popover's place is
+  // then compared with where a fresh placement puts it — a scroll event
+  // dispatched by hand on the document, as a page scroll's is (on the
+  // window, the popover's `contains` check would throw on its target), which
+  // the popover answers by placing itself again —
+  // so the check does not depend on which side it lands. On the old code it
+  // stayed where it was until that scroll.
+  await scenario(browser, base, profile, 'an open popover follows its anchor when layout moves it without a scroll', async (page) => {
+    const verse = page.locator(`[data-block-id="${blockId(VERSE_BLOCK)}"] [data-entity-id]`).first();
+    await verse.waitFor({ timeout: 10_000 });
+    await page.evaluate(({ id, y }) => {
+      const element = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`);
+      window.scrollBy(0, element.getBoundingClientRect().top - y);
+    }, { id: blockId(VERSE_BLOCK), y: MOVED_ANCHOR_Y });
+    await settle(page, 500);
+    await verse.click();
+    const dialog = page.locator('[role="dialog"]');
+    await dialog.getByText('(bundled)').waitFor({ timeout: 10_000 });
+    await settle(page, 500);
+    const state = () => page.evaluate((id) => {
+      const panel = document.querySelector('[role="dialog"]').getBoundingClientRect();
+      const anchor = document.querySelector(`[data-block-id="${id}"] [data-entity-id]`).getBoundingClientRect();
+      return { panelTop: Math.round(panel.top), anchorTop: Math.round(anchor.top), anchorBottom: Math.round(anchor.bottom), scrollY: Math.round(window.scrollY) };
+    }, blockId(VERSE_BLOCK));
+    const before = await state();
+    await page.evaluate(({ id, px }) => {
+      document.querySelector(`[data-block-id="${id}"]`).style.paddingTop = `${px}px`;
+    }, { id: blockId(VERSE_BLOCK), px: MOVED_ANCHOR_PX });
+    await settle(page, 300);
+    const moved = await state();
+    await page.evaluate(() => document.dispatchEvent(new Event('scroll')));
+    await settle(page, 300);
+    const replaced = await state();
+    const detail = `before ${JSON.stringify(before)}, after the padding ${JSON.stringify(moved)}, after a scroll event ${JSON.stringify(replaced)}`;
+    check(
+      'an open popover is placed again when its anchor moves without a scroll',
+      moved.anchorTop - before.anchorTop >= MOVED_ANCHOR_PX - 2 && moved.scrollY === before.scrollY && moved.panelTop !== before.panelTop && moved.panelTop === replaced.panelTop,
+      detail,
     );
   });
 

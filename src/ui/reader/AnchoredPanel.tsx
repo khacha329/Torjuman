@@ -130,6 +130,38 @@ export function AnchoredPanel({
     return () => observer.disconnect();
   }, [asSheet, reposition]);
 
+  // Placed again when the anchor moves with no scroll, no resize and no
+  // change in the panel's own size: when layout above it changes inside the
+  // viewport (a block above it growing or shrinking as it is measured, say),
+  // or the list moves under the sticky header. None of the listeners here
+  // hears that, so the popover stayed where it was and the anchor slid under
+  // it or away from it (FOUND_ISSUES 49). Nothing reports an element's
+  // position changing, so the anchor's rectangle is read once a frame while
+  // the popover is open, and the popover is placed again only when the
+  // rectangle has moved. A rectangle read on a frame whose layout is already
+  // clean costs microseconds, and the loop runs only while a popover is open,
+  // never for a sheet (pinned to the bottom of the screen, never placed).
+  useEffect(() => {
+    if (asSheet) return;
+    let frame = 0;
+    let last: DOMRect | null = null;
+    const watch = () => {
+      if (anchor.isConnected) {
+        const rect = anchor.getBoundingClientRect();
+        if (
+          last !== null &&
+          (rect.top !== last.top || rect.left !== last.left || rect.bottom !== last.bottom || rect.right !== last.right)
+        ) {
+          reposition();
+        }
+        last = rect;
+      }
+      frame = requestAnimationFrame(watch);
+    };
+    frame = requestAnimationFrame(watch);
+    return () => cancelAnimationFrame(frame);
+  }, [anchor, asSheet, reposition]);
+
   useEffect(() => {
     const onScroll = (event: Event) => {
       // A scroll that started inside the panel is the user reading it, not a
