@@ -63,6 +63,13 @@ export async function deleteBook(
   // go with it; an installed Itqan shard belongs to no book and must not.
   await deleteNarratorShard(handle, `taqrib:${id}`);
 
+  // Share records stay, though each names its book (FOUND_ISSUES 19, the
+  // owner's word, 2026-11-26). A published chapter is its own encrypted copy,
+  // so its link keeps working for everyone it was given to after the book is
+  // gone; and the record holds the link's key, which exists nowhere else.
+  // Removing it would leave that link out there with no way to find it again,
+  // send it again or back it up. Settings → Published chapters keeps listing it.
+
   // The book row goes last. An interrupted removal then still lists the book,
   // so pressing Remove again finishes the job; deleting the row first would
   // strand every other store's rows with nothing left to reach them by.

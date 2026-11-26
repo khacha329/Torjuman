@@ -512,7 +512,10 @@ Backups are split accordingly, because one monolithic file is impractical —
   positions, the word-gloss cache, the Qurʾān-verse and ḥadīth caches, share
   records (with their decryption keys: a published link's key exists nowhere
   else), compiled QUL views, and settings — every store in `WORK_STORES`
-  (`platform/storage/idbBackup.ts`) plus the settings row. Small and
+  (`platform/storage/idbBackup.ts`) plus the settings row. A share record
+  outlives its book on purpose: removing a book leaves the chapters published
+  from it working, and listed under `Settings → Published chapters`, since
+  the record holds the only copy of the link's key. Small and
   irreplaceable. It records which books it references by Shamela ID and reports
   any that are missing on restore. It leaves by the whole-tablet transfer's
   routes (below): `Save to Downloads`, `Send through the proxy`, and `Send…`

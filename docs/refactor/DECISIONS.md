@@ -101,3 +101,11 @@ lane B found.
   no-offline-source note, and nothing is looked up for it. No detector
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
+
+## Decided for lane C, 2026-11-26
+
+- **19. Share records outlive their book.** Keep them, and say so. A
+  removed book's share records stay: the chapter's link keeps working for
+  others, and the record holds the only copy of its key besides the link.
+  The code, README and the remove-book confirm say so. (The owner's answer
+  to lane C's question; the alternative was deleting them with the book.)

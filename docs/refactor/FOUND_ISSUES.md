@@ -331,13 +331,19 @@ those resources are installed and is unused where they are not. Settings counts
 them ("compiled verse views"). Check D's `work-backup`: the file now carries the
 one compilation and the restored database has it.
 
-## 19. Share records outlive their book (2026-11-16, measured)
+## 19. Share records outlive their book (2026-11-16, measured, fixed in lane C)
 
 `ShareRecord` has a `bookId` (`types/share.ts:31`) but `deleteBook`
 (`IdbStorageAdapter.ts:399-416`) leaves the record: check D's `delete-book`,
 "listShareRecords (outlives its book)". Probably right — a published link still
 works for others, and its key exists only in the link and this record — but
 nothing says so. Design §6 D.
+
+**Fixed in lane C** by saying so, the owner's choice (2026-11-26; DECISIONS.md):
+the records stay. `deleteBook` (`idbLibrary.ts`) says why, README's work-backup
+entry says it, and the Library's delete confirm adds, for a book with a
+published chapter, that the chapter keeps working and stays under Settings →
+Published chapters. No data change; check D's `delete-book` is unchanged.
 
 ## 20. Databases from before v7 cannot be checked (2026-11-16, by design)
 
