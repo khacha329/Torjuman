@@ -523,7 +523,7 @@ order under the second book's id. A remount resets only what going through
 the Library already reset. R's "a second book opened by its URL restores its
 own position" guards it: on the old code the second book opened at block 0.
 
-## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading)
+## 32. A failed work export says "Preparing…" forever (2026-11-16, by reading, fixed in lane C)
 
 `ui/settings/BackupSection.tsx:26-39`: `exportWork` sets "Preparing…" and
 then awaits `storage.exportWork()` and `saveFile` with no `try`, so a failure
@@ -532,6 +532,11 @@ said. Its success message counts translation cards, explanations, marks and
 glossary entries, but not sharḥ cards or word glosses, which the backup does
 carry (`WorkBundle`, `platform/storage/StorageAdapter.ts:48-60`) — like the
 restore's count (FOUND_ISSUES 25). Phase 5 plan, Design §9 G.
+
+**Fixed in lane C.** The export is in a `try`: a failure says "Export failed,
+so no backup was saved" and why. Its success message counts every kind of
+card and note the file carries, commentary cards and word glosses included
+(`describeWorkBundle`, `library/workBackup.ts`).
 
 ## 33. When Meaning is offered (2026-11-16, by reading)
 

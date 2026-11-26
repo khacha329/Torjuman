@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import type { WorkBundle } from '../../platform/storage/StorageAdapter';
+import { describeWorkBundle } from '../../library/workBackup';
 import { saveFile } from '../../lib/saveFile';
 import { Button } from '../kit';
 import { Section } from './Section';
@@ -23,19 +24,25 @@ export function BackupSection() {
   const [status, setStatus] = useState<string | null>(null);
   const workFileRef = useRef<HTMLInputElement>(null);
 
+  // Every failure ends in a message. Without the `try` (FOUND_ISSUES 32) a
+  // quota error or a refused download left "Preparing…" on screen for good,
+  // and nothing said the backup had not been made.
   const exportWork = async () => {
     setStatus('Preparing…');
-    const bundle = await storage.exportWork();
+    try {
+      const bundle = await storage.exportWork();
 
-    await saveFile(
-      new Blob([JSON.stringify(bundle)], { type: 'application/json' }),
-      `hashiya-work-${new Date().toISOString().slice(0, 10)}.json`,
-    );
+      await saveFile(
+        new Blob([JSON.stringify(bundle)], { type: 'application/json' }),
+        `hashiya-work-${new Date().toISOString().slice(0, 10)}.json`,
+      );
 
-    setStatus(
-      `Exported ${bundle.cards.length} translation card(s), ${bundle.explanationCards.length} explanation(s), ` +
-        `${bundle.marks.length} mark(s), ${bundle.glossary.length} glossary entries.`,
-    );
+      setStatus(`Exported ${describeWorkBundle(bundle)}.`);
+    } catch (caught) {
+      setStatus(
+        `Export failed, so no backup was saved: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
   };
 
   const importWork = async (file: File) => {
