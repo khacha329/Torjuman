@@ -1240,10 +1240,11 @@ no «وا», «ت», «ا» or «ه». The edge is a lookaround over `\p{L}\p{M}
 - A formula right after any other letter, a combining mark, a tatweel or ﷺ
   («كرواه», «المتفق عليه», a part-vowelled «وَرواه») no longer cuts there;
   the cut moves to the next formula at a word's start, if any, and
-  `queryPasses` (`hadithText.ts`) then runs one pass, not two. The
-  part-vowelled case is 75's, and its fix takes it.
-- After «قالوا» with no colon or «؛» in the next 40 characters, the isnād
-  search moves on: it closes at a later closer (possibly a «فقال:» inside the
+  `queryPasses` (`hadithText.ts`) then runs one pass, not two, unless
+  something else was stripped (the isnād, the entry number, edge
+  whitespace). The part-vowelled case is 75's, and its fix takes it.
+- After «قالوا», with no «:» or «؛» in the window of 40 after the phrase that
+  opened the isnād (a «.» also ends that window), the isnād search moves on: it closes at a later closer (possibly a «فقال:» inside the
   matn) or not at all, and then the chain stays in the shingles. Rare.
 - Everything that read the fragment reads clean text: a «» ورواه مسلم» after a
   closing mark no longer folds to «و», so `quotationOverrun` no longer shows
@@ -1258,8 +1259,9 @@ Comments and checks that cite 74: `SHORT_QUOTE_MAX_RAW_WORDS`
 (`hadithJson.ts`) and the report's `over-stripped` (`hadithJsonReport.ts`) are
 rewritten; `enrich.ts` ~578 and H's raw-word guard (~798) are still true; V's
 "over-stripped (agrees only unstripped)" case (`verify-parsers.ts` ~6126)
-now passed by the word-count branch, so it has a longer prefix, an entry that
-holds only the tail, and pins `wordsAfter`. Still cut as before, as the
+had come to pass by the word-count branch instead; it now has a longer
+prefix and an entry that holds only the tail, and pins `wordsAfter` (5) and
+`own` (0 of 2), so V itself checks that only the unstripped text agrees. Still cut as before, as the
 review noted: a bare «أخرجه» (he took him out) or «فأخرجه» in a matn's own
 words, and a spaced «و رواه» still leaves «و».
 
