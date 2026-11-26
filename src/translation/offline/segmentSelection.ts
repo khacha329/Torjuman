@@ -344,11 +344,13 @@ function blockJoin(previous: Block, next: Block): string {
  * as cover: a verse quoted in a matn is inside the ḥadīth (FOUND_ISSUES 61),
  * so a piece added here that encloses it reads it in the ḥadīth's Arabic, as
  * the detector's whole-block entity does. (A verse that straddles the edge
- * between such a piece and a ḥadīth entity's piece, in either direction, or
- * that starts where such a piece starts and runs longer, is emitted as a
- * verse, with its whole muṣḥaf text, and the ḥadīth piece it overlaps is shown
- * only from where the verse ends or not at all, as 61 describes for a verse
- * across a ḥadīth's edge. None of it is prose.)
+ * between such a piece and a ḥadīth entity's piece, in either direction,
+ * overlaps both: the piece it starts in is shown whole, so the verse's opening
+ * reads twice, there and in its muṣḥaf text; the verse is emitted with that
+ * whole text; and the piece it runs into is shown from where the verse ends.
+ * A verse that starts where such a piece starts and runs longer is emitted
+ * first, and the piece is shown from its end or not at all. This is 61's
+ * verse across a ḥadīth's edge. None of it is prose.)
  */
 function uncoveredMatn(pieces: readonly Piece[], from: number, to: number): Piece[] {
   const hadith = pieces.filter((piece) => piece.type === 'hadith').sort((a, b) => a.start - b.start);

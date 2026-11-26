@@ -1349,8 +1349,8 @@ with the existing QURAN_UNRESOLVED_NOTE, as 71 does for a matn. That needs
 the owner's word: the parser's `quran` span kind is a guess (a citation
 follows, or the text is densely vowelled: `shamela/parsePage.ts` ~251), so an
 unresolved one is not always a verse, and cutting it would keep commentary
-from the model too. Left unfixed: the owner asked for it to be recorded only (2026-11-26;
-DECISIONS, "Answered for lane B3").
+from the model too. Left unfixed: the owner asked for it to be recorded only
+(2026-11-26; DECISIONS, "Answered for lane B3").
 
 ## 78. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
 
@@ -1362,12 +1362,16 @@ paragraph, which the parser marks as an inline span of kind `quote` ("a
 quoted lemma or prophetic speech in ((...))", `types/book.ts` ~139), is never
 an entity, so on device `segmentSelection` leaves it in `prose` and the
 model translates it, beside the verified segments of the same card. Since 71
-this is the remaining way ḥadīth text reaches the on-device model. Not
-measured. Pre-existing; not caused by lane B3. A fix needs the owner's word,
-as 77's case 3 does: the `quote` kind also covers a lemma the commentary
-explains, which is commentary and should be translated, so cutting every
-`quote` span would keep that from the model too. Left unfixed: the owner asked for it to be recorded only (2026-11-26;
-DECISIONS, "Answered for lane B3").
+this is the remaining way for prophetic speech that the parser marks as a
+quotation. Speech it does not mark reaches the model too: in no styled run,
+in a styled run without brackets (`emphasis`), in a single-bracket run taken
+for a verse (77's case 3), or in a book whose matns are not typed
+`hadith_matn`. Not measured. Pre-existing; not caused by lane B3. A fix
+needs the owner's word, as 77's case 3 does: the `quote` kind also covers a
+lemma the commentary explains, which is commentary and should be translated,
+so cutting every `quote` span would keep that from the model too. Left
+unfixed: the owner asked for it to be recorded only (2026-11-26; DECISIONS,
+"Answered for lane B3").
 
 ## 79. The check scripts do not typecheck, and T does not see them (2026-11-26, measured)
 
