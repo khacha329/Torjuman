@@ -956,11 +956,15 @@ its computed style, as on Android vh and innerHeight differ. R's new
 scenario "a popover with too little room on either side opens as the
 sheet" makes the window 960×340 (the panel still beside the text) and
 centres the verse: before this follow-up the popover was capped beside it;
-now it opens as the sheet. In U at 960×600, measured: the ḥadīth popover
-captures (`reader-hadith`, the `reader-hadith-sharh-*` states) now open as
-the sheet, and `reader-quran` stays a popover, capped to 203 px beside its
-verse; every landscape popover capture's DOM also gains the content wrapper.
-Those captures are re-baselined in lane A2's last commit.
+now it opens as the sheet. In U at 960×600, measured on the final code
+(the threshold on the content): `reader-hadith`, six of the seven
+`reader-hadith-sharh-*` states and `reader-quran` now open as the sheet;
+`reader-hadith-sharh-short-too-short` stays a popover, capped to 258 px, with
+the content wrapper, and is now U's only landscape popover capture (R still
+covers placement). Those captures are re-baselined in lane A2's U commit,
+whose message describes an earlier threshold's result; this is the
+correct one. Their screenshot hashes are left as recorded (every PNG
+differs on the owner's PC) and need re-recording where PNGs are stable.
 
 ## 48. The margin menu re-registers its outside tap on every reader render (2026-11-17, by reading, fixed in lane A2)
 
