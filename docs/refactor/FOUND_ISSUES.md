@@ -1205,3 +1205,32 @@ Found by the same review. The regexes run on the raw block text, before
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
+
+## 76. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+
+Found by lane B2 while wiring 62. `subscribe` in `app/useOnline.ts` adds the
+same two functions (`handleOnline`, `emit`) to `window` for every subscriber,
+and `addEventListener` registers a given function once, so there is one
+listener of each, shared. The first subscriber to unsubscribe (any screen
+that reads `useOnline()` and closes: a sheet, the catalog) removes both for
+every other one, and from then until a new subscriber mounts nothing hears
+the browser's `online` and `offline` events. The signal is still right when
+something re-reads it (the next render reads `navigator.onLine`), but a
+screen left open does not update by itself. Not caused by 62 (the shared
+`emit` behaved the same). Left unfixed.
+
+## 77. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
+
+Found by lane B2, which ran the checks on the owner's PC (Windows 11, Node
+22.23.1, Playwright 1.63's Chromium 153). On clean `main` (`5e72107`), U
+matches 143 of 294 files: 127 screenshots differ, as font rendering differs
+from the Linux container where the record was made, and six DOM captures
+differ — `reader-retranslate.html`, `settings--offline-translation.html` and
+`settings--offline-downloading.html` at both sizes — for a reason not found
+(their text shows nothing platform-specific). Q, P and D reproduce their
+records exactly there. Also on that PC, git's system config sets
+`core.autocrlf=true`, so a checkout turns the LF records into CRLF and Q
+fails on "the header or the formatting" until the clone is set to
+`core.autocrlf=false` and checked out again. So U can be re-recorded only in
+the Linux container; on the PC it can only be compared with a dump of `main`
+made there (`VERIFY_OUT`, as the script's header describes). Left as it is.
