@@ -1241,6 +1241,47 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       partial.segments.filter((segment) => segment.type === 'hadith').map((segment) => segment.arabic).join('') === matn,
       partial.segments,
     );
+
+    // A verse entity inside the matn and no ḥadīth entity (stored entities
+    // from before a re-detection): the verse is not cover, so the ḥadīth piece
+    // encloses it and it is read in the ḥadīth's Arabic, as under the
+    // detector's whole-block entity (FOUND_ISSUES 61).
+    const verseAt = matn.indexOf(' ') + 1;
+    const verseEnd = matn.indexOf(' ', matn.indexOf(' ', verseAt) + 1);
+    const verse: Entity = {
+      ...matnEntity(blocks[1], '1:1'),
+      id: 'ent-verse-in-matn',
+      type: 'quran',
+      startOffset: verseAt,
+      endOffset: verseEnd,
+      textUthmani: matn.slice(verseAt, verseEnd),
+    };
+    const verseOnly = cut(blocks, [verse], ['s1', 0], ['s2', after.length]);
+    expect('71: a verse entity in a matn with no ḥadīth entity: prose, ḥadīth, prose', JSON.stringify(types(verseOnly)) === '["prose","hadith","prose"]', types(verseOnly));
+    expect('71: …the verse inside the ḥadīth’s Arabic, the matn whole, none of it offered', verseOnly.segments[1]?.arabic === matn && !reachesModel(verseOnly, matn), verseOnly);
+
+    // Two matn blocks in one selection, with nothing between them: two
+    // ḥadīth, not one, and nothing offered.
+    const second = text(words(9));
+    const twoMatns = [blocks[0], blocks[1], blockOf('m2', 3, 'hadith_matn', second, { hadithNumber: '13' })];
+    const both = cut(twoMatns, [], ['s1', 0], ['m2', second.length]);
+    expect('71: two matn blocks, no entities: prose, ḥadīth, ḥadīth', JSON.stringify(types(both)) === '["prose","hadith","hadith"]', types(both));
+    expect('71: …neither matn offered', !reachesModel(both, matn) && !reachesModel(both, second), both.prose);
+
+    // Two ḥadīth entities that overlap, with a gap before the first and after
+    // the second: the gaps are ḥadīth too, the overlap shown once.
+    const cuts = [0, 3, 6, 9].map((n) => matn.split(' ').slice(0, n).join(' ').length + (n ? 1 : 0));
+    const overlapping = [
+      matnEntity(blocks[1], 'seg#12', { id: 'ent-a', startOffset: cuts[1], endOffset: cuts[3] - 1 }),
+      matnEntity(blocks[1], 'seg#12', { id: 'ent-b', startOffset: cuts[2], endOffset: matn.length - 4 }),
+    ];
+    const overlapped = cut(blocks, overlapping, ['m1', 0], ['m1', matn.length]);
+    expect('71: overlapping ḥadīth entities with gaps: nothing offered', overlapped.prose.length === 0, overlapped);
+    expect(
+      '71: …and the matn is shown once, end to end',
+      overlapped.segments.map((segment) => segment.arabic).join('') === matn,
+      overlapped.segments.map((segment) => segment.arabic),
+    );
   }
 }
 

@@ -158,7 +158,7 @@ export function segmentSelection(options: {
     const rank = (piece: Piece) => (piece.type === 'hadith' ? 0 : 1);
     covering.sort((a, b) => a.start - b.start || b.end - a.end || rank(a) - rank(b));
 
-    // Walk the block's share, emitting prose between entities. A piece that
+    // Walk the block's share, emitting prose between pieces. A piece that
     // lies wholly inside one already emitted (a verse quoted in a ḥadīth) is
     // skipped, and one that runs past it emits only the part not yet shown.
     // (Until FOUND_ISSUES 61 each piece was sliced from its own start after
@@ -262,8 +262,11 @@ export function segmentSelection(options: {
  * The parts of a matn block's share [from, to) that no ḥadīth piece covers,
  * as ḥadīth pieces with no entity (FOUND_ISSUES 71). Verses are not counted
  * as cover: a verse quoted in a matn is inside the ḥadīth (FOUND_ISSUES 61),
- * so a piece added here around it reads it in the ḥadīth's Arabic, as the
- * detector's whole-block entity does.
+ * so a piece added here that encloses it reads it in the ḥadīth's Arabic, as
+ * the detector's whole-block entity does. (A verse that runs from such a
+ * piece into a ḥadīth entity's piece is emitted as a verse for its part, as
+ * 61 describes for a verse straddling a ḥadīth's edge. Either way none of it
+ * is prose.)
  */
 function uncoveredMatn(pieces: readonly Piece[], from: number, to: number): Piece[] {
   const hadith = pieces.filter((piece) => piece.type === 'hadith').sort((a, b) => a.start - b.start);

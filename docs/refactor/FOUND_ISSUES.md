@@ -1111,20 +1111,26 @@ unfixed.
 
 **Fixed in lane B3** (commit "71." on `claude/lane-b3-offline-text`, at the
 owner's word in the lane brief, 2026-11-26; checked by H, which reproduced it
-first: with no entities the whole matn was the one prose span). The first of
-the two fixes below: `segmentSelection` cuts a `hadith_matn` block by its
-type. Every part of the block's selected share that no ḥadīth entity covers
-becomes a ḥadīth piece with no reference: Arabic plus the no-offline-source
-note, nothing looked up. With the detector's entity, which spans the whole
-block, nothing changes. Not changed: `ReaderScreen`'s load still has no
-rejection handler (lane A2's file); it no longer matters to the invariant.
+first: with no entities the matn went to the model inside the one prose span,
+merged with the commentary on both sides). The first of the two fixes below:
+`segmentSelection` cuts a `hadith_matn` block by its type. Every part of the
+block's selected share that no ḥadīth entity covers becomes a ḥadīth piece
+with no reference: Arabic plus the no-offline-source note, nothing looked up.
+With the detector's entity, which spans the whole block, nothing changes. Not
+changed: `ReaderScreen`'s load still has no rejection handler (lane A2's
+file; FOUND_ISSUES 76); it no longer matters to the ḥadīth invariant.
 
-A consequence the owner should know: an on-device card made before the
+Consequences the owner should know. An on-device card made before the
 entities load shows such a ḥadīth with the note even where a verified
 English is cached, and it is made under the same cache key as one made after,
 so the cache serves it until it is retranslated. That is the safe side of
 the trade; refusing the translation until the entities are in would not have
-covered a shared chapter that carries none.
+covered a shared chapter that carries none. And, as for 68: an on-device card
+made in that window before this fix holds a prose segment with the model's
+English for the matn; its cache key is unchanged (correctly: trap 5), so
+nothing marks it stale, and it stays, in backups and shares too, until
+retranslated. Verses have the same gap and are not fixed by this: FOUND_ISSUES
+77.
 
 Found by the review of lane B's fix to 68. **A risk to the ḥadīth
 invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
@@ -1205,3 +1211,40 @@ Found by the same review. The regexes run on the raw block text, before
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
+
+## 76. The reader's entity load has no rejection handler (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 71. `ui/reader/ReaderScreen.tsx`
+(~306–309) runs `void load.then(...)` over `ensureEntities` (or
+`listEntities` in a shared view) with no `catch`. A rejected load leaves the
+reader's `entities` at `[]` for the whole visit, with no notice and an
+unhandled rejection in the console: no verse or ḥadīth is marked or tappable,
+and nothing says why. Since 71 the on-device cut no longer depends on it for
+ḥadīth; verses still do (77). Lane A2's file. Not measured. Left unfixed.
+
+## 77. On device, a verse without an entity reaches the model (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 71. **Against "Scripture is never
+added to the prose list"** (README, "The invariant"; the header of
+`translation/offline/segmentSelection.ts`). `segmentSelection` cuts a verse
+out of the prose only where a `quran` entity marks it. It reads neither a
+block's type nor its spans, so verse text with no entity goes into `prose`,
+and the on-device model translates it, in three cases:
+
+1. before the reader's entities load, after the load fails (76), or in a
+   shared chapter whose bundle carries none (the gap 71 closed for ḥadīth);
+2. a `quran` block (`shamela/structure.ts` ~66, `isEntirelyQuran`) whose
+   verse the detector did not resolve;
+3. an inline span of kind `quran` that the detector did not resolve. The
+   detector leaves an unmatched verse unmarked; Settings → Verse and ḥadīth
+   detection lists it, and `segmentSelection`'s own comment says so ("an
+   unmatched verse is left unmarked").
+
+The quoted ḥadīth invariant is unaffected. Not measured. Pre-existing; not
+caused by lane B3. A fix could cut a `quran` block and every `quran` span
+not covered by a verse entity as a verse piece with no reference, emitted
+with the existing QURAN_UNRESOLVED_NOTE, as 71 does for a matn. That needs
+the owner's word: the parser's `quran` span kind is a guess (a citation
+follows, or the text is densely vowelled: `shamela/parsePage.ts` ~251), so an
+unresolved one is not always a verse, and cutting it would keep commentary
+from the model too. Left unfixed.
