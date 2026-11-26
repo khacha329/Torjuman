@@ -1183,11 +1183,13 @@ Left unfixed.
 Found by the review of lane UI-1's tabs. `MissingResource`
 (`ui/reader/QuranTabs.tsx` ~224) tells the reader, under the Qurʾān sheet's
 QUL tabs, to "Download one from QUL in a browser and import it in Settings →
-Reference works." QUL files are imported in the QUL resources section
+Reference works" ("Settings → Library → Reference works" since lane UI-1
+named the tabs). QUL files are imported in the QUL resources section
 (`ui/settings/QulResources.tsx`); Reference works holds dictionaries and
 commentaries and says nothing of QUL. Its only caller is `QuranSheet.tsx`,
-for a QUL resource. Both sections are on Settings' Library tab, so the
-button lands on the right tab either way. Pre-existing. Left unfixed.
+for a QUL resource. Both sections are on Settings' Library tab, which its
+"Open Settings" button opens since lane UI-1, so the button lands on the
+right tab either way. Pre-existing. Left unfixed.
 
 ## 77. Check U's screenshots of a tall Settings section are cut off (2026-11-26, measured)
 
@@ -1199,3 +1201,16 @@ tab bar, above the scrolling area, moves it up to about 496 px, so such
 PNGs show about 46 px less. The "Not captured" list in
 `scripts/verify-markup.mjs` already records the case for
 `settings--translation-profiles--claude.png`. Left as it is.
+
+## 78. The "no key yet" badges do not notice a key being saved (2026-11-26, by reading)
+
+Found by the review of lane UI-1's tabs. Settings → Translation's provider
+cards (`ui/settings/TranslationSection.tsx`, "no key yet") and Ḥadīth
+source (`ui/settings/HadithSourceSection.tsx`) read the key store
+(`services/secrets.ts`) while rendering, and the store has no subscription.
+So saving a key in API keys leaves "no key yet" showing on the other two
+until they render again for another reason (leaving and re-opening
+Settings, or a change in the app's context). Pre-existing on main, where the
+three sections sat in one column. In lane UI-1's first commit every tab tap
+happened to re-render them, which hid it; the second builds the tabs' contents
+once, as main's column was, and it shows as before. Left unfixed.

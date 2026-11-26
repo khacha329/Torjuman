@@ -862,7 +862,7 @@ function NoKeyBanner() {
         two minutes.
       </span>
       <a
-        href={hrefFor({ name: 'settings' })}
+        href={hrefFor({ name: 'settings', tab: 'translation' })}
         className="rounded border border-emerald-300 bg-white px-2 py-0.5 font-medium hover:bg-emerald-100"
       >
         Add a key

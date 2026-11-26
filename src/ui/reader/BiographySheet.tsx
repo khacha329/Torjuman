@@ -170,8 +170,11 @@ export function BiographySheet({
             ) : (
               <>
                 , or add another work in{' '}
-                <button className="underline" onClick={() => navigate({ name: 'settings' })}>
-                  Settings → Add from catalog
+                <button
+                  className="underline"
+                  onClick={() => navigate({ name: 'settings', tab: 'library' })}
+                >
+                  Settings → Library → Add from catalog
                 </button>
                 .
               </>

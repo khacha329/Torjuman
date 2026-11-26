@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOnline } from '../app/useOnline';
+import { hrefFor } from '../app/router';
 import {
   estimateMinutes,
   groupEntries,
@@ -106,7 +107,11 @@ export function CatalogScreen({
             headers, so a browser needs a proxy in front of it and this build was made
             without one. The list below is still the useful half: import these on a desktop
             with <code className="rounded bg-amber-100 px-1">npm run dev</code>, export each
-            book from Settings → Library transfer, and load the files here. To import
+            book from{' '}
+            <a className="underline" href={hrefFor({ name: 'settings', tab: 'data' })}>
+              Settings → Data → Library transfer
+            </a>
+            , and load the files here. To import
             directly instead, deploy{' '}
             <code className="rounded bg-amber-100 px-1">proxy/worker.js</code> and set the
             repository variable <code className="rounded bg-amber-100 px-1">PROXY_URL</code>.

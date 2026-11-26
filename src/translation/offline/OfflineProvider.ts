@@ -513,7 +513,7 @@ async function runLoad(
           `Requested ${diagnostics.requestedDtype} (${diagnostics.expectedSuffix}), ` +
           `graph optimisation ${diagnostics.graphOptimization}; ` +
           `${diagnostics.files.length} file(s) loaded, ${fromNetwork} from the network. ` +
-          `See Settings → Offline translation → diagnostics. Underlying error: ${diagnostics.error}`
+          `See Settings → Translation → Offline translation → diagnostics. Underlying error: ${diagnostics.error}`
         : `The offline model could not be loaded: ${diagnostics.error}`,
     );
   }

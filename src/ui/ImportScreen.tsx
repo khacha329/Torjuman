@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
-import { navigate } from '../app/router';
+import { hrefFor, navigate } from '../app/router';
 import { createBookFromPreview, fetchBookPreview, type BookPreview } from '../ingest/importer';
 import { parseBookInput } from '../shamela/urls';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
@@ -107,7 +107,11 @@ export function ImportScreen() {
                   the <code className="rounded bg-amber-100 px-1">PROXY_URL</code> repository
                   variable, which makes importing work here; or import on a desktop with{' '}
                   <code className="rounded bg-amber-100 px-1">npm run dev</code> and move the
-                  book across with <strong>Library transfer</strong> in Settings. Everything
+                  book across with{' '}
+                  <a className="underline" href={hrefFor({ name: 'settings', tab: 'data' })}>
+                    <strong>Library transfer</strong> in Settings
+                  </a>
+                  . Everything
                   else here works offline.
                 </div>
               )}

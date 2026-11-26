@@ -219,7 +219,7 @@ export function QuranSheet({
             <div className="mt-3">
               <MissingResource
                 what="QUL resource"
-                onOpenSettings={() => navigate({ name: 'settings' })}
+                onOpenSettings={() => navigate({ name: 'settings', tab: 'library' })}
               />
             </div>
           )}
