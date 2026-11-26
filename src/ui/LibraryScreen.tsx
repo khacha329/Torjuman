@@ -31,8 +31,18 @@ export function LibraryScreen() {
   }, [refresh, progress?.fetchedPages]);
 
   const remove = async (book: Book) => {
+    // A chapter published from the book outlives it (FOUND_ISSUES 19), which
+    // is worth saying before the yes, not discovering after.
+    // A failed read only loses the extra sentence; the delete is still asked.
+    const published = await storage
+      .listShareRecords()
+      .then((records) => records.some((record) => record.bookId === book.id))
+      .catch(() => false);
     const confirmed = window.confirm(
-      `Delete "${book.title}"?\n\nThis removes the imported text, and any translation cards anchored to it, from this device. It cannot be undone.`,
+      `Delete "${book.title}"?\n\nThis removes the imported text, and any translation cards anchored to it, from this device. It cannot be undone.` +
+        (published
+          ? '\n\nChapters you published from it keep working for anyone with the link, and stay under Settings → Published chapters.'
+          : ''),
     );
     if (!confirmed) return;
     // A large book takes long enough to clear that an unchanged card reads as a

@@ -140,8 +140,6 @@ interface StoreSpec<S extends StoreNames<Schema>> {
   indexes?: readonly IndexSpec<S>[];
   /** How a database opened at oldVersion >= 1 gets this store. */
   onUpgrade: 'assumed' | 'if-missing' | 'recreate';
-  /** Created when the named store is missing, not when this one is (the QUL trio). */
-  createdWith?: StoreNames<Schema>;
   /**
    * Rows filed under a book, cleared with it by `deleteBook`. Only a store
    * with a `byBook` index can carry it: that index is what the clearing walks.
@@ -263,9 +261,8 @@ const TABLE = {
       { name: 'byResourceKey', keyPath: ['resourceId', 'key'] },
     ],
     onUpgrade: 'if-missing',
-    createdWith: 'qulResources',
   },
-  qulCompilations: { keyPath: 'cacheKey', onUpgrade: 'if-missing', createdWith: 'qulResources' },
+  qulCompilations: { keyPath: 'cacheKey', onUpgrade: 'if-missing' },
   // Derived from each book's contents, so indexed only by book: a lookup
   // reads every imported biographical work anyway, and there are three of
   // them at most.
@@ -367,19 +364,23 @@ export function upgradeDatabase(db: IDBPDatabase<Schema>, oldVersion: number): v
     // detection rather than migrated.
     //
     // The names are read once, before anything is created, and every guard
-    // asks that snapshot. Asking the live list would find `qulResources` just
-    // created and skip `qulEntries` and `qulCompilations`, which are created
-    // with it (their `createdWith`), exactly as the one hand-written guard over
-    // all three did. Creation follows the table's order; it cannot be
-    // observed, since store and index names are listed sorted and a failed
-    // creation aborts the whole upgrade.
+    // asks that snapshot. Each `if-missing` store is guarded by its own name.
+    // Until lane C the three QUL stores shared one guard, `qulResources`'s
+    // (a `createdWith` field, kept from the one hand-written guard over all
+    // three), so a database with `qulResources` but no `qulEntries` never got
+    // `qulEntries`, and one with `qulEntries` but no `qulResources` could not
+    // open at all: creating `qulEntries` again threw a ConstraintError and
+    // aborted the upgrade (FOUND_ISSUES 21). Neither arises from the app's own
+    // code; check D's three `odd-v10-without-*` databases pin them. Creation
+    // follows the table's order; it cannot be observed, since store and index
+    // names are listed sorted and a failed creation aborts the whole upgrade.
     const existing = new Set(db.objectStoreNames);
     for (const name of Object.keys(STORES) as StoreNames<Schema>[]) {
       const spec = STORES[name];
       if (spec.onUpgrade === 'recreate') {
         if (existing.has(name)) db.deleteObjectStore(name);
         createStore(db, name);
-      } else if (spec.onUpgrade === 'if-missing' && !existing.has(spec.createdWith ?? name)) {
+      } else if (spec.onUpgrade === 'if-missing' && !existing.has(name)) {
         createStore(db, name);
       }
     }

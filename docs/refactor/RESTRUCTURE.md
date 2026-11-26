@@ -82,8 +82,9 @@ And concretely:
   so "one file plus one entry" cannot hold literally.)
 - **Adding a store** is one entry in one schema table that both upgrade paths
   read: `STORES` in `platform/storage/idbSchema.ts`, giving the store's key
-  path, its indexes, how an existing database gets it (`onUpgrade`, and
-  `createdWith` for a store created together with another) and `perBook`
+  path, its indexes, how an existing database gets it (`onUpgrade`; until
+  lane C also `createdWith`, for a store created together with another,
+  removed with FOUND_ISSUES 21) and `perBook`
   when its rows belong to a book. The entry is not the whole change, because
   a store has methods and the database has a version. A new store also
   needs its `Schema` type; its `StorageAdapter` methods, written as functions
@@ -188,7 +189,7 @@ walks into:
   Since Phase 4 both branches of `upgradeDatabase` (`idbSchema.ts`) read the
   one `STORES` table, so they cannot disagree about which stores exist or
   how a *new* store is built. They can still differ in two ways: a store's
-  `onUpgrade` or `createdWith` can be wrong (D's upgrade and odd-database
+  `onUpgrade` can be wrong (D's upgrade and odd-database
   scenarios show it, given an old-version database without the store), and
   a change to an existing store's indexes or key path reaches fresh installs
   only, since the upgrade branch never alters a store that exists (§2).

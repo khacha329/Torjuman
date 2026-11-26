@@ -239,7 +239,16 @@ export default defineConfig({
             files: [
               {
                 name: 'transfer',
-                accept: ['application/gzip', 'application/x-gzip', 'application/octet-stream', '.gz'],
+                // JSON for the work backup, which since lane C can be shared
+                // here too; the receive screen tells the two apart.
+                accept: [
+                  'application/gzip',
+                  'application/x-gzip',
+                  'application/octet-stream',
+                  '.gz',
+                  'application/json',
+                  '.json',
+                ],
               },
             ],
           },
