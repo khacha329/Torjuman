@@ -7,6 +7,7 @@ import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
 import type { TranslationResult } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
+import { translateWithFallback } from '../../translation/providers/fallback';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { findLocalHadith } from '../../retrieval/hadithJson';
@@ -290,8 +291,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         // Compared against the card's own provider and model, so simply
         // switching provider in settings does not mark every existing card
         // stale — only a change that would actually alter this card's output.
-        providerId: card.providerId,
-        model: card.model,
+        // A card a fallback model answered is keyed by the model asked for.
+        providerId: card.fallback?.fromProviderId ?? card.providerId,
+        model: card.fallback?.fromModel ?? card.model,
       }),
     [activeProfile, glossaryHash],
   );
@@ -418,8 +420,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           return finished;
         }
 
-        const result = await providerFor(useProviderId).translate(
-          translationRequestFor({
+        // The profile's model first; if it is busy, the next one in the
+        // fallback chain (providers/fallback.ts), and the card records which
+        // answered. Its cache key stays the one asked for, so selecting the
+        // passage again serves this card (the owner's answer, 2026-11-26).
+        const answered = await translateWithFallback({
+          request: translationRequestFor({
             anchor,
             before,
             after,
@@ -429,9 +435,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             useModel,
             known,
           }),
-          apiKey,
-          (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
-        );
+          providerId: useProviderId,
+          keyFor: (id) => (id === useProviderId ? apiKey : secrets.getProviderKey(id)),
+          crossProvider: settings.crossProviderFallback,
+          onChunk: (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
+        });
+        const result = answered.result;
 
         // Measured before enrichment, against the Arabic that was sent. A
         // well-formed answer that quietly stopped half way through the passage
@@ -440,6 +449,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         const finished: TranslationCard = {
           ...card,
+          providerId: answered.providerId,
+          model: answered.model,
+          ...(answered.fallback ? { fallback: answered.fallback } : {}),
           status: 'complete',
           usedExternalLookup: result.searched === true,
           usage: result.usage,
@@ -483,7 +495,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         upsert(finished);
         await dropReplaced(replaces);
 
-        setStats((previous) => withCloudRequest(previous, useProviderId, result));
+        setStats((previous) => withCloudRequest(previous, answered.providerId, result));
 
         return finished;
       } catch (caught) {
@@ -507,6 +519,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       http,
       settings.quranTranslationId,
       settings.quranTranslationName,
+      settings.crossProviderFallback,
       storage,
       upsert,
       dropReplaced,

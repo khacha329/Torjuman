@@ -187,6 +187,15 @@ export function failedCard(card: TranslationCard, caught: unknown): TranslationC
 
   const failed: TranslationCard = {
     ...card,
+    // A fallback model gave this failure (providers/fallback.ts): the card
+    // names it, as a finished card names the model that answered.
+    ...(error.answeredBy
+      ? {
+          providerId: error.answeredBy.providerId,
+          model: error.answeredBy.model,
+          fallback: error.answeredBy.fallback,
+        }
+      : {}),
     status: 'error',
     error: error.message,
     errorKind: error.kind,

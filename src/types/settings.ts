@@ -63,4 +63,13 @@ export interface AppSettings {
    * addition to them, never a replacement.
    */
   compileEnabled: boolean;
+  /**
+   * Whether a translation whose provider is busy on every model may be
+   * answered by the other provider: Claude Haiku 5.5 for Gemini, the Gemini
+   * models for Claude (translation/providers/fallback.ts). On by default, the
+   * owner's choice (2026-11-26). Within a provider the fallback always runs,
+   * and it never reaches the on-device model. Settings saved before it
+   * existed get it from AppContext's defaults.
+   */
+  crossProviderFallback: boolean;
 }

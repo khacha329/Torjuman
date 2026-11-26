@@ -44,6 +44,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   hadithSourceId: 'sunnah',
   // The retrieved tabs are the primary interface. Compiling is opt-in.
   compileEnabled: false,
+  // A busy provider may hand a translation to the other one (lane B2).
+  crossProviderFallback: true,
 };
 
 interface AppServices {

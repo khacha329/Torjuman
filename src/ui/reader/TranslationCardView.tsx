@@ -345,6 +345,12 @@ function ProviderBadge({ card }: { card: TranslationCard }) {
       {card.usedExternalLookup && card.providerId === 'anthropic' && (
         <span className="text-[10px] text-muted">· web search</span>
       )}
+      {/* The badge above names the model that answered; when that is not
+          the profile's, this says which was asked and why it did not
+          answer (lane B2, providers/fallback.ts). */}
+      {card.fallback && (
+        <span className="w-full text-[10px] text-amber-800">{card.fallback.note}</span>
+      )}
     </div>
   );
 }
