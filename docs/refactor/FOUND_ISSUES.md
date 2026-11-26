@@ -1478,3 +1478,16 @@ then the block's tail again as a ḥadīth segment with the no-offline-source
 note, so the tail's words read twice. Before 71 the tail went to the model.
 Nothing reaches the model; the detector's entities span their block, so only
 stale entities do this. Not measured. Left unfixed.
+
+## 86. A verse that starts with a stored ḥadīth entity and runs past it drops the ḥadīth (2026-11-26, by reading)
+
+Found by the review of lane B3's record for 71 (b1a0d20). In
+`segmentSelection`, a verse whose share starts at the same offset as a ḥadīth
+entity's piece and ends after it sorts first (the longer piece), and the
+ḥadīth piece, lying wholly inside it, is skipped: its segment, with its
+verified English or its no-offline-source note, is missing from the card.
+This is the skip 72 fixed for an exact tie, here for a verse that outruns
+the ḥadīth. With the detector's whole-block entity a verse's share can never
+outrun the ḥadīth's, so it needs a stored entity short of its block (85's
+precondition). Nothing reaches the model. Pre-existing (61's skip and the
+sort). Not measured. Left unfixed.
