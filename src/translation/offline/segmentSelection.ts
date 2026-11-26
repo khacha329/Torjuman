@@ -91,6 +91,8 @@ export function segmentSelection(options: {
    * block, and only the first is a segment (FOUND_ISSUES 69).
    */
   const verseSegments = new Map<string, { slot: number; block: Block }>();
+  /** The block the last prose text came from, for the join to the next (FOUND_ISSUES 70). */
+  let proseBlock: Block | null = null;
 
   for (const block of blocks) {
     if (block.order < startOrder || block.order > endOrder) continue;
@@ -178,17 +180,17 @@ export function segmentSelection(options: {
       if (piece.end <= cursor) continue;
       const start = Math.max(piece.start, cursor);
       if (start > cursor) {
-        pushProse(block.text.slice(cursor, start));
+        pushProse(block.text.slice(cursor, start), block);
       }
       pushEntity(piece, block.text.slice(start, piece.end), block);
       cursor = piece.end;
     }
-    if (cursor < to) pushProse(block.text.slice(cursor, to));
+    if (cursor < to) pushProse(block.text.slice(cursor, to), block);
   }
 
   return { segments, prose };
 
-  function pushProse(text: string): void {
+  function pushProse(text: string, block: Block): void {
     if (text.trim() === '') return;
 
     // A takhrīj formula is finished here, from the fixed table, and never
@@ -212,18 +214,30 @@ export function segmentSelection(options: {
     }
 
     // Merge with a preceding prose segment so a sentence broken only by
-    // whitespace is not translated as two fragments.
+    // whitespace is not translated as two fragments. Two prose texts of one
+    // block always have a piece's segment between them (a later share of a
+    // verse, which adds none, starts its block), so this only ever joins one
+    // block's last prose to the next block's first, and what stands between
+    // them is `blockJoin`'s. Until FOUND_ISSUES 70 it was
+    // nothing: the last word of one block and the first of the next reached
+    // the model as one word. A newline between two paragraphs of a page keeps
+    // them two sentences, since `splitSentences` cuts at it; a space across a
+    // page break keeps a sentence that Shamela broke there whole, and one that
+    // ended there is still cut at its terminator. (Joining every edge with a
+    // newline would have split each sentence that runs over a page.)
     const previous = segments[segments.length - 1];
-    if (previous && previous.type === 'prose' && previous.english === '') {
-      previous.arabic += text;
+    if (previous && previous.type === 'prose' && previous.english === '' && proseBlock) {
+      previous.arabic += blockJoin(proseBlock, block) + text;
       const slot = prose[prose.length - 1];
       slot.text = previous.arabic;
+      proseBlock = block;
       return;
     }
 
     const slot = segments.length;
     segments.push({ type: 'prose', arabic: text, english: '', source: 'model' });
     prose.push({ slot, text });
+    proseBlock = block;
   }
 
   function pushEntity(piece: Piece, sourceText: string, block: Block): void {

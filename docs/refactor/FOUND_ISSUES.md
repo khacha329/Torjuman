@@ -1108,6 +1108,20 @@ is still read twice, once in the ḥadīth's Arabic. The exception is 72.)
 
 ## 70. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
 
+**Fixed in lane B3** (commit "70." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced it first: the two edge words fused into one). Weighed
+as the entry asks, and answered by the page: `pushProse` joins with
+`blockJoin`, a newline between two blocks of one page and a space across a
+page break. A block is one paragraph of a Shamela page (`parsePage.ts`, one
+per `<p>`), so two blocks of one page are two paragraphs, and the newline
+keeps them two sentences for `splitSentences`; Shamela breaks pages
+mid-sentence (`ingest/crawler.ts`), so across a page the space keeps a broken
+sentence whole, and one that did end there is still cut at its terminator.
+The cost: a paragraph that ends a page with no terminator (a heading, say)
+runs into the next page's first sentence. 69 joins a verse's shares the same
+way. Cache keys are unchanged (the key hashes the selection, not the cut), so
+on-device cards made before keep their glued text until retranslated.
+
 Found by the `torjuman-llm` review of lane B's fix to 61. `pushProse` in
 `translation/offline/segmentSelection.ts` merges a prose span into the one
 before it with `previous.arabic += text`, so the last word of one block and

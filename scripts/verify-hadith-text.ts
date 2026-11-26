@@ -69,6 +69,7 @@ import {
   segmentSelection,
   type SegmentedSelection,
 } from '../src/translation/offline/segmentSelection';
+import { splitSentences } from '../src/translation/offline/sentences';
 import { QuranEnglish, QuranIndex } from '../src/quran/quranIndex';
 import { stripApparatus } from '../src/retrieval/sharh';
 import type {
@@ -1336,6 +1337,40 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       verses(onePage).length === 1 && verses(onePage)[0].arabic === `${verseA}\n${verseB}`,
       verses(onePage),
     );
+  }
+
+  // FOUND_ISSUES 70. Prose that runs from one block into the next is one
+  // span, and the two blocks' edge words stay two words.
+  {
+    const partA = text(words(7));
+    const partB = text(words(7));
+    const pageBreak = [
+      blockOf('p1', 1, 'sharh', partA, { pageId: 'seg:p1' }),
+      blockOf('p2', 2, 'sharh', partB, { pageId: 'seg:p2' }),
+    ];
+    const lastOfA = partA.split(' ').at(-1)!;
+    const firstOfB = partB.split(' ')[0];
+    const across = cut(pageBreak, [], ['p1', 0], ['p2', partB.length]);
+    expect('70: two blocks of prose: one span', across.prose.length === 1 && across.segments.length === 1, across);
+    expect(
+      '70: …across a page break, joined by a space: the edge words stay apart',
+      across.prose[0]?.text === `${partA} ${partB}` && reachesModel(across, lastOfA) && reachesModel(across, firstOfB),
+      across.prose,
+    );
+    expect('70: …and a sentence Shamela broke at the page stays one sentence', splitSentences(across.prose[0]?.text ?? '').length === 1, splitSentences(across.prose[0]?.text ?? ''));
+
+    const onePage = cut([pageBreak[0], { ...pageBreak[1], pageId: 'seg:p1' }], [], ['p1', 0], ['p2', partB.length]);
+    expect('70: two paragraphs of one page: joined by a newline', onePage.prose[0]?.text === `${partA}\n${partB}`, onePage.prose);
+    expect('70: …so the model gets them as two sentences', splitSentences(onePage.prose[0]?.text ?? '').length === 2, splitSentences(onePage.prose[0]?.text ?? ''));
+
+    // Prose on both sides of a matn is not joined across it.
+    const withMatn = cut(
+      [pageBreak[0], blockOf('pm', 2, 'hadith_matn', text(words(9))), { ...pageBreak[1], order: 3 }],
+      [],
+      ['p1', 0],
+      ['p2', partB.length],
+    );
+    expect('70: prose before and after a matn: two spans, not one', withMatn.prose.length === 2 && JSON.stringify(types(withMatn)) === '["prose","hadith","prose"]', withMatn);
   }
 }
 
