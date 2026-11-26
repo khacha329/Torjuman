@@ -534,7 +534,7 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
     ],
   );
 
-  const { dragging, dragWidth } = usePanelControls({ settings, updateSettings });
+  const { beginDrag, dragWidth } = usePanelControls({ settings, updateSettings });
 
   const { headerRef, headerHeight } = useHeaderHeight({ loading, book });
 
@@ -738,8 +738,9 @@ export function ReaderScreen({ bookId }: { bookId: string }) {
           <>
             <div
               onPointerDown={(event) => {
-                dragging.current = true;
-                document.body.style.userSelect = 'none';
+                // A second pointer during a drag is not a new drag
+                // (FOUND_ISSUES 50).
+                if (!beginDrag(event.pointerId)) return;
                 // Captured, so a drag that leaves the narrow divider keeps
                 // coming to it; the events still bubble to the window
                 // listeners in usePanelControls, which do the resizing.

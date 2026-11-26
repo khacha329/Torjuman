@@ -881,13 +881,26 @@ shrinking, say). No concrete trigger was found: the virtualizer's own
 corrections move the page by scrolling, which is seen. A possibility, not a
 measured bug. Found by the review of 34. Left unfixed.
 
-## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading)
+## 50. The divider's handlers ignore `pointerId` (2026-11-17, by reading, fixed in lane A2)
 
 `ui/reader/usePanelControls.ts`: while the divider is dragged, any
 pointer's `pointermove` resizes the panel and any pointer's `pointerup` or
 `pointercancel` ends the drag, so a second finger landing elsewhere during a
 drag moves or ends it. Pre-existing; found by the review of lane A's 27.
 Left unfixed.
+
+**Fixed in lane A2:** the drag belongs to the pointer that started it.
+`usePanelControls` keeps that pointer's `pointerId` (in place of the
+`dragging` flag) and its window listeners ignore every other pointer's
+`pointermove`, `pointerup` and `pointercancel`; the divider's
+`onPointerDown` calls the hook's `beginDrag`, which refuses a second pointer
+while a drag is under way, so it does not take the drag over or capture.
+R's new scenario "a second pointer during a divider drag" dispatches another
+pointer's pointerdown on the divider, pointermove far to the left and
+pointerup in the middle of a mouse drag: on the old code the move resized
+the panel back to 432 px and the pointerup ended the drag (the mouse's
+later moves did nothing); with the fix the panel stays at 375 px, the drag
+goes on to 335 px, and that width is stored on release.
 
 ## 51. Leaving the reader mid-drag leaves the page unselectable (2026-11-17, by reading)
 

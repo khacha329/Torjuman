@@ -30,8 +30,9 @@
 //     outside-tap listener kept while the page scrolls (FOUND_ISSUES 34); the
 //     divider dragged with a mouse; a divider drag ended by pointercancel
 //     (FOUND_ISSUES 27); the margin menu's outside-tap listener kept while
-//     the reader renders (FOUND_ISSUES 48); the divider dragged with a
-//     finger (its width reported, its end judged)
+//     the reader renders (FOUND_ISSUES 48); a second pointer during a divider
+//     drag (FOUND_ISSUES 50); the divider dragged with a finger (its width
+//     reported, its end judged)
 //   - portrait: the cards sheet's handle; the handle's count of every card
 //     kind (FOUND_ISSUES 28); a marker opening a popover; the read-mark ↑ ↓
 //     and ↓ in turn (FOUND_ISSUES 39); the centred jump (FOUND_ISSUES 40);
@@ -1245,6 +1246,62 @@ async function landscapeControls(browser, base, profile) {
     check(
       '  and moves after the cancel leave the panel alone',
       afterMoves === cancelled.aside,
+      detail,
+    );
+  });
+
+  // A divider drag belongs to the pointer that started it (FOUND_ISSUES 50).
+  // While the mouse drags the divider, a second pointer's events arrive —
+  // dispatched by hand, so they come at known points of the drag on every
+  // run: a pointerdown on the divider, a pointermove far to the left, and a
+  // pointerup. None may move the panel or end the drag; the mouse's own
+  // moves then still resize it, and its release stores the width. On the old
+  // code the second pointer's move resized the panel to where it was and its
+  // pointerup ended the drag.
+  await scenario(browser, base, profile, 'a second pointer during a divider drag', async (page) => {
+    const divider = page.getByRole('separator', { name: 'Resize card panel' });
+    const box = await divider.boundingBox();
+    const from = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + 200) };
+    const start = (await panelState(page)).aside;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 60, from.y, { steps: 4 });
+    await settle(page, 200);
+    const during = (await panelState(page)).aside;
+    const other = (type, clientX) => page.evaluate(({ type, clientX, y }) => {
+      const event = new PointerEvent(type, { pointerId: 7, pointerType: 'touch', isPrimary: false, clientX, clientY: y, bubbles: true });
+      const target = type === 'pointerdown' ? document.querySelector('[role="separator"]') : window;
+      target.dispatchEvent(event);
+    }, { type, clientX, y: from.y });
+    await other('pointerdown', from.x);
+    await other('pointermove', 200);
+    await settle(page, 200);
+    const afterOtherMove = (await panelState(page)).aside;
+    await other('pointerup', 200);
+    await settle(page, 200);
+    const afterOtherUp = {
+      aside: (await panelState(page)).aside,
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+    };
+    await page.mouse.move(from.x + 100, from.y, { steps: 4 });
+    await settle(page, 200);
+    const afterMouseMove = (await panelState(page)).aside;
+    await page.mouse.up();
+    await settle(page, 300);
+    const released = {
+      aside: (await panelState(page)).aside,
+      stored: (await storedSettings(page))?.panelWidth ?? null,
+      userSelect: await page.evaluate(() => document.body.style.userSelect),
+    };
+    const detail = `panel ${start} → ${during} in the drag, ${afterOtherMove} after the other pointer's move, ${afterOtherUp.aside} after its pointerup (user-select ${JSON.stringify(afterOtherUp.userSelect)}), ${afterMouseMove} after the mouse moved on, ${released.aside} released; stored ${released.stored}, user-select ${JSON.stringify(released.userSelect)}`;
+    check(
+      "a second pointer's move and release during a divider drag neither move the panel nor end the drag",
+      during < start && afterOtherMove === during && afterOtherUp.aside === during && afterOtherUp.userSelect === 'none',
+      detail,
+    );
+    check(
+      '  and the dragging pointer then still resizes it, and its release stores the width',
+      afterMouseMove < during && released.aside === afterMouseMove && released.stored === released.aside && released.userSelect === '',
       detail,
     );
   });

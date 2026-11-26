@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { useApp } from '../../app/AppContext';
 import { clampPanelWidth } from '../useLayoutMode';
 
 // The card panel's controls: Ctrl/Cmd + \ to show or hide it, and the
-// divider dragged to resize it. `dragging` is returned because the divider's
-// onPointerDown, in the screen, sets it; `dragWidth` is the width while a drag
+// divider dragged to resize it. `beginDrag` is returned because the divider's
+// onPointerDown, in the screen, calls it; `dragWidth` is the width while a drag
 // lasts, which the screen shows in place of the stored one. Moved from
 // ReaderScreen.tsx in restructure Phase 5 step 5g4
 // (docs/refactor/plans/phase5-big-ui-files.md); the divider's handling
@@ -47,23 +47,38 @@ export function usePanelControls({
   // `dragging` on and text selection off after a cancel, so the next
   // unrelated pointer movement resized the panel (FOUND_ISSUES 27). A
   // cancelled drag keeps the width it got to, as a released one does.
-  const dragging = useRef(false);
+  //
+  // The drag belongs to the one pointer that started it: `dragPointer` holds
+  // its `pointerId`, and the window listeners ignore every other pointer's
+  // events. They used to take any pointer's, so a second finger landing
+  // elsewhere during a drag resized the panel to where it was, or ended the
+  // drag when it lifted (FOUND_ISSUES 50). A second pointer pressed on the
+  // divider itself does not take the drag over either.
+  const dragPointer = useRef<number | null>(null);
   const dragWidthRef = useRef<number | null>(null);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
+
+  /** Called by the divider's onPointerDown: the drag starts, for this pointer only. */
+  const beginDrag = useCallback((pointerId: number) => {
+    if (dragPointer.current !== null) return false;
+    dragPointer.current = pointerId;
+    document.body.style.userSelect = 'none';
+    return true;
+  }, []);
+
   useEffect(() => {
     const move = (event: PointerEvent) => {
-      if (!dragging.current) return;
+      if (event.pointerId !== dragPointer.current) return;
       const width = clampPanelWidth(window.innerWidth - event.clientX, window.innerWidth);
       dragWidthRef.current = width;
       setDragWidth(width);
     };
-    const stop = () => {
+    const stop = (event: PointerEvent) => {
+      if (event.pointerId !== dragPointer.current) return;
       const width = dragWidthRef.current;
-      const wasDragging = dragging.current;
-      dragging.current = false;
+      dragPointer.current = null;
       dragWidthRef.current = null;
       document.body.style.userSelect = '';
-      if (!wasDragging) return;
       // In the same event as the settings update, so the two render together
       // and the panel does not flick back to the stored width in between.
       if (width !== null) void updateSettings({ panelWidth: width });
@@ -79,5 +94,5 @@ export function usePanelControls({
     };
   }, [updateSettings]);
 
-  return { dragging, dragWidth };
+  return { beginDrag, dragWidth };
 }
