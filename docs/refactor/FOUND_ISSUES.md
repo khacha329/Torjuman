@@ -807,6 +807,8 @@ review of 30. Docs only. Left unfixed.
 
 ## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "45." on `claude/lane-b2-translation`; DECISIONS, lane B2: leaving the reader stops the batch).
+
 `ui/reader/useBatchTranslate.ts:82-110` runs its loop to the end whatever
 happens to the screen that started it. Leaving the reader (through the
 Library, or by editing the URL to another book) unmounts the bar that shows
