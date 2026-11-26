@@ -596,44 +596,8 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulResources": {
-      "schema": {
-        "version": 10,
-        "stores": [
-          {"name":"biographyEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"blocks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookOrder","keyPath":["bookId","order"],"unique":false,"multiEntry":false},{"name":"byPage","keyPath":"pageId","unique":false,"multiEntry":false}]},
-          {"name":"books","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"cards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byCacheKey","keyPath":"cacheKey","unique":false,"multiEntry":false}]},
-          {"name":"crawlStates","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"dictionaryEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byRoot","keyPath":"root","unique":false,"multiEntry":false}]},
-          {"name":"entities","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"explanationCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"glossary","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"hadiths","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"marks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"narratorProfiles","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byNaming","keyPath":"namings","unique":false,"multiEntry":true},{"name":"byShard","keyPath":"shard","unique":false,"multiEntry":false}]},
-          {"name":"pages","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookPage","keyPath":["bookId","pageIndex"],"unique":false,"multiEntry":false}]},
-          {"name":"positions","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"profiles","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"qulCompilations","keyPath":"cacheKey","autoIncrement":false,"indexes":[]},
-          {"name":"qulEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byResource","keyPath":"resourceId","unique":false,"multiEntry":false},{"name":"byResourceKey","keyPath":["resourceId","key"],"unique":false,"multiEntry":false}]},
-          {"name":"quranVerses","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"settings","keyPath":"key","autoIncrement":false,"indexes":[]},
-          {"name":"sharhCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"tocNodes","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"wordGlosses","keyPath":"word","autoIncrement":false,"indexes":[]}
-        ]
-      },
-      "steps": [
-        [
-          "init",
-          {"rejected":"AbortError: Version change transaction was aborted in upgradeneeded event handler."}
-        ],
-        ["schemaVersion",{"value":11}]
-      ],
-      "uncaughtInPage": [
-        "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists.",
-        "Uncaught exception in event handler."
-      ],
+      "schema": {"version":11,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -658,9 +622,7 @@
         "dictionaryEntries": [
           {"id":"dict-b1","bookId":"shamela-990002","root":"كتب","rootDisplay":"كتب","pageIndex":1,"volume":1,"printPage":11}
         ],
-        "entities": [
-          {"id":"ent-a1","bookId":"shamela-990001","kind":"quran","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"reference":"112:1","confidence":1}
-        ],
+        "entities": [],
         "explanationCards": [
           {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
         ],
@@ -697,12 +659,14 @@
           {"id":"qul-d1|112:1","resourceId":"qul-d1","key":"112:1","value":{"text":"تفسير تجريبي"}},
           {"id":"qul-d1|112:2","resourceId":"qul-d1","key":"112:2","value":{"text":"تفسير آخر"}}
         ],
+        "qulResources": [],
         "quranVerses": [
           {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
         ],
         "settings": [
           {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
         ],
+        "shareRecords": [],
         "sharhCards": [
           {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
         ],
@@ -718,34 +682,7 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulEntries": {
-      "schema": {
-        "version": 11,
-        "stores": [
-          {"name":"biographyEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"blocks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookOrder","keyPath":["bookId","order"],"unique":false,"multiEntry":false},{"name":"byPage","keyPath":"pageId","unique":false,"multiEntry":false}]},
-          {"name":"books","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"cards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byCacheKey","keyPath":"cacheKey","unique":false,"multiEntry":false}]},
-          {"name":"crawlStates","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"dictionaryEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byRoot","keyPath":"root","unique":false,"multiEntry":false}]},
-          {"name":"entities","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"explanationCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"glossary","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"hadiths","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"marks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"narratorProfiles","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byNaming","keyPath":"namings","unique":false,"multiEntry":true},{"name":"byShard","keyPath":"shard","unique":false,"multiEntry":false}]},
-          {"name":"pages","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookPage","keyPath":["bookId","pageIndex"],"unique":false,"multiEntry":false}]},
-          {"name":"positions","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"profiles","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"qulCompilations","keyPath":"cacheKey","autoIncrement":false,"indexes":[]},
-          {"name":"qulResources","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"quranVerses","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"settings","keyPath":"key","autoIncrement":false,"indexes":[]},
-          {"name":"shareRecords","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"sharhCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"tocNodes","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"wordGlosses","keyPath":"word","autoIncrement":false,"indexes":[]}
-        ]
-      },
+      "schema": {"version":11,"stores":"as today"},
       "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
       "rows": {
         "biographyEntries": [
@@ -804,6 +741,7 @@
         "qulCompilations": [
           {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
         ],
+        "qulEntries": [],
         "qulResources": [
           {"id":"qul-d1","kind":"tafsir","name":"Synthetic tafsir","fileName":"synthetic.json","byteSize":100,"entryCount":2,"format":"json","importedAt":1772000000000}
         ],
@@ -829,34 +767,7 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulCompilations": {
-      "schema": {
-        "version": 11,
-        "stores": [
-          {"name":"biographyEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"blocks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookOrder","keyPath":["bookId","order"],"unique":false,"multiEntry":false},{"name":"byPage","keyPath":"pageId","unique":false,"multiEntry":false}]},
-          {"name":"books","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"cards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byCacheKey","keyPath":"cacheKey","unique":false,"multiEntry":false}]},
-          {"name":"crawlStates","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"dictionaryEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byRoot","keyPath":"root","unique":false,"multiEntry":false}]},
-          {"name":"entities","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"explanationCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"glossary","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"hadiths","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"marks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
-          {"name":"narratorProfiles","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byNaming","keyPath":"namings","unique":false,"multiEntry":true},{"name":"byShard","keyPath":"shard","unique":false,"multiEntry":false}]},
-          {"name":"pages","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookPage","keyPath":["bookId","pageIndex"],"unique":false,"multiEntry":false}]},
-          {"name":"positions","keyPath":"bookId","autoIncrement":false,"indexes":[]},
-          {"name":"profiles","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"qulEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byResource","keyPath":"resourceId","unique":false,"multiEntry":false},{"name":"byResourceKey","keyPath":["resourceId","key"],"unique":false,"multiEntry":false}]},
-          {"name":"qulResources","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"quranVerses","keyPath":"reference","autoIncrement":false,"indexes":[]},
-          {"name":"settings","keyPath":"key","autoIncrement":false,"indexes":[]},
-          {"name":"shareRecords","keyPath":"id","autoIncrement":false,"indexes":[]},
-          {"name":"sharhCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"tocNodes","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
-          {"name":"wordGlosses","keyPath":"word","autoIncrement":false,"indexes":[]}
-        ]
-      },
+      "schema": {"version":11,"stores":"as today"},
       "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
       "rows": {
         "biographyEntries": [
@@ -912,6 +823,7 @@
         "profiles": [
           {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
         ],
+        "qulCompilations": [],
         "qulEntries": [
           {"id":"qul-d1|112:1","resourceId":"qul-d1","key":"112:1","value":{"text":"تفسير تجريبي"}},
           {"id":"qul-d1|112:2","resourceId":"qul-d1","key":"112:2","value":{"text":"تفسير آخر"}}
@@ -947,6 +859,7 @@
         ["getBook",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["listBooks",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["deleteBook",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["adoptStagedBook",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["putTocNodes",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["listTocNodes",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["putPage",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
@@ -1039,7 +952,7 @@
         ["putStoreRows",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["clearAllStores",{"rejected":"Error: StorageAdapter.init() has not been awaited"}]
       ],
-      "methodsCovered": 84,
+      "methodsCovered": 85,
       "rows": {"(no database)":[]},
       "localStorage": []
     },
@@ -2871,6 +2784,9 @@
                 "shareRecords": [
                   {"id":"share-a1","key":"share-key-share-a1","title":"مشاركة share-a1","bookId":"shamela-990001","bookTitle":"كتاب تجريبي","rangeLabel":"الباب الأول","createdAt":1772000000000,"bytes":512,"blocks":2,"cards":1,"marks":1}
                 ],
+                "qulCompilations": [
+                  {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+                ],
                 "settings": {
                   "providerId": "gemini",
                   "activeProfileId": "profile-d",
@@ -2890,7 +2806,7 @@
             }
           ]
         ],
-        "file": {"bytes":3797,"sha256":"809be86a6e9f5f75fbf966f07b1059533562cc784feacd8ded83cbcd6c99410f"},
+        "file": {"bytes":3996,"sha256":"ce437e8cdc4485c97d9a3fea408a64b586466b5c2058f1a28a2b3d603117583e"},
         "rows": {
           "biographyEntries": [
             {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -2994,7 +2910,197 @@
             "importWork",
             {
               "value": {
-                "restoredCards": 3,
+                "restoredCards": 4,
+                "restoredMarks": 1,
+                "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
+              }
+            }
+          ],
+          [
+            "getSettings",
+            {
+              "value": {
+                "providerId": "gemini",
+                "activeProfileId": "profile-d",
+                "fontFamily": "Amiri",
+                "fontSize": 22,
+                "lineHeight": 1.9,
+                "panelWidth": 380,
+                "panelCollapsed": false,
+                "panelPosition": "right",
+                "panelScope": "visible",
+                "quranTranslationId": 20,
+                "quranTranslationName": "Synthetic",
+                "hadithSourceId": "sunnah",
+                "compileEnabled": false
+              }
+            }
+          ]
+        ],
+        "rows": {
+          "biographyEntries": [],
+          "blocks": [],
+          "books": [],
+          "cards": [
+            {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
+            {"id":"card-b1","bookId":"shamela-990002","kind":"translation","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-b1","status":"complete"}
+          ],
+          "crawlStates": [],
+          "dictionaryEntries": [],
+          "entities": [],
+          "explanationCards": [
+            {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+          ],
+          "glossary": [
+            {"id":"gloss-1","arabic":"الإخلاص","english":"sincerity","note":"synthetic","addedAt":1772000000001},
+            {"id":"gloss-2","arabic":"النية","english":"intention","note":null,"addedAt":1772000000002}
+          ],
+          "hadiths": [
+            {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
+          ],
+          "marks": [
+            {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+          ],
+          "narratorProfiles": [],
+          "pages": [],
+          "positions": [
+            {"bookId":"shamela-990001","blockOrder":1,"updatedAt":1772000000000},
+            {"bookId":"shamela-990002","blockOrder":0,"updatedAt":1772000000000}
+          ],
+          "profiles": [
+            {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
+          ],
+          "qulCompilations": [
+            {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+          ],
+          "qulEntries": [],
+          "qulResources": [],
+          "quranVerses": [
+            {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
+          ],
+          "settings": [
+            {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
+          ],
+          "shareRecords": [
+            {"id":"share-a1","key":"share-key-share-a1","title":"مشاركة share-a1","bookId":"shamela-990001","bookTitle":"كتاب تجريبي","rangeLabel":"الباب الأول","createdAt":1772000000000,"bytes":512,"blocks":2,"cards":1,"marks":1}
+          ],
+          "sharhCards": [
+            {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+          ],
+          "tocNodes": [],
+          "wordGlosses": [
+            {"word":"الطهارة","display":"الطَّهَارَة","root":"طهر","meaning":"purity","note":null,"isTechnicalTerm":true,"model":"synthetic-model","createdAt":1772000000000}
+          ]
+        },
+        "localStorage": [
+          ["other-app.note","the receiving tablet"],
+          ["shamela-reader.anthropic-api-key","sk-ant-d-check-target-only-key"],
+          ["shamela-reader.catalogOffered","1"]
+        ]
+      },
+      "import-without-shareRecords": {
+        "schema": {"version":11,"stores":"as today"},
+        "steps": [
+          ["init",{"value":"(undefined)"}],
+          [
+            "importWork",
+            {
+              "value": {
+                "restoredCards": 4,
+                "restoredMarks": 1,
+                "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
+              }
+            }
+          ],
+          [
+            "getSettings",
+            {
+              "value": {
+                "providerId": "gemini",
+                "activeProfileId": "profile-d",
+                "fontFamily": "Amiri",
+                "fontSize": 22,
+                "lineHeight": 1.9,
+                "panelWidth": 380,
+                "panelCollapsed": false,
+                "panelPosition": "right",
+                "panelScope": "visible",
+                "quranTranslationId": 20,
+                "quranTranslationName": "Synthetic",
+                "hadithSourceId": "sunnah",
+                "compileEnabled": false
+              }
+            }
+          ]
+        ],
+        "rows": {
+          "biographyEntries": [],
+          "blocks": [],
+          "books": [],
+          "cards": [
+            {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
+            {"id":"card-b1","bookId":"shamela-990002","kind":"translation","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-b1","status":"complete"}
+          ],
+          "crawlStates": [],
+          "dictionaryEntries": [],
+          "entities": [],
+          "explanationCards": [
+            {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+          ],
+          "glossary": [
+            {"id":"gloss-1","arabic":"الإخلاص","english":"sincerity","note":"synthetic","addedAt":1772000000001},
+            {"id":"gloss-2","arabic":"النية","english":"intention","note":null,"addedAt":1772000000002}
+          ],
+          "hadiths": [
+            {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
+          ],
+          "marks": [
+            {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+          ],
+          "narratorProfiles": [],
+          "pages": [],
+          "positions": [
+            {"bookId":"shamela-990001","blockOrder":1,"updatedAt":1772000000000},
+            {"bookId":"shamela-990002","blockOrder":0,"updatedAt":1772000000000}
+          ],
+          "profiles": [
+            {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
+          ],
+          "qulCompilations": [
+            {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+          ],
+          "qulEntries": [],
+          "qulResources": [],
+          "quranVerses": [
+            {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
+          ],
+          "settings": [
+            {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
+          ],
+          "shareRecords": [],
+          "sharhCards": [
+            {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+          ],
+          "tocNodes": [],
+          "wordGlosses": [
+            {"word":"الطهارة","display":"الطَّهَارَة","root":"طهر","meaning":"purity","note":null,"isTechnicalTerm":true,"model":"synthetic-model","createdAt":1772000000000}
+          ]
+        },
+        "localStorage": [
+          ["other-app.note","the receiving tablet"],
+          ["shamela-reader.anthropic-api-key","sk-ant-d-check-target-only-key"],
+          ["shamela-reader.catalogOffered","1"]
+        ]
+      },
+      "import-without-qulCompilations": {
+        "schema": {"version":11,"stores":"as today"},
+        "steps": [
+          ["init",{"value":"(undefined)"}],
+          [
+            "importWork",
+            {
+              "value": {
+                "restoredCards": 4,
                 "restoredMarks": 1,
                 "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
               }
@@ -3080,98 +3186,6 @@
           ["shamela-reader.catalogOffered","1"]
         ]
       },
-      "import-without-shareRecords": {
-        "schema": {"version":11,"stores":"as today"},
-        "steps": [
-          ["init",{"value":"(undefined)"}],
-          [
-            "importWork",
-            {
-              "value": {
-                "restoredCards": 3,
-                "restoredMarks": 1,
-                "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
-              }
-            }
-          ],
-          [
-            "getSettings",
-            {
-              "value": {
-                "providerId": "gemini",
-                "activeProfileId": "profile-d",
-                "fontFamily": "Amiri",
-                "fontSize": 22,
-                "lineHeight": 1.9,
-                "panelWidth": 380,
-                "panelCollapsed": false,
-                "panelPosition": "right",
-                "panelScope": "visible",
-                "quranTranslationId": 20,
-                "quranTranslationName": "Synthetic",
-                "hadithSourceId": "sunnah",
-                "compileEnabled": false
-              }
-            }
-          ]
-        ],
-        "rows": {
-          "biographyEntries": [],
-          "blocks": [],
-          "books": [],
-          "cards": [
-            {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
-            {"id":"card-b1","bookId":"shamela-990002","kind":"translation","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-b1","status":"complete"}
-          ],
-          "crawlStates": [],
-          "dictionaryEntries": [],
-          "entities": [],
-          "explanationCards": [
-            {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
-          ],
-          "glossary": [
-            {"id":"gloss-1","arabic":"الإخلاص","english":"sincerity","note":"synthetic","addedAt":1772000000001},
-            {"id":"gloss-2","arabic":"النية","english":"intention","note":null,"addedAt":1772000000002}
-          ],
-          "hadiths": [
-            {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
-          ],
-          "marks": [
-            {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
-          ],
-          "narratorProfiles": [],
-          "pages": [],
-          "positions": [
-            {"bookId":"shamela-990001","blockOrder":1,"updatedAt":1772000000000},
-            {"bookId":"shamela-990002","blockOrder":0,"updatedAt":1772000000000}
-          ],
-          "profiles": [
-            {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
-          ],
-          "qulCompilations": [],
-          "qulEntries": [],
-          "qulResources": [],
-          "quranVerses": [
-            {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
-          ],
-          "settings": [
-            {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
-          ],
-          "shareRecords": [],
-          "sharhCards": [
-            {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
-          ],
-          "tocNodes": [],
-          "wordGlosses": [
-            {"word":"الطهارة","display":"الطَّهَارَة","root":"طهر","meaning":"purity","note":null,"isTechnicalTerm":true,"model":"synthetic-model","createdAt":1772000000000}
-          ]
-        },
-        "localStorage": [
-          ["other-app.note","the receiving tablet"],
-          ["shamela-reader.anthropic-api-key","sk-ant-d-check-target-only-key"],
-          ["shamela-reader.catalogOffered","1"]
-        ]
-      },
       "import-missing-books": {
         "schema": {"version":11,"stores":"as today"},
         "steps": [
@@ -3180,7 +3194,7 @@
             "importWork",
             {
               "value": {
-                "restoredCards": 3,
+                "restoredCards": 4,
                 "restoredMarks": 1,
                 "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990999,"title":"كتاب غائب"}]
               }
@@ -3242,7 +3256,9 @@
           "profiles": [
             {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
           ],
-          "qulCompilations": [],
+          "qulCompilations": [
+            {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+          ],
           "qulEntries": [],
           "qulResources": [],
           "quranVerses": [
@@ -3276,7 +3292,7 @@
             "importWork",
             {
               "value": {
-                "restoredCards": 3,
+                "restoredCards": 4,
                 "restoredMarks": 1,
                 "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
               }
@@ -3337,7 +3353,9 @@
           "profiles": [
             {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
           ],
-          "qulCompilations": [],
+          "qulCompilations": [
+            {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+          ],
           "qulEntries": [],
           "qulResources": [],
           "quranVerses": [
@@ -3703,7 +3721,30 @@
               "rejected": "Error: The file is incomplete: expected 3 blocks and 2 pages, found 2 and 2. The transfer was probably cut short."
             }
           ],
-          ["getBook A",{"value":"(undefined)"}]
+          [
+            "getBook A",
+            {
+              "value": {
+                "id": "shamela-990001",
+                "shamelaId": 990001,
+                "title": "كتاب المثال",
+                "author": "مؤلف تجريبي",
+                "publisher": "",
+                "edition": "",
+                "volumeCount": 1,
+                "category": "",
+                "structureProfile": "generic",
+                "importedAt": 1772000000000,
+                "importStatus": "complete",
+                "totalPages": 2,
+                "fetchedPages": 2,
+                "volumeStarts": [1],
+                "hadithCollection": null,
+                "role": "reading",
+                "nameIndexSize": 0
+              }
+            }
+          ]
         ],
         "snapshots": {
           "with the book": {
@@ -3816,7 +3857,9 @@
             "books": [
               {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
             ],
-            "cards": [],
+            "cards": [
+              {"id":"card-kept","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-kept","status":"complete"}
+            ],
             "crawlStates": [
               {"bookId":"shamela-990001","status":"complete","nextPage":2,"failedPages":[],"updatedAt":1772357400000}
             ],
@@ -3824,16 +3867,20 @@
             "entities": [
               {"id":"ent_mm7ju2800021b2z","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":11,"endBlockId":"shamela-990001:p1:0","endOffset":55,"type":"quran","reference":"112:1-112:2","matchQuality":"exact","detectedAt":1772357400000,"textUthmani":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ","label":"الإخلاص 1–2","matchedWords":6}
             ],
-            "explanationCards": [],
+            "explanationCards": [
+              {"id":"explain-kept","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+            ],
             "glossary": [],
             "hadiths": [],
-            "marks": [],
+            "marks": [
+              {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+            ],
             "narratorProfiles": [],
             "pages": [
               {"id":"shamela-990001:p1","bookId":"shamela-990001","pageIndex":1,"volume":1,"printPage":11,"rawHtml":"","fetchedAt":1772357400000},
               {"id":"shamela-990001:p2","bookId":"shamela-990001","pageIndex":2,"volume":1,"printPage":12,"rawHtml":"","fetchedAt":1772357400000}
             ],
-            "positions": [],
+            "positions": [{"bookId":"shamela-990001","blockOrder":2,"updatedAt":1772000000000}],
             "profiles": [],
             "qulCompilations": [],
             "qulEntries": [],
@@ -3841,7 +3888,9 @@
             "quranVerses": [],
             "settings": [],
             "shareRecords": [],
-            "sharhCards": [],
+            "sharhCards": [
+              {"id":"sharh-kept","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+            ],
             "tocNodes": [
               {"id":"shamela-990001:toc0","bookId":"shamela-990001","parentId":null,"title":"الباب الأول","pageIndex":1,"order":0,"depth":0},
               {"id":"shamela-990001:toc1","bookId":"shamela-990001","parentId":null,"title":"الباب الثاني","pageIndex":2,"order":1,"depth":0}
@@ -3856,19 +3905,38 @@
         ],
         "rows": {
           "biographyEntries": [],
-          "blocks": [],
-          "books": [],
-          "cards": [],
-          "crawlStates": [],
+          "blocks": [
+            {"id":"shamela-990001:p1:0","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":0,"type":"body","text":"قال تعالى: ﴿قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ﴾ وهذا نص تجريبي.","normalized":"قال تعالي: ﴿قل هو الله احد الله الصمد﴾ وهذا نص تجريبي.","contentHash":"3b04a76c260a7edae8cda052437b93bc6a1e1722f53fc6d6b62b544bdd59a1eb","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
+            {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"01cedf1cdddf6788d923ddbe37c0a892f12b288ccdfef76be3c898f67db96f30","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
+            {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"867317ab6ecdccf58f1c35ccbf4531ba8ada82857ad8f4472b49193b8ffae0bd","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "books": [
+            {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
+          ],
+          "cards": [
+            {"id":"card-kept","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-kept","status":"complete"}
+          ],
+          "crawlStates": [
+            {"bookId":"shamela-990001","status":"complete","nextPage":2,"failedPages":[],"updatedAt":1772357400000}
+          ],
           "dictionaryEntries": [],
-          "entities": [],
-          "explanationCards": [],
+          "entities": [
+            {"id":"ent_mm7ju2800021b2z","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":11,"endBlockId":"shamela-990001:p1:0","endOffset":55,"type":"quran","reference":"112:1-112:2","matchQuality":"exact","detectedAt":1772357400000,"textUthmani":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ","label":"الإخلاص 1–2","matchedWords":6}
+          ],
+          "explanationCards": [
+            {"id":"explain-kept","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+          ],
           "glossary": [],
           "hadiths": [],
-          "marks": [],
+          "marks": [
+            {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+          ],
           "narratorProfiles": [],
-          "pages": [],
-          "positions": [],
+          "pages": [
+            {"id":"shamela-990001:p1","bookId":"shamela-990001","pageIndex":1,"volume":1,"printPage":11,"rawHtml":"","fetchedAt":1772357400000},
+            {"id":"shamela-990001:p2","bookId":"shamela-990001","pageIndex":2,"volume":1,"printPage":12,"rawHtml":"","fetchedAt":1772357400000}
+          ],
+          "positions": [{"bookId":"shamela-990001","blockOrder":2,"updatedAt":1772000000000}],
           "profiles": [],
           "qulCompilations": [],
           "qulEntries": [],
@@ -3876,8 +3944,13 @@
           "quranVerses": [],
           "settings": [],
           "shareRecords": [],
-          "sharhCards": [],
-          "tocNodes": [],
+          "sharhCards": [
+            {"id":"sharh-kept","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+          ],
+          "tocNodes": [
+            {"id":"shamela-990001:toc0","bookId":"shamela-990001","parentId":null,"title":"الباب الأول","pageIndex":1,"order":0,"depth":0},
+            {"id":"shamela-990001:toc1","bookId":"shamela-990001","parentId":null,"title":"الباب الثاني","pageIndex":2,"order":1,"depth":0}
+          ],
           "wordGlosses": []
         },
         "localStorage": []
@@ -4591,6 +4664,7 @@
         ["init",{"value":"(undefined)"}],
         ["ignored: putBook",{"value":"(undefined)"}],
         ["ignored: deleteBook",{"value":"(undefined)"}],
+        ["ignored: adoptStagedBook",{"value":"(undefined)"}],
         ["ignored: putTocNodes",{"value":"(undefined)"}],
         ["ignored: putPage",{"value":"(undefined)"}],
         ["ignored: putBlocks",{"value":"(undefined)"}],

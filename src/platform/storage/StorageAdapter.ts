@@ -75,11 +75,27 @@ export interface WorkBundle {
    * Provider API keys are a different thing entirely and are still never here.
    */
   shareRecords?: ShareRecord[];
+  /**
+   * Compiled verse views: the one generated thing in the QUL feature, each a
+   * paid model call. In no work backup until lane C (FOUND_ISSUES 18).
+   *
+   * Kept by the owner's choice knowing the limit (2026-11-26, DECISIONS.md):
+   * a compilation's cache key includes the ids of the resources installed when
+   * it was made, and a resource imported by hand gets a random id. So a
+   * restored compilation is found again on the same tablet, after a
+   * whole-tablet transfer, or for a seeded resource (fixed ids) — and on a new
+   * tablet whose tafsīrs were imported afresh, almost never. Unfound rows cost
+   * a few kilobytes and nothing else.
+   *
+   * Absent on a bundle written before lane C, hence optional.
+   */
+  qulCompilations?: QulCompilation[];
   settings: AppSettings | null;
 }
 
 /** What a work restore found missing. */
 export interface WorkRestoreReport {
+  /** Translation, explanation and sharḥ cards together. */
   restoredCards: number;
   restoredMarks: number;
   missingBooks: { shamelaId: number; title: string }[];
@@ -98,6 +114,20 @@ export interface SearchHit {
   matchLength: number;
 }
 
+/**
+ * Where a per-book import writes the copy it is reading until the whole file
+ * is in (FOUND_ISSUES 24; library/transfer.ts). A staged row is the real row
+ * with this prefix on its `id`, its `bookId` and, for a block, its `pageId`:
+ * the keys stay clear of the book already on the device, and no query by the
+ * real book or page reaches a staged row. `adoptStagedBook` strips the prefix.
+ */
+export const STAGING_PREFIX = 'staging:';
+
+/** The staged form of an id or a book id. */
+export function stagedId(id: string): string {
+  return `${STAGING_PREFIX}${id}`;
+}
+
 export interface StorageAdapter {
   init(): Promise<void>;
 
@@ -106,6 +136,17 @@ export interface StorageAdapter {
   getBook(id: string): Promise<Book | undefined>;
   listBooks(): Promise<Book[]>;
   deleteBook(id: string): Promise<void>;
+  /**
+   * Make a staged import (`stagedId(book.id)`) the book, in one transaction:
+   * the book's old text and everything derived from it go — table of
+   * contents, pages, blocks, entities, dictionary and biography entries, its
+   * Taqrīb narrator profiles — the staged rows take their real ids, and the
+   * book and its crawl state are written. The user's work on the book (marks,
+   * translation, explanation and sharḥ cards, the reading position) is not
+   * touched. All of it happens, or none: a failure leaves the book as it was
+   * and the staged rows where they were.
+   */
+  adoptStagedBook(book: Book, crawlState: CrawlState): Promise<void>;
 
   // Table of contents
   putTocNodes(nodes: TocNode[]): Promise<void>;

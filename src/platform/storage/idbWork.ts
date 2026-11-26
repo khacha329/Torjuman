@@ -21,7 +21,7 @@ import type { Schema } from './idbSchema';
 // handle for the reason given in idbTransfer.ts (`putMarks` and `deleteMarks`
 // with an empty list resolve even before `init`).
 
-const SETTINGS_KEY = 'app';
+export const SETTINGS_KEY = 'app';
 
 export async function putMarks(handle: () => IDBPDatabase<Schema>, marks: Mark[]): Promise<void> {
   if (marks.length === 0) return;

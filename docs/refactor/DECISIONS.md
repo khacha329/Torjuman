@@ -157,8 +157,23 @@ Answers to the lane's review, the owner's, later on 2026-11-26:
   Claude, Haiku 5.5 gets the request without the research pass: a plain
   translation, as Gemini would have given, and no web search.
 - **62, how far.** Only the reader's cloud translations report outcomes;
-  that is recorded, not widened. FOUND_ISSUES 76 is fixed with it: the
-  window listeners are registered once, so the browser's online event always
-  clears an assumption of offline.
+  that is recorded, not widened. FOUND_ISSUES 83 (76 on the lane's branch)
+  is fixed with it: the window listeners are registered once, so the
+  browser's online event always clears an assumption of offline.
 - **Check U.** The entries only the Linux container can record are
   re-recorded by a cloud session on the lane's branch before the merge.
+
+## Decided for lane C, 2026-11-26
+
+- **19. Share records outlive their book.** Keep them, and say so. A
+  removed book's share records stay: the chapter's link keeps working for
+  others, and the record holds the only copy of its key besides the link.
+  The code, README and the remove-book confirm say so. (The owner's answer
+  to lane C's question; the alternative was deleting them with the book.)
+- **18. Compiled QUL views in the work backup.** Keep them in it, knowing
+  the limit: a compilation's cache key includes the ids of the resources
+  installed when it was made, and a hand-imported resource gets a random id,
+  so on a new tablet whose tafsīrs are imported afresh a restored
+  compilation is almost never found. It comes back on the same tablet, after
+  a whole-tablet transfer, or for a seeded resource. (The owner's answer to
+  lane C's question after review; the alternative was leaving them out.)

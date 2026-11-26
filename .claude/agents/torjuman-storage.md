@@ -17,8 +17,9 @@ are kept out of backups".
   — the only IndexedDB code. The class holds `init`, the `schemaVersion`
   getter and one-line delegates; the code is in:
   - `idbSchema.ts`: schema-history comment and `DB_VERSION`, the `Schema`
-    types, the `STORES` table (key path, indexes, `onUpgrade`,
-    `createdWith`, `perBook`), `BOOK_STORES` derived from it, and
+    types, the `STORES` table (key path, indexes, `onUpgrade`, `perBook`;
+    each store guarded by its own name since lane C), `BOOK_STORES` derived
+    from it, and
     `upgradeDatabase`, whose two branches both read the table (existing DB:
     one snapshot of the store names, then each entry's `onUpgrade`; fresh
     install: creates every entry).

@@ -1,4 +1,5 @@
-// Receives a tablet transfer file shared to the installed app.
+// Receives a tablet transfer file, or a work backup, shared to the installed
+// app.
 //
 // Pulled into the generated service worker with workbox's importScripts (see
 // vite.config.ts), so it runs before workbox's own routes. The manifest's
