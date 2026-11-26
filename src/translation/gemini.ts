@@ -105,18 +105,21 @@ export async function geminiHttpError(response: Response, model?: string): Promi
   if ((response.status === 400 || response.status === 404) && /not found|not supported/i.test(message)) {
     return new TranslationError(
       'api',
-      `Gemini does not offer this model to your key: ${message}. Pick a different model in Settings.`,
+      // Gemini's message ends in a full stop of its own.
+      `Gemini does not offer this model to your key: ${message.replace(/\.$/, '')}. Pick a different model in Settings.`,
       { condition: 'model-unavailable' },
     );
   }
 
   // "This model is currently experiencing high demand" (503 UNAVAILABLE), or
   // an internal error (500). Not the key and not the request: the same call
-  // may well succeed in a moment, or on another model.
+  // may well succeed in a moment, or on another model. A body that was not
+  // Gemini's JSON leaves only the status, said once.
   if (response.status === 503 || response.status === 500) {
+    const said = message === `HTTP ${response.status}` ? '.' : `: ${message}`;
     return new TranslationError(
       'api',
-      `Gemini ${model ? `${name} ` : ''}is busy (HTTP ${response.status}): ${message}`,
+      `Gemini ${model ? `${name} ` : ''}is busy (HTTP ${response.status})${said}`,
       { condition: 'overloaded' },
     );
   }
