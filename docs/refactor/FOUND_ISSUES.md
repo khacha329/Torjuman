@@ -1011,6 +1011,8 @@ segments until retranslated.
 
 ## 62. The online signal is never corrected by request outcomes (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "62." on `claude/lane-b2-translation`; DECISIONS, lane B2: wired to request outcomes).
+
 Found by the review of lane B. `app/useOnline.ts` exports
 `reportNetworkFailure` and `reportNetworkSuccess`, and its header says the
 signal is "corrected by real request outcomes", but nothing in `src/` calls

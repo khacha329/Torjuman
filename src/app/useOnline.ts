@@ -8,6 +8,15 @@ import { useSyncExternalStore } from 'react';
 // request outcomes — a provider call that fails to connect marks the app
 // offline until something succeeds again.
 //
+// The outcomes reported are the reader's cloud translations
+// (ui/reader/useTranslator.ts): one that could not reach its host at all
+// (TranslationError condition `unreachable`) reports a failure, and one that
+// got any response, an error response included, reports a success. Nothing
+// called either function until FOUND_ISSUES 62, so this was a reactive
+// `navigator.onLine` despite the paragraph above. The browser's own `online`
+// event clears the assumption as well, so a tablet that loses and regains its
+// link is not left offline until the next translation.
+//
 // Everything that needs the network reads this and disables itself with a
 // specific reason. Nothing fails silently.
 
@@ -18,13 +27,18 @@ function emit(): void {
   for (const listener of listeners) listener();
 }
 
+function handleOnline(): void {
+  assumedOffline = false;
+  emit();
+}
+
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
-  window.addEventListener('online', emit);
+  window.addEventListener('online', handleOnline);
   window.addEventListener('offline', emit);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener('online', emit);
+    window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', emit);
   };
 }

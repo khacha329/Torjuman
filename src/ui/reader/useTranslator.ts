@@ -5,7 +5,8 @@ import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
-import type { TranslationResult } from '../../translation/TranslationProvider';
+import { TranslationError, type TranslationResult } from '../../translation/TranslationProvider';
+import { reportNetworkFailure, reportNetworkSuccess } from '../../app/useOnline';
 import { providerFor } from '../../translation/providers/registry';
 import {
   translateWithFallback,
@@ -450,6 +451,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           onChunk: (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
         });
         answered = outcome;
+        reportNetworkSuccess();
         const result = outcome.result;
 
         // Measured before enrichment, against the Arabic that was sent. A
@@ -509,6 +511,14 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         return finished;
       } catch (caught) {
+        // The online signal learns from the outcome (FOUND_ISSUES 62): no
+        // response at all marks the app offline; any response, an error
+        // included, says the network is there. A fallback model that could
+        // not be reached comes after others that answered, so it does not.
+        if (!offline && caught instanceof TranslationError) {
+          if (caught.condition === 'unreachable' && !caught.answeredBy) reportNetworkFailure();
+          else reportNetworkSuccess();
+        }
         const failed = failedCard(card, caught, answered);
         await storage.putCard(failed);
         upsert(failed);
