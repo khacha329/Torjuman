@@ -1314,6 +1314,49 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     strip(`${chain} أن قالوا: ${matn}`) === matn,
     strip(`${chain} أن قالوا: ${matn}`),
   );
+
+  // FOUND_ISSUES 75: vowelled text. Each made-up word takes a fatḥa on every
+  // letter; the formulae carry their usual ḥarakāt.
+  const vowel = (bare: string) => [...bare].map((char) => (char === ' ' ? char : `${char}َ`)).join('');
+  const vMatn = vowel(matn);
+  const vTail = vowel(tail);
+  expect('75: an unvowelled matn is left alone', strip(matn) === matn && strip(vMatn) === vMatn, [strip(matn), strip(vMatn)]);
+  for (const formula of ['رَوَاهُ', 'وَرَوَاهُ', 'أَخْرَجَهُ', 'فَأَخْرَجَهُ', 'مُتَّفَقٌ عَلَيْهِ', 'وَفِي رِوَايَةٍ']) {
+    expect(`75: a vowelled «${formula}» cuts the takhrīj tail`, strip(`${vMatn} ${formula} ${vTail}`) === vMatn, strip(`${vMatn} ${formula} ${vTail}`));
+  }
+  const vChain = `عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُمَا قَالَ:`;
+  expect('75: a vowelled isnād closes at «قَالَ:»', strip(`${vChain} ${vMatn}`) === vMatn, strip(`${vChain} ${vMatn}`));
+  expect(
+    '75: …and at «أَنَّهُ قَالَ»',
+    strip(`عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُ أَنَّهُ قَالَ ${vMatn}`) === vMatn,
+    strip(`عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُ أَنَّهُ قَالَ ${vMatn}`),
+  );
+
+  // The isnād's window counts letters, not code points: a chain under 160
+  // letters but, vowelled, over 160 code points still closes.
+  const longChain = vowel(text(words(20)));
+  // «عن » and the chain's letters and spaces, as the window counts them.
+  const longBare = 3 + longChain.replace(/َ/g, '').length;
+  expect(
+    '75: a long vowelled chain (over 160 code points, under 160 letters) is still stripped',
+    longChain.length > 160 && longBare < 160 && strip(`عَنْ ${longChain} رَضِيَ اللَّهُ عَنْهُ قَالَ: ${vMatn}`) === vMatn,
+    { codePoints: longChain.length, letters: longBare },
+  );
+
+  // The variants `normalize` folds: no hamza, alif maqṣūra.
+  const name = text(words(2));
+  expect('75: «ان رسول الله» without its hamza closes the isnād', strip(`عن ${name} ان رسول الله قال: ${matn}`) === matn, strip(`عن ${name} ان رسول الله قال: ${matn}`));
+  expect('75: «رضى الله عنه» with alif maqṣūra', strip(`عن ${name} رضى الله عنه قال: ${matn}`) === matn, strip(`عن ${name} رضى الله عنه قال: ${matn}`));
+
+  // A letter is one character and its marks, read one way only. A window
+  // that let `.` take a mark too had more ways to divide a vowelled run the
+  // longer it ran, and on 400 vowelled letters with no closer it ran past a
+  // minute in Node (measured while writing 75); this one is linear.
+  const noCloser = [...text(words(80))].map((char) => (char === ' ' ? char : `${char}َّ`)).join('');
+  const startedAt = performance.now();
+  const untouched = strip(`عَنْ ${noCloser}`);
+  const elapsed = performance.now() - startedAt;
+  expect('75: a long vowelled text with no closer is searched quickly, and left whole', elapsed < 250 && untouched === `عَنْ ${noCloser}`, { elapsed });
 }
 
 // ------------------------------------------------------------------- summary

@@ -95,7 +95,40 @@ const VARIANTS: Record<string, string> = {
   و: 'وؤ',
 };
 
-const MARKS = '[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]*';
+/**
+ * The marks a letter may carry in display text, as the body of a character
+ * class (`[${DISPLAY_MARK_CLASS}]`, or `[^${DISPLAY_MARK_CLASS}]` for anything
+ * else). Exported with `displayTextPattern` for a rule that counts printed
+ * letters, so that a vowelled text is measured as a bare one is: a letter is
+ * one character outside the class followed by any marks in it, which can be
+ * read only one way, so a failing match does not backtrack over the ways of
+ * dividing a run of marks.
+ */
+export const DISPLAY_MARK_CLASS = '\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640';
+const MARKS = `[${DISPLAY_MARK_CLASS}]*`;
+
+/**
+ * Regular-expression source (for a `u` RegExp) that finds `normalized` — text
+ * as `normalize` writes it — in display text: every letter may carry the
+ * marks normalization removed and be any variant it folds, and a space is any
+ * run of whitespace.
+ *
+ * This is `findInDisplayText`'s pattern, shared so that a rule which must
+ * match printed text, vowelled or not, is written once in its bare form and
+ * never as a regex over diacritics: `stripApparatus` (retrieval/sharh.ts)
+ * missed «رَوَاهُ» because its patterns were literal bare letters
+ * (FOUND_ISSUES 75).
+ */
+export function displayTextPattern(normalized: string): string {
+  return [...normalized]
+    .map((char) => {
+      if (char === ' ') return '\\s+';
+      const set = VARIANTS[char];
+      const atom = set ? `[${set}]` : escapeRegex(char);
+      return atom + MARKS;
+    })
+    .join('');
+}
 
 /**
  * Locate a normalized query inside *display* text, returning offsets into the
@@ -112,14 +145,7 @@ export function findInDisplayText(
 ): [start: number, end: number] | null {
   if (!normalizedQuery) return null;
 
-  const pattern = [...normalizedQuery]
-    .map((char) => {
-      if (char === ' ') return '\\s+';
-      const set = VARIANTS[char];
-      const atom = set ? `[${set}]` : escapeRegex(char);
-      return atom + MARKS;
-    })
-    .join('');
+  const pattern = displayTextPattern(normalizedQuery);
 
   const match = new RegExp(MARKS + pattern, 'u').exec(text);
   return match ? [match.index, match.index + match[0].length] : null;

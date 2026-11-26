@@ -1230,6 +1230,37 @@ as "over-stripped". Not measured; pre-existing. Left unfixed.
 
 ## 75. `stripApparatus` never matches vowelled text (2026-11-20, by reading)
 
+**Fixed in lane B3** (commit "75." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced it first). Each formula is written in its bare form and
+widened by `displayTextPattern`, now exported from `lib/arabic.ts`: it is
+`findInDisplayText`'s pattern, moved out unchanged (the reader's highlight
+builds the same string as before), so every letter may carry the marks in its
+class (ḥarakāt, superscript alef, Qurʾānic marks, tatweel) and be any variant
+`normalize` folds. The cut is still made in the raw text, which every caller
+expects back (`queryPasses` in `hadithText.ts` compares the two). The
+isnād's windows (160 and 40) count letters with their marks, not code points,
+so a vowelled chain is measured as a bare one; a letter is one character
+outside the mark class and the marks after it, so a run of marks is read one
+way only. (A window whose letter could also be a mark ran past a minute on 400
+vowelled letters with no closer, measured in Node while writing the fix; H
+keeps a timing case.)
+
+What else changes, on bare text too:
+- The folded variants match: «ان رسول الله» without its hamza, and also
+  «إن رسول الله», open the isnād as «أن رسول الله» does; «رضى» with alif
+  maqṣūra as «رضي»; «رواية» and «روايه» alike. Inside the first 160 letters
+  and followed by a closer within 40, so an «إن رسول الله … قال:» lead-in is
+  now stripped with the chain before it.
+- A tatweel is a mark: it no longer counts toward a window, and «قـال» or
+  «رواـه» match.
+- A part-vowelled «وَرواه», which 74's edge stopped cutting, cuts again at the
+  «و».
+- Not tolerated inside a formula: the marks outside the class, U+0610–U+061A
+  and U+08D3–U+08FF, which `normalize` removes and `findInDisplayText` never
+  allowed either (FOUND_ISSUES 80).
+
+Whether book 9260's matn blocks carry ḥarakāt is still not checked.
+
 Found by the same review. The regexes run on the raw block text, before
 `normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» with ḥarakāt never match,
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
@@ -1291,3 +1322,17 @@ measured. Pre-existing; not caused by lane B3. A fix needs the owner's word,
 as 77's case 3 does: the `quote` kind also covers a lemma the commentary
 explains, which is commentary and should be translated, so cutting every
 `quote` span would keep that from the model too. Left unfixed.
+
+## 80. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
+
+Found while fixing 75. `normalize` (`lib/arabic.ts`) removes U+0610–U+061A
+(the small high signs, honorific signs among them) and U+08D3–U+08FF (Arabic
+Extended-A, where Ḥafṣ Uthmānī writes its open tanwīn) besides the ḥarakāt.
+The pattern `findInDisplayText` builds, and since 75 `displayTextPattern`,
+allows only U+064B–U+065F, U+0670, U+06D6–U+06ED and tatweel between letters.
+So a search hit whose text carries one of the others is found in
+`Block.normalized` but not located in the display text: `SearchPanel` gets a
+null range for it. Since 75 the same marks inside a takhrīj or isnād formula
+keep `stripApparatus` from matching it. Not measured, and not known to occur
+in an imported book. Pre-existing for the search; left as it was by 75, which
+moved the pattern without changing it. Left unfixed.
