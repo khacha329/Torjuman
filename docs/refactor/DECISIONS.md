@@ -144,3 +144,21 @@ it left open, given in the lane's session on 2026-11-26.
   standalone flag whose text is not its block's text is treated as an entry
   card — never served for the block, retranslated on its own. Stored data is
   left alone.
+- **The issues.** Fix FOUND_ISSUES 45, 53, 54, 55, 57, 58, 59, 60, 62, 63,
+  64, 65, 66 and 67 (the work order). Those not named above needed no
+  decision beyond their entry; each fix is its own commit.
+
+Answers to the lane's review, the owner's, later on 2026-11-26:
+
+- **Translate the rest on a fallback card** asks the model the card asked
+  for, through the same chain, under that model's key — not the model that
+  answered. A Gemini card that Haiku answered goes back to Gemini first.
+- **Web lookup across providers.** When the chain crosses from Gemini to
+  Claude, Haiku 5.5 gets the request without the research pass: a plain
+  translation, as Gemini would have given, and no web search.
+- **62, how far.** Only the reader's cloud translations report outcomes;
+  that is recorded, not widened. FOUND_ISSUES 76 is fixed with it: the
+  window listeners are registered once, so the browser's online event always
+  clears an assumption of offline.
+- **Check U.** The entries only the Linux container can record are
+  re-recorded by a cloud session on the lane's branch before the merge.
