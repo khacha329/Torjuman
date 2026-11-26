@@ -857,6 +857,9 @@ await scenario('anthropic.validateKey.403', [anthropicError(403)], validateAnthr
 await scenario('anthropic.validateKey.429', times(3, () => anthropicError(429, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
 await scenario('anthropic.validateKey.400', [anthropicError(400)], validateAnthropic(ANTHROPIC_KEY));
 await scenario('anthropic.validateKey.connection-failure', times(3, () => CONNECTION_FAILURE), validateAnthropic(ANTHROPIC_KEY));
+// FOUND_ISSUES 58: a server error is no verdict on the key (three answers: the SDK retries twice).
+await scenario('anthropic.validateKey.500', times(3, () => anthropicError(500, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
+await scenario('anthropic.validateKey.529', times(3, () => anthropicError(529, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
 
 // --------------------------------------------------- Gemini: translate
 

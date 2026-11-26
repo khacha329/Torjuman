@@ -957,6 +957,8 @@ DECISIONS 41 and 42, none is a defect of the fix:
 
 ## 58. The Claude key check passes on a server error (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "58." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. `AnthropicProvider.validateKey` still returns
 `true` for any 5xx (500, 529 overloaded) through the branch whose comment
 says a rate limit or a 400 still proves the key authenticated, which does

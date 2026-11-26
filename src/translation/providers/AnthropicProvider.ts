@@ -76,11 +76,14 @@ export class AnthropicProvider implements TranslationProvider {
       // A rate limit or a 400 still proves the key authenticated. An error
       // with no status proves nothing: the SDK's APIConnectionError is an
       // APIError without one, so with no network the key used to test as good
-      // (FOUND_ISSUES 12). It is thrown instead, and the key screens show
-      // "Could not reach Claude: …" rather than a verdict on the key.
+      // (FOUND_ISSUES 12). Nor does a server error (500, 529 overloaded): the
+      // request may never have reached the key check, and it passed as good
+      // until FOUND_ISSUES 58. Both are thrown instead, and the key screens
+      // say the key was not checked rather than give a verdict on it.
       if (
         error instanceof Anthropic.APIError &&
         error.status !== undefined &&
+        error.status < 500 &&
         error.status !== 401 &&
         error.status !== 403
       ) {
