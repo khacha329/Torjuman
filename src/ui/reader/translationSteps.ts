@@ -89,10 +89,14 @@ export function samePassage(
  * before FOUND_ISSUES 26 was fixed, which has no flag and holds the visible
  * block's cache key (FOUND_ISSUES 53). Such a card is recognised as the
  * entry action made it: anchored on one whole block, from offset 0 to the
- * block's end, with text that is not in that block. A selection's text is
- * always its blocks' own text, so no real selection matches. The block must be
- * among `blocks`; when it is not, nothing is claimed. Stored cards are left as
- * they are (DECISIONS, lane B2).
+ * block's end, with text that is not in that block. A one-block selection's
+ * text is the block's own text as the browser gives it back, and the check is
+ * on the trimmed text being anywhere in the block, so a selection matches only
+ * if the block's stored text changed under it to a different text of the same
+ * length (a re-import that rewrote it; inferred, not seen). Such a card is
+ * then never served and is asked again. The block must be among `blocks`;
+ * when it is not, nothing is claimed. Stored cards are left as they are
+ * (DECISIONS, lane B2).
  */
 export function isEntryCard(
   card: Pick<

@@ -78,8 +78,10 @@ export async function getCardByCacheKey(
   // served. The first the index gave back is the lowest primary key, and a
   // card id begins with its creation time (lib/id.ts), so the oldest won
   // (FOUND_ISSUES 65). Two finished cards under one key come from a failed
-  // `dropReplaced`, or from retranslations that overlapped before lane B2
-  // allowed one at a time (FOUND_ISSUES 57).
+  // delete in useTranslator's `dropSuperseded`, from retranslations that
+  // overlapped before lane B2 allowed one at a time (FOUND_ISSUES 57), or from
+  // two Translates of one passage in flight together, neither yet stored when
+  // the other looked in the cache.
   let newest: TranslationCard | undefined;
   let cursor = await handle()
     .transaction('cards')
