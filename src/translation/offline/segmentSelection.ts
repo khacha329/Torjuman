@@ -259,7 +259,8 @@ export function segmentSelection(options: {
       // path does not arise today; where it would and something stands
       // between (a verse over three blocks, the middle one inside a ḥadīth),
       // the share is emitted as a segment of its own, as before 69, rather
-      // than have its words shown nowhere (review of 8e22e5b).
+      // than have its words shown nowhere (review of 8e22e5b); that segment
+      // repeats the verse's English and note.
       const earlier = verseSegments.get(entity.id);
       if (earlier) {
         if (entity.textUthmani !== undefined) return;

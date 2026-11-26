@@ -1094,8 +1094,8 @@ break is not a paragraph's end in Shamela). That path does not arise with
 today's detector, which always sets `textUthmani` and joins at most two
 blocks; where it would and the verse's segment is no longer the last (a verse
 over three blocks, the middle one inside a ḥadīth), the share is emitted as a
-segment of its own, as before, rather than shown nowhere (from the fix's
-review). Unchanged: 61's edge case, a verse
+segment of its own, as before, rather than shown nowhere; that segment
+repeats the verse's English and note (from the fix's review). Unchanged: 61's edge case, a verse
 whose first share lies inside a ḥadīth and is skipped, is first emitted at its
 next share, so that part still reads twice. Verses only: no ḥadīth entity has
 a second share, since the detector's spans one block. On-device cards made
