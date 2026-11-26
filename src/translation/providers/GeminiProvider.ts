@@ -1,5 +1,6 @@
 import {
   TranslationError,
+  type KeyCheck,
   type ModelOption,
   type TranslationProvider,
   type TranslationRequest,
@@ -98,23 +99,69 @@ export class GeminiProvider implements TranslationProvider {
   readonly fitFor =
     'Good for reading along and checking passages you would otherwise skip.';
 
-  async validateKey(key: string): Promise<boolean> {
-    if (!key.trim()) return false;
-    let response: Response;
-    try {
-      response = await fetch(`${GEMINI_BASE}/models`, {
-        headers: { 'x-goog-api-key': key },
-      });
-    } catch {
-      throw new TranslationError(
-        'network',
-        'Could not reach the Gemini API. Check the network connection.',
-      );
+  /**
+   * models.list with the key: a rejection says the key is bad, and the list
+   * says which of `models` the key is offered (lane B2). The docs describe it
+   * as "the Models available through the Gemini API"; whether it leaves out a
+   * model a key is refused (the 2.5 models for a new key) is not stated
+   * there, so a model it lists can still be refused when called, and the
+   * fallback steps over one that is.
+   *
+   * Pages of up to 1,000 (the API's maximum), following nextPageToken; at
+   * most MAX_LIST_PAGES of them, against a token that never ends. A page
+   * after the first that fails leaves the list unknown: the key itself is
+   * good, and no model is marked rather than marking every one.
+   *
+   * A server error (500, 503) is no verdict on the key: thrown, not "rejected"
+   * as every non-OK status used to be.
+   */
+  async validateKey(key: string, models: readonly string[] = []): Promise<KeyCheck> {
+    if (!key.trim()) return { valid: false, unusableModels: [] };
+    const listed = new Set<string>();
+    let pageToken: string | null = null;
+    for (let page = 0; page < MAX_LIST_PAGES; page++) {
+      const query = new URLSearchParams({ pageSize: '1000' });
+      if (pageToken) query.set('pageToken', pageToken);
+      let response: Response;
+      try {
+        response = await fetch(`${GEMINI_BASE}/models?${query}`, {
+          headers: { 'x-goog-api-key': key },
+        });
+      } catch {
+        if (page > 0) return { valid: true, unusableModels: [] };
+        throw new TranslationError(
+          'network',
+          'Could not reach the Gemini API. Check the network connection.',
+          { condition: 'unreachable' },
+        );
+      }
+      if (page > 0 && !response.ok) return { valid: true, unusableModels: [] };
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        return { valid: false, unusableModels: [] };
+      }
+      if (!response.ok) throw await geminiHttpError(response);
+
+      let payload: GeminiModelList;
+      try {
+        payload = (await response.json()) as GeminiModelList;
+      } catch {
+        // The key was accepted; only the list could not be read.
+        return { valid: true, unusableModels: [] };
+      }
+      for (const entry of payload.models ?? []) {
+        const methods = entry.supportedGenerationMethods;
+        if (methods && !methods.includes('generateContent')) continue;
+        if (typeof entry.name === 'string') listed.add(entry.name.replace(/^models\//, ''));
+      }
+      pageToken = payload.nextPageToken || null;
+      if (!pageToken) {
+        return {
+          valid: true,
+          unusableModels: [...new Set(models)].filter((model) => !listed.has(model)),
+        };
+      }
     }
-    if (response.status === 400 || response.status === 401 || response.status === 403) {
-      return false;
-    }
-    return response.ok;
+    return { valid: true, unusableModels: [] };
   }
 
   /**
@@ -426,6 +473,15 @@ export class GeminiProvider implements TranslationProvider {
     return { text, finishReason, blockReason, usage, budget };
   }
 }
+
+/** models.list's response (generativelanguage v1beta, ListModelsResponse). */
+interface GeminiModelList {
+  models?: { name?: string; supportedGenerationMethods?: string[] }[];
+  nextPageToken?: string;
+}
+
+/** The most models.list pages a key check reads (1,000 models each). */
+const MAX_LIST_PAGES = 5;
 
 /** A stretch of the request's targetText, end exclusive. */
 interface PassagePart {

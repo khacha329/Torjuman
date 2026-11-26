@@ -191,7 +191,13 @@ export interface TranslationProvider {
   /** One line describing what this provider is fit for. */
   readonly fitFor: string;
 
-  validateKey(key: string): Promise<boolean>;
+  /**
+   * Test a key. Throws a TranslationError when the key could not be tested
+   * (no network, a server error): that is no verdict on the key. `models`
+   * are the model IDs to look for in the key's own model list, where the
+   * provider reads one.
+   */
+  validateKey(key: string, models?: readonly string[]): Promise<KeyCheck>;
 
   translate(
     request: TranslationRequest,

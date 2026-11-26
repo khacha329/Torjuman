@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
-import { allProviders, providerFor } from '../../translation/providers/registry';
+import { allProviders, modelLabel, providerFor } from '../../translation/providers/registry';
 import type { CloudProviderId } from '../../types';
 import { Button, inputClass } from '../kit';
 import { Section } from './Section';
@@ -38,9 +39,19 @@ type TestState = 'idle' | 'testing' | 'valid' | 'invalid' | 'error';
 
 function ProviderKeyField({ providerId }: { providerId: CloudProviderId }) {
   const provider = providerFor(providerId);
+  const { profiles } = useApp();
   const [value, setValue] = useState(() => secrets.getProviderKey(providerId));
   const [state, setState] = useState<TestState>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  // Of the models this app is set to use on this provider, those the key's
+  // own model list leaves out (lane B2). Shown under "Key works".
+  const [unusable, setUnusable] = useState<string[]>([]);
+  // The configured models: every one offered (the fallback chain runs
+  // through them) and any a profile is pinned to.
+  const configuredModels = [
+    ...provider.availableModels.map((model) => model.id),
+    ...profiles.filter((profile) => profile.providerId === providerId).map((profile) => profile.model),
+  ];
 
   const save = () => {
     secrets.setProviderKey(providerId, value);
@@ -55,9 +66,11 @@ function ProviderKeyField({ providerId }: { providerId: CloudProviderId }) {
     secrets.setProviderKey(providerId, value);
     setState('testing');
     setMessage(null);
+    setUnusable([]);
     try {
-      const ok = await provider.validateKey(value);
-      setState(ok ? 'valid' : 'invalid');
+      const check = await provider.validateKey(value, configuredModels);
+      setState(check.valid ? 'valid' : 'invalid');
+      setUnusable(check.unusableModels);
     } catch (error) {
       setState('error');
       setMessage(error instanceof Error ? error.message : String(error));
@@ -120,6 +133,15 @@ function ProviderKeyField({ providerId }: { providerId: CloudProviderId }) {
         )}
         {message && state === 'idle' && <span className="text-muted">{message}</span>}
       </div>
+
+      {state === 'valid' && unusable.length > 0 && (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">
+          This key’s model list does not include{' '}
+          {unusable.map((model) => `${modelLabel(providerId, model)} (${model})`).join(', ')}.
+          {provider.displayName} is likely to refuse them: a profile on one fails with that reason, and
+          the fallback moves past one that refuses.
+        </p>
+      )}
     </div>
   );
 }

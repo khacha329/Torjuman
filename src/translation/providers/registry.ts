@@ -56,6 +56,12 @@ export function defaultModelFor(id: ProviderId): string {
   return providerFor(id).defaultModel;
 }
 
+/** A model's short name as a card's badge shows it ("Flash 3.8"), or its ID. */
+export function modelLabel(id: ProviderId, model: string): string {
+  const option = findModelOption(id, model);
+  return option ? option.label.split(' — ')[0] : model;
+}
+
 /** Which provider a profile saved before providers existed was on (AppContext). */
 export function providerIdForModel(model: string): CloudProviderId {
   return isClaudeModel(model) ? 'anthropic' : 'gemini';

@@ -29,8 +29,8 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
     setState('testing');
     setMessage(null);
     try {
-      const ok = await provider.validateKey(key);
-      if (!ok) {
+      const { valid } = await provider.validateKey(key);
+      if (!valid) {
         setState('invalid');
         return;
       }

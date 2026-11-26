@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { TranslatedSegment, TranslationUsage } from '../../types';
 import {
   TranslationError,
+  type KeyCheck,
   type ModelOption,
   type TranslationProvider,
   type TranslationRequest,
@@ -57,18 +58,21 @@ export class AnthropicProvider implements TranslationProvider {
     return anthropicClient(key);
   }
 
-  async validateKey(key: string): Promise<boolean> {
-    if (!key.trim()) return false;
+  // No model list is read here (lane B2's model marking is Gemini's), so
+  // `unusableModels` is always empty.
+  async validateKey(key: string): Promise<KeyCheck> {
+    const verdict = (valid: boolean): KeyCheck => ({ valid, unusableModels: [] });
+    if (!key.trim()) return verdict(false);
     try {
       await this.client(key).messages.create({
         model: ANTHROPIC_KEY_CHECK_MODEL,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'hi' }],
       });
-      return true;
+      return verdict(true);
     } catch (error) {
-      if (error instanceof Anthropic.AuthenticationError) return false;
-      if (error instanceof Anthropic.PermissionDeniedError) return false;
+      if (error instanceof Anthropic.AuthenticationError) return verdict(false);
+      if (error instanceof Anthropic.PermissionDeniedError) return verdict(false);
       // A rate limit or a 400 still proves the key authenticated. An error
       // with no status proves nothing: the SDK's APIConnectionError is an
       // APIError without one, so with no network the key used to test as good
@@ -80,7 +84,7 @@ export class AnthropicProvider implements TranslationProvider {
         error.status !== 401 &&
         error.status !== 403
       ) {
-        return true;
+        return verdict(true);
       }
       throw toTranslationError(error);
     }
