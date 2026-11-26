@@ -63,6 +63,22 @@ interface BlockLine {
   /** anchor */ a: string | null;
 }
 
+/**
+ * The book was imported — its new copy is in place and the old one gone — but
+ * rebuilding what is derived from it (verses and ḥadīth, or a dictionary's
+ * root index) stopped. Its own class so the screen does not call it a failed
+ * import: nothing is rolled back, and the reader rebuilds entities when the
+ * book is opened.
+ */
+export class BookIndexingError extends Error {
+  constructor(cause: unknown) {
+    super(
+      `The book was imported, but indexing it stopped: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+    this.name = 'BookIndexingError';
+  }
+}
+
 export interface TransferProgress {
   phase: 'reading' | 'writing' | 'inserting' | 'indexing' | 'done';
   done: number;
@@ -359,9 +375,7 @@ export async function importBookFile(
       if (book.role === 'dictionary') await buildRootIndex(storage, book);
       else await regenerateEntities(storage, book);
     } catch (error) {
-      throw new Error(
-        `The book was imported, but indexing it stopped: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new BookIndexingError(error);
     }
 
     onProgress({ phase: 'done', done: blockCount, total: blockCount, message: 'Done.' });

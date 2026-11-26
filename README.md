@@ -603,14 +603,20 @@ transfer is rejected rather than read as a short book. The incoming copy is
 written under staged ids (`staging:` before each key, `stagedId` in
 `StorageAdapter.ts`) and becomes the book only once the whole file is in and
 its counts check out, in one IndexedDB transaction (`adoptStagedBook`). So an
-import that fails partway leaves the device as it was: a new book is not
+import that fails before then — a file cut short, a newer format, a quota
+error, the tab closed — leaves the device as it was: a new book is not
 added — a half-imported book looks valid and reads as though pages were
-missing — and a book being **replaced** keeps its old copy. A replacement
+missing — and a book being **replaced** keeps its old copy. Only rebuilding
+the derived index can fail after it, and that says the book was imported
+(`BookIndexingError`); the reader rebuilds entities when the book is opened. A replacement
 swaps the text and what is derived from it (entities, dictionary and
 biography entries, a Taqrīb's narrator profiles) and keeps the user's work on
 the book — marks, translation, explanation and sharḥ cards, the reading
 position — which anchors to block ids that are the same in both copies. Until
-then the staged copy takes room beside the old one. It once deleted the old
+it is adopted the staged copy takes room beside the old one, and while the
+swap commits briefly more. An import that never finishes (the tab closed)
+leaves its staged rows until the same book is imported again (FOUND_ISSUES
+77). It once deleted the old
 copy first, work and all, and a replacement cut short left no copy
 (FOUND_ISSUES 24).
 

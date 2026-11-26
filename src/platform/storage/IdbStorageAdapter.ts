@@ -41,10 +41,10 @@ import {
   readStoreRows,
 } from './idbTransfer';
 import {
+  adoptStagedBook,
   clearDictionaryEntries,
   clearEntities,
   countBlocks,
-  adoptStagedBook,
   countPages,
   deleteBlocksForPage,
   deleteBook,
