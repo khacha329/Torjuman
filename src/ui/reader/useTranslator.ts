@@ -7,7 +7,10 @@ import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
 import type { TranslationResult } from '../../translation/TranslationProvider';
 import { providerFor } from '../../translation/providers/registry';
-import { translateWithFallback } from '../../translation/providers/fallback';
+import {
+  translateWithFallback,
+  type FallbackOutcome,
+} from '../../translation/providers/fallback';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { findLocalHadith } from '../../retrieval/hadithJson';
@@ -411,6 +414,10 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // Also held app-wide, so the service-worker update prompt waits: a reload
       // mid-request loses the passage and the tokens already spent on it.
       const endActivity = beginActivity();
+      // The provider's answer, once there is one: if enrichment or storing
+      // the card then fails, the failed card keeps that paid reply
+      // (FOUND_ISSUES 55).
+      let answered: FallbackOutcome | null = null;
 
       try {
         if (offline) {
@@ -426,7 +433,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         // fallback chain (providers/fallback.ts), and the card records which
         // answered. Its cache key stays the one asked for, so selecting the
         // passage again serves this card (the owner's answer, 2026-11-26).
-        const answered = await translateWithFallback({
+        const outcome = await translateWithFallback({
           request: translationRequestFor({
             anchor,
             before,
@@ -442,7 +449,8 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
           crossProvider: settings.crossProviderFallback,
           onChunk: (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
         });
-        const result = answered.result;
+        answered = outcome;
+        const result = outcome.result;
 
         // Measured before enrichment, against the Arabic that was sent. A
         // well-formed answer that quietly stopped half way through the passage
@@ -451,9 +459,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         const finished: TranslationCard = {
           ...card,
-          providerId: answered.providerId,
-          model: answered.model,
-          ...(answered.fallback ? { fallback: answered.fallback } : {}),
+          providerId: outcome.providerId,
+          model: outcome.model,
+          ...(outcome.fallback ? { fallback: outcome.fallback } : {}),
           status: 'complete',
           usedExternalLookup: result.searched === true,
           usage: result.usage,
@@ -497,11 +505,11 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         upsert(finished);
         await dropReplaced(replaces);
 
-        setStats((previous) => withCloudRequest(previous, answered.providerId, result));
+        setStats((previous) => withCloudRequest(previous, outcome.providerId, result));
 
         return finished;
       } catch (caught) {
-        const failed = failedCard(card, caught);
+        const failed = failedCard(card, caught, answered);
         await storage.putCard(failed);
         upsert(failed);
         // A failure that was billed (FOUND_ISSUES 64) counts in the session

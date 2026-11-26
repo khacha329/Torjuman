@@ -928,6 +928,8 @@ named translate only. Left unfixed.
 
 ## 55. A failure after a paid reply in translate keeps no raw text (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "55." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. In `ui/reader/useTranslator.ts`, if
 `enrichSegments` or `storage.putCard(finished)` throws after the provider has
 returned, the error is not a `TranslationError`, so `failedCard` sets no

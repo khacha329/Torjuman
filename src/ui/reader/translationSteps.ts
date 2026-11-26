@@ -10,6 +10,7 @@ import { newId } from '../../lib/id';
 import { sha256 } from '../../lib/hash';
 import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError, type TranslationRequest } from '../../translation/TranslationProvider';
+import type { FallbackOutcome } from '../../translation/providers/fallback';
 import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
 import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
 
@@ -176,13 +177,34 @@ export function loadingCard({
   };
 }
 
-export function failedCard(card: TranslationCard, caught: unknown): TranslationCard {
+/**
+ * The card a failed translation leaves. `answered` is the provider's answer
+ * when the failure came after it — enrichment or the card's write threw —
+ * so the paid reply is kept as the card's raw text, with its usage, cost and
+ * the model that gave it (FOUND_ISSUES 55). Such an error is not a
+ * TranslationError and carried none of it.
+ */
+export function failedCard(
+  card: TranslationCard,
+  caught: unknown,
+  answered: FallbackOutcome | null = null,
+): TranslationCard {
   const error =
     caught instanceof TranslationError
       ? caught
       : new TranslationError(
           'api',
           caught instanceof Error ? caught.message : String(caught),
+          answered
+            ? {
+                raw: answered.result.raw || null,
+                usage: answered.result.usage,
+                costUsd: answered.result.costUsd,
+                answeredBy: answered.fallback
+                  ? { providerId: answered.providerId, model: answered.model, fallback: answered.fallback }
+                  : null,
+              }
+            : {},
         );
 
   const failed: TranslationCard = {
