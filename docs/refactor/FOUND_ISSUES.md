@@ -981,6 +981,8 @@ status in the prefix and again in the SDK's message). Left unfixed.
 
 ## 60. `useSharh` keeps one busy flag (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "60." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. `ui/reader/useSharh.ts` has the single-flag
 pattern FOUND_ISSUES 29 fixed in `useTranslator`; its busy bar is in
 `CommentaryBars.tsx`. If two sharḥ lookups can run at once, the first to
