@@ -129,8 +129,10 @@ owner's answer of 2026-11-26 in DECISIONS: `formatBytes` everywhere, with a
 gigabyte step). All four places below now use it, and so does a fifth
 found while fixing, the offline model's file list in Settings → Translation
 → Offline translation → diagnostics (`OfflineTranslation.tsx`, the same
-megabytes-only code as Library transfer's). The "not enough space" message
-no longer rounds up.
+megabytes-only code as Library transfer's), on screen and in the report
+Settings → About → This build copies (`BuildSection.tsx`). The "not enough
+space" message no longer rounds up. Other sizes the entry did not list are
+79.
 
 Only two of the app's byte formatters were the same; Phase 2 step 2c merged
 those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
@@ -1222,3 +1224,22 @@ Settings, or a change in the app's context). Pre-existing on main, where the
 three sections sat in one column. In lane UI-1's first commit every tab tap
 happened to re-render them, which hid it; the second builds the tabs' contents
 once, as main's column was, and it shows as before. Left unfixed.
+
+## 79. QUL resources and Ḥadīth English write sizes their own way (2026-11-26, by reading)
+
+Found by the review of lane UI-1's fix to 8, which they were not part of.
+Settings → Library → QUL resources (`ui/settings/QulResources.tsx` ~230,
+~285, and the totals ~297–306) and Ḥadīth English
+(`ui/settings/HadithJsonResources.tsx` ~266, ~295) write a file's size as
+megabytes with two decimals ("0.36 MB", "3.00 MB"), where everything 8
+named now uses `formatBytes` ("369 KB", "3.0 MB"). The QUL lines date from
+the first commit (810b059); entry 8 (2026-11-15) missed them, and Ḥadīth
+English came later (4946d07). Making them match changes text the owner
+sees, and check U's `settings--qul-resources` and
+`settings--hadith-english--imported`. Left as they are, for the owner.
+(The QUL section's seed size, ~321, is a fixed approximate figure and is
+not one of them.)
+
+Related, pre-existing: `formatBytes` rounds before it changes unit, so it
+reads "1024 KB" from 1023.5 KB up to 1 MB, and since 8's gigabyte step
+"1024.0 MB" from 1023.95 MB up to 1 GB.

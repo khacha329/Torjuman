@@ -106,9 +106,13 @@ lane B found.
 
 The owner's answers to the two questions lane UI-1 asked.
 
-- **8. Byte sizes.** One format everywhere: `formatBytes` in
-  `lib/format.ts` ("512 B", "300 KB", "2.5 MB"), with a gigabyte step
-  added ("1.4 GB"), so a tablet's free space does not read "52345.6 MB".
-  The "not enough space" message stops rounding up.
+- **8. Byte sizes.** Asked which one format the places in FOUND_ISSUES 8
+  should use (the tablet transfer file's size, the "not enough space"
+  message, the book export's status, the offline storage line, and the
+  offline model's file list), the owner chose `formatBytes` in
+  `lib/format.ts` ("512 B", "300 KB", "2.5 MB") with a gigabyte step added
+  ("1.4 GB"), so a tablet's free space does not read "52345.6 MB". The
+  "not enough space" message stops rounding up. Sizes elsewhere were not
+  part of the question (FOUND_ISSUES 79).
 - **Where "What works offline" goes.** The brief's five Settings tabs did
   not place it. It goes in About, above "This build" and "Retrieval".
