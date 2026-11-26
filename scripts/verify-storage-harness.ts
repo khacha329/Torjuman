@@ -665,6 +665,18 @@ const phases: Record<string, Phase> = {
     await record.step('getCardByCacheKey cache-a2 (the replaced key)', () => s.getCardByCacheKey('cache-a2'));
     await record.step('getCardByCacheKey cache-a2-new (the new key)', () => s.getCardByCacheKey('cache-a2-new'));
     await record.step('getCardByCacheKey missing', () => s.getCardByCacheKey('nope'));
+    // FOUND_ISSUES 65 (lane B2): two finished cards under one key, the older
+    // with the lower id, which the index gives back first: the newer is
+    // served. Deleted again, so every later step sees the rows it saw before.
+    await record.step('putCard b2-older and b2-newer (one cache key)', async () => {
+      await s.putCard(card('card-b2a', B, 'cache-b2', T0 + 1) as never);
+      await s.putCard(card('card-b2b', B, 'cache-b2', T0 + 9) as never);
+    });
+    await record.step('getCardByCacheKey cache-b2 (the newer)', () => s.getCardByCacheKey('cache-b2'));
+    await record.step('deleteCard b2-older and b2-newer', async () => {
+      await s.deleteCard('card-b2a');
+      await s.deleteCard('card-b2b');
+    });
     await record.step('deleteCard a1', () => s.deleteCard('card-a1'));
     await record.step('deleteCard missing', () => s.deleteCard('nope'));
     await record.step('listCards A', () => s.listCards(A));

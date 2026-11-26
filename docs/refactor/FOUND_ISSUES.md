@@ -1037,6 +1037,8 @@ cost reach neither the failed card nor the session totals. Left unfixed.
 
 ## 65. Two finished cards under one key: the oldest id wins (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "65." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. Since 41, `getCardByCacheKey` walks
 `byCacheKey` and returns the first complete row, which is the lowest primary
 key, not necessarily the newest card. Two complete cards under one key
