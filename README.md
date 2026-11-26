@@ -674,8 +674,9 @@ Gemini turned translations away with "This model is currently experiencing
 high demand" (503), and the card failed at once. Now (lane B2, 2026-11-26):
 
 - **Retried first.** Gemini translate retries a 503 or a 500 twice, after
-  about 1 s and 2 s, each wait cut by up to a quarter at random — the policy
-  the Anthropic SDK already applies to Claude's 529 and 500. A 429 keeps its
+  about 1 s and 2 s, each wait cut by up to a quarter at random — the shape of
+  the Anthropic SDK's own two retries of Claude's 529 and 500, which wait about
+  0.5 s and 1 s (or a `retry-after`). A 429 keeps its
   own retries, and waits at most 60 s for a `retry-after`: a longer one fails
   the card at once and says how long Gemini asked to wait (FOUND_ISSUES 67).
 - **Then the fallback chain** (`translation/providers/fallback.ts`). A Gemini

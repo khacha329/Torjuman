@@ -59,9 +59,11 @@ const MAX_RETRY_AFTER_SECONDS = 60;
 /**
  * Retries of a 503 ("This model is currently experiencing high demand") or a
  * 500, before the fallback (providers/fallback.ts) asks another model. The
- * SDK's own policy for Claude's 529, so both providers wait alike: two
- * retries, the wait doubling from 1 s, each cut by up to a quarter at random
- * so that many clients turned away together do not all come back together.
+ * shape of the Anthropic SDK's retries of Claude's 529 (two of them, the wait
+ * doubling, each cut by up to a quarter at random so that many clients turned
+ * away together do not all come back together), but from 1 s, where the SDK
+ * (0.120, client.mjs calculateDefaultRetryTimeoutMillis) starts at 0.5 s and
+ * reads a retry-after first: about 1 s and 2 s here, 0.5 s and 1 s there.
  * Short on purpose: a busy model is usually busy for longer than a few
  * seconds, and the next model in the chain is the better bet.
  */

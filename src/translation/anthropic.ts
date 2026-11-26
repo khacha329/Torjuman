@@ -166,10 +166,17 @@ export function toTranslationError(error: unknown): TranslationError {
     // The one Claude condition the fallback starts on (lane B2), as Gemini's
     // 503 and 500 are on that side.
     const overloaded = error.status === 529 || error.status === 500;
+    // A 404 is a model this key is not offered (not_found_error): a fallback
+    // model in that state is stepped over, as a Gemini one is.
+    const unavailable = error.status === 404;
     return new TranslationError(
       'api',
       `Anthropic API error ${error.status}: ${said ?? error.message}`,
-      overloaded ? { condition: 'overloaded' } : {},
+      overloaded
+        ? { condition: 'overloaded' }
+        : unavailable
+          ? { condition: 'model-unavailable' }
+          : {},
     );
   }
   // fetch reports a connection that drops while the body is read as a

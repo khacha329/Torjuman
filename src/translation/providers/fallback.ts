@@ -162,9 +162,14 @@ export async function translateWithFallback({
         why = whyPassed(caught);
         if (why === null) {
           // This model answered, with a failure of its own: that is the
-          // card's outcome, said to come from it.
+          // card's outcome, said to come from it. The note says it was asked,
+          // not that it answered, since the card shows a failure under it.
           throw caught.with({
-            answeredBy: { providerId: step.providerId, model: step.model, fallback: fallback! },
+            answeredBy: {
+              providerId: step.providerId,
+              model: step.model,
+              fallback: { ...fallback!, note: `${passedOver(passed, asked)}, so ${stepName(step, asked)} was asked.` },
+            },
           });
         }
       }
@@ -172,9 +177,11 @@ export async function translateWithFallback({
 
       if (last) {
         // The profile's model's own error, which says why the chain began,
-        // and then what every other model did.
+        // and then what every other model did. Claude's mapped messages end
+        // without a full stop, Gemini's with one.
+        const said = /[.!?…]$/.test(first.message) ? first.message : `${first.message}.`;
         throw first.with({
-          message: `${first.message} The fallback found no model to answer: ${passedOver(passed.slice(1), asked)}.`,
+          message: `${said} The fallback found no model to answer: ${passedOver(passed.slice(1), asked)}.`,
         });
       }
       onChunk?.(`${stepName(step, asked)} ${why}. Asking ${stepName(chain[index + 1], asked)}…`);
