@@ -1015,6 +1015,8 @@ Left unfixed.
 
 ## 63. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "63." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B, beside 15.2. In
 `translation/providers/AnthropicProvider.ts` `structure`:
 

@@ -227,6 +227,15 @@ export class AnthropicProvider implements TranslationProvider {
     const ceiling = outputCeilingFor(request.model);
     let budget = maxTokensFor(request.targetText, 4, request.model);
 
+    // Every paid word a failure could otherwise lose (FOUND_ISSUES 63): the
+    // research notes, an earlier attempt cut off at max_tokens (its tool
+    // arguments were reset before the retry), and this attempt's tool
+    // arguments and text — text a model writes instead of calling the tool
+    // was not collected while streaming, so a stream that then failed lost it.
+    let earlier = '';
+    const paidSoFar = (...current: string[]) =>
+      [research ?? '', earlier, ...current].reduce(joinNotes, '');
+
     for (let attempt = 0; attempt < 2; attempt++) {
       const stream = client.messages.stream({
         model: request.model,
@@ -256,14 +265,20 @@ export class AnthropicProvider implements TranslationProvider {
         partial += delta;
         onChunk?.(partial);
       });
+      // Collected only, never shown as progress: the progress line stays the
+      // tool's arguments, as before.
+      let streamedText = '';
+      stream.on('text', (delta) => {
+        streamedText += delta;
+      });
 
       let message: Anthropic.Message;
       try {
         message = await stream.finalMessage();
       } catch (error) {
         // As in the research pass (FOUND_ISSUES 15.2): the research notes and
-        // the tool arguments streamed so far are kept as raw.
-        throw withRaw(toTranslationError(error), joinNotes(research ?? '', partial));
+        // what this pass streamed so far are kept as raw.
+        throw withRaw(toTranslationError(error), paidSoFar(partial, streamedText));
       }
 
       addUsage(usage, message.usage);
@@ -275,6 +290,7 @@ export class AnthropicProvider implements TranslationProvider {
             (message.stop_details && 'explanation' in message.stop_details
               ? ` ${message.stop_details.explanation}`
               : ''),
+          { raw: paidSoFar(partial, textOf(message)) || null },
         );
       }
 
@@ -284,12 +300,13 @@ export class AnthropicProvider implements TranslationProvider {
       if (message.stop_reason === 'max_tokens') {
         if (attempt === 0 && budget < ceiling) {
           budget = Math.min(budget * 2, ceiling);
+          earlier = joinNotes(earlier, partial || textOf(message));
           continue;
         }
         throw new TranslationError(
           'truncated',
           `The answer was cut off at the ${budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
-          { raw: partial },
+          { raw: paidSoFar(partial || textOf(message)) },
         );
       }
 
@@ -315,7 +332,7 @@ export class AnthropicProvider implements TranslationProvider {
       throw new TranslationError(
         'parse',
         `Claude returned no structured output: ${parsed.error}`,
-        { raw: text || partial },
+        { raw: paidSoFar(text || partial) },
       );
     }
 

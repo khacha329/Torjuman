@@ -1766,6 +1766,31 @@ await scenario('fallback.anthropic.research-then-529-no-fallback', researchThen5
   }),
 );
 
+// FOUND_ISSUES 63: what the structuring pass keeps as raw. Text written
+// instead of the tool call, then the stream fails: the text is kept. A
+// refusal after a research pass: the notes are kept.
+await scenario(
+  'anthropic.translate.text-then-stream-error',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [{ type: 'text', deltas: ['[{"type":"prose",', '"english":"And this'] }],
+      stop: 'end_turn',
+      // message_start, content_block_start, two text deltas.
+      errorAfterEvents: 4,
+    }),
+  ],
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'anthropic.translate.research-then-refusal',
+  [
+    anthropicStream({ model: SONNET, blocks: [{ type: 'text', deltas: ['Notes on ', 'the example.'] }], stop: 'end_turn' }),
+    anthropicStream({ model: SONNET, blocks: [], stop: 'refusal' }),
+  ],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+
 values('values.fallbackChain', () => {
   const both = { crossProvider: true, hasKey: () => true };
   const own = { crossProvider: false, hasKey: () => true };
