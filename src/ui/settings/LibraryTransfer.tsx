@@ -58,8 +58,10 @@ export function LibraryTransfer() {
         onConflict: async (existing) =>
           window.confirm(
             `"${existing.title}" is already on this device.\n\n` +
-              'Replace it with the contents of this file? Its translation cards and marks ' +
-              'are kept — they anchor to block IDs, which are the same either way.',
+              'Replace it with the contents of this file? Its translation cards, explanations, ' +
+              'commentary cards, marks and reading position are kept — they anchor to block IDs, ' +
+              'which are the same either way. The book is replaced only once the whole file has ' +
+              'been read; if the import fails, it stays as it is.',
           ),
       });
       await refresh();

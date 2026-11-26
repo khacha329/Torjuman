@@ -426,6 +426,7 @@ const phases: Record<string, Phase> = {
       ['getBook', 'getBook', () => s.getBook(A)],
       ['listBooks', 'listBooks', () => s.listBooks()],
       ['deleteBook', 'deleteBook', () => s.deleteBook(A)],
+      ['adoptStagedBook', 'adoptStagedBook', () => s.adoptStagedBook(r('books'), r('crawlStates'))],
       ['putTocNodes', 'putTocNodes', () => s.putTocNodes(rows.tocNodes as never)],
       ['listTocNodes', 'listTocNodes', () => s.listTocNodes(A)],
       ['putPage', 'putPage', () => s.putPage(r('pages'))],
@@ -978,9 +979,8 @@ const phases: Record<string, Phase> = {
     }
     if (input.mode === 'conflict') {
       await run('importBookFile A', fileFrom(files[A].base64, `a.hashiya.gz`));
-      // The user's work on A. LibraryTransfer.tsx's confirm says "Its
-      // translation cards and marks are kept"; the record shows what a
-      // replace does to each (FOUND_ISSUES 24).
+      // The user's work on A. LibraryTransfer.tsx's confirm says it is kept;
+      // the record shows what a replace does to each (FOUND_ISSUES 24).
       await pageHelpers().put({
         marks: [mark('mark-kept', A)],
         cards: [card('card-kept', A, 'cache-kept')],
@@ -994,8 +994,10 @@ const phases: Record<string, Phase> = {
       await run('importBookFile A, no onConflict', fileFrom(files[A].base64, `a.hashiya.gz`));
       await run('importBookFile A, onConflict true', fileFrom(files[A].base64, `a.hashiya.gz`), true);
       await record.snapshot('after onConflict true');
-      // A replacement that fails part way: the old copy was deleted before
-      // the new one was read, and the rollback deletes the new one too.
+      // A replacement that fails part way. It once left no copy: the old one
+      // was deleted before the new one was read, and the rollback deleted the
+      // new one too. Since lane C the new copy is staged, so the book and the
+      // work on it are as they were, and no staged row is left behind.
       await run('importBookFile A one block short, onConflict true', shortFile(files[A].text), true);
       await record.step('getBook A', () => s.getBook(A));
     }
@@ -1107,6 +1109,7 @@ const phases: Record<string, Phase> = {
     const r = (name: keyof typeof rows, i = 0) => rows[name][i] as never;
     const ignored: [string, () => unknown][] = [
       ['putBook', () => s.putBook(r('books'))], ['deleteBook', () => s.deleteBook(A)],
+      ['adoptStagedBook', () => s.adoptStagedBook(r('books'), r('crawlStates'))],
       ['putTocNodes', () => s.putTocNodes(rows.tocNodes as never)], ['putPage', () => s.putPage(r('pages'))],
       ['putBlocks', () => s.putBlocks(rows.blocks as never)], ['deleteBlocksForPage', () => s.deleteBlocksForPage(`${A}:p1`)],
       ['putEntities', () => s.putEntities(rows.entities as never)], ['clearEntities', () => s.clearEntities(A)],

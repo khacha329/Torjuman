@@ -1,9 +1,9 @@
 import type { IDBPDatabase } from 'idb';
 import type { Block, Book, CrawlState, DictionaryEntry, Entity, Page, TocNode } from '../../types';
 import { letterFold } from '../../lib/arabic';
-import type { PageMeta, SearchHit } from './StorageAdapter';
-import { BOOK_STORES, type Schema } from './idbSchema';
-import { purgeIndex } from './idbPurge';
+import { STAGING_PREFIX, stagedId, type PageMeta, type SearchHit } from './StorageAdapter';
+import { BOOK_STORES, type BookStore, type SameUnion, type Schema } from './idbSchema';
+import { PURGE_BATCH, purgeIndex } from './idbPurge';
 import { deleteNarratorShard } from './idbReference';
 
 // Book content: books and their removal, the table of contents, pages,
@@ -70,6 +70,114 @@ export async function deleteBook(
   await db.delete('crawlStates', id);
   await db.delete('positions', id);
   searchIndex.delete(id);
+}
+
+/**
+ * A book's per-book stores, by what a replacement does with each
+ * (FOUND_ISSUES 24, `adoptStagedBook`). Its text is replaced row for row by
+ * the staged copy; what is derived from the text goes with the old copy and is
+ * rebuilt from the new; the user's work stays, since it anchors to block ids
+ * that are the same in both. The assertion below fails `tsc` if a per-book
+ * store is added without saying which it is.
+ */
+const BOOK_TEXT_STORES = ['tocNodes', 'pages', 'blocks'] as const;
+const BOOK_DERIVED_STORES = ['entities', 'dictionaryEntries', 'biographyEntries'] as const;
+const BOOK_WORK_STORES = ['marks', 'cards', 'explanationCards', 'sharhCards'] as const;
+
+true satisfies SameUnion<
+  BookStore,
+  | (typeof BOOK_TEXT_STORES)[number]
+  | (typeof BOOK_DERIVED_STORES)[number]
+  | (typeof BOOK_WORK_STORES)[number]
+>;
+
+/** Staged rows moved per round trip: values, not keys, so fewer than a purge's. */
+const ADOPT_BATCH = 1000;
+
+/**
+ * The staged import becomes the book, in one transaction (see the interface).
+ *
+ * One transaction because the alternative is a window with neither copy whole:
+ * the old one partly deleted, the new one partly moved. A transaction that
+ * fails — quota, the tab killed — commits nothing, so the book on the device
+ * stays exactly as it was. Only IndexedDB requests are awaited inside it,
+ * which is what keeps it open; the batches are queued as `purgeIndex` queues
+ * them, so a large book is a few hundred round trips rather than one per row.
+ *
+ * `positions` and the work stores are not in the transaction at all, which is
+ * the guarantee that a replacement cannot touch them.
+ */
+export async function adoptStagedBook(
+  handle: () => IDBPDatabase<Schema>,
+  searchIndex: Map<string, SearchEntry[]>,
+  book: Book,
+  crawlState: CrawlState,
+): Promise<void> {
+  // Untyped for the reason purgeIndex gives: idb's generics cannot tie an
+  // index to its store across a union of store names.
+  const db = handle() as unknown as IDBPDatabase;
+  const staging = stagedId(book.id);
+  const tx = db.transaction(
+    [...BOOK_TEXT_STORES, ...BOOK_DERIVED_STORES, 'narratorProfiles', 'books', 'crawlStates'],
+    'readwrite',
+  );
+
+  const purge = async (store: string, index: string, key: string) => {
+    for (;;) {
+      const keys = await tx.objectStore(store).index(index).getAllKeys(key, PURGE_BATCH);
+      await Promise.all(keys.map((primary) => tx.objectStore(store).delete(primary)));
+      if (keys.length < PURGE_BATCH) return;
+    }
+  };
+
+  try {
+    for (const store of [...BOOK_TEXT_STORES, ...BOOK_DERIVED_STORES]) {
+      await purge(store, 'byBook', book.id);
+    }
+    // As deleteBook does: a Taqrīb's profiles are built from its text.
+    await purge('narratorProfiles', 'byShard', `taqrib:${book.id}`);
+
+    for (const store of BOOK_TEXT_STORES) {
+      for (;;) {
+        const rows = (await tx.objectStore(store).index('byBook').getAll(staging, ADOPT_BATCH)) as {
+          id: string;
+        }[];
+        await Promise.all(
+          rows.flatMap((row) => [
+            tx.objectStore(store).delete(row.id),
+            tx.objectStore(store).put(unstaged(row)),
+          ]),
+        );
+        if (rows.length < ADOPT_BATCH) break;
+      }
+    }
+
+    await Promise.all([tx.objectStore('books').put(book), tx.objectStore('crawlStates').put(crawlState)]);
+    await tx.done;
+  } catch (error) {
+    // A failed request has usually aborted the transaction already; abort it
+    // in case it has not, and wait for it to end so nothing is left pending.
+    try {
+      tx.abort();
+    } catch {
+      // Already finished or aborted.
+    }
+    await tx.done.catch(() => {});
+    throw error;
+  }
+  searchIndex.delete(book.id);
+}
+
+/** The real row a staged one stands for: the prefix off its keys. */
+function unstaged<T extends object>(row: T): T {
+  const out = { ...row } as Record<string, unknown>;
+  for (const field of ['id', 'bookId', 'pageId']) {
+    const value = out[field];
+    if (typeof value === 'string' && value.startsWith(STAGING_PREFIX)) {
+      out[field] = value.slice(STAGING_PREFIX.length);
+    }
+  }
+  return out as T;
 }
 
 export async function putTocNodes(

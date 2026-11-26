@@ -1,4 +1,4 @@
-import type { StorageAdapter } from '../platform/storage/StorageAdapter';
+import { stagedId, type StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book, Page, TocNode } from '../types';
 import { normalize } from '../lib/arabic';
 import { sha256 } from '../lib/hash';
@@ -201,7 +201,13 @@ export async function importBookFile(
   let header: HeaderLine | null = null;
   let buffer = '';
   let bookId = '';
-  let created = false;
+  // The incoming copy is written under staged ids (`stagedId`) and becomes
+  // the book only once the whole file is in and its counts check out
+  // (FOUND_ISSUES 24). Until then the book already on the device — its text
+  // and the cards, marks and position anchored to it — is not touched, so a
+  // file cut short, a newer format or a quota error leaves it as it was.
+  let staging = '';
+  let adopted = false;
 
   const pageBatch: Page[] = [];
   const blockBatch: Block[] = [];
@@ -245,13 +251,19 @@ export async function importBookFile(
           if (existing) {
             const replace = options.onConflict ? await options.onConflict(existing) : false;
             if (!replace) throw new Error('CANCELLED');
-            await storage.deleteBook(existing.id);
+            // Not deleted here, as it once was: that took the user's cards
+            // and marks with it, and a failure after it left no copy at all.
+            // `adoptStagedBook` replaces the text once the new copy is whole.
           }
 
           bookId = header.book.id;
-          await storage.putBook({ ...header.book, importStatus: 'in-progress' });
-          await storage.putTocNodes(header.toc);
-          created = true;
+          staging = stagedId(bookId);
+          // An import that never finished (the tab closed, the tablet slept)
+          // leaves its staged rows behind; they go before this one starts.
+          await storage.deleteBook(staging);
+          await storage.putTocNodes(
+            header.toc.map((node) => ({ ...node, id: stagedId(node.id), bookId: staging })),
+          );
           continue;
         }
 
@@ -259,8 +271,8 @@ export async function importBookFile(
 
         if (record.kind === 'page') {
           pageBatch.push({
-            id: `${bookId}:p${record.p}`,
-            bookId,
+            id: stagedId(`${bookId}:p${record.p}`),
+            bookId: staging,
             pageIndex: record.p,
             volume: record.v,
             printPage: record.s,
@@ -278,9 +290,9 @@ export async function importBookFile(
         // Recomputed on arrival rather than carried: deterministic, and between
         // them they roughly double the file size.
         blockBatch.push({
-          id: record.id,
-          bookId,
-          pageId: record.g,
+          id: stagedId(record.id),
+          bookId: staging,
+          pageId: stagedId(record.g),
           order: record.o,
           type: record.t,
           text: record.x,
@@ -324,14 +336,14 @@ export async function importBookFile(
       fetchedPages: pageCount,
       importStatus: 'complete',
     };
-    await storage.putBook(book);
-    await storage.putCrawlState({
+    await storage.adoptStagedBook(book, {
       bookId,
       status: 'complete',
       nextPage: book.totalPages,
       failedPages: [],
       updatedAt: Date.now(),
     });
+    adopted = true;
 
     onProgress({
       phase: 'indexing',
@@ -341,16 +353,25 @@ export async function importBookFile(
     });
 
     // Derived data, rebuilt locally against the bundled muṣḥaf — no network.
-    if (book.role === 'dictionary') await buildRootIndex(storage, book);
-    else await regenerateEntities(storage, book);
+    // The book is in place by now and its old copy gone, so a failure here
+    // says so rather than reading as a failed import.
+    try {
+      if (book.role === 'dictionary') await buildRootIndex(storage, book);
+      else await regenerateEntities(storage, book);
+    } catch (error) {
+      throw new Error(
+        `The book was imported, but indexing it stopped: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
 
     onProgress({ phase: 'done', done: blockCount, total: blockCount, message: 'Done.' });
 
     return { book, pages: pageCount, blocks: blockCount };
   } catch (error) {
     // A half-imported book looks valid and reads as though pages were missing,
-    // which is worse than no book at all.
-    if (created && bookId) await storage.deleteBook(bookId);
+    // which is worse than no book at all. Only the staged rows go: the book
+    // already on the device, if there is one, was never touched.
+    if (staging && !adopted) await storage.deleteBook(staging);
     throw error;
   } finally {
     reader.releaseLock();

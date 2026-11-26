@@ -592,9 +592,20 @@ UTF-8, which matters: Arabic escaped as `\uXXXX` costs six bytes per character
 instead of two.
 
 The header carries a format version and the block count, so a truncated
-transfer is rejected rather than read as a short book. An import that fails
-partway rolls back to no book — a half-imported book looks valid and reads as
-though pages were missing.
+transfer is rejected rather than read as a short book. The incoming copy is
+written under staged ids (`staging:` before each key, `stagedId` in
+`StorageAdapter.ts`) and becomes the book only once the whole file is in and
+its counts check out, in one IndexedDB transaction (`adoptStagedBook`). So an
+import that fails partway leaves the device as it was: a new book is not
+added — a half-imported book looks valid and reads as though pages were
+missing — and a book being **replaced** keeps its old copy. A replacement
+swaps the text and what is derived from it (entities, dictionary and
+biography entries, a Taqrīb's narrator profiles) and keeps the user's work on
+the book — marks, translation, explanation and sharḥ cards, the reading
+position — which anchors to block ids that are the same in both copies. Until
+then the staged copy takes room beside the old one. It once deleted the old
+copy first, work and all, and a replacement cut short left no copy
+(FOUND_ISSUES 24).
 
 ## Structured output
 

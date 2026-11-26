@@ -369,7 +369,7 @@ the fields this one knows and drops the rest without a word. By design — block
 ids are deterministic, so the rows bind wherever they land — but unstated.
 Design §6 H.
 
-## 24. Replacing a book from a Library transfer file deletes its cards and marks (2026-11-16, measured)
+## 24. Replacing a book from a Library transfer file deletes its cards and marks (2026-11-16, measured, fixed in lane C)
 
 Found while building check D (Phase 4 step 4a). When a per-book file is
 imported for a book already on the device, `ui/settings/LibraryTransfer.tsx:58-63`
@@ -397,6 +397,19 @@ survives only in a work backup or a whole-tablet file made beforehand.
 **Possible data loss on the owner's tablet; left unfixed (structure-only
 phase).** A fix — keep the user's work on a replacement, or say plainly that
 it goes — is the owner's call, in its own change.
+
+**Fixed in lane C**, as DECISIONS.md has it. The incoming copy is written
+under staged ids (`stagedId`, `STAGING_PREFIX` in `StorageAdapter.ts`) and
+becomes the book only once the whole file is in and its counts check out:
+`adoptStagedBook` (`idbLibrary.ts`), one IndexedDB transaction, removes the old
+text and what is derived from it and moves the staged rows to their real ids.
+The marks, cards, explanation and sharḥ cards and the position are not in that
+transaction. A failure before or in it removes only the staged rows. The
+dialog now says the work is kept and that a failed import leaves the book as it
+is. Check D's `book-transfer` → `import-conflict`: "after onConflict true" keeps
+the five work rows; after the cut-short replacement, `getBook A` is the book,
+with its work, and no staged row remains. The cost: until it is adopted the
+staged copy takes room beside the old one.
 
 ## 25. A work restore's card count leaves out sharḥ cards (2026-11-16, measured)
 
@@ -1182,3 +1195,15 @@ Found by the same review. The regexes run on the raw block text, before
 and a book printed vowelled keeps its takhrīj and isnād in the shingles.
 Whether book 9260's matn blocks carry ḥarakāt was not checked. Pre-existing.
 Left unfixed.
+
+## 76. A failed fresh book import deleted work restored for that book (2026-11-26, by reading, fixed in lane C with 24)
+
+Found while fixing 24. A work backup restores fine before its books are on the
+device ("it will bind correctly once that book is imported", `idbBackup.ts`),
+so cards and marks can be waiting for a book that is not there yet. A per-book
+import that then failed part way rolled back with `deleteBook(bookId)`
+(`library/transfer.ts`), which purges every `BOOK_STORES` store and the
+position for that id — the waiting work among them. Not a replacement, so
+not 24 as written. The fix to 24 covers it: every import is staged, and the
+rollback removes only staged rows. Check D has no scenario with work waiting
+for a book; `import-one-block-short` (no work) is unchanged.

@@ -44,6 +44,7 @@ import {
   clearDictionaryEntries,
   clearEntities,
   countBlocks,
+  adoptStagedBook,
   countPages,
   deleteBlocksForPage,
   deleteBook,
@@ -184,6 +185,10 @@ export class IdbStorageAdapter implements StorageAdapter {
 
   async deleteBook(id: string): Promise<void> {
     return deleteBook(this.lazyHandle, this.searchIndex, id);
+  }
+
+  async adoptStagedBook(book: Book, crawlState: CrawlState): Promise<void> {
+    return adoptStagedBook(this.lazyHandle, this.searchIndex, book, crawlState);
   }
 
   // ------------------------------------------------------------------ toc
