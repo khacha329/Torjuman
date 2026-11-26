@@ -381,7 +381,7 @@ function blockJoin(previous: Block, next: Block): string {
  * whole text; and the piece it runs into is shown from where the verse ends.
  * A verse that starts where either piece starts and runs longer is emitted
  * first, and that piece is not shown at all: for a ḥadīth entity's piece that
- * drops its segment, with its English or its note (FOUND_ISSUES 86; only a
+ * drops its segment, with its English or its note (FOUND_ISSUES 95; only a
  * stored entity short of its block allows it). This is 61's verse across a
  * ḥadīth's edge. None of it is prose.)
  */

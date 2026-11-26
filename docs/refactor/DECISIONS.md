@@ -152,6 +152,6 @@ fixes needed decisions not recorded above.
   «Quoted in part; this is the whole ḥadīth.» — as Q5 of
   `docs/plans/hadith-text-matching.md` decided for the card path. The whole
   ḥadīth selected still shows the verified Arabic and English.
-- **77 and 78. Verses without an entity, and ḥadīth quoted in a `quote`
+- **86 and 87. Verses without an entity, and ḥadīth quoted in a `quote`
   span, reaching the on-device model.** Recorded only; not fixed in lane B3.
   Each needs a rule for spans the parser only guesses at, in its own change.

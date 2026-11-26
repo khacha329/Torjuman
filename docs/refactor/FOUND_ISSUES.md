@@ -1346,7 +1346,7 @@ block's selected share that no ḥadīth entity covers becomes a ḥadīth piece
 with no reference: Arabic plus the no-offline-source note, nothing looked up.
 With the detector's entity, which spans the whole block, nothing changes. Not
 changed: `ReaderScreen`'s load still has no rejection handler (lane A2's
-file; FOUND_ISSUES 76); it no longer matters to the ḥadīth invariant.
+file; FOUND_ISSUES 85); it no longer matters to the ḥadīth invariant.
 
 Consequences the owner should know. An on-device card made before the
 entities load shows such a ḥadīth with the note even where a verified
@@ -1358,7 +1358,7 @@ made in that window before this fix holds a prose segment with the model's
 English for the matn; its cache key is unchanged (correctly: trap 5), so
 nothing marks it stale, and it stays, in backups and shares too, until
 retranslated. Verses have the same gap and are not fixed by this: FOUND_ISSUES
-77. The owner kept this fix over refusing until the entities load
+86. The owner kept this fix over refusing until the entities load
 (2026-11-26; DECISIONS, "Answered for lane B3").
 
 Found by the review of lane B's fix to 68. **A risk to the ḥadīth
@@ -1513,11 +1513,11 @@ proved it by reading). Text otherwise bare can carry one: a tatweel, a
 superscript alef («هٰذا»), a hamza mark (U+0653–U+0655) or a Qurʾānic pause
 mark is now a mark, not a letter, so it no longer counts toward a window,
 and «قـال» or «رواـه» match. Books printed without hamza or with alif
-maqṣūra keep their isnād, as on main (FOUND_ISSUES 87). A part-vowelled «وَرواه», which
+maqṣūra keep their isnād, as on main (FOUND_ISSUES 96). A part-vowelled «وَرواه», which
 74's edge stopped cutting, cuts again at the «و». Not tolerated inside a
 formula: the marks outside the class, U+0610–U+061A and U+08D3–U+08FF, which
 `normalize` removes and `findInDisplayText` never allowed either
-(FOUND_ISSUES 80). Whether book 9260's matn blocks carry ḥarakāt is still not
+(FOUND_ISSUES 89). Whether book 9260's matn blocks carry ḥarakāt is still not
 checked.
 
 Found by the same review. The regexes run on the raw block text, before
@@ -1624,7 +1624,7 @@ merged first, took 76–82, so they were renumbered 83 and 84 when main was
 merged into lane A2. Commit subjects keep the old numbers: "Record
 FOUND_ISSUES 76" is 83, and "record FOUND_ISSUES 77" in a 47 commit is 84.
 
-## 76. The reader's entity load has no rejection handler (2026-11-26, by reading)
+## 85. The reader's entity load has no rejection handler (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 71. `ui/reader/ReaderScreen.tsx`
 (~306–309) runs `void load.then(...)` over `ensureEntities` (or
@@ -1634,9 +1634,9 @@ effect runs again (a change of book, block count or read-only state), with no
 notice and an unhandled rejection in the console: no verse or ḥadīth is marked
 or tappable,
 and nothing says why. Since 71 the on-device cut no longer depends on it for
-ḥadīth; verses still do (77). Lane A2's file. Not measured. Left unfixed.
+ḥadīth; verses still do (86). Lane A2's file. Not measured. Left unfixed.
 
-## 77. On device, a verse without an entity reaches the model (2026-11-26, by reading)
+## 86. On device, a verse without an entity reaches the model (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 71. **Against "Scripture is never
 added to the prose list"** (README, "The invariant"; the header of
@@ -1646,7 +1646,7 @@ type only for a matn (since 71) and never its spans, so verse text with no
 entity goes into `prose`,
 and the on-device model translates it, in three cases:
 
-1. before the reader's entities load, after the load fails (76), or in a
+1. before the reader's entities load, after the load fails (85), or in a
    shared chapter whose bundle carries none (the gap 71 closed for ḥadīth);
 2. a `quran` block (`shamela/structure.ts` ~66, `isEntirelyQuran`) whose
    verse the detector did not resolve;
@@ -1666,9 +1666,9 @@ unresolved one is not always a verse, and cutting it would keep commentary
 from the model too. Left unfixed: the owner asked for it to be recorded only
 (2026-11-26; DECISIONS, "Answered for lane B3").
 
-## 78. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
+## 87. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
 
-Found by the review of lane B3's records for 71, 76 and 77. **Against the
+Found by the review of lane B3's records for 71, 85 and 86. **Against the
 ḥadīth invariant** as README states it. The detector makes a ḥadīth entity
 only for a `hadith_matn` block (`quran/detectEntities.ts` ~293, the one place
 `type: 'hadith'` is set). Prophetic speech that a sharḥ quotes inside its own
@@ -1679,15 +1679,15 @@ model translates it, beside the verified segments of the same card. Since 71
 this is the remaining way for prophetic speech that the parser marks as a
 quotation. Speech it does not mark reaches the model too: in no styled run,
 in a styled run without brackets (`emphasis`), in a single-bracket run taken
-for a verse (77's case 3), or in a book whose matns are not typed
+for a verse (86's case 3), or in a book whose matns are not typed
 `hadith_matn`. Not measured. Pre-existing; not caused by lane B3. A fix
-needs the owner's word, as 77's case 3 does: the `quote` kind also covers a
+needs the owner's word, as 86's case 3 does: the `quote` kind also covers a
 lemma the commentary explains, which is commentary and should be translated,
 so cutting every `quote` span would keep that from the model too. Left
 unfixed: the owner asked for it to be recorded only (2026-11-26; DECISIONS,
 "Answered for lane B3").
 
-## 79. The check scripts do not typecheck, and T does not see them (2026-11-26, measured)
+## 88. The check scripts do not typecheck, and T does not see them (2026-11-26, measured)
 
 Found while adding lane B3's cases to check H. `tsc -b` covers `src/` and
 `vite.config.ts` only (`tsconfig.app.json`, `tsconfig.node.json`), and
@@ -1701,7 +1701,7 @@ read the field, so the cases still mean what they say) and
 `scripts/verify-parsers.ts` has
 27. Lane B3 adds none to either. Left unfixed.
 
-## 80. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
+## 89. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
 
 Found while fixing 75. `normalize` (`lib/arabic.ts`) removes U+0610–U+061A
 (the small high signs, honorific signs among them) and U+08D3–U+08FF (Arabic
@@ -1716,7 +1716,7 @@ keep `stripApparatus` from matching it. Not measured, and not known to occur
 in an imported book. Pre-existing for the search; 75 reuses the class without
 changing it. Left unfixed.
 
-## 81. The on-device verse note credits Khattab, but Pickthall is bundled (2026-11-26, by reading)
+## 90. The on-device verse note credits Khattab, but Pickthall is bundled (2026-11-26, by reading)
 
 Found while fixing 69 (check H prints the note). `QURAN_OFFLINE_NOTE` in
 `translation/offline/segmentSelection.ts` reads "English: Dr. Mustafa
@@ -1729,7 +1729,7 @@ names the wrong translator, and one README says is not shipped.
 Khattab’s translation ship with the app"; lane UI-1's area). A fix changes
 card text only, not cache keys; stored cards keep the old note. Left unfixed.
 
-## 82. A whitespace-only ḥadīth piece becomes a segment (2026-11-26, by reading)
+## 91. A whitespace-only ḥadīth piece becomes a segment (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 71. `pushProse` drops a span that is
 only whitespace; `pushEntity` does not. The parser trims a block and
@@ -1743,7 +1743,7 @@ English is cached, with that whole English and «Quoted in part» (since 73;
 the lookup is by the entity's whole text). Display only; nothing
 reaches the model. Left unfixed.
 
-## 83. On a Windows checkout with `core.autocrlf`, the recorded checks fail on line endings (2026-11-26, measured)
+## 92. On a Windows checkout with `core.autocrlf`, the recorded checks fail on line endings (2026-11-26, measured)
 
 Found while running lane B3's checks on a Windows PC (Git for Windows, which
 sets `core.autocrlf=true` in its system gitconfig). The checkout's text files
@@ -1765,7 +1765,7 @@ checked). Only the 127 screenshots point to this machine's renderer. A fix could
 (`* text=auto eol=lf`) or make the comparisons ignore CR; U's dependence on
 the renderer is a separate question. Left unfixed.
 
-## 84. The overrun check strips apparatus from sharḥ prose (2026-11-26, by reading)
+## 93. The overrun check strips apparatus from sharḥ prose (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 75. `hadithQuotationOverrun`
 (`retrieval/quotationOverrun.ts` ~80) runs `stripApparatus` over the
@@ -1784,7 +1784,7 @@ isnād rule strips it through «النووي:», so what is left is reported as 
 run on, and the takhrīj is quoted as commentary. Pre-existing; 75 widens it
 to the vowelled forms of the same phrases. Not measured. Left unfixed.
 
-## 85. A stored matn entity short of its block, with a cached ḥadīth, shows the tail twice (2026-11-26, by reading)
+## 94. A stored matn entity short of its block, with a cached ḥadīth, shows the tail twice (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 73. Since 71, the part of a matn
 block that a stored ḥadīth entity does not cover is a ḥadīth piece of its
@@ -1800,7 +1800,7 @@ tail went to the model.
 Nothing reaches the model; the detector's entities span their block, so only
 stale entities do this. Not measured. Left unfixed.
 
-## 86. A verse that starts with a stored ḥadīth entity and runs past it drops the ḥadīth (2026-11-26, by reading)
+## 95. A verse that starts with a stored ḥadīth entity and runs past it drops the ḥadīth (2026-11-26, by reading)
 
 Found by the review of lane B3's record for 71 (b1a0d20). In
 `segmentSelection`, a verse whose share starts at the same offset as a ḥadīth
@@ -1809,11 +1809,11 @@ entity's piece and ends after it sorts first (the longer piece), and the
 verified English or its no-offline-source note, is missing from the card.
 This is the skip 72 fixed for an exact tie, here for a verse that outruns
 the ḥadīth. With the detector's whole-block entity a verse's share can never
-outrun the ḥadīth's, so it needs a stored entity short of its block (85's
+outrun the ḥadīth's, so it needs a stored entity short of its block (94's
 precondition). Nothing reaches the model. Pre-existing (61's skip and the
 sort). Not measured. Left unfixed.
 
-## 87. A book printed without hamza or with alif maqṣūra keeps its isnād in the shingles (2026-11-26, by reading)
+## 96. A book printed without hamza or with alif maqṣūra keeps its isnād in the shingles (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 75. `stripApparatus` matches its
 formulae letter for letter (75 adds marks, deliberately no letter variants),
