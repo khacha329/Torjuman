@@ -1031,6 +1031,8 @@ Left unfixed.
 
 ## 64. A failure after research loses the research pass's cost (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "64." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. When the structuring pass fails after a
 research pass, the error carries no usage, so the research pass's tokens and
 cost reach neither the failed card nor the session totals. Left unfixed.

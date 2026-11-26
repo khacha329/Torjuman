@@ -201,6 +201,9 @@ export function failedCard(card: TranslationCard, caught: unknown): TranslationC
     errorKind: error.kind,
     rawResponse: error.raw ?? undefined,
     ...(error.stopReason !== null ? { stopReason: error.stopReason } : {}),
+    // What was billed before the failure (a Claude research pass, say), so
+    // the card's cost line shows it (FOUND_ISSUES 64).
+    ...(error.usage ? { usage: error.usage, costUsd: error.costUsd } : {}),
   };
   return failed;
 }

@@ -96,10 +96,12 @@ function withOfflineRequest(previous: SessionStats): SessionStats {
   };
 }
 
+// `result` is a finished translation's, or a failed one's billed usage and
+// cost (TranslationError.usage, FOUND_ISSUES 64): either was a request paid.
 function withCloudRequest(
   previous: SessionStats,
   useProviderId: ProviderId,
-  result: TranslationResult,
+  result: Pick<TranslationResult, 'usage' | 'costUsd'>,
 ): SessionStats {
   return {
     requests: previous.requests + 1,
@@ -502,6 +504,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         const failed = failedCard(card, caught);
         await storage.putCard(failed);
         upsert(failed);
+        // A failure that was billed (FOUND_ISSUES 64) counts in the session
+        // totals, under the provider that billed it.
+        if (failed.usage && failed.providerId !== 'offline') {
+          const billed = { usage: failed.usage, costUsd: failed.costUsd ?? null };
+          setStats((previous) => withCloudRequest(previous, failed.providerId, billed));
+        }
         return failed;
       } finally {
         endActivity();

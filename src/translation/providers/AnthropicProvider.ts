@@ -110,15 +110,23 @@ export class AnthropicProvider implements TranslationProvider {
     // one pass, but merging them is a separate change from the model upgrade.
     let research: string | null = null;
     let searched = false;
-    if (request.allowExternalLookup) {
-      ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
-    }
+    try {
+      if (request.allowExternalLookup) {
+        ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
+      }
 
-    const result = await this.structure(client, request, usage, research, onChunk);
-    // Reported only when a search ran: the research pass may answer without
-    // calling the tool, and the card's "web search" must not claim one
-    // (FOUND_ISSUES 43).
-    return searched ? { ...result, searched: true } : result;
+      const result = await this.structure(client, request, usage, research, onChunk);
+      // Reported only when a search ran: the research pass may answer without
+      // calling the tool, and the card's "web search" must not claim one
+      // (FOUND_ISSUES 43).
+      return searched ? { ...result, searched: true } : result;
+    } catch (error) {
+      // Tokens billed before the failure — a finished research pass, a
+      // truncated first attempt — go with the error, so the failed card and
+      // the session totals still show what was paid (FOUND_ISSUES 64). The
+      // error carried no usage, so a failure after research lost its cost.
+      throw withUsage(toTranslationError(error), request.model, usage);
+    }
   }
 
   /** Pass 1: web search enabled, tool_choice auto, free-form prose. Not parsed. */
@@ -328,4 +336,15 @@ function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | 
 
 function emptyUsage(): TranslationUsage {
   return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+}
+
+/**
+ * The error with what was billed before it, and that usage's cost, unless
+ * nothing was. A copy of the running total: the caller's object is not kept.
+ */
+function withUsage(error: TranslationError, model: string, usage: TranslationUsage): TranslationError {
+  const billed =
+    usage.inputTokens + usage.outputTokens + usage.cacheReadTokens + usage.cacheWriteTokens > 0;
+  if (!billed || error.usage) return error;
+  return error.with({ usage: { ...usage }, costUsd: costOf(model, usage) });
 }

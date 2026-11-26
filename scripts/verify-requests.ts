@@ -1748,6 +1748,24 @@ await scenario(
   translateChain('anthropic', SONNET),
 );
 
+// FOUND_ISSUES 64: the research pass finishes and is billed, then the
+// structuring pass is overloaded. The error carries the research pass's usage
+// and cost, and the notes as raw; with paid output on it, no fallback runs.
+const researchThen529 = () => [
+  anthropicStream({ model: SONNET, blocks: [{ type: 'text', deltas: ['Notes on ', 'the example.'] }], stop: 'end_turn' }),
+  ...claude529(),
+];
+await scenario('anthropic.translate.research-then-529', researchThen529(), translateAnthropic(translationRequest({ allowExternalLookup: true })));
+await scenario('fallback.anthropic.research-then-529-no-fallback', researchThen529(), (context) =>
+  translateWithFallback({
+    request: translationRequest({ model: SONNET, allowExternalLookup: true }),
+    providerId: 'anthropic',
+    keyFor: (id) => (id === 'gemini' ? GEMINI_KEY : ANTHROPIC_KEY),
+    crossProvider: true,
+    onChunk: context.progress,
+  }),
+);
+
 values('values.fallbackChain', () => {
   const both = { crossProvider: true, hasKey: () => true };
   const own = { crossProvider: false, hasKey: () => true };
