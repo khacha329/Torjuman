@@ -125,8 +125,8 @@ Fixed in the check, not the app. Found in Phase 2 step 2a and its review.
 ## 8. Byte sizes are written five different ways (2026-11-15, measured)
 
 **Fixed in lane UI-1** (commit "8." on `claude/lane-ui1-settings`; the
-owner's answer of 2026-11-26 in DECISIONS: `formatBytes` everywhere, with a
-gigabyte step). All four places below now use it, and so does a fifth
+owner's answer of 2026-11-26 in DECISIONS: `formatBytes` for these places,
+with a gigabyte step). All four places below now use it, and so does a fifth
 found while fixing, the offline model's file list in Settings → Translation
 → Offline translation → diagnostics (`OfflineTranslation.tsx`, the same
 megabytes-only code as Library transfer's), on screen and in the report
@@ -1232,11 +1232,13 @@ Settings → Library → QUL resources (`ui/settings/QulResources.tsx` ~230,
 ~285, and the totals ~297–306) and Ḥadīth English
 (`ui/settings/HadithJsonResources.tsx` ~266, ~295) write a file's size as
 megabytes with two decimals ("0.36 MB", "3.00 MB"), where everything 8
-named now uses `formatBytes` ("369 KB", "3.0 MB"). The QUL lines date from
-the first commit (810b059); entry 8 (2026-11-15) missed them, and Ḥadīth
-English came later (4946d07). Making them match changes text the owner
-sees, and check U's `settings--qul-resources` and
-`settings--hadith-english--imported`. Left as they are, for the owner.
+named now uses `formatBytes` ("365 KB", "3.0 MB"). The QUL per-file lines
+date from the first commit (810b059) and its totals from 1ed3b24; entry 8
+(2026-11-15) missed them, and Ḥadīth English came later (4946d07). Making
+them match changes text the owner sees, and check U's
+`settings--qul-resources`, `settings--hadith-english--imported`,
+`settings-tab-library` and `settings-proxy-tab-library`. Left as they
+are, for the owner.
 (The QUL section's seed size, ~321, is a fixed approximate figure and is
 not one of them.)
 
