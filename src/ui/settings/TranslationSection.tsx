@@ -110,13 +110,14 @@ export function TranslationSection() {
           }
         />
         <span className="text-sm">
-          When every model of a provider is busy, ask the other provider
+          When a provider's models are busy, ask the other provider
           <span className="mt-0.5 block text-xs text-muted">
-            A busy model is retried, then the other models of the same provider are asked in
-            turn. With this on, a Gemini translation then goes to Claude{' '}
-            {modelLabel('anthropic', ANTHROPIC_CROSS_FALLBACK_MODEL)} (paid) if a Claude key is
-            set, and a Claude one to Gemini if a Gemini key is set. The card says
-            which model answered and why. The on-device model is never asked.
+            A busy model is retried, then more models of the same provider are asked: every
+            other Gemini model, or each cheaper Claude model. With this on, if none of them
+            answers, a Gemini translation goes to Claude{' '}
+            {modelLabel('anthropic', ANTHROPIC_CROSS_FALLBACK_MODEL)} (paid, without the web
+            lookup) if a Claude key is set, and a Claude one to Gemini if a Gemini key is set.
+            The card says which model answered and why. The on-device model is never asked.
           </span>
         </span>
       </label>

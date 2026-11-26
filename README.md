@@ -684,9 +684,10 @@ high demand" (503), and the card failed at once. Now (lane B2, 2026-11-26):
   order 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite, then Claude
   Haiku 5.5. A Claude profile asks its own model, then each cheaper Claude
   model, then the Gemini models in that order. Crossing to the other provider
-  needs its key and the Settings switch "When every model of a provider is
-  busy, ask the other provider" (on by default). The on-device model is never
-  asked.
+  needs its key and the Settings switch "When a provider's models are busy,
+  ask the other provider" (on by default), and drops the profile's web lookup:
+  Haiku taking over a Gemini translation gives the plain translation, with no
+  paid research pass. The on-device model is never asked.
 - **Only an overload starts it**, and only one with nothing paid on it: an
   overload in the middle of a Claude reply has billed tokens in its raw text,
   and the failed card keeps them. A model further down the chain that is busy,

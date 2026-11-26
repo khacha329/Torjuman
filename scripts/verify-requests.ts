@@ -1717,6 +1717,17 @@ await scenario('fallback.gemini.all-busy-then-haiku', [...allBusyGemini(), emitT
 await scenario('fallback.gemini.all-busy-switch-off', allBusyGemini(), translateChain('gemini', FLASH_LITE_3_5, false));
 await scenario('fallback.gemini.all-busy-no-claude-key', allBusyGemini(), translateChain('gemini', FLASH_LITE_3_5, true, ['gemini']));
 await scenario('fallback.gemini.all-busy-haiku-529', [...allBusyGemini(), ...claude529()], translateChain('gemini', FLASH_LITE_3_5));
+// A Gemini profile with web lookup on: Haiku gets the plain request, one
+// structuring pass and no web-search tool (the owner's answer to the review).
+await scenario('fallback.gemini.all-busy-then-haiku-without-lookup', [...allBusyGemini(), emitTool(HAIKU)], (context) =>
+  translateWithFallback({
+    request: translationRequest({ model: FLASH_LITE_3_5, allowExternalLookup: true }),
+    providerId: 'gemini',
+    keyFor: (id) => (id === 'gemini' ? GEMINI_KEY : ANTHROPIC_KEY),
+    crossProvider: true,
+    onChunk: context.progress,
+  }),
+);
 // A fallback model that answers with an error of its own: the error names it.
 await scenario(
   'fallback.gemini.fallback-model-fails',

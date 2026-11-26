@@ -26,9 +26,12 @@ import { modelLabel, providerFor } from './registry';
 //            (ANTHROPIC_FALLBACK_ORDER), then the Gemini models in that order.
 //
 // Crossing to the other provider needs that provider's key and the Settings
-// switch (`crossProviderFallback`, on by default). The on-device model is
-// never in a chain: it cannot honour the prompt, and it must only ever see
-// the prose that offline/segmentSelection.ts cuts out for it.
+// switch (`crossProviderFallback`, on by default). A step that crosses gets
+// the request without `allowExternalLookup` (the owner's answer to the lane's
+// review): a Gemini translation that Haiku takes over is the plain one Gemini
+// would have given, not a paid research pass with web search. The on-device
+// model is never in a chain: it cannot honour the prompt, and it must only
+// ever see the prose that offline/segmentSelection.ts cuts out for it.
 //
 // What starts a fallback is only an `overloaded` error from the profile's own
 // model, and only one with no paid output on it: an overload in the middle of
@@ -141,8 +144,11 @@ export async function translateWithFallback({
             note: `${passedOver(passed, asked)}, so ${stepName(step, asked)} answered.`,
           };
     try {
+      const crossed = step.providerId !== asked.providerId;
       const result = await providerFor(step.providerId).translate(
-        { ...request, model: step.model },
+        crossed
+          ? { ...request, model: step.model, allowExternalLookup: false }
+          : { ...request, model: step.model },
         keyFor(step.providerId),
         onChunk,
       );
