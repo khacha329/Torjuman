@@ -967,6 +967,8 @@ not obviously hold for a server error. Check Q has no
 
 ## 59. Two error messages repeat themselves (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "59." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. Cosmetic: the key screens read "Could not
 reach Claude: Could not reach api.anthropic.com. …" (the screen's prefix
 plus the mapped message; Gemini reads the same way), and an Anthropic 500 in

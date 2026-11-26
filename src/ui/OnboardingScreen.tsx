@@ -135,7 +135,9 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
           )}
           {state === 'error' && (
             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Could not reach {provider.displayName}: {message}
+              {/* Not "Could not reach …:" before a message that says so
+                  itself (FOUND_ISSUES 59). */}
+              Key not checked: {message}
             </p>
           )}
 

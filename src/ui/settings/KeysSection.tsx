@@ -126,9 +126,12 @@ function ProviderKeyField({ providerId }: { providerId: CloudProviderId }) {
             ✕ Rejected — check you copied the whole key
           </span>
         )}
+        {/* The mapped message already says what happened ("Could not reach
+            api.anthropic.com…", or a server error since FOUND_ISSUES 58), so
+            it is not prefixed with "Could not reach Claude:" (FOUND_ISSUES 59). */}
         {state === 'error' && (
           <span className="rounded bg-amber-50 px-2 py-1 text-amber-900">
-            Could not reach {provider.displayName}: {message}
+            Key not checked: {message}
           </span>
         )}
         {message && state === 'idle' && <span className="text-muted">{message}</span>}
