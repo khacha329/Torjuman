@@ -110,7 +110,11 @@ picked from the options lane A2 put to him.
 - **47. A popover that fits neither below nor above covers its anchor.**
   "Larger side, scroll." Put the popover on whichever side of its anchor
   has more room, cap its height to that side, and scroll inside it. Never
-  cover the anchor.
+  cover the anchor. Where the larger side cannot show at least half of the
+  popover's content, open the content as the app's bottom sheet instead, as
+  in portrait today. Asked as a follow-up the same day: the owner first
+  chose the sheet below about 160 px of room ("Bottom sheet"), then replaced
+  that fixed threshold with this one ("Under half its content").
 - **52. A read-mark arrow does nothing for a mark that cannot reach the
   middle.** "Count as reached." A mark that is already on screen counts as
   reached, so the arrow goes on to the next mark, or turns off if there is
