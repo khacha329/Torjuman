@@ -822,7 +822,7 @@ editing the URL kept the reader mounted, so the bar stayed visible (in the
 wrong book); the Library path has always behaved this way. Found by the
 review of lane A's 31. Left unfixed.
 
-## 46. A Similar āyah's high marks touch the label above it (2026-11-17, measured in the container)
+## 46. A Similar āyah's high marks touch the label above it (2026-11-17, measured in the container, fixed in lane A2)
 
 Once the verse draws in the reader font (38), a stacked high mark on the
 first line of a `RelatedAyahView` (`ui/reader/QuranTabs.tsx`) reaches into its
@@ -833,6 +833,13 @@ mark ۗ (U+06D7) over 42:53's ٱلۡأَرۡضِ overlaps the "c" of "coverage",
 Translation tab's single verse has the tab bar's padding above it and is
 clear. Before 38 these marks drew as empty boxes inside the line, so the collision
 was hidden. Cosmetic. Left unfixed.
+
+**Fixed in lane A2:** the label above a Similar āyah has `mb-3` (12 px) in
+place of `mb-1` (4 px), which clears the stacked marks; a comment beside it
+says why. U's `reader-quran-similar` at both sizes is the only capture whose
+DOM or screenshot changes (the label's class, and the verses 8 px lower);
+compared before and after on the owner's PC, where both marks touched the
+label before and are clear after. Its baseline is re-recorded.
 
 ## 47. A popover that fits neither below nor above covers its anchor (2026-11-17, measured)
 
