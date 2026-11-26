@@ -4,7 +4,7 @@ import { hrefFor, navigate } from '../app/router';
 import { createBookFromPreview, fetchBookPreview, type BookPreview } from '../ingest/importer';
 import { parseBookInput } from '../shamela/urls';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
-import { Button, Field, inputClass, LinkButton, Spinner, TopBar } from './kit';
+import { Button, Field, inputClass, LinkButton, ProgressBar, Spinner, TopBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 import { percentOf } from '../lib/format';
 
@@ -286,9 +286,7 @@ function CrawlPanel({ bookId }: { bookId: string }) {
           : `Fetching page ${progress.currentPage.toLocaleString()} of ${progress.totalPages.toLocaleString()} — about ${minutesLeft} minutes left.`}
       </p>
 
-      <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-rule">
-        <div className="h-full bg-accent transition-all" style={{ width: `${percent}%` }} />
-      </div>
+      <ProgressBar percent={percent} className="mb-2" />
       <p className="mb-4 text-xs text-muted">
         {percent}% — {progress.fetchedPages.toLocaleString()} pages,{' '}
         {blockCount.toLocaleString()} paragraphs parsed

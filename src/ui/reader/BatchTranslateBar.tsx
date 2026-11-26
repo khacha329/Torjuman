@@ -1,7 +1,8 @@
 import type { BatchEstimate } from '../../translation/hadithRange';
 import { formatCost } from '../../translation/hadithRange';
 import type { BatchProgress } from './useBatchTranslate';
-import { Button } from '../kit';
+import { percentOf } from '../../lib/format';
+import { Button, ProgressBar } from '../kit';
 
 // The confirmation before a batch run, and the progress of one.
 //
@@ -62,7 +63,7 @@ export function BatchRunning({
   onDismiss: () => void;
 }) {
   const finished = !progress.running;
-  const percent = Math.round(((progress.done + progress.failed) / progress.total) * 100);
+  const percent = percentOf(progress.done + progress.failed, progress.total);
 
   return (
     <div className="shrink-0 border-b border-rule bg-parchment px-3 py-2">
@@ -96,12 +97,7 @@ export function BatchRunning({
         </div>
       </div>
 
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-rule">
-        <div
-          className="h-full bg-accent transition-[width] duration-300"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      <ProgressBar percent={percent} className="mt-1.5" />
     </div>
   );
 }

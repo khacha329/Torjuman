@@ -157,7 +157,9 @@
 //
 // Not captured, with the reason (the reviewer reads these):
 //   - BatchTranslateBar: reaching it needs a running batch translation; its
-//     markup does not change in Phase 2, only its import path;
+//     markup does not change in Phase 2, only its import path (FOUND_ISSUES 9
+//     later put its bar on ProgressBar, read in the diff; check P runs the
+//     batch and records its text, not its markup);
 //   - UpdateBar: needs a service-worker update, which is blocked here; import
 //     path only;
 //   - ShareChapter's sealed state: reached through the share dialog; its
@@ -1409,7 +1411,8 @@ async function proxyCaptures(browser, base, profile, dir) {
   await capture(page, dir, 'device-transfer-relay', device);
   await page.context().close();
 
-  // Copy 8 (ImportScreen's own bar): the partial book resumed, the first page fetch held.
+  // Copy 8 (ImportScreen's bar, its own markup until FOUND_ISSUES 9 put it on
+  // ProgressBar): the partial book resumed, the first page fetch held.
   page = await fresh();
   await go(page, '#/');
   await page.getByRole('button', { name: 'Resume import' }).click();

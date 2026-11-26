@@ -155,6 +155,12 @@ planning, step 2c and its review.
 
 ## 9. Two progress bars look different from the other seven (2026-11-15, measured)
 
+**Fixed in lane UI-1** (commit "9." on `claude/lane-ui1-settings`, by the
+owner's brief: "Fix FOUND_ISSUES 8 and 9"). Both bars are `ui/kit/ProgressBar`
+now, keeping only their margins (`mb-2` on the import screen, `mt-1.5` on
+the batch bar): `h-1.5`, full width, `transition-all`. The batch bar's
+percentage is `percentOf`, so a zero total gives 0, not `NaN%`.
+
 Phase 2 step 2h put the seven identical progress bars (`h-1.5`, rule-coloured
 track, accent fill) on `ui/kit/ProgressBar`. Two differ, and keep their own
 markup (owner's answer to Phase 2 Q5):
