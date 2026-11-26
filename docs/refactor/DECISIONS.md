@@ -102,6 +102,39 @@ lane B found.
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
 
+## Decided for lane A2, 2026-11-26
+
+The owner's answers, relayed from the session that started lane A2, each
+picked from the options lane A2 put to him.
+
+- **47. A popover that fits neither below nor above covers its anchor.**
+  "Larger side, scroll." Put the popover on whichever side of its anchor
+  has more room, cap its height to that side, and scroll inside it. Never
+  cover the anchor. Where the larger side cannot show at least half of the
+  popover's content, open the content as the app's bottom sheet instead, as
+  in portrait today. Asked as a follow-up the same day: the owner first
+  chose the sheet below about 160 px of room ("Bottom sheet"), then replaced
+  that fixed threshold with this one ("Under half its content").
+- **52. A read-mark arrow does nothing for a mark that cannot reach the
+  middle.** "Count as reached." A mark that is already on screen counts as
+  reached, so the arrow goes on to the next mark, or turns off if there is
+  none.
+
+## Decided for lane C, 2026-11-26
+
+- **19. Share records outlive their book.** Keep them, and say so. A
+  removed book's share records stay: the chapter's link keeps working for
+  others, and the record holds the only copy of its key besides the link.
+  The code, README and the remove-book confirm say so. (The owner's answer
+  to lane C's question; the alternative was deleting them with the book.)
+- **18. Compiled QUL views in the work backup.** Keep them in it, knowing
+  the limit: a compilation's cache key includes the ids of the resources
+  installed when it was made, and a hand-imported resource gets a random id,
+  so on a new tablet whose tafsīrs are imported afresh a restored
+  compilation is almost never found. It comes back on the same tablet, after
+  a whole-tablet transfer, or for a seeded resource. (The owner's answer to
+  lane C's question after review; the alternative was leaving them out.)
+
 ## Answered for lane B3, 2026-11-26
 
 The owner's answers to lane B3's questions, asked in its session because the

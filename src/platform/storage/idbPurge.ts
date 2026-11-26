@@ -14,7 +14,7 @@ import type { BookStore, Schema } from './idbSchema';
  * round trips instead of 200,000; small enough that the key array stays a few
  * hundred kilobytes rather than several megabytes.
  */
-const PURGE_BATCH = 4096;
+export const PURGE_BATCH = 4096;
 
 /**
  * Delete every row an index points at, a batch of primary keys at a time.

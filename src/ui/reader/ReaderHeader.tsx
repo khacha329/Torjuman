@@ -27,6 +27,7 @@ export function ReaderHeader({
   marks,
   visibleBlock,
   middleBlock,
+  whollyInView,
   listRef,
   setShowToc,
   setShowSearch,
@@ -46,6 +47,7 @@ export function ReaderHeader({
   marks: ReturnType<typeof useMarks>;
   visibleBlock: Block | null;
   middleBlock: Block | null;
+  whollyInView: { first: number; last: number } | null;
   listRef: RefObject<BlockListHandle | null>;
   setShowToc: Dispatch<SetStateAction<boolean>>;
   setShowSearch: Dispatch<SetStateAction<boolean>>;
@@ -97,6 +99,7 @@ export function ReaderHeader({
         <ReadMarkNav
           positions={marks.readPositions}
           currentOrder={(middleBlock ?? visibleBlock)?.order ?? 0}
+          whollyInView={whollyInView}
           onJump={(order) => listRef.current?.scrollToOrder(order, 'center')}
         />
       )}
@@ -133,18 +136,29 @@ export function ReaderHeader({
  * the mark just reached is neither, and each arrow moves on from it. Counted
  * from the top block, a mark ↓ had centred was still below it, and ↓ found
  * it again (FOUND_ISSUES 39).
+ *
+ * A mark whose block is wholly on screen counts as reached too, by the
+ * owner's decision (2026-11-26) on FOUND_ISSUES 52, and the arrows pass over
+ * it to the next mark, or are off if there is none. A mark in the first or
+ * last half-screen of the book cannot be centred: the jump was clamped at the
+ * end of the page, nothing moved, and the arrow went on offering the same
+ * mark, a tap that did nothing.
  */
 function ReadMarkNav({
   positions,
   currentOrder,
+  whollyInView,
   onJump,
 }: {
   positions: number[];
   currentOrder: number;
+  whollyInView: { first: number; last: number } | null;
   onJump: (order: number) => void;
 }) {
-  const previous = [...positions].reverse().find((order) => order < currentOrder);
-  const next = positions.find((order) => order > currentOrder);
+  const reached = (order: number) =>
+    whollyInView !== null && order >= whollyInView.first && order <= whollyInView.last;
+  const previous = [...positions].reverse().find((order) => order < currentOrder && !reached(order));
+  const next = positions.find((order) => order > currentOrder && !reached(order));
 
   return (
     <div className="flex shrink-0 items-center gap-0.5 rounded-md border border-rule">

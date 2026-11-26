@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Block, Mark } from '../../types';
 
 /** Long-press menu on the block margin. */
@@ -26,12 +26,24 @@ export function MarginMenu({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // The latest `onClose`, read by the listeners below instead of listing it as
+  // a dependency of their effect: the reader passes an inline arrow, new on
+  // each of its renders, so with `onClose` as a dependency every reader render
+  // removed the document's pointerdown listener and added it back a tick
+  // later, and a tap in that tick was not seen as an outside tap
+  // (FOUND_ISSUES 48; the same fix as AnchoredPanel's for 34). The listeners
+  // are now added once, when the menu opens.
+  const onCloseRef = useRef(onClose);
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     const outside = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) onClose();
+      if (!ref.current?.contains(event.target as Node)) onCloseRef.current();
     };
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     const timer = setTimeout(() => document.addEventListener('pointerdown', outside), 0);
     document.addEventListener('keydown', onEscape);
@@ -40,7 +52,7 @@ export function MarginMenu({
       document.removeEventListener('pointerdown', outside);
       document.removeEventListener('keydown', onEscape);
     };
-  }, [onClose]);
+  }, []);
 
   const rect = anchor.getBoundingClientRect();
   const left = Math.min(Math.max(8, rect.left - 150), window.innerWidth - 172);

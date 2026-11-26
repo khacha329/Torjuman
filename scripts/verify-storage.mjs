@@ -91,17 +91,18 @@
 //     branch never creates, with today's indexes, at version 1 — the one
 //     database that exercises every guard;
 //   - three databases the app cannot produce (FOUND_ISSUES 21): v10 without
-//     qulResources (today `init` rejects and the database stays at 10 with
-//     every row), v10 without qulEntries and v10 without qulCompilations
-//     (today each opens, and never gets the missing store: the trio's one
-//     guard tests qulResources only). The third was added after step 4j's
+//     qulResources, v10 without qulEntries and v10 without qulCompilations.
+//     Since lane C each store has its own upgrade guard, so each of the
+//     three opens and gets the store it lacks, every row kept. Until then
+//     the trio shared qulResources's guard: the first rejected `init` with
+//     Chromium's AbortError ("Version change transaction was aborted in
+//     upgradeneeded event handler") and stayed at 10 — the ConstraintError
+//     itself ("An object store with the specified name already exists")
+//     reached the page as an uncaught exception in the upgrade handler,
+//     which the record kept as `uncaughtInPage` — and the other two opened
+//     and never got the missing store. The third was added after step 4j's
 //     review: it is the only database that lacks qulCompilations but has
-//     qulResources. The first rejects `init` with Chromium's AbortError
-//     ("Version change transaction was aborted in upgradeneeded event
-//     handler"); the ConstraintError itself ("An object store with the
-//     specified name already exists") reaches the page as an uncaught
-//     exception in the upgrade handler, which the record keeps as
-//     `uncaughtInPage`.
+//     qulResources.
 //
 // What D sees only as an outcome, and leaves to the reviewer: the ORDER of
 // writes and where transactions begin and end. A moved body that split one
@@ -356,6 +357,7 @@ const HARNESS_SCENARIOS = [
       { name: 'export', run: 'work-export' },
       { name: 'import-fresh', run: 'work-import', input: (out) => ({ file: out.export.result.file }) },
       { name: 'import-without-shareRecords', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropShareRecords: true }) },
+      { name: 'import-without-qulCompilations', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropQulCompilations: true }) },
       { name: 'import-missing-books', run: 'work-import', input: (out) => ({ file: out.export.result.file, withBook: true, extraReferencedBook: true }) },
       { name: 'import-over-existing', run: 'work-import', input: (out) => ({ file: out.export.result.file, overwrite: true }) },
     ],
@@ -532,8 +534,8 @@ async function harnessPhase(browser, origin, phase, input) {
     const bookStores = await page.evaluate(() => window.__dcheckHarness.bookStores);
     // Recorded, not fatal: an exception thrown inside the upgrade callback
     // reaches the page as an uncaught error event as well as a rejected
-    // `init` (the odd database without qulResources), and that is the
-    // behaviour being pinned.
+    // `init` (as the odd database without qulResources did until lane C),
+    // and that is behaviour worth pinning.
     return { result, schema: schemaRecord(schema), rows, local, fakeKeys, bookStores, errors };
   } finally {
     await context.close();
