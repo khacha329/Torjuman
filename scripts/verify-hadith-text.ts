@@ -1337,6 +1337,22 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
       verses(onePage).length === 1 && verses(onePage)[0].arabic === `${verseA}\n${verseB}`,
       verses(onePage),
     );
+
+    // The guard (review of 8e22e5b): a verse with no muṣḥaf text over three
+    // blocks whose middle one is a matn. The middle share is read inside the
+    // ḥadīth, so the verse's segment is no longer the last when the third
+    // share comes; that share becomes a segment of its own rather than vanish.
+    const middle = text(words(5));
+    const third = text(words(3));
+    const threeBlocks = [
+      a,
+      blockOf('v2m', 2, 'hadith_matn', middle, { pageId: 'seg:p2' }),
+      blockOf('v3', 3, 'sharh', `${third} ${last}`, { pageId: 'seg:p3' }),
+    ];
+    const longVerse = verse({ endBlockId: 'v3', endOffset: third.length });
+    const overThree = cut(threeBlocks, [longVerse, matnEntity(threeBlocks[1], '')], ['v1', 0], ['v3', threeBlocks[2].text.length]);
+    expect('69: a verse over three blocks, a matn between: prose, verse, ḥadīth, verse, prose', JSON.stringify(types(overThree)) === '["prose","quran","hadith","quran","prose"]', types(overThree));
+    expect('69: …the third share’s words are in the card, and not offered', verses(overThree)[1]?.arabic === third && !reachesModel(overThree, third), overThree.segments);
   }
 
   // FOUND_ISSUES 70. Prose that runs from one block into the next is one

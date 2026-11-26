@@ -253,14 +253,20 @@ export function segmentSelection(options: {
       // the book's words, does this share carry on its Arabic. The walk emits
       // a verse's share in a block before anything else there (it starts at
       // the block's offset 0) and leaves it last in the block before (it runs
-      // to the end), so that segment is the last one; the check is a guard.
+      // to the end), so that segment is the last one. The detector always
+      // sets `textUthmani` and joins at most two blocks, so the carrying-on
+      // path does not arise today; where it would and something stands
+      // between (a verse over three blocks, the middle one inside a ḥadīth),
+      // the share is emitted as a segment of its own, as before 69, rather
+      // than have its words shown nowhere (review of 8e22e5b).
       const earlier = verseSegments.get(entity.id);
       if (earlier) {
-        if (entity.textUthmani === undefined && earlier.slot === segments.length - 1) {
+        if (entity.textUthmani !== undefined) return;
+        if (earlier.slot === segments.length - 1) {
           segments[earlier.slot].arabic += blockJoin(earlier.block, block) + sourceText;
           earlier.block = block;
+          return;
         }
-        return;
       }
 
       // Retrieved from the bundled muṣḥaf, never generated.
