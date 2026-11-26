@@ -1241,8 +1241,9 @@ Left unfixed.
 Found by the review of lane B3's fix to 71. `ui/reader/ReaderScreen.tsx`
 (~306–309) runs `void load.then(...)` over `ensureEntities` (or
 `listEntities` in a shared view) with no `catch`. A rejected load leaves the
-reader's `entities` at `[]` for the whole visit, with no notice and an
-unhandled rejection in the console: no verse or ḥadīth is marked or tappable,
+reader's `entities` as they were, which on first open is `[]`, until the
+effect runs again (a change of book, block count or read-only state), with no
+notice and an unhandled rejection in the console: no verse or ḥadīth is marked or tappable,
 and nothing says why. Since 71 the on-device cut no longer depends on it for
 ḥadīth; verses still do (77). Lane A2's file. Not measured. Left unfixed.
 
@@ -1251,8 +1252,9 @@ and nothing says why. Since 71 the on-device cut no longer depends on it for
 Found by the review of lane B3's fix to 71. **Against "Scripture is never
 added to the prose list"** (README, "The invariant"; the header of
 `translation/offline/segmentSelection.ts`). `segmentSelection` cuts a verse
-out of the prose only where a `quran` entity marks it. It reads neither a
-block's type nor its spans, so verse text with no entity goes into `prose`,
+out of the prose only where a `quran` entity marks it. It reads a block's
+type only for a matn (since 71) and never its spans, so verse text with no
+entity goes into `prose`,
 and the on-device model translates it, in three cases:
 
 1. before the reader's entities load, after the load fails (76), or in a
@@ -1260,9 +1262,10 @@ and the on-device model translates it, in three cases:
 2. a `quran` block (`shamela/structure.ts` ~66, `isEntirelyQuran`) whose
    verse the detector did not resolve;
 3. an inline span of kind `quran` that the detector did not resolve. The
-   detector leaves an unmatched verse unmarked; Settings → Verse and ḥadīth
-   detection lists it, and `segmentSelection`'s own comment says so ("an
-   unmatched verse is left unmarked").
+   detector leaves an unmatched verse unmarked (`segmentSelection`'s own
+   comment says so: "an unmatched verse is left unmarked"); Settings → Verse
+   and ḥadīth detection lists an unmatched bracketed span of 16 characters or
+   more (`quran/detectEntities.ts` ~441–484), not `quran` spans as such.
 
 The quoted ḥadīth invariant is unaffected. Not measured. Pre-existing; not
 caused by lane B3. A fix could cut a `quran` block and every `quran` span
@@ -1272,3 +1275,19 @@ the owner's word: the parser's `quran` span kind is a guess (a citation
 follows, or the text is densely vowelled: `shamela/parsePage.ts` ~251), so an
 unresolved one is not always a verse, and cutting it would keep commentary
 from the model too. Left unfixed.
+
+## 78. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
+
+Found by the review of lane B3's records for 71, 76 and 77. **Against the
+ḥadīth invariant** as README states it. The detector makes a ḥadīth entity
+only for a `hadith_matn` block (`quran/detectEntities.ts` ~293, the one place
+`type: 'hadith'` is set). Prophetic speech that a sharḥ quotes inside its own
+paragraph, which the parser marks as an inline span of kind `quote` ("a
+quoted lemma or prophetic speech in ((...))", `types/book.ts` ~139), is never
+an entity, so on device `segmentSelection` leaves it in `prose` and the
+model translates it, beside the verified segments of the same card. Since 71
+this is the remaining way ḥadīth text reaches the on-device model. Not
+measured. Pre-existing; not caused by lane B3. A fix needs the owner's word,
+as 77's case 3 does: the `quote` kind also covers a lemma the commentary
+explains, which is commentary and should be translated, so cutting every
+`quote` span would keep that from the model too. Left unfixed.

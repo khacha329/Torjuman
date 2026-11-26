@@ -263,10 +263,12 @@ export function segmentSelection(options: {
  * as ḥadīth pieces with no entity (FOUND_ISSUES 71). Verses are not counted
  * as cover: a verse quoted in a matn is inside the ḥadīth (FOUND_ISSUES 61),
  * so a piece added here that encloses it reads it in the ḥadīth's Arabic, as
- * the detector's whole-block entity does. (A verse that runs from such a
- * piece into a ḥadīth entity's piece is emitted as a verse for its part, as
- * 61 describes for a verse straddling a ḥadīth's edge. Either way none of it
- * is prose.)
+ * the detector's whole-block entity does. (A verse that straddles the edge
+ * between such a piece and a ḥadīth entity's piece, in either direction, or
+ * that starts where such a piece starts and runs longer, is emitted as a
+ * verse, with its whole muṣḥaf text, and the ḥadīth piece it overlaps is shown
+ * only from where the verse ends or not at all, as 61 describes for a verse
+ * across a ḥadīth's edge. None of it is prose.)
  */
 function uncoveredMatn(pieces: readonly Piece[], from: number, to: number): Piece[] {
   const hadith = pieces.filter((piece) => piece.type === 'hadith').sort((a, b) => a.start - b.start);
