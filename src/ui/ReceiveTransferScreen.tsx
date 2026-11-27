@@ -201,12 +201,12 @@ export function ReceiveTransferScreen({ shared }: { shared: boolean }) {
         {state.step === 'choose' && (
           <section className="rounded-lg border border-rule bg-white p-5">
             <p className="mb-4 text-sm text-muted">
-              On the other tablet, open <strong>Settings → Move to another tablet</strong>,
+              On the other tablet, open <strong>Settings → Data → Move to another tablet</strong>,
               create the transfer file and send it here — with Quick Share, a cable or
               Drive. Then open it below, or share it straight to this app.
             </p>
             <p className="mb-4 text-sm text-muted">
-              A work backup from <strong>Settings → Work backup</strong> is received the
+              A work backup from <strong>Settings → Data → Work backup</strong> is received the
               same way. It is added to this tablet's work rather than replacing it.
             </p>
             <Button variant="primary" onClick={() => fileRef.current?.click()}>

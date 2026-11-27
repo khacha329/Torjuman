@@ -5,6 +5,7 @@ import {
   lastOfflineLoad,
   OFFLINE_DTYPE,
 } from '../../translation/offline/OfflineProvider';
+import { formatBytes } from '../../lib/format';
 import { Button, SettingsSection } from '../kit';
 import { formatRetrievalLog } from '../../services/retrievalLog';
 import { describeLayout } from '../useLayoutMode';
@@ -122,7 +123,7 @@ export function BuildSection() {
             ...load.files.map(
               (entry) =>
                 `    ${entry.source.padEnd(7)} ${entry.file}` +
-                (entry.bytes ? ` (${(entry.bytes / 1048576).toFixed(1)} MB)` : ''),
+                (entry.bytes ? ` (${formatBytes(entry.bytes)})` : ''),
             ),
           ]
         : []),

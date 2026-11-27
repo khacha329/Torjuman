@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { exportDevice, type DeviceTransferProgress } from '../../library/deviceTransfer';
+import { formatBytes } from '../../lib/format';
 import { needsDataUrl, saveFile } from '../../lib/saveFile';
 import {
   formatRelayCode,
@@ -41,7 +42,7 @@ export function DeviceTransfer() {
         onProgress: setProgress,
       })) as File;
       setFile(made);
-      setStatus(`Ready: ${sizeOf(made.size)}.`);
+      setStatus(`Ready: ${formatBytes(made.size)}.`);
     } catch (error) {
       setStatus(`Could not create the file: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -207,9 +208,4 @@ export function DeviceTransfer() {
       </p>
     </SettingsSection>
   );
-}
-
-function sizeOf(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString()} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

@@ -18,8 +18,8 @@
 //
 // How. Two `vite build`s (no tsc) into .verify/markup-build/{plain,proxy} with
 // an explicit environment, each served with Vite's `preview`. Every capture
-// gets a fresh browser context, except that Settings and its 21 sections are
-// captured from one: touch, 960×600 or 600×960, deviceScaleFactor 2,
+// gets a fresh browser context, except that Settings' five tabs and their 22
+// sections are captured from one: touch, 960×600 or 600×960, deviceScaleFactor 2,
 // en-US, UTC, service workers blocked (so every request is visible to the
 // route below and the update bar stays out), Date pinned with page.clock. The
 // app is opened once so it creates its database and finishes seeding the one
@@ -155,15 +155,19 @@
 //
 // Not captured, with the reason (the reviewer reads these):
 //   - BatchTranslateBar: reaching it needs a running batch translation; its
-//     markup does not change in Phase 2, only its import path;
+//     markup does not change in Phase 2, only its import path (FOUND_ISSUES 9
+//     later put its bar on ProgressBar, read in the diff; check P runs the
+//     batch and records its text, not its markup);
 //   - UpdateBar: needs a service-worker update, which is blocked here; import
 //     path only;
 //   - ShareChapter's sealed state: reached through the share dialog; its
 //     formatBytes is moved verbatim, so the Published chapters capture (all
-//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it;
+//     three branches: 512 B, 300 KB, 2.5 MB) and the diff cover it (the
+//     gigabyte step FOUND_ISSUES 8 added later is in no capture: nothing
+//     seeded here is that large);
 //   - (3b) the Claude captures in the proxy build: neither screen reads the
-//     proxy setting, and the proxy build's Settings capture is the whole column
-//     with Gemini chosen;
+//     proxy setting, and the proxy build's Settings captures are every tab's
+//     whole panel with Gemini chosen;
 //   - (3b) onboarding's key check ("Checking…", rejected, "Could not reach
 //     Claude: …"): it needs an answer from the model host, which is aborted
 //     here, and the error state carries the browser's own message;
@@ -773,8 +777,10 @@ async function serialize(page, element) {
     // bundled QUL seed and the muṣḥaf load — so which comes first is a race
     // (found while taking the 2a baseline). The rows are kept, markup and all,
     // and only put in a fixed order; in screenshots the list is painted over.
+    // The section's first h2 at any depth: since lane UI-1 a foldable section
+    // holds its heading inside the fold's heading row, not as a direct child.
     const sections = [clone, ...clone.querySelectorAll('section')].filter(
-      (el) => el.tagName === 'SECTION' && el.querySelector(':scope > h2')?.textContent === 'Retrieval',
+      (el) => el.tagName === 'SECTION' && el.querySelector('h2')?.textContent === 'Retrieval',
     );
     for (const list of sections.flatMap((el) => [...el.querySelectorAll('ul')])) {
       const rows = [...list.children].sort((a, b) => (a.outerHTML < b.outerHTML ? -1 : a.outerHTML > b.outerHTML ? 1 : 0));
@@ -784,8 +790,9 @@ async function serialize(page, element) {
   }, element === null);
   return (
     html
-      // React useId ids, in each React version's spelling. None exist today;
-      // without this a later one would make the check flaky.
+      // React useId ids, in each React version's spelling. The first came with
+      // lane UI-1 (a foldable Settings section's body id); without this its
+      // number, which depends on render order, would make the check flaky.
       .replace(/«r[0-9a-z]+»/g, '«r»')
       .replace(/:r[0-9a-z]+:/g, ':r:')
       .replace(/_r_[0-9a-z]+_/g, '_r_')
@@ -822,8 +829,33 @@ function slugOf(text) {
     .replace(/^-|-$/g, '');
 }
 
-const column = (page) => page.locator('div.mx-auto.max-w-3xl').first();
+// Settings is five tabs (lane UI-1), every one mounted and all but the chosen
+// one hidden, so the column is the tab panel on screen. Ids and labels as in
+// SETTINGS_TABS (app/router.ts) and SettingsScreen's TAB_LABELS.
+const SETTINGS_TABS = [
+  ['translation', 'Translation'],
+  ['reading', 'Reading'],
+  ['library', 'Library'],
+  ['data', 'Data'],
+  ['about', 'About'],
+];
+const column = (page) => page.locator('[data-settings-tab]:not([hidden])');
+const settingsTabBar = (page) => page.locator('nav[aria-label="Settings"]');
 const section = (page, title) => column(page).locator(':scope > section').filter({ has: page.locator('h2', { hasText: title }) });
+
+/** Every section of the tab on screen, each captured as settings--<its h2's slug>. */
+async function captureSections(page, dir, slugs) {
+  const titles = await column(page).locator(':scope > section').evaluateAll((sections) =>
+    sections.map((s) => s.querySelector('h2')?.textContent ?? ''),
+  );
+  for (const [index, title] of titles.entries()) {
+    const slug = slugOf(title);
+    if (!slug || slugs.has(slug)) throw new Error(`settings section ${index} has no unique name: "${title}"`);
+    slugs.add(slug);
+    const element = column(page).locator(':scope > section').nth(index);
+    await capture(page, dir, `settings--${slug}`, element);
+  }
+}
 
 /**
  * Replace CompressionStream with one that never finishes: the export reaches
@@ -872,27 +904,44 @@ async function plainCaptures(browser, base, profile, dir) {
   await capture(page, dir, 'reader-header', page.locator('header').first());
   await page.context().close();
 
+  // Settings from one context, as before the tabs: a bare #/settings opens
+  // the first tab (a fresh context remembers none), and each tab after it is
+  // reached by tapping it in the bar. Per tab: settings-tab-<id> (the panel's
+  // HTML, the viewport's screenshot — what the tablet shows, the top bar and
+  // the tab bar included), settings-tab-<id>--bar, then every section in it.
   page = await fresh();
   await go(page, '#/settings');
-  await section(page, 'This build').waitFor();
-  await page.getByText('512 B').waitFor();
-  await capture(page, dir, 'settings', null, column(page));
-  const titles = await column(page).locator(':scope > section').evaluateAll((sections) =>
-    sections.map((s) => s.querySelector('h2')?.textContent ?? ''),
-  );
+  await page.waitForFunction(() => window.location.hash === '#/settings/translation');
   const slugs = new Set();
-  for (const [index, title] of titles.entries()) {
-    const slug = slugOf(title);
-    if (!slug || slugs.has(slug)) throw new Error(`settings section ${index} has no unique name: "${title}"`);
-    slugs.add(slug);
-    const element = column(page).locator(':scope > section').nth(index);
-    await capture(page, dir, `settings--${slug}`, element);
+  for (const [id, label] of SETTINGS_TABS) {
+    if (id !== 'translation') await settingsTabBar(page).getByRole('link', { name: label, exact: true }).click();
+    await page.locator(`[data-settings-tab="${id}"]:not([hidden])`).waitFor();
+    if (id === 'data') await page.getByText('512 B').waitFor();
+    if (id === 'about') await section(page, 'This build').waitFor();
+    await capture(page, dir, `settings-tab-${id}`, column(page), null);
+    await capture(page, dir, `settings-tab-${id}--bar`, settingsTabBar(page));
+    await captureSections(page, dir, slugs);
   }
+  // The folds. The glossary opens folded (its default); unfolded, then
+  // searched with the hamza left off, which only normalize's folding finds.
+  // And one ordinary section folded: What works offline, whose heading row
+  // sets its own bottom margin, which folding drops.
+  await settingsTabBar(page).getByRole('link', { name: 'Translation', exact: true }).click();
+  const glossary = section(page, 'Glossary');
+  await glossary.getByRole('button', { name: 'Unfold this section' }).click();
+  await capture(page, dir, 'settings--glossary--open', glossary);
+  await glossary.getByRole('searchbox').fill('الاخلاص');
+  await glossary.getByText('1 of 2').waitFor();
+  await capture(page, dir, 'settings--glossary--search', glossary);
+  await settingsTabBar(page).getByRole('link', { name: 'About', exact: true }).click();
+  const offlineList = section(page, 'What works offline');
+  await offlineList.getByRole('button', { name: 'Fold this section' }).click();
+  await capture(page, dir, 'settings--what-works-offline--folded', offlineList);
   await page.context().close();
 
   // ProgressBar 6: a book export held at "Compressing…".
   page = await fresh();
-  await go(page, '#/settings');
+  await go(page, '#/settings/data');
   const library = section(page, 'Library transfer');
   await library.getByText(BOOK_TITLE).waitFor();
   await stubCompression(page);
@@ -903,7 +952,7 @@ async function plainCaptures(browser, base, profile, dir) {
 
   // ProgressBar 4: the tablet transfer file held on its last message.
   page = await fresh();
-  await go(page, '#/settings');
+  await go(page, '#/settings/data');
   const device = section(page, 'Move to another tablet');
   await device.waitFor();
   await stubCompression(page);
@@ -914,7 +963,7 @@ async function plainCaptures(browser, base, profile, dir) {
 
   // ProgressBar 7: the model download, one small file answered, the rest held (see the route).
   page = await fresh({ network: { modelDownload: true } });
-  await go(page, '#/settings');
+  await go(page, '#/settings/translation');
   const offline = section(page, 'Offline translation');
   await offline.waitFor();
   page.on('dialog', (dialog) => void dialog.accept());
@@ -937,7 +986,7 @@ async function plainCaptures(browser, base, profile, dir) {
   // provider anthropic, model defaultModelFor('anthropic')); both sections
   // that read it are captured after the profile line has changed.
   page = await fresh();
-  await go(page, '#/settings');
+  await go(page, '#/settings/translation');
   const translation = section(page, /^Translation$/);
   await translation.waitFor();
   await translation.getByRole('button', { name: /^Claude/ }).click();
@@ -951,7 +1000,7 @@ async function plainCaptures(browser, base, profile, dir) {
   // index line in both its states. Its own context, so every capture above
   // keeps a database with no hadith-json resource.
   page = await fresh({ hadithJson: true });
-  await go(page, '#/settings');
+  await go(page, '#/settings/library');
   const hadithEnglish = section(page, /^Ḥadīth English/);
   await hadithEnglish.getByText('Text index: not built yet').waitFor();
   await hadithEnglish.getByText('Text index: 80,222 positions').waitFor();
@@ -1312,11 +1361,19 @@ async function proxyCaptures(browser, base, profile, dir) {
     await page.context().close();
   }
 
+  // Every tab, each panel whole (HTML and screenshot), as the single column
+  // was captured before the tabs: the proxy build's differences are spread
+  // over several sections.
   page = await fresh();
   await go(page, '#/settings');
-  await section(page, 'This build').waitFor();
-  await page.getByText('512 B').waitFor();
-  await capture(page, dir, 'settings-proxy', null, column(page));
+  await page.waitForFunction(() => window.location.hash === '#/settings/translation');
+  for (const [id, label] of SETTINGS_TABS) {
+    if (id !== 'translation') await settingsTabBar(page).getByRole('link', { name: label, exact: true }).click();
+    await page.locator(`[data-settings-tab="${id}"]:not([hidden])`).waitFor();
+    if (id === 'data') await page.getByText('512 B').waitFor();
+    if (id === 'about') await section(page, 'This build').waitFor();
+    await capture(page, dir, `settings-proxy-tab-${id}`, column(page));
+  }
   await page.context().close();
 
   // ProgressBar 2: the first catalog entry importing, its first fetch held.
@@ -1343,7 +1400,7 @@ async function proxyCaptures(browser, base, profile, dir) {
 
   // ProgressBar 5: the transfer file written for real, then sent; the first PUT held.
   page = await fresh();
-  await go(page, '#/settings');
+  await go(page, '#/settings/data');
   const device = section(page, 'Move to another tablet');
   await device.waitFor();
   await device.getByRole('button', { name: 'Create the transfer file' }).click();
@@ -1352,7 +1409,8 @@ async function proxyCaptures(browser, base, profile, dir) {
   await capture(page, dir, 'device-transfer-relay', device);
   await page.context().close();
 
-  // Copy 8 (ImportScreen's own bar): the partial book resumed, the first page fetch held.
+  // Copy 8 (ImportScreen's bar, its own markup until FOUND_ISSUES 9 put it on
+  // ProgressBar): the partial book resumed, the first page fetch held.
   page = await fresh();
   await go(page, '#/');
   await page.getByRole('button', { name: 'Resume import' }).click();

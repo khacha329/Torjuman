@@ -159,7 +159,7 @@ export function SelectionRail({
             label={
               biographyAvailable
                 ? 'Biography — look this name up in the imported biographical works'
-                : 'Biography — none imported; Settings → Add from catalog'
+                : 'Biography — none imported; Settings → Library → Add from catalog'
             }
             onClick={onBiography}
             disabled={!biographyAvailable}
@@ -191,7 +191,7 @@ export function SelectionRail({
             label={
               dictionaryAvailable
                 ? 'Dictionary — the classical entry for this word’s root'
-                : 'Dictionary — none imported; Settings → Reference works'
+                : 'Dictionary — none imported; Settings → Library → Reference works'
             }
             onClick={onDictionary}
             disabled={!dictionaryAvailable}

@@ -131,6 +131,16 @@ Fixed in the check, not the app. Found in Phase 2 step 2a and its review.
 
 ## 8. Byte sizes are written five different ways (2026-11-15, measured)
 
+**Fixed in lane UI-1** (commit "8." on `claude/lane-ui1-settings`; the
+owner's answer of 2026-11-26 in DECISIONS: `formatBytes` for these places,
+with a gigabyte step). All four places below now use it, and so does a fifth
+found while fixing, the offline model's file list in Settings → Translation
+→ Offline translation → diagnostics (`OfflineTranslation.tsx`, the same
+megabytes-only code as Library transfer's), on screen and in the report
+Settings → About → This build copies (`BuildSection.tsx`). The "not enough
+space" message no longer rounds up. Other sizes the entry did not list are
+106.
+
 Only two of the app's byte formatters were the same; Phase 2 step 2c merged
 those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
 whole kilobytes, one decimal for megabytes). The others differ, so merging
@@ -151,6 +161,12 @@ Left as is. A later, visible change can pick one format. Found in Phase 2
 planning, step 2c and its review.
 
 ## 9. Two progress bars look different from the other seven (2026-11-15, measured)
+
+**Fixed in lane UI-1** (commit "9." on `claude/lane-ui1-settings`, by the
+owner's brief: "Fix FOUND_ISSUES 8 and 9"). Both bars are `ui/kit/ProgressBar`
+now, keeping only their margins (`mb-2` on the import screen, `mt-1.5` on
+the batch bar): `h-1.5`, full width, `transition-all`. The batch bar's
+percentage is `percentOf`, so a zero total gives 0, not `NaN%`.
 
 Phase 2 step 2h put the seven identical progress bars (`h-1.5`, rule-coloured
 track, accent fill) on `ui/kit/ProgressBar`. Two differ, and keep their own
@@ -1949,3 +1965,67 @@ profile on Flash 3.7 moves to Flash 3.8, selecting a passage it already
 translated is a cache miss: a new request, and a second complete card beside
 the Flash 3.7 one. The old cards are not stale (their own model is compared)
 and are kept. As intended, not a defect.
+
+## 103. The Qurʾān sheet sends a missing QUL resource to Reference works (2026-11-26, by reading)
+
+Found by the review of lane UI-1's tabs. `MissingResource`
+(`ui/reader/QuranTabs.tsx` ~228) tells the reader, under the Qurʾān sheet's
+QUL tabs, to "Download one from QUL in a browser and import it in Settings →
+Reference works" ("Settings → Library → Reference works" since lane UI-1
+named the tabs). QUL files are imported in the QUL resources section
+(`ui/settings/QulResources.tsx`); Reference works holds dictionaries and
+commentaries and says nothing of QUL. Its only caller is `QuranSheet.tsx`,
+for a QUL resource. Both sections are on Settings' Library tab, which its
+"Open Settings" button opens since lane UI-1, so the button lands on the
+right tab either way. Pre-existing. Left unfixed.
+
+## 104. Check U's screenshots of a tall Settings section are cut off (2026-11-26, measured)
+
+Found by the same review as 103. A section taller than the visible part of
+Settings' scrolling area comes out of an element screenshot clipped at that
+area's bottom edge; the .html is whole. On main the cut is at about 542 CSS
+px at 960×600 (`settings--translation-profiles`, the glossary). Lane UI-1's
+tab bar, above the scrolling area, moves it up to about 496 px, so such
+PNGs show about 46 px less. The "Not captured" list in
+`scripts/verify-markup.mjs` already records the case for
+`settings--translation-profiles--claude.png`. Left as it is.
+
+## 105. The "no key yet" badges do not notice a key being saved (2026-11-26, by reading)
+
+Found by the review of lane UI-1's tabs. Settings → Translation's provider
+cards (`ui/settings/TranslationSection.tsx`, "no key yet") and Ḥadīth
+source (`ui/settings/HadithSourceSection.tsx`) read the key store
+(`services/secrets.ts`) while rendering, and the store has no subscription.
+So saving a key in API keys leaves "no key yet" showing on the other two
+until they render again for another reason (leaving and re-opening
+Settings, or a change in the app's context). Pre-existing on main, where the
+three sections sat in one column. In lane UI-1's first commit every tab tap
+happened to re-render them, which hid it; the second builds the tabs' contents
+once, as main's column was, and it shows as before. Left unfixed.
+
+## 106. QUL resources and Ḥadīth English write sizes their own way (2026-11-26, by reading)
+
+Found by the review of lane UI-1's fix to 8, which they were not part of.
+Settings → Library → QUL resources (`ui/settings/QulResources.tsx` ~230,
+~285, and the totals ~297–306) and Ḥadīth English
+(`ui/settings/HadithJsonResources.tsx` ~266, ~295) write a file's size as
+megabytes with two decimals ("0.36 MB", "3.00 MB"), where everything 8
+named now uses `formatBytes` ("365 KB", "3.0 MB"). The QUL per-file lines
+date from the first commit (810b059) and its totals from 1ed3b24; entry 8
+(2026-11-15) missed them, and Ḥadīth English came later (4946d07). Making
+them match changes text the owner sees, and check U's
+`settings--qul-resources`, `settings--hadith-english--imported`,
+`settings-tab-library` and `settings-proxy-tab-library`. Left as they
+are, for the owner.
+(The QUL section's seed size, ~321, is a fixed approximate figure and is
+not one of them.)
+
+Related, pre-existing: `formatBytes` rounds before it changes unit, so it
+reads "1024 KB" from 1023.5 KB up to 1 MB, and since 8's gigabyte step
+"1024.0 MB" from 1023.95 MB up to 1 GB.
+
+Lane UI-1's entries were numbered 76–79 on its branch, then 83–86 after it
+merged lane C, 85–88 after lane A2, 97–100 after lane B3, and 103–106
+after lane B2. Commit messages before those merges keep the old numbers:
+76, 83, 85 and 97 are 103; 77, 84, 86 and 98 are 104; 78, 85, 87 and 99
+are 105; 79, 86, 88 and 100 are 106.

@@ -355,7 +355,10 @@ export function HadithSheet({
               {' '}
               Import <code>{hadithJsonCollection(text.collection)?.fileName ?? `${text.collection}.json`}</code>{' '}
               (hadith-json) in{' '}
-              <button className="underline" onClick={() => navigate({ name: 'settings' })}>
+              <button
+                className="underline"
+                onClick={() => navigate({ name: 'settings', tab: 'library' })}
+              >
                 Settings
               </button>{' '}
               to find this ḥadīth by its text.
@@ -377,7 +380,7 @@ export function HadithSheet({
               sunnah.com is the source that carries one, and it needs a key —{' '}
               <button
                 className="underline"
-                onClick={() => navigate({ name: 'settings' })}
+                onClick={() => navigate({ name: 'settings', tab: 'translation' })}
               >
                 add it in Settings
               </button>

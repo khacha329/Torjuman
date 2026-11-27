@@ -1,5 +1,6 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import { API_KEY_STORAGE_KEYS } from '../services/secrets';
+import { formatBytes } from '../lib/format';
 import { canGunzip, canGzip, gunzipStream, gzipStream } from '../lib/gzip';
 
 // Moving everything on one tablet to another, as one file.
@@ -390,8 +391,7 @@ export async function roomFor(summary: DeviceTransferSummary): Promise<string | 
       ?.indexedDB ?? 0;
   const available = estimate.quota - estimate.usage + replaced;
   if (summary.uncompressedBytes <= available) return null;
-  const mb = (bytes: number) => `${Math.ceil(bytes / 1024 / 1024).toLocaleString()} MB`;
-  return `This tablet has about ${mb(available)} free for the app, and the transfer needs about ${mb(summary.uncompressedBytes)}. Free some space and try again.`;
+  return `This tablet has about ${formatBytes(available)} free for the app, and the transfer needs about ${formatBytes(summary.uncompressedBytes)}. Free some space and try again.`;
 }
 
 // ----------------------------------------------------------------- helpers
