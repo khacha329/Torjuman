@@ -474,11 +474,16 @@ export const SHORT_QUOTE_WORDS = 3;
 
 /**
  * Most words the quotation may have BEFORE stripping. The rule tests what
- * `stripApparatus` leaves, and the stripper is not word-anchored (FOUND_ISSUES
- * 74): a long matn cut to three words by a mid-word «ورواه» would otherwise be
- * accepted on that residue while the real text was never compared. A short
- * quotation with a lead-in the stripper removes («عن النبي ﷺ قال: …») stays under
- * this; a cut-down long matn does not.
+ * `stripApparatus` leaves, and the stripper cuts the rest of a text at the
+ * first takhrīj-like word: a long matn cut to three words by an «ورواه» in its
+ * own text would otherwise be accepted on that residue while the real text was
+ * never compared. (Added while the cut could fall mid-word, FOUND_ISSUES 74.
+ * Then the residue kept a stray «و» that a dataset entry seldom held, which
+ * refused some cut-down matns by accident; since the fix the cut takes the
+ * «و» with it, the residue is clean and more likely to be found, so this
+ * guard is now the only thing refusing them.) A short quotation with a lead-in
+ * the stripper removes («عن النبي ﷺ قال: …») stays under this; a cut-down long
+ * matn does not.
  */
 export const SHORT_QUOTE_MAX_RAW_WORDS = 12;
 
