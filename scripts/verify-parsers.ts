@@ -6130,11 +6130,22 @@ console.log('\n=== A selection survives its blocks scrolling out of the virtuali
     const drifted = classify(matns[0], 1);
     check('miss reason: drifted, with where it agrees', [drifted.reason, drifted.bestElsewhere?.number, drifted.bestElsewhere?.offset], ['drifted', 30, 29]);
     check('miss reason: partial (own number agrees in part)', classify(matns[2], 2).reason, 'partial');
-    // The plan's over-strip test: the stripper cuts «ورواه» mid-word and drops
-    // the tail that carries the match, while the unstripped text agrees.
+    // The plan's over-strip test: an «ورواه» in the matn's own words cuts off
+    // the tail that carries the match, so the stripped text does not agree
+    // with the entry (which holds the tail) while the unstripped text does.
+    // Four words or more must survive the cut, or the case stops at the word
+    // count instead of reaching that test: since FOUND_ISSUES 74 the cut takes
+    // the «و» with it, and the old three-word prefix kept three, not four.
+    // `wordsAfter` pins the branch, and `own` (the stripped text against its
+    // entry: no hit of two runs) that only the unstripped text agrees.
     const tail = 'من قام رمضان إيمانا واحتسابا غفر له ما تقدم من ذنبه ومن قام ليلة القدر إيمانا';
-    corpus.set(40, { t: 'hadith-json', number: 40, idInBook: 40, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: 'قال الناس يومئذ ورواه ' + tail });
-    check('miss reason: over-stripped (agrees only unstripped)', classify('قال الناس يومئذ ورواه ' + tail, 40).reason, 'over-stripped');
+    corpus.set(40, { t: 'hadith-json', number: 40, idInBook: 40, chapterId: 0, chapterEnglish: '', narrator: '', text: '', arabic: tail });
+    const overStripped = classify('قال الناس يومئذ في المسجد ورواه ' + tail, 40);
+    check(
+      'miss reason: over-stripped (agrees only unstripped)',
+      [overStripped.reason, overStripped.wordsAfter, overStripped.own.hits, overStripped.own.tried],
+      ['over-stripped', 5, 0, 2],
+    );
     check('miss reason: no ḥadīth at that number', classify(matns[0], 999).reason, 'no-entry');
     check('the longest common run is measured in words', classify(matns[2], 2).ownRunWords, 9);
     check('miss reason: different wording', classify('أقبل الناس على الصلاة في المسجد الكبير يوم الجمعة بعد الأذان مباشرة', 3).reason, 'different-wording');

@@ -1224,7 +1224,7 @@ Left unfixed.
 Since the fix (lane B2), by the review of the lane: only the reader's cloud
 translations report, as the owner decided. An assumption of offline is
 cleared by a cloud translation that gets any response, the browser's
-`online` event (reliable since 85, fixed with this one), or a reload. Until
+`online` event (reliable since 97, fixed with this one), or a reload. Until
 then the catalog's Import and the on-device model's download stay disabled
 and offer no way back of their own, and an on-device profile's Translate
 reports nothing: a cloud Translate in the reader is the way back.
@@ -1313,6 +1313,26 @@ matn in an unmapped book `unresolved`.
 
 ## 69. A verse across two blocks shows twice in an offline card (2026-11-17, by reading)
 
+**Fixed in lane B3** (commit "69." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced it first: two verse segments with the same muṣḥaf text
+and English). A verse's later shares make no segment of their own: the first
+share's segment already shows the whole muṣḥaf text and English. Where a verse
+has no `textUthmani`, so its segment shows the book's words, each later share
+carries that Arabic on, joined by a space across a page break and by a newline
+between two paragraphs of one page (`blockJoin`, the join 70 uses; a page
+break is not a paragraph's end in Shamela). That path does not arise with
+today's detector, which always sets `textUthmani` and joins at most two
+blocks; where it would and the verse's segment is no longer the last (a verse
+over three blocks, the middle one inside a ḥadīth), the share is emitted as a
+segment of its own, as before, rather than shown nowhere; that segment
+repeats the verse's English and note (from the fix's review). Unchanged:
+61's edge case, a verse whose first share lies inside a ḥadīth and is
+skipped, is first emitted at its
+next share, so that part still reads twice. Verses only: no ḥadīth entity has
+a second share, since the detector's spans one block. On-device cards made
+before the fix keep both segments until retranslated; cache keys are
+unchanged (trap 5).
+
 Found by the review of lane B's fix to 61. `segmentSelection` emits a verse
 once per block's share, and each time `pushEntity` uses the whole
 `textUthmani` and English, so a verse spanning two blocks appears twice in
@@ -1323,6 +1343,20 @@ follows once — the 61 edge case, as for a numbered matn, so that first part
 is still read twice, once in the ḥadīth's Arabic. The exception is 72.)
 
 ## 70. On device, prose from consecutive blocks is joined with no separator (2026-11-17, by reading and a probe)
+
+**Fixed in lane B3** (commit "70." on `claude/lane-b3-offline-text`; checked
+by H, which reproduced it first: the two edge words fused into one). Weighed
+as the entry asks, and answered by the page: `pushProse` joins with
+`blockJoin`, a newline between two blocks of one page and a space across a
+page break. A block is one paragraph of a Shamela page (`parsePage.ts`, one
+per `<p>`), so two blocks of one page are two paragraphs, and the newline
+keeps them two sentences for `splitSentences`; Shamela breaks pages
+mid-sentence (`ingest/crawler.ts`), so across a page the space keeps a broken
+sentence whole, and one that did end there is still cut at its terminator.
+The cost: a paragraph that ends a page with no terminator (a heading, say)
+runs into the next page's first sentence. 69 joins a verse's shares the same
+way. Cache keys are unchanged (the key hashes the selection, not the cut), so
+on-device cards made before keep their glued text until retranslated.
 
 Found by the `torjuman-llm` review of lane B's fix to 61. `pushProse` in
 `translation/offline/segmentSelection.ts` merges a prose span into the one
@@ -1338,6 +1372,30 @@ over a page break, a space would not. The fixer should weigh that. Left
 unfixed.
 
 ## 71. On device, the ḥadīth invariant holds only once the entities have loaded (2026-11-18, by reading)
+
+**Fixed in lane B3** (commit "71." on `claude/lane-b3-offline-text`, at the
+owner's word in the lane brief, 2026-11-26; checked by H, which reproduced it
+first: with no entities the matn went to the model inside the one prose span,
+merged with the commentary on both sides). The first of the two fixes below:
+`segmentSelection` cuts a `hadith_matn` block by its type. Every part of the
+block's selected share that no ḥadīth entity covers becomes a ḥadīth piece
+with no reference: Arabic plus the no-offline-source note, nothing looked up.
+With the detector's entity, which spans the whole block, nothing changes. Not
+changed: `ReaderScreen`'s load still has no rejection handler (lane A2's
+file; FOUND_ISSUES 85); it no longer matters to the ḥadīth invariant.
+
+Consequences the owner should know. An on-device card made before the
+entities load shows such a ḥadīth with the note even where a verified
+English is cached, and it is made under the same cache key as one made after,
+so the cache serves it until it is retranslated. That is the safe side of
+the trade; refusing the translation until the entities are in would not have
+covered a shared chapter that carries none. And, as for 68: an on-device card
+made in that window before this fix holds a prose segment with the model's
+English for the matn; its cache key is unchanged (correctly: trap 5), so
+nothing marks it stale, and it stays, in backups and shares too, until
+retranslated. Verses have the same gap and are not fixed by this: FOUND_ISSUES
+86. The owner kept this fix over refusing until the entities load
+(2026-11-26; DECISIONS, "Answered for lane B3").
 
 Found by the review of lane B's fix to 68. **A risk to the ḥadīth
 invariant.** `segmentSelection` cuts a ḥadīth out of the prose only where an
@@ -1383,6 +1441,31 @@ for a verse inside a ḥadīth.
 
 ## 73. On device, part of a verified ḥadīth shows the whole of it (2026-11-18, by reading)
 
+**Fixed in lane B3** (commit "73." on `claude/lane-b3-offline-text`, as the
+owner decided, 2026-11-26: DECISIONS, "Answered for lane B3"; checked by H,
+which reproduced it first). `pushEntity` shows the verified Arabic only when
+the selection holds the whole ḥadīth entity (`selectsWhole`: it starts at or
+before the entity's first letter and ends at or after its last; a span with
+no letter keeps its own bounds). For part of it the
+segment keeps the book's selected words, carries the whole ḥadīth's English
+and adds `HADITH_QUOTED_IN_PART`, the card path's note («Quoted in part; this
+is the whole ḥadīth.»), imported from `retrieval/enrich.ts`: a new
+`translation/offline → retrieval` edge, allowed by every layer rule. With
+hadith-json, whose Arabic was already the book's words, a part now gains the
+note. A ḥadīth clipped only by a verse before it, with the whole ḥadīth
+selected, still counts as whole (61's edge case, unchanged). The test is on
+the ḥadīth's words, from its first letter to its last: the entry number, a
+closing «.» or «»» and spaces inside the entity's span do not count, so a
+touch selection that leaves them out is the whole ḥadīth (the first version
+counted them, and the review found that a selection short only of the full
+stop read as "quoted in part"). Otherwise the test is exact, while the card
+path calls a quotation partial only below `QUOTED_IN_PART_BELOW` (0.9 of the
+matn, `retrieval/hadithText.ts`): a selection one word short of the matn
+shows the selected words with the note. Translate the surrounding passage
+and Translate all select whole blocks, so they are unaffected. On-device cards
+made before keep the whole verified text until retranslated; cache keys are
+unchanged.
+
 Found by the re-review of lane B's fix to 72. `pushEntity` in
 `translation/offline/segmentSelection.ts` emits `verified?.arabic ||
 sourceText`, so a selection covering only part of a ḥadīth whose verified
@@ -1390,6 +1473,45 @@ translation is cached shows the whole verified Arabic and English, not the
 selected slice. Not measured; pre-existing. Left unfixed.
 
 ## 74. `stripApparatus` cuts inside words (2026-11-20, by reading)
+
+**Fixed in lane B3** (commit "74." on `claude/lane-b3-offline-text`, with
+its review fixes; checked by H, which reproduced the fragments first).
+`TAKHRIJ` starts at a word's edge and takes a written-on «و» or «ف» with
+«رواه», «أخرجه» and «متفق عليه», so the cut falls one letter earlier, at the
+conjunction. The closer «أنه قال» (or «أن قال») ends at a word's edge, so
+«قالوا», «قالت», «قالا» or «قاله» no longer closes the isnād there and leaves
+no «وا», «ت», «ا» or «ه». The edge is a lookaround over `\p{L}\p{M}`, since
+`\b` sees no Arabic letters. What else changes, from the fix's review:
+
+- A formula right after any other letter, a combining mark, a tatweel or ﷺ
+  («كرواه», «المتفق عليه», a part-vowelled «وَرواه») no longer cuts there;
+  the cut moves to the next formula at a word's start, if any, and
+  `queryPasses` (`hadithText.ts`) then runs one pass, not two, unless
+  something else was stripped (the isnād, the entry number, edge
+  whitespace). The part-vowelled case is 75's, and its fix takes it.
+- After «قالوا», with no «:» or «؛» in the window of 40 after the phrase that
+  opened the isnād (a «.» also ends that window), the isnād search moves on:
+  it closes at a later closer (possibly a «فقال:» inside the
+  matn) or not at all, and then the chain stays in the shingles. Rare.
+- Everything that read the fragment reads clean text: a «» ورواه مسلم» after a
+  closing mark no longer folds to «و», so `quotationOverrun` no longer shows
+  a false "words after the quotation" note; a three-word quotation followed
+  by «ورواه…» can now match a short quotation, which leaves
+  `SHORT_QUOTE_MAX_RAW_WORDS` the only guard against a cut-down long matn
+  (its comment says so); `enrich.ts`'s `numberCompared` can flip for three
+  words plus a fragment; `scripts/hadithMatch.ts` reports count fewer
+  over-stripped.
+
+Comments and checks that cite 74: `SHORT_QUOTE_MAX_RAW_WORDS`
+(`hadithJson.ts`) and the report's `over-stripped` (`hadithJsonReport.ts`) are
+rewritten; `enrich.ts` ~578 and H's raw-word guard (~798) are still true; V's
+"over-stripped (agrees only unstripped)" case (`verify-parsers.ts` ~6126)
+had come to pass by the word-count branch instead; it now has a longer
+prefix and an entry that holds only the tail, and pins `wordsAfter` (5) and
+`own` (0 of 2), so V itself checks that only the unstripped text agrees.
+Still cut as before, as the review noted: a bare «أخرجه» (he took him out) or
+«فأخرجه» in a matn's own
+words, and a spaced «و رواه» still leaves «و».
 
 Found by the review of 17ac63a (hadith text matching, step 0b).
 `TAKHRIJ` and `ISNAD_CLOSER` in `retrieval/sharh.ts` are not word-anchored:
@@ -1401,6 +1523,40 @@ lookup and the hadith-json match alike. The step 0b report counts such misses
 as "over-stripped". Not measured; pre-existing. Left unfixed.
 
 ## 75. `stripApparatus` never matches vowelled text (2026-11-20, by reading)
+
+**Fixed in lane B3** (commit "75." on `claude/lane-b3-offline-text`, with
+its review fixes; checked by H, which reproduced it first). Each formula is
+written as before and widened by `markedPattern`, new in `lib/arabic.ts`:
+every letter matches as written, followed by any marks of
+`DISPLAY_MARK_CLASS` (ḥarakāt, superscript alef, Qurʾānic marks, tatweel),
+and a space is any whitespace. No letter variant is folded. The first version
+did fold them, through `findInDisplayText`'s pattern, and the review found
+that «أن رسول الله» then matched the «ان» at the end of «كان رسول الله» and
+cut the matn after the next «قال:»; it also took «إن رسول الله», «رواة» and a
+bare «انه قال». H now checks that a narrative «كان رسول الله … قال:», bare or
+vowelled, opens no isnād, and that a bare «ان رسول الله» is left as before.
+The cut is still made in the raw text, which every caller expects back
+(`queryPasses` in `hadithText.ts` compares the two, and now finds a
+difference more often, so it runs its second, stripped pass more often:
+local work, no requests). The isnād's windows (160 and 40) count letters
+with their marks, not code points, so a vowelled chain is measured as a bare
+one; a letter is one character outside the mark class and the marks after
+it, so a run of marks is read one way only. (A window whose letter could
+also be a mark ran past a minute on 400 vowelled letters with no closer,
+measured in Node while writing the fix; H keeps a timing case.)
+
+On text with no mark of the class the output is exactly 74's (the review
+proved it by reading). Text otherwise bare can carry one: a tatweel, a
+superscript alef («هٰذا»), a hamza mark (U+0653–U+0655) or a Qurʾānic pause
+mark is now a mark, not a letter, so it no longer counts toward a window,
+and «قـال» or «رواـه» match. A book printed without hamza or with alif
+maqṣūra keeps its isnād where that spelling is its only opener or closer, as
+on main (FOUND_ISSUES 96). A part-vowelled «وَرواه», which 74's edge stopped
+cutting, cuts again at the «و». Not tolerated inside a
+formula: the marks outside the class, U+0610–U+061A and U+08D3–U+08FF, which
+`normalize` removes and `findInDisplayText` never allowed either
+(FOUND_ISSUES 89). Whether book 9260's matn blocks carry ḥarakāt is still not
+checked.
 
 Found by the same review. The regexes run on the raw block text, before
 `normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» with ḥarakāt never match,
@@ -1506,16 +1662,226 @@ merged first, took 76–82, so they were renumbered 83 and 84 when main was
 merged into lane A2. Commit subjects keep the old numbers: "Record
 FOUND_ISSUES 76" is 83, and "record FOUND_ISSUES 77" in a 47 commit is 84.
 
-Lane B2's entries were numbered 76–81 on its branch. Lane C reached main
-first with 76–82 and lane A2 next with 83–84, so they are renumbered 85–90
-after them, and the lanes can merge. Each old number is the new one less 9.
-Commit subjects keep the old numbers: "76." is 85, "FOUND_ISSUES 76, 77"
-are 85 and 86, "78–81" are 87–90, and the 83–88 that two later commits
-name (the merge of lane C, the baselines, the review notes) are 85–90.
+## 85. The reader's entity load has no rejection handler (2026-11-26, by reading)
 
-## 85. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+Found by the review of lane B3's fix to 71. `ui/reader/ReaderScreen.tsx`
+(~312–315 since lane A2) runs `void load.then(...)` over `ensureEntities` (or
+`listEntities` in a shared view) with no `catch`. A rejected load leaves the
+reader's `entities` as they were, which on first open is `[]`, until the
+effect runs again (a change of book, block count or read-only state), with no
+notice and an unhandled rejection in the console: no verse or ḥadīth is
+marked or tappable, and nothing says why. Since 71 the on-device cut no longer
+depends on it for
+ḥadīth; verses still do (86). Lane A2's file. Not measured. Left unfixed.
 
-**Fixed in lane B2** (commit "76." (lane B2's old number for 85) on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
+## 86. On device, a verse without an entity reaches the model (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 71. **Against "Scripture is never
+added to the prose list"** (README, "The invariant"; the header of
+`translation/offline/segmentSelection.ts`). `segmentSelection` cuts a verse
+out of the prose only where a `quran` entity marks it. It reads a block's
+type only for a matn (since 71) and never its spans, so verse text with no
+entity goes into `prose`,
+and the on-device model translates it, in three cases:
+
+1. before the reader's entities load, after the load fails (85), or in a
+   shared chapter whose bundle carries none (the gap 71 closed for ḥadīth);
+2. a `quran` block (`shamela/structure.ts` ~66, `isEntirelyQuran`) whose
+   verse the detector did not resolve;
+3. an inline span of kind `quran` that the detector did not resolve. The
+   detector leaves an unmatched verse unmarked (`segmentSelection`'s own
+   comment says so: "an unmatched verse is left unmarked"); Settings → Verse
+   and ḥadīth detection lists an unmatched bracketed span of 16 characters or
+   more (`quran/detectEntities.ts` ~441–484), not `quran` spans as such.
+
+The quoted ḥadīth invariant is unaffected. Not measured. Pre-existing; not
+caused by lane B3. A fix could cut a `quran` block and every `quran` span
+not covered by a verse entity as a verse piece with no reference, emitted
+with the existing QURAN_UNRESOLVED_NOTE, as 71 does for a matn. That needs
+the owner's word: the parser's `quran` span kind is a guess (a citation
+follows, or the text is densely vowelled: `shamela/parsePage.ts` ~251), so an
+unresolved one is not always a verse, and cutting it would keep commentary
+from the model too. Left unfixed: the owner asked for it to be recorded only
+(2026-11-26; DECISIONS, "Answered for lane B3").
+
+## 87. On device, a ḥadīth quoted in the commentary reaches the model (2026-11-26, by reading)
+
+Found by the review of lane B3's records for 71, 85 and 86. **Against the
+ḥadīth invariant** as README states it. The detector makes a ḥadīth entity
+only for a `hadith_matn` block (`quran/detectEntities.ts` ~293, the one place
+`type: 'hadith'` is set). Prophetic speech that a sharḥ quotes inside its own
+paragraph, which the parser marks as an inline span of kind `quote` ("a
+quoted lemma or prophetic speech in ((...))", `types/book.ts` ~139), is never
+an entity, so on device `segmentSelection` leaves it in `prose` and the
+model translates it, beside the verified segments of the same card. Since 71
+this is the remaining way for prophetic speech that the parser marks as a
+quotation. Speech it does not mark reaches the model too: in no styled run,
+in a styled run without brackets (`emphasis`), in a single-bracket run taken
+for a verse (86's case 3), or in a book whose matns are not typed
+`hadith_matn`. Not measured. Pre-existing; not caused by lane B3. A fix
+needs the owner's word, as 86's case 3 does: the `quote` kind also covers a
+lemma the commentary explains, which is commentary and should be translated,
+so cutting every `quote` span would keep that from the model too. Left
+unfixed: the owner asked for it to be recorded only (2026-11-26; DECISIONS,
+"Answered for lane B3").
+
+## 88. The check scripts do not typecheck, and T does not see them (2026-11-26, measured)
+
+Found while adding lane B3's cases to check H. `tsc -b` covers `src/` and
+`vite.config.ts` only (`tsconfig.app.json`, `tsconfig.node.json`), and
+Vite's SSR build strips types without checking them, so `scripts/*.ts` are
+never typechecked. Each typechecked on its own with a scratch tsconfig
+extending `tsconfig.app.json` with `types: ["node"]`, on main (5e72107):
+`scripts/verify-hadith-text.ts` has 3 errors (~963, ~1003, ~1013: calls to
+`hadithImportedMissNote` without `ImportedMiss.numberCompared`, added after
+the cases were written; their statuses, 'none-near' and 'common', never
+read the field, so the cases still mean what they say) and
+`scripts/verify-parsers.ts` has 27. Lane B3 adds none to either. Left unfixed.
+
+## 89. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
+
+Found while fixing 75. `normalize` (`lib/arabic.ts`) removes U+0610–U+061A
+(the small high signs, honorific signs among them) and U+08D3–U+08FF (Arabic
+Extended-A, where Ḥafṣ Uthmānī writes its open tanwīn) besides the ḥarakāt.
+The pattern `findInDisplayText` builds, and since 75 `markedPattern`, which
+shares its mark class, allows only U+064B–U+065F, U+0670, U+06D6–U+06ED and
+tatweel after a letter.
+So a search hit whose text carries one of the others is found in
+`Block.normalized` but not located in the display text: `SearchPanel` gets a
+null range for it. Since 75 the same marks inside a takhrīj or isnād formula
+keep `stripApparatus` from matching it. Not measured, and not known to occur
+in an imported book. Pre-existing for the search; 75 reuses the class without
+changing it. Left unfixed.
+
+## 90. The on-device verse note credits Khattab, but Pickthall is bundled (2026-11-26, by reading)
+
+Found while fixing 69 (check H prints the note). `QURAN_OFFLINE_NOTE` in
+`translation/offline/segmentSelection.ts` reads "English: Dr. Mustafa
+Khattab, The Clear Qurʾān (bundled)." and is the note on every verse segment
+of an on-device card. The bundled English is Pickthall (1930): README, "The
+bundled translation is Pickthall, and why", `quran/quranIndex.ts` ~417, and
+V's licensing check on `public/quran/english.json`. So every offline card
+names the wrong translator, and one README says is not shipped.
+`ui/settings/OfflineCapabilities.tsx` ~21 says the same ("The muṣḥaf and
+Khattab’s translation ship with the app"; lane UI-1's area). A fix changes
+card text only, not cache keys; stored cards keep the old note. Left unfixed.
+
+## 91. A whitespace-only ḥadīth piece becomes a segment (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 71. `pushProse` drops a span that is
+only whitespace; `pushEntity` does not. The parser trims a block and
+collapses its whitespace (`parsePage.ts`, `TextBuilder`), so a piece of
+whitespace alone seldom arises from an imported block (it can where a stored
+entity ends before a space and the selection ends one character later); a
+piece of punctuation alone is the usual case (a selection that starts after
+a matn's last word but before its closing «.» or «»»). It shows as a ḥadīth
+segment of one mark, with the no-offline-source note, or, where the ḥadīth's
+English is cached, with that whole English and «Quoted in part» (since 73;
+the lookup is by the entity's whole text). Display only; nothing
+reaches the model. Left unfixed.
+
+## 92. On a Windows checkout with `core.autocrlf`, the recorded checks fail on line endings (2026-11-26, measured)
+
+Found while running lane B3's checks on a Windows PC (Git for Windows, which
+sets `core.autocrlf=true` in its system gitconfig). The checkout's text files
+are CRLF, the records the checks compare against with them, and the checks
+write LF: Q reported "FAIL: 1 entry differs … (every entry is equal; the
+header or the formatting differs)" on an unchanged tree, and passed once the
+clone was set to `core.autocrlf=false` and its files converted back to LF.
+The repository has no `.gitattributes`. On the same PC, U fails on unchanged
+main too, 143 of 294 files matching: 127 screenshots and 6 DOM files differ
+(`reader-retranslate`, `settings--offline-downloading` and
+`settings--offline-translation` at both sizes), and 18 screenshots the run
+took are not in the record, which lists those screens' DOM but not their
+images (`reader-hadith-sharh-*`, `settings--hadith-english-*`; any image
+absent from a record that claims images counts as differing). Those 18 were
+left out on purpose when their screens were baselined (7c23fda, 064e11c and
+677c4df: "PNGs are left out", "not added", "HTML only"), so they fail on
+every machine, and the 6 DOM files are the captures 7c23fda already names as
+stale on main. Only the 127 screenshots point to this machine's renderer.
+Measured against the record at 5e72107; lanes C and A2 have re-recorded U
+since, and merged main fails here the same way (143 of 294). A fix could add
+a `.gitattributes` (`* text=auto eol=lf`) or make the comparisons ignore CR;
+U's dependence on the renderer is a separate question. Left unfixed.
+
+## 93. The overrun check strips apparatus from sharḥ prose (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 75. `hadithQuotationOverrun`
+(`retrieval/quotationOverrun.ts` ~80) runs `stripApparatus` over the
+commentary that follows a quotation's closing mark, before deciding whether
+words run on past it. The plan says the stripper is applied only to a matn
+block or a `hadith` segment, never to sharḥ prose
+(`docs/plans/hadith-text-matching.md`, Design 1); here the input is the
+commentary part of a `hadith` segment, after its quotation. The isnād half
+removes the tail from its start through a closer and keeps what follows; the
+takhrīj half cuts what follows. The check only asks whether anything is
+left, and the words it shows come from the unstripped text. The takhrīj
+half changes its answer only where nothing stands before the formula; the
+isnād half also where words do, since its opener may come up to 160 letters
+in: «… ». وفي الباب عن النبي قال: الحديث» folds, unstripped, to words that
+are reported, and stripped leaves «الحديث», which is accepted, so the
+overrun is missed. It can also report one: «متفق عليه من حديث أبي هريرة رضي
+الله عنه، وقال النووي: …» starts with a tail the check accepts, but the
+isnād rule strips it through «النووي:», so what is left is reported as words
+run on, and the takhrīj is quoted as commentary. Pre-existing; 75 widens it
+to the vowelled forms of the same phrases. Not measured. Left unfixed.
+
+## 94. A stored matn entity short of its block, with a cached ḥadīth, shows the tail twice (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 73. Since 71, the part of a matn
+block that a stored ḥadīth entity does not cover is a ḥadīth piece of its
+own. When that entity stops short of its block (stored before a re-parse moved
+the text) and its verified ḥadīth is cached, a selection of the whole block
+holds the entity whole: the card shows the whole verified Arabic and English,
+then the block's tail again as a ḥadīth segment with the no-offline-source
+note, so the tail's words read twice. That is for a sunnah.com record, whose
+Arabic is the whole ḥadīth; with hadith-json, whose cached Arabic is empty,
+the entity's segment shows its own span, and the tail reads once, as a
+segment with the note under an English that already covers it. Before 71 the
+tail went to the model.
+Nothing reaches the model; the detector's entities span their block, so only
+stale entities do this. Not measured. Left unfixed.
+
+## 95. A verse that starts with a stored ḥadīth entity and runs past it drops the ḥadīth (2026-11-26, by reading)
+
+Found by the review of lane B3's record for 71 (b1a0d20). In
+`segmentSelection`, a verse whose share starts at the same offset as a ḥadīth
+entity's piece and ends after it sorts first (the longer piece), and the
+ḥadīth piece, lying wholly inside it, is skipped: its segment, with its
+verified English or its no-offline-source note, is missing from the card.
+This is the skip 72 fixed for an exact tie, here for a verse that outruns
+the ḥadīth. With the detector's whole-block entity a verse's share can never
+outrun the ḥadīth's, so it needs a stored entity short of its block (94's
+precondition). Nothing reaches the model. Pre-existing (61's skip and the
+sort). Not measured. Left unfixed.
+
+## 96. A book printed without hamza or with alif maqṣūra keeps its isnād in the shingles (2026-11-26, by reading)
+
+Found by the review of lane B3's fix to 75. `stripApparatus` matches its
+formulae letter for letter (75 adds marks, deliberately no letter variants),
+so in a book that prints «النبى» or «رضى» with alif maqṣūra, or «ان»/«انه»
+without hamza, those phrases neither open nor close an isnād, as on main.
+The chain stays in the shingles where such a phrase is its only opener, or a
+colonless «انه قال» its only closer: «قال:» and a bare «:» still close one,
+and «رضي الله عنه» or «أن رسول الله» still open one. Folding every variant was
+tried in 75 and made «أن
+رسول الله» match the «ان» of «كان». A narrower fold could not: ى→ي alone, or a
+hamza fold only at a word's start. Not measured. Pre-existing. Left unfixed.
+
+Lane B3 wrote 85–96 as 76–87 on its branch and renumbered them after lanes C
+and A2 merged their 76–84 (+9: 76→85 … 87→96). Its commit messages before the
+renumbering use the old numbers.
+
+Lane B2's entries were numbered 76–81 on its branch, then 83–88 and 85–90
+as lanes C, A2 and B3 reached main first with 76–82, 83–84 and 85–96. They
+are 97–102 now: 76 is 97, 77 is 98, and 78–81 are 99–102, whichever of the
+earlier numbers a lane B2 commit or note uses (83–88 and 85–90 map the same
+way, in order). Commit subjects and messages keep the number they were
+written with; the PR lists the mapping.
+
+## 97. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+
+**Fixed in lane B2** (commit "76." (lane B2's first number for 97) on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
 
 Found by lane B2 while wiring 62. `subscribe` in `app/useOnline.ts` adds the
 same two functions (`handleOnline`, `emit`) to `window` for every subscriber,
@@ -1528,7 +1894,7 @@ something re-reads it (the next render reads `navigator.onLine`), but a
 screen left open does not update by itself. Not caused by 62 (the shared
 `emit` behaved the same). Left unfixed.
 
-## 86. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
+## 98. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
 
 Found by lane B2, which ran the checks on the owner's PC (Windows 11, Node
 22.23.1, Playwright 1.63's Chromium 153). On clean `main` (`5e72107`), U
@@ -1542,9 +1908,10 @@ records exactly there. Also on that PC, git's system config sets
 fails on "the header or the formatting" until the clone is set to
 `core.autocrlf=false` and checked out again. So U can be re-recorded only in
 the Linux container; on the PC it can only be compared with a dump of `main`
-made there (`VERIFY_OUT`, as the script's header describes). Left as it is.
+made there (`VERIFY_OUT`, as the script's header describes). The line-ending
+part is FOUND_ISSUES 92 too (lane B3), found the same day. Left as it is.
 
-## 87. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
+## 99. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
 
 Found by the review of lane B2. The Retranslate menu's "Same provider and
 model" (`ui/reader/TranslationCardView.tsx`) calls `onRetranslate()` with
@@ -1555,7 +1922,7 @@ model, or on another profile, is retranslated on the profile's. Older than
 lane B2; more visible since, as a fallback card names a model the profile
 does not use. Left unfixed.
 
-## 88. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
+## 100. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
 
 Found by the review of lane B2. `withCloudRequest` (`ui/reader/useTranslator.ts`)
 counts one request per translation, under the provider that answered. A
@@ -1564,7 +1931,7 @@ retries (lane B2), a RECITATION split's halves, and each model the fallback
 asked. On the free tier, where requests are the budget, the session line
 undercounts. Left unfixed.
 
-## 89. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
+## 101. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
 
 Found by the review of lane B2. In `GeminiProvider.translate`, when a part
 after a RECITATION split fails before any whole segment has come back, the
@@ -1574,7 +1941,7 @@ Free tier, so nothing is billed; but the text is lost, and since lane B2 an
 overload there lets another model answer instead. Older than lane B2. Left
 unfixed.
 
-## 90. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
+## 102. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
 
 Found by the review of lane B2, as a consequence of its migration, for the
 owner to know. The model is part of the cache key (`cacheKeyFor`), so once a

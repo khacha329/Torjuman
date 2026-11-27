@@ -1,6 +1,6 @@
 import type { StorageAdapter } from '../platform/storage/StorageAdapter';
 import type { Block, Book } from '../types';
-import { letterFold } from '../lib/arabic';
+import { DISPLAY_MARK_CLASS, letterFold, markedPattern } from '../lib/arabic';
 import { recordRetrieval } from '../services/retrievalLog';
 
 // Finding a ḥadīth's commentary in an imported sharḥ, by its own words.
@@ -109,12 +109,75 @@ export interface SharhPassage {
  */
 const ENTRY_NUMBER = /^\s*[0-9٠-٩]+\s*[-–—]\s*/;
 
-/** The isnād runs to its closer; the matn starts after it. */
-const ISNAD_CLOSER =
-  /^.{0,160}?(?:رضي\s+الله\s+عنه(?:ما|م|ا)?|أن\s+رسول\s+الله|عن\s+النبي)[^:؛.]{0,40}?(?:قال\s*[:؛]|قالت\s*[:؛]|أنه?\s+قال|:)/s;
+// A word's edges. JavaScript's `\b` knows only ASCII word characters, so in
+// Arabic it marks no edge at all; a letter or a combining mark on the far
+// side means the match is inside a word. Until FOUND_ISSUES 74 neither
+// pattern below had an edge: «رواه» matched inside «ورواه» and «فرواه», and
+// «أنه قال» stopped at the start of «قالوا», so the cut left «و», «ف» or «وا»
+// in the edge shingle, which then could not hit.
+const WORD_START = '(?<![\\p{L}\\p{M}])';
+const WORD_END = '(?![\\p{L}\\p{M}])';
 
-/** The takhrīj tail and anything after it. */
-const TAKHRIJ = /(?:رواه|أخرجه|متفق\s+عليه|وفي\s+رواية)[\s\S]*$/;
+// The formulae as a book may print them, vowelled or bare. Until FOUND_ISSUES
+// 75 they were literal bare letters run over the raw block text, before
+// `normalize`, so «رَوَاهُ» or «رَضِيَ اللَّهُ عَنْهُ» never matched and a book
+// printed vowelled kept its takhrīj and isnād in the shingles. Each is now
+// written as before and widened by `markedPattern` (lib/arabic.ts): every
+// letter may carry its ḥarakāt, superscript alef, Qurʾānic marks or tatweel,
+// and nothing else changes. No letter variant is folded. A first version did
+// fold them, as the reader's search does, and «أن رسول الله» then matched the
+// «ان» at the end of «كان رسول الله», the commonest narrative opening, and
+// opened an isnād there (review of 6e195fd). The cut is made in the raw text,
+// which every caller expects back.
+const printed = markedPattern;
+
+/** Any marks a letter carries, as `markedPattern` allows them. */
+const MARKS = `[${DISPLAY_MARK_CLASS}]*`;
+
+/**
+ * At most `max` printed letters, lazily, each with whatever marks it carries,
+ * so that a window measures a vowelled text as it measures a bare one.
+ * Counted in code points, «رَضِيَ اللَّهُ عَنْهُ» (21) is nearly twice as long as
+ * «رضي الله عنه» (12), and the isnād's 160 would hold little more than half
+ * the chain. A letter is anything but a mark (and but `excluded`), so a run of
+ * marks is read one way only.
+ */
+const letters = (excluded: string, max: number) =>
+  `(?:[^${DISPLAY_MARK_CLASS}${excluded}]${MARKS}){0,${max}}?`;
+
+/**
+ * The isnād runs to its closer; the matn starts after it. Only the closer
+ * that ends the match, «أنه قال», needed an edge, since only it decides where
+ * the cut falls. The phrases that open the isnād are unanchored, as they were
+ * before 74: one inside a longer word («وعن النبي», «بأن رسول الله») still
+ * opens it.
+ */
+const ISNAD_CLOSER = new RegExp(
+  // Marks before the first letter too, which `.` used to step over.
+  `^${MARKS}` +
+    letters('', 160) +
+    `(?:${printed('رضي الله عنه')}(?:${printed('ما')}|${printed('م')}|${printed('ا')})?` +
+    `|${printed('أن رسول الله')}|${printed('عن النبي')})` +
+    letters(':؛.', 40) +
+    `(?:${printed('قال')}\\s*[:؛]|${printed('قالت')}\\s*[:؛]` +
+    `|${printed('أن')}(?:${printed('ه')})?\\s+${printed('قال')}${WORD_END}|:)`,
+  'u',
+);
+
+/**
+ * The takhrīj tail and anything after it, from the start of the word that
+ * opens it. «ورواه», «فأخرجه» and «ومتفق عليه» are the same formulae with the
+ * conjunction written on, so the conjunction goes with them rather than being
+ * left behind: the cut falls one letter earlier than it did before 74, at the
+ * conjunction. Any other letter before the formula puts it inside a longer
+ * word, and it no longer cuts there at all.
+ */
+const TAKHRIJ = new RegExp(
+  `${WORD_START}(?:(?:[وف]${MARKS})?` +
+    `(?:${printed('رواه')}|${printed('أخرجه')}|${printed('متفق عليه')})` +
+    `|${printed('وفي رواية')})[\\s\\S]*$`,
+  'u',
+);
 
 export function stripApparatus(matn: string): string {
   let text = matn.replace(ENTRY_NUMBER, '');

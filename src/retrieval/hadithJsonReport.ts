@@ -38,11 +38,12 @@ export type MissReason =
    * four words that the short-quotation rule did not take (one it took counts
    * in `byNumber`), or the UNSTRIPPED matn agrees with its own number or a
    * neighbour in the window while the stripped one does not. The second
-   * happens two ways (review of 17ac63a): `agrees` is a ratio over at most ten
+   * happens (review of 17ac63a) because `agrees` is a ratio over at most ten
    * evenly drawn runs, and runs from the isnād or a takhrīj-like phrase can be
-   * hits that the stripped text, resampled over fewer words, loses; and the
-   * regexes are not word-anchored, so «ورواه», «فأخرجه» or «قالوا» are cut
-   * mid-word and leave a fragment in an edge run (FOUND_ISSUES 74).
+   * hits that the stripped text, resampled over fewer words, loses. Until
+   * FOUND_ISSUES 74 it also happened because the regexes were not
+   * word-anchored: «ورواه», «فأخرجه» or «قالوا» were cut mid-word and left a
+   * fragment in an edge run. Reports run before that fix count those too.
    */
   | 'over-stripped'
   /** Agrees with a dataset number outside the ±window. */

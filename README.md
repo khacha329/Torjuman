@@ -366,7 +366,9 @@ The same principle governs `public/qul/` — see [docs/RESOURCES.md](docs/RESOUR
 This is structural, not remembered. `offline/segmentSelection.ts` cuts the
 selection at every verse and ḥadīth boundary *before* anything is
 translated — a ḥadīth with no number included (FOUND_ISSUES 68); a marked
-name cuts nothing (FOUND_ISSUES 61) — and returns
+name cuts nothing (FOUND_ISSUES 61); a `hadith_matn` block is ḥadīth by its
+type, so the cut holds before the book's entities have loaded, or if they
+never do (FOUND_ISSUES 71) — and returns
 two things: finished segments, and a list of plain prose spans. Verses are
 resolved from the bundled muṣḥaf; ḥadīth take a verified local translation if
 one is cached, and Arabic plus an honest note if not. **Scripture is never added
