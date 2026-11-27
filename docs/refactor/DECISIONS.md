@@ -162,6 +162,18 @@ Answers to the lane's review, the owner's, later on 2026-11-26:
   browser's online event always clears an assumption of offline.
 - **Check U.** The entries only the Linux container can record are
   re-recorded by a cloud session on the lane's branch before the merge.
+  *Superseded 2026-11-27:* no cloud session could be started from the
+  owner's PC, and the owner asked for the merge once T, B, L and the lane's
+  checks pass. The entries left for the container are listed in the PR, as
+  lanes B, C, A2 and B3 left theirs.
+
+The owner's word on 2026-11-27, with lanes C, A2 and B3 merged:
+
+- **Order with UI-1.** Lane B2 merges before UI-1 (#30, Settings in
+  tabs). UI-1 does not change `KeysSection` or `TranslationSection`, only how
+  `SettingsScreen` arranges them, so it takes in the Test key note and the
+  fallback switch when it merges main. Lane B2's findings follow main's
+  highest, as 97–102.
 
 ## Decided for lane A2, 2026-11-26
 
