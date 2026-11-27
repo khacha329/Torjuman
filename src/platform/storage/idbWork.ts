@@ -1,8 +1,10 @@
 import type { IDBPDatabase } from 'idb';
 import type {
   AppSettings,
+  BookPlacement,
   ExplanationCard,
   GlossaryEntry,
+  LibraryFolder,
   Mark,
   ReadingPosition,
   ShareRecord,
@@ -14,7 +16,8 @@ import type {
 import type { Schema } from './idbSchema';
 
 // The user's work: marks, cards, profiles, glossary, reading positions,
-// settings, explanation and sharḥ cards, share records and word glosses.
+// settings, explanation and sharḥ cards, share records and word glosses —
+// and, since version 12, how the library is arranged (placements, folders).
 // Moved verbatim from IdbStorageAdapter.ts in restructure Phase 4 step 4f
 // (docs/refactor/plans/phase4-storage.md), each method made a function whose
 // first parameter fetches the database handle — a fetcher rather than the
@@ -258,4 +261,78 @@ export async function getWordGloss(
 
 export async function listWordGlosses(handle: () => IDBPDatabase<Schema>): Promise<WordGloss[]> {
   return handle().getAll('wordGlosses');
+}
+
+// The library's arrangement (version 12; see BookPlacement). Added after
+// restructure Phase 4, so not moved code.
+
+export async function listBookPlacements(
+  handle: () => IDBPDatabase<Schema>,
+): Promise<BookPlacement[]> {
+  return handle().getAll('bookPlacements');
+}
+
+/**
+ * Writes the placements in one transaction. A move renumbers a whole section,
+ * and a section written half-way would leave two books with one place.
+ */
+export async function putBookPlacements(
+  handle: () => IDBPDatabase<Schema>,
+  placements: BookPlacement[],
+): Promise<void> {
+  if (placements.length === 0) return;
+  const tx = handle().transaction('bookPlacements', 'readwrite');
+  await Promise.all(placements.map((placement) => tx.store.put(placement)));
+  await tx.done;
+}
+
+/** In the order they were made, which is the order the Library lists them. */
+export async function listLibraryFolders(
+  handle: () => IDBPDatabase<Schema>,
+): Promise<LibraryFolder[]> {
+  const folders = await handle().getAll('libraryFolders');
+  return folders.sort(
+    (a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+}
+
+export async function putLibraryFolder(
+  handle: () => IDBPDatabase<Schema>,
+  folder: LibraryFolder,
+): Promise<void> {
+  await handle().put('libraryFolders', folder);
+}
+
+/**
+ * Removes the folder and moves its books to Unfiled, in one transaction: a
+ * folder deleted while its books still named it would leave them shown as
+ * Unfiled anyway (a placement naming no folder is), but a failure between two
+ * transactions could leave the folder in place with its books moved out, and
+ * neither half is what was asked. No book is deleted.
+ *
+ * An unpinned book's place is cleared, so it arrives at the top of Unfiled
+ * rather than wherever its old number falls among Unfiled's books. A pinned
+ * book keeps its place: it is shown in Pinned, and its number is its place
+ * there, which deleting a folder does not change.
+ */
+export async function deleteLibraryFolder(
+  handle: () => IDBPDatabase<Schema>,
+  id: string,
+  now: number,
+): Promise<void> {
+  const tx = handle().transaction(['bookPlacements', 'libraryFolders'], 'readwrite');
+  const placements = tx.objectStore('bookPlacements');
+  const filed = (await placements.getAll()).filter((placement) => placement.folderId === id);
+  await Promise.all([
+    ...filed.map((placement) =>
+      placements.put({
+        ...placement,
+        folderId: null,
+        position: placement.pinned ? placement.position : null,
+        updatedAt: now,
+      }),
+    ),
+    tx.objectStore('libraryFolders').delete(id),
+  ]);
+  await tx.done;
 }

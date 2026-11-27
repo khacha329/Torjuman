@@ -4,6 +4,7 @@ import type {
   BiographyEntry,
   Block,
   Book,
+  BookPlacement,
   CrawlState,
   DictionaryEntry,
   Entity,
@@ -12,6 +13,7 @@ import type {
   GlossaryEntry,
   Mark,
   HadithRecord,
+  LibraryFolder,
   Page,
   QulCompilation,
   QulEntry,
@@ -96,6 +98,7 @@ import {
   deleteCard,
   deleteExplanationCard,
   deleteGlossaryEntry,
+  deleteLibraryFolder,
   deleteMarks,
   deleteProfile,
   deleteShareRecord,
@@ -105,17 +108,21 @@ import {
   getReadingPosition,
   getSettings,
   getWordGloss,
+  listBookPlacements,
   listCards,
   listExplanationCards,
   listGlossary,
+  listLibraryFolders,
   listMarks,
   listProfiles,
   listShareRecords,
   listSharhCards,
   listWordGlosses,
+  putBookPlacements,
   putCard,
   putExplanationCard,
   putGlossaryEntry,
+  putLibraryFolder,
   putMarks,
   putProfile,
   putReadingPosition,
@@ -523,6 +530,28 @@ export class IdbStorageAdapter implements StorageAdapter {
 
   async listWordGlosses(): Promise<WordGloss[]> {
     return listWordGlosses(this.lazyHandle);
+  }
+
+  // ------------------------------------------------- library arrangement
+
+  async listBookPlacements(): Promise<BookPlacement[]> {
+    return listBookPlacements(this.lazyHandle);
+  }
+
+  async putBookPlacements(placements: BookPlacement[]): Promise<void> {
+    return putBookPlacements(this.lazyHandle, placements);
+  }
+
+  async listLibraryFolders(): Promise<LibraryFolder[]> {
+    return listLibraryFolders(this.lazyHandle);
+  }
+
+  async putLibraryFolder(folder: LibraryFolder): Promise<void> {
+    return putLibraryFolder(this.lazyHandle, folder);
+  }
+
+  async deleteLibraryFolder(id: string): Promise<void> {
+    return deleteLibraryFolder(this.lazyHandle, id, Date.now());
   }
 
   // ------------------------------------------------------ device transfer

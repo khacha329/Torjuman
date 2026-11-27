@@ -30,6 +30,7 @@ its progress log.
 | `npm run verify:requests` | every request the provider call sites send, retries and mapped errors, with fake keys and canned responses, against `docs/refactor/phase3/requests.json` (~1 s) | anywhere |
 | `npm run verify:storage` | Playwright: the IndexedDB schema after a fresh install and every upgrade, and the rows after every storage method, backup and transfer path, against `docs/refactor/phase4/storage.json` (~20 s) | anywhere |
 | `npm run verify:translate` | Playwright: the translate pipeline through the real reader (selection → Translate, cache hit, retranslate, stale card, errors, batch, no key, Claude with cost and web search, on device) with canned Gemini and Anthropic responses and fake keys, against `docs/refactor/phase5/translate.json` (~70 s) | anywhere |
+| `npm run verify:library` | Playwright: the Library's pins, Move up / Move down (buttons and long press), folders, and a book deleted and imported again keeping its place, on both tablet sizes and a desktop; screenshots into `.verify/library/` (~40 s) | anywhere |
 | `npm run stage` | a build on Cloudflare staging, to try on the tablet before tagging | owner's PC |
 
 In the cloud container `npm run verify` fails at once on the missing
@@ -136,10 +137,13 @@ src/
                        client, error mappings), gemini (the one POST)
     providers/         AnthropicProvider, GeminiProvider, the registry
     offline/           on-device model (transformers.js)
-  library/             per-book transfer, whole-tablet transfer, relay, share target
+  library/             per-book transfer, whole-tablet transfer, relay, share target,
+                       the Library's arrangement rules (arrangement)
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
-  ui/                  screens; reader/ and settings/ hold most of the UI
+  ui/                  screens; reader/ and settings/ hold most of the UI;
+                       LibraryScreen with its card, menu, folder heading and
+                       useLongPress
     reader/            ReaderScreen (the shared state and the columns) with
                        its hooks (useWordLookup, useReadingPosition,
                        useReaderNavigation, usePanelControls,

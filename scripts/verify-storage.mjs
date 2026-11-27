@@ -29,7 +29,7 @@
 //      stub page served by page.route at /__dcheck/ builds the old database
 //      with raw IndexedDB if the scenario has one, then the page goes to the
 //      app, which opens it with the real minified `init`; the script polls
-//      (from Node) until the database reports version 11 and the first boot
+//      (from Node) until the database reports version 12 and the first boot
 //      has seeded the bundled matching-ayah resource, then dumps the schema.
 //      Rows are not recorded here: the app seeds profiles, settings and QUL
 //      rows itself. Its uncaught page errors and console errors are, sorted
@@ -87,6 +87,9 @@
 //     after it, and every store they share has today's keyPath and indexes;
 //   - v9 is v8 plus sharhCards (the history comment; 9 and 10 landed in one
 //     commit, so no v9 build ever existed);
+//   - v11 is today's schema without the two stores version 12 added
+//     (bookPlacements and libraryFolders, lane UI-2): every tablet before
+//     that lane. v12 is today's schema, for the reopen;
 //   - v1base is not a historical schema: the twelve stores the existing-DB
 //     branch never creates, with today's indexes, at version 1 — the one
 //     database that exercises every guard;
@@ -162,6 +165,8 @@ const TODAY = [
   ['sharhCards', 'id', [['byBook', 'bookId']]],
   ['narratorProfiles', 'id', [['byNaming', 'namings', { multiEntry: true }], ['byShard', 'shard']]],
   ['shareRecords', 'id'],
+  ['bookPlacements', 'shamelaId'],
+  ['libraryFolders', 'id'],
   ['wordGlosses', 'word'],
   ['qulResources', 'id'],
   ['qulEntries', 'id', [['byResource', 'resourceId'], ['byResourceKey', ['resourceId', 'key']]]],
@@ -183,17 +188,20 @@ const BASE_TWELVE = [
 ];
 
 const without = (...names) => TODAY.filter(([name]) => !names.includes(name));
+/** The two stores version 12 added (lane UI-2), absent from every older database. */
+const V12 = ['bookPlacements', 'libraryFolders'];
 
 const OLD_DATABASES = {
   v1base: { version: 1, stores: TODAY.filter(([name]) => BASE_TWELVE.includes(name)) },
-  v7: { version: 7, stores: without('biographyEntries', 'sharhCards', 'narratorProfiles', 'shareRecords') },
-  v8: { version: 8, stores: without('sharhCards', 'narratorProfiles', 'shareRecords') },
-  v9: { version: 9, stores: without('narratorProfiles', 'shareRecords') },
-  v10: { version: 10, stores: without('shareRecords') },
-  v11: { version: 11, stores: TODAY },
-  'v10-without-qulResources': { version: 10, stores: without('shareRecords', 'qulResources') },
-  'v10-without-qulEntries': { version: 10, stores: without('shareRecords', 'qulEntries') },
-  'v10-without-qulCompilations': { version: 10, stores: without('shareRecords', 'qulCompilations') },
+  v7: { version: 7, stores: without('biographyEntries', 'sharhCards', 'narratorProfiles', 'shareRecords', ...V12) },
+  v8: { version: 8, stores: without('sharhCards', 'narratorProfiles', 'shareRecords', ...V12) },
+  v9: { version: 9, stores: without('narratorProfiles', 'shareRecords', ...V12) },
+  v10: { version: 10, stores: without('shareRecords', ...V12) },
+  v11: { version: 11, stores: without(...V12) },
+  v12: { version: 12, stores: TODAY },
+  'v10-without-qulResources': { version: 10, stores: without('shareRecords', 'qulResources', ...V12) },
+  'v10-without-qulEntries': { version: 10, stores: without('shareRecords', 'qulEntries', ...V12) },
+  'v10-without-qulCompilations': { version: 10, stores: without('shareRecords', 'qulCompilations', ...V12) },
 };
 
 // ------------------------------------------------------------------ in-page helpers
@@ -293,7 +301,7 @@ function installPageHelpers(dbName) {
     },
     async ready(seedId) {
       const known = await indexedDB.databases();
-      if (!known.some((db) => db.name === dbName && db.version === 11)) return false;
+      if (!known.some((db) => db.name === dbName && db.version === 12)) return false;
       const db = await open();
       try {
         if (!db.objectStoreNames.contains('qulResources')) return false;
@@ -322,7 +330,8 @@ const BUNDLE_SCENARIOS = [
   ['upgrade-v8', 'v8'],
   ['upgrade-v9', 'v9'],
   ['upgrade-v10', 'v10'],
-  ['reopen-v11', 'v11'],
+  ['upgrade-v11', 'v11'],
+  ['reopen-v12', 'v12'],
 ];
 
 const storesOf = (old) => OLD_DATABASES[old].stores.map(([name]) => name);
@@ -334,11 +343,11 @@ const storesOf = (old) => OLD_DATABASES[old].stores.map(([name]) => name);
  */
 const HARNESS_SCENARIOS = [
   { id: 'harness/fresh', phases: [{ run: 'open' }] },
-  ...['v1base', 'v7', 'v8', 'v9', 'v10'].map((old) => ({
+  ...['v1base', 'v7', 'v8', 'v9', 'v10', 'v11'].map((old) => ({
     id: `harness/upgrade-${old}`,
     phases: [{ run: 'seed-then-open', old, input: { stores: storesOf(old) } }],
   })),
-  { id: 'harness/reopen-v11', phases: [{ run: 'seed-then-open', old: 'v11', input: { stores: storesOf('v11') } }] },
+  { id: 'harness/reopen-v12', phases: [{ run: 'seed-then-open', old: 'v12', input: { stores: storesOf('v12') } }] },
   ...['v10-without-qulResources', 'v10-without-qulEntries', 'v10-without-qulCompilations'].map((old) => ({
     id: `harness/odd-${old}`,
     phases: [{ run: 'seed-then-open', old, input: { stores: storesOf(old) } }],
@@ -346,7 +355,7 @@ const HARNESS_SCENARIOS = [
   { id: 'family/before-init', phases: [{ run: 'before-init' }] },
   ...['books', 'toc', 'pages', 'blocks', 'entities-dictionary', 'marks', 'cards', 'profiles', 'glossary',
     'retrieval-cache', 'qul', 'biography', 'crawl-position-settings', 'explanation-sharh', 'narrators',
-    'share-records', 'word-glosses', 'raw-store-io'].map((family) => ({
+    'share-records', 'word-glosses', 'library-arrangement', 'raw-store-io'].map((family) => ({
     id: `family/${family}`,
     phases: [{ run: `family-${family}` }],
   })),
@@ -358,6 +367,7 @@ const HARNESS_SCENARIOS = [
       { name: 'import-fresh', run: 'work-import', input: (out) => ({ file: out.export.result.file }) },
       { name: 'import-without-shareRecords', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropShareRecords: true }) },
       { name: 'import-without-qulCompilations', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropQulCompilations: true }) },
+      { name: 'import-without-library-arrangement', run: 'work-import', input: (out) => ({ file: out.export.result.file, dropLibraryArrangement: true }) },
       { name: 'import-missing-books', run: 'work-import', input: (out) => ({ file: out.export.result.file, withBook: true, extraReferencedBook: true }) },
       { name: 'import-over-existing', run: 'work-import', input: (out) => ({ file: out.export.result.file, overwrite: true }) },
     ],
@@ -490,7 +500,7 @@ async function buildOld(page, old) {
 async function todaySchema(browser, origin) {
   const { context, page } = await newPage(browser, origin);
   try {
-    await buildOld(page, 'v11');
+    await buildOld(page, 'v12');
     return schemaRecord(await page.evaluate(() => window.__dcheckPage.schema()));
   } finally {
     await context.close();
@@ -510,7 +520,7 @@ async function bundleScenario(browser, origin, base, name, old) {
     await page.goto(base);
     const deadline = Date.now() + BOOT_LIMIT_MS;
     while (!(await page.evaluate(() => window.__dcheckPage.ready('qul-seed-matching-ayah')))) {
-      if (Date.now() > deadline) throw new Error(`bundle/${name}: the app did not open version 11 and seed within ${BOOT_LIMIT_MS / 1000} s (${errors.join('; ')})`);
+      if (Date.now() > deadline) throw new Error(`bundle/${name}: the app did not open version 12 and seed within ${BOOT_LIMIT_MS / 1000} s (${errors.join('; ')})`);
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
     const schema = schemaRecord(await page.evaluate(() => window.__dcheckPage.schema()));

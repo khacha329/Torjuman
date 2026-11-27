@@ -3,12 +3,14 @@ import type {
   BiographyEntry,
   Block,
   Book,
+  BookPlacement,
   CrawlState,
   DictionaryEntry,
   Entity,
   ExplanationCard,
   GlossaryEntry,
   HadithRecord,
+  LibraryFolder,
   Mark,
   Page,
   QulCompilation,
@@ -439,6 +441,26 @@ export class ShareStorageAdapter implements StorageAdapter {
   }
 
   putWordGloss = ignored;
+
+  // ------------------------------------------------- library arrangement
+
+  /**
+   * None: a shared view's library is the one shared book, which no screen
+   * lists, and the visitor's own arrangement is theirs, not the chapter's. The
+   * Library hides its arranging controls in share mode as well; these are the
+   * backstop behind that, as for every other write here.
+   */
+  async listBookPlacements(): Promise<BookPlacement[]> {
+    return [];
+  }
+
+  async listLibraryFolders(): Promise<LibraryFolder[]> {
+    return [];
+  }
+
+  putBookPlacements = ignored;
+  putLibraryFolder = ignored;
+  deleteLibraryFolder = ignored;
 
   // ------------------------------------------------------ crawl, position
 

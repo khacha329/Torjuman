@@ -3,12 +3,14 @@ import type {
   BiographyEntry,
   Block,
   Book,
+  BookPlacement,
   CrawlState,
   DictionaryEntry,
   Entity,
   ExplanationCard,
   SharhCard,
   GlossaryEntry,
+  LibraryFolder,
   Mark,
   WordGloss,
   HadithRecord,
@@ -90,6 +92,15 @@ export interface WorkBundle {
    * Absent on a bundle written before lane C, hence optional.
    */
   qulCompilations?: QulCompilation[];
+  /**
+   * How the library is arranged: pins, the manual order and folder
+   * membership, by Shamela ID, and the folders themselves (version 12). In
+   * the backup because the arrangement is the owner's own work with no other
+   * copy; keyed by Shamela ID, so it applies to a book imported afresh on the
+   * new tablet. Absent on a bundle written before version 12, hence optional.
+   */
+  bookPlacements?: BookPlacement[];
+  libraryFolders?: LibraryFolder[];
   settings: AppSettings | null;
 }
 
@@ -280,6 +291,18 @@ export interface StorageAdapter {
   putWordGloss(gloss: WordGloss): Promise<void>;
   getWordGloss(word: string): Promise<WordGloss | undefined>;
   listWordGlosses(): Promise<WordGloss[]>;
+
+  // How the library is arranged: pins, the manual order, folders. Keyed by
+  // Shamela ID and kept apart from the book, so it survives the book being
+  // replaced, or deleted and imported again — see BookPlacement.
+  listBookPlacements(): Promise<BookPlacement[]>;
+  /** All in one transaction: a move renumbers a whole section. */
+  putBookPlacements(placements: BookPlacement[]): Promise<void>;
+  /** In the order they were made. */
+  listLibraryFolders(): Promise<LibraryFolder[]>;
+  putLibraryFolder(folder: LibraryFolder): Promise<void>;
+  /** Removes the folder; its books move to Unfiled. No book is deleted. */
+  deleteLibraryFolder(id: string): Promise<void>;
 
   // Work backup — user work only, never book content and never API keys
   exportWork(): Promise<WorkBundle>;

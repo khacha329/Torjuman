@@ -643,7 +643,7 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
   if (cards && reader) throw new Error('newPage: cards and reader are separate seeds');
   const readerSeed = seed && reader ? seedReader(reader === true ? {} : reader) : null;
   if (seed) {
-    // The app creates its database on boot (DB_VERSION 11) and then seeds the
+    // The app creates its database on boot (DB_VERSION 12) and then seeds the
     // bundled QUL resource, whose resource row is written last. Both are waited
     // for, so the reload below never interrupts a first-boot write — which the
     // app survives by design (qul/seed.ts redoes a half-written seed), but
@@ -654,7 +654,7 @@ async function newPage(browser, base, profile, { onboarded = true, seed = true, 
     const seeded = () =>
       page.evaluate(async () => {
         const known = await indexedDB.databases();
-        if (!known.some((db) => db.name === 'shamela-reader' && db.version === 11)) return false;
+        if (!known.some((db) => db.name === 'shamela-reader' && db.version === 12)) return false;
         const db = await new Promise((resolve, reject) => {
           const request = indexedDB.open('shamela-reader');
           request.onsuccess = () => resolve(request.result);
