@@ -1289,9 +1289,9 @@ today's detector, which always sets `textUthmani` and joins at most two
 blocks; where it would and the verse's segment is no longer the last (a verse
 over three blocks, the middle one inside a ḥadīth), the share is emitted as a
 segment of its own, as before, rather than shown nowhere; that segment
-repeats the verse's English and note (from the fix's review). Unchanged: 61's
-edge case, a verse
-whose first share lies inside a ḥadīth and is skipped, is first emitted at its
+repeats the verse's English and note (from the fix's review). Unchanged:
+61's edge case, a verse whose first share lies inside a ḥadīth and is
+skipped, is first emitted at its
 next share, so that part still reads twice. Verses only: no ḥadīth entity has
 a second share, since the detector's spans one block. On-device cards made
 before the fix keep both segments until retranslated; cache keys are
@@ -1472,9 +1472,9 @@ rewritten; `enrich.ts` ~578 and H's raw-word guard (~798) are still true; V's
 "over-stripped (agrees only unstripped)" case (`verify-parsers.ts` ~6126)
 had come to pass by the word-count branch instead; it now has a longer
 prefix and an entry that holds only the tail, and pins `wordsAfter` (5) and
-`own` (0 of 2), so V itself checks that only the unstripped text agrees. Still
-cut as before, as the
-review noted: a bare «أخرجه» (he took him out) or «فأخرجه» in a matn's own
+`own` (0 of 2), so V itself checks that only the unstripped text agrees.
+Still cut as before, as the review noted: a bare «أخرجه» (he took him out) or
+«فأخرجه» in a matn's own
 words, and a spaced «و رواه» still leaves «و».
 
 Found by the review of 17ac63a (hadith text matching, step 0b).
@@ -1513,9 +1513,10 @@ On text with no mark of the class the output is exactly 74's (the review
 proved it by reading). Text otherwise bare can carry one: a tatweel, a
 superscript alef («هٰذا»), a hamza mark (U+0653–U+0655) or a Qurʾānic pause
 mark is now a mark, not a letter, so it no longer counts toward a window,
-and «قـال» or «رواـه» match. Books printed without hamza or with alif
-maqṣūra keep their isnād, as on main (FOUND_ISSUES 96). A part-vowelled «وَرواه», which
-74's edge stopped cutting, cuts again at the «و». Not tolerated inside a
+and «قـال» or «رواـه» match. A book printed without hamza or with alif
+maqṣūra keeps its isnād where that spelling is its only opener or closer, as
+on main (FOUND_ISSUES 96). A part-vowelled «وَرواه», which 74's edge stopped
+cutting, cuts again at the «و». Not tolerated inside a
 formula: the marks outside the class, U+0610–U+061A and U+08D3–U+08FF, which
 `normalize` removes and `findInDisplayText` never allowed either
 (FOUND_ISSUES 89). Whether book 9260's matn blocks carry ḥarakāt is still not
@@ -1628,13 +1629,13 @@ FOUND_ISSUES 76" is 83, and "record FOUND_ISSUES 77" in a 47 commit is 84.
 ## 85. The reader's entity load has no rejection handler (2026-11-26, by reading)
 
 Found by the review of lane B3's fix to 71. `ui/reader/ReaderScreen.tsx`
-(~306–309) runs `void load.then(...)` over `ensureEntities` (or
+(~312–315 since lane A2) runs `void load.then(...)` over `ensureEntities` (or
 `listEntities` in a shared view) with no `catch`. A rejected load leaves the
 reader's `entities` as they were, which on first open is `[]`, until the
 effect runs again (a change of book, block count or read-only state), with no
-notice and an unhandled rejection in the console: no verse or ḥadīth is marked
-or tappable,
-and nothing says why. Since 71 the on-device cut no longer depends on it for
+notice and an unhandled rejection in the console: no verse or ḥadīth is
+marked or tappable, and nothing says why. Since 71 the on-device cut no longer
+depends on it for
 ḥadīth; verses still do (86). Lane A2's file. Not measured. Left unfixed.
 
 ## 86. On device, a verse without an entity reaches the model (2026-11-26, by reading)
@@ -1699,8 +1700,7 @@ extending `tsconfig.app.json` with `types: ["node"]`, on main (5e72107):
 `hadithImportedMissNote` without `ImportedMiss.numberCompared`, added after
 the cases were written; their statuses, 'none-near' and 'common', never
 read the field, so the cases still mean what they say) and
-`scripts/verify-parsers.ts` has
-27. Lane B3 adds none to either. Left unfixed.
+`scripts/verify-parsers.ts` has 27. Lane B3 adds none to either. Left unfixed.
 
 ## 89. The display-text pattern does not allow every mark `normalize` removes (2026-11-26, by reading)
 
@@ -1759,12 +1759,14 @@ main too, 143 of 294 files matching: 127 screenshots and 6 DOM files differ
 took are not in the record, which lists those screens' DOM but not their
 images (`reader-hadith-sharh-*`, `settings--hadith-english-*`; any image
 absent from a record that claims images counts as differing). Those 18 were
-left out on purpose (677c4df, "HTML only"), so they fail on every machine,
-and the 6 DOM files may be the "six captures that already differ on main"
-that `docs/plans/hadith-short-quote.md` (step 5's record) mentions (not
-checked). Only the 127 screenshots point to this machine's renderer. A fix could add a `.gitattributes`
-(`* text=auto eol=lf`) or make the comparisons ignore CR; U's dependence on
-the renderer is a separate question. Left unfixed.
+left out on purpose when their screens were baselined (7c23fda, 064e11c and
+677c4df: "PNGs are left out", "not added", "HTML only"), so they fail on
+every machine, and the 6 DOM files are the captures 7c23fda already names as
+stale on main. Only the 127 screenshots point to this machine's renderer.
+Measured against the record at 5e72107; lanes C and A2 have re-recorded U
+since, and merged main fails here the same way (143 of 294). A fix could add
+a `.gitattributes` (`* text=auto eol=lf`) or make the comparisons ignore CR;
+U's dependence on the renderer is a separate question. Left unfixed.
 
 ## 93. The overrun check strips apparatus from sharḥ prose (2026-11-26, by reading)
 
@@ -1777,8 +1779,11 @@ block or a `hadith` segment, never to sharḥ prose
 commentary part of a `hadith` segment, after its quotation. The isnād half
 removes the tail from its start through a closer and keeps what follows; the
 takhrīj half cuts what follows. The check only asks whether anything is
-left, and the words it shows come from the unstripped text, so the strip
-changes its answer only where nothing stands before the formula: then an
+left, and the words it shows come from the unstripped text. The takhrīj
+half changes its answer only where nothing stands before the formula; the
+isnād half also where words do, since its opener may come up to 160 letters
+in: «… ». وفي الباب عن النبي قال: الحديث» folds, unstripped, to words that
+are reported, and stripped leaves «الحديث», which is accepted, so the
 overrun is missed. It can also report one: «متفق عليه من حديث أبي هريرة رضي
 الله عنه، وقال النووي: …» starts with a tail the check accepts, but the
 isnād rule strips it through «النووي:», so what is left is reported as words
@@ -1818,8 +1823,15 @@ sort). Not measured. Left unfixed.
 
 Found by the review of lane B3's fix to 75. `stripApparatus` matches its
 formulae letter for letter (75 adds marks, deliberately no letter variants),
-so a book that prints «النبى» or «رضى» with alif maqṣūra, or «ان»/«انه»
-without hamza, has no isnād opener or closer found and keeps its chain in the
-shingles, as on main. Folding every variant was tried in 75 and made «أن
+so in a book that prints «النبى» or «رضى» with alif maqṣūra, or «ان»/«انه»
+without hamza, those phrases neither open nor close an isnād, as on main.
+The chain stays in the shingles where such a phrase is its only opener, or a
+colonless «انه قال» its only closer: «قال:» and a bare «:» still close one,
+and «رضي الله عنه» or «أن رسول الله» still open one. Folding every variant was
+tried in 75 and made «أن
 رسول الله» match the «ان» of «كان». A narrower fold could not: ى→ي alone, or a
 hamza fold only at a word's start. Not measured. Pre-existing. Left unfixed.
+
+Lane B3 wrote 85–96 as 76–87 on its branch and renumbered them after lanes C
+and A2 merged their 76–84 (+9: 76→85 … 87→96). Its commit messages before the
+renumbering use the old numbers.
