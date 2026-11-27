@@ -139,7 +139,7 @@ found while fixing, the offline model's file list in Settings → Translation
 megabytes-only code as Library transfer's), on screen and in the report
 Settings → About → This build copies (`BuildSection.tsx`). The "not enough
 space" message no longer rounds up. Other sizes the entry did not list are
-100.
+106.
 
 Only two of the app's byte formatters were the same; Phase 2 step 2c merged
 those into `lib/format.ts` (`formatBytes`: "512 B", "300 KB", "2.5 MB",
@@ -902,6 +902,8 @@ vertical centre). The rest of the comment is unchanged. No code changed.
 
 ## 45. A batch translation keeps running, unseen, after the reader closes (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "45." on `claude/lane-b2-translation`; DECISIONS, lane B2: leaving the reader stops the batch).
+
 `ui/reader/useBatchTranslate.ts:82-110` runs its loop to the end whatever
 happens to the screen that started it. Leaving the reader (through the
 Library, or by editing the URL to another book) unmounts the bar that shows
@@ -1116,6 +1118,8 @@ old one.
 
 ## 53. Dictionary-entry cards made before the fix to 26 keep the block's key (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "53." on `claude/lane-b2-translation`; DECISIONS, lane B2: recognised on use).
+
 Found by the review of lane B. A "Translate this entry" card stored before
 FOUND_ISSUES 26 was fixed has no `standalone` flag and holds the visible
 block's cache key, so a later Translate of that whole block, or Translate
@@ -1129,12 +1133,16 @@ from the block's text).
 
 ## 54. Explain loses its research notes when the stream fails mid-reply (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "54." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. FOUND_ISSUES 15.2 was fixed for translate
 (`withRaw` in `providers/AnthropicProvider.ts`); `translation/explain.ts`
 still throws the mapped error without the notes written so far. Its scope
 named translate only. Left unfixed.
 
 ## 55. A failure after a paid reply in translate keeps no raw text (2026-11-17, by reading)
+
+**Fixed in lane B2** (commit "55." on `claude/lane-b2-translation`; the lane B2 work order).
 
 Found by the review of lane B. In `ui/reader/useTranslator.ts`, if
 `enrichSegments` or `storage.putCard(finished)` throws after the provider has
@@ -1155,6 +1163,8 @@ change). Lane D material. Left unfixed.
 
 ## 57. Consequences of 41 and 42 as decided (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "57." on `claude/lane-b2-translation`; DECISIONS, lane B2: all three change).
+
 Found by the review of lane B, for the owner to know; each follows from
 DECISIONS 41 and 42, none is a defect of the fix:
 
@@ -1167,6 +1177,8 @@ DECISIONS 41 and 42, none is a defect of the fix:
 
 ## 58. The Claude key check passes on a server error (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "58." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. `AnthropicProvider.validateKey` still returns
 `true` for any 5xx (500, 529 overloaded) through the branch whose comment
 says a rate limit or a 400 still proves the key authenticated, which does
@@ -1175,6 +1187,8 @@ not obviously hold for a server error. Check Q has no
 
 ## 59. Two error messages repeat themselves (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "59." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. Cosmetic: the key screens read "Could not
 reach Claude: Could not reach api.anthropic.com. …" (the screen's prefix
 plus the mapped message; Gemini reads the same way), and an Anthropic 500 in
@@ -1182,6 +1196,8 @@ Explain, gloss and compile reads "Anthropic API error 500: 500 {…}" (the
 status in the prefix and again in the SDK's message). Left unfixed.
 
 ## 60. `useSharh` keeps one busy flag (2026-11-17, by reading)
+
+**Fixed in lane B2** (commit "60." on `claude/lane-b2-translation`; the lane B2 work order).
 
 Found by the review of lane B. `ui/reader/useSharh.ts` has the single-flag
 pattern FOUND_ISSUES 29 fixed in `useTranslator`; its busy bar is in
@@ -1211,6 +1227,8 @@ segments until retranslated.
 
 ## 62. The online signal is never corrected by request outcomes (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "62." on `claude/lane-b2-translation`; DECISIONS, lane B2: wired to request outcomes).
+
 Found by the review of lane B. `app/useOnline.ts` exports
 `reportNetworkFailure` and `reportNetworkSuccess`, and its header says the
 signal is "corrected by real request outcomes", but nothing in `src/` calls
@@ -1219,7 +1237,17 @@ FOUND_ISSUES 33: `glossWord`'s "No API key is set" branch is now reachable
 only if the key is removed while the rail is open; it stays as a guard.
 Left unfixed.
 
+Since the fix (lane B2), by the review of the lane: only the reader's cloud
+translations report, as the owner decided. An assumption of offline is
+cleared by a cloud translation that gets any response, the browser's
+`online` event (reliable since 97, fixed with this one), or a reload. Until
+then the catalog's Import and the on-device model's download stay disabled
+and offer no way back of their own, and an on-device profile's Translate
+reports nothing: a cloud Translate in the reader is the way back.
+
 ## 63. The structuring pass keeps less raw text than it could (2026-11-17, by reading)
+
+**Fixed in lane B2** (commit "63." on `claude/lane-b2-translation`; the lane B2 work order).
 
 Found by the review of lane B, beside 15.2. In
 `translation/providers/AnthropicProvider.ts` `structure`:
@@ -1237,11 +1265,15 @@ Left unfixed.
 
 ## 64. A failure after research loses the research pass's cost (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "64." on `claude/lane-b2-translation`; the lane B2 work order).
+
 Found by the review of lane B. When the structuring pass fails after a
 research pass, the error carries no usage, so the research pass's tokens and
 cost reach neither the failed card nor the session totals. Left unfixed.
 
 ## 65. Two finished cards under one key: the oldest id wins (2026-11-17, by reading)
+
+**Fixed in lane B2** (commit "65." on `claude/lane-b2-translation`; the lane B2 work order).
 
 Found by the review of lane B. Since 41, `getCardByCacheKey` walks
 `byCacheKey` and returns the first complete row, which is the lowest primary
@@ -1250,6 +1282,8 @@ happen through 57.2, 57.3 or a failed `dropReplaced`. Left unfixed.
 
 ## 66. The "web search" badge names a provider (2026-11-17, by reading)
 
+**Fixed in lane B2** (commit "66." on `claude/lane-b2-translation`; the lane B2 work order: a provider capability).
+
 Found by the review of lane B. FOUND_ISSUES 43's fix shows the badge only
 when `card.providerId === 'anthropic'` (`ui/reader/TranslationCardView.tsx`),
 for cards stored before the fix. That is a new place in the UI that names a
@@ -1257,6 +1291,8 @@ provider, not in the Phase 3 plan's Design §5 list. Left as it is unless the
 owner wants a provider capability instead.
 
 ## 67. Gemini's 429 wait has no cap (2026-11-17, by reading)
+
+**Fixed in lane B2** (commit "67." on `claude/lane-b2-translation`; DECISIONS, lane B2: a 60 s cap).
 
 Found by the review of lane B. Gemini translate waits whatever `retry-after`
 asks, number or (since 11) date, before its next attempt, with no upper
@@ -1852,7 +1888,85 @@ Lane B3 wrote 85–96 as 76–87 on its branch and renumbered them after lanes C
 and A2 merged their 76–84 (+9: 76→85 … 87→96). Its commit messages before the
 renumbering use the old numbers.
 
-## 97. The Qurʾān sheet sends a missing QUL resource to Reference works (2026-11-26, by reading)
+Lane B2's entries were numbered 76–81 on its branch, then 83–88 and 85–90
+as lanes C, A2 and B3 reached main first with 76–82, 83–84 and 85–96. They
+are 97–102 now: 76 is 97, 77 is 98, and 78–81 are 99–102, whichever of the
+earlier numbers a lane B2 commit or note uses (83–88 and 85–90 map the same
+way, in order). Commit subjects and messages keep the number they were
+written with; the PR lists the mapping.
+
+## 97. The online signal's window listeners go with the first unsubscribe (2026-11-26, by reading)
+
+**Fixed in lane B2** (commit "76." (lane B2's first number for 97) on `claude/lane-b2-translation`; DECISIONS, lane B2: fixed with 62, at the owner's word).
+
+Found by lane B2 while wiring 62. `subscribe` in `app/useOnline.ts` adds the
+same two functions (`handleOnline`, `emit`) to `window` for every subscriber,
+and `addEventListener` registers a given function once, so there is one
+listener of each, shared. The first subscriber to unsubscribe (any screen
+that reads `useOnline()` and closes: a sheet, the catalog) removes both for
+every other one, and from then until a new subscriber mounts nothing hears
+the browser's `online` and `offline` events. The signal is still right when
+something re-reads it (the next render reads `navigator.onLine`), but a
+screen left open does not update by itself. Not caused by 62 (the shared
+`emit` behaved the same). Left unfixed.
+
+## 98. Check U's record does not reproduce on the owner's Windows PC (2026-11-26, measured)
+
+Found by lane B2, which ran the checks on the owner's PC (Windows 11, Node
+22.23.1, Playwright 1.63's Chromium 153). On clean `main` (`5e72107`), U
+matches 143 of 294 files: 127 screenshots differ, as font rendering differs
+from the Linux container where the record was made, and six DOM captures
+differ — `reader-retranslate.html`, `settings--offline-translation.html` and
+`settings--offline-downloading.html` at both sizes — for a reason not found
+(their text shows nothing platform-specific). Q, P and D reproduce their
+records exactly there. Also on that PC, git's system config sets
+`core.autocrlf=true`, so a checkout turns the LF records into CRLF and Q
+fails on "the header or the formatting" until the clone is set to
+`core.autocrlf=false` and checked out again. So U can be re-recorded only in
+the Linux container; on the PC it can only be compared with a dump of `main`
+made there (`VERIFY_OUT`, as the script's header describes). The line-ending
+part is FOUND_ISSUES 92 too (lane B3), found the same day. Left as it is.
+
+## 99. "Same provider and model" retranslates on the profile's, not the card's (2026-11-26, by reading)
+
+Found by the review of lane B2. The Retranslate menu's "Same provider and
+model" (`ui/reader/TranslationCardView.tsx`) calls `onRetranslate()` with
+no options, and `translate` then uses `providerId ?? activeProfile.providerId`
+and `model ?? activeProfile.model` (`ui/reader/useTranslator.ts`): the
+active profile's provider and model, not the card's. A card made on another
+model, or on another profile, is retranslated on the profile's. Older than
+lane B2; more visible since, as a fallback card names a model the profile
+does not use. Left unfixed.
+
+## 100. The session's request count leaves out retries and the fallback (2026-11-26, by reading)
+
+Found by the review of lane B2. `withCloudRequest` (`ui/reader/useTranslator.ts`)
+counts one request per translation, under the provider that answered. A
+translation's HTTP requests can be more: Gemini's 429 retries, the 503/500
+retries (lane B2), a RECITATION split's halves, and each model the fallback
+asked. On the free tier, where requests are the budget, the session line
+undercounts. Left unfixed.
+
+## 101. A RECITATION split loses the first part's raw text if the second fails first (2026-11-26, by reading)
+
+Found by the review of lane B2. In `GeminiProvider.translate`, when a part
+after a RECITATION split fails before any whole segment has come back, the
+error is thrown without the raw text of the parts before it
+(`translation/providers/GeminiProvider.ts`, the catch around `this.stream`).
+Free tier, so nothing is billed; but the text is lost, and since lane B2 an
+overload there lets another model answer instead. Older than lane B2. Left
+unfixed.
+
+## 102. A profile moved off a retired model misses the cache for passages already translated (2026-11-26, by reading)
+
+Found by the review of lane B2, as a consequence of its migration, for the
+owner to know. The model is part of the cache key (`cacheKeyFor`), so once a
+profile on Flash 3.7 moves to Flash 3.8, selecting a passage it already
+translated is a cache miss: a new request, and a second complete card beside
+the Flash 3.7 one. The old cards are not stale (their own model is compared)
+and are kept. As intended, not a defect.
+
+## 103. The Qurʾān sheet sends a missing QUL resource to Reference works (2026-11-26, by reading)
 
 Found by the review of lane UI-1's tabs. `MissingResource`
 (`ui/reader/QuranTabs.tsx` ~228) tells the reader, under the Qurʾān sheet's
@@ -1865,9 +1979,9 @@ for a QUL resource. Both sections are on Settings' Library tab, which its
 "Open Settings" button opens since lane UI-1, so the button lands on the
 right tab either way. Pre-existing. Left unfixed.
 
-## 98. Check U's screenshots of a tall Settings section are cut off (2026-11-26, measured)
+## 104. Check U's screenshots of a tall Settings section are cut off (2026-11-26, measured)
 
-Found by the same review as 97. A section taller than the visible part of
+Found by the same review as 103. A section taller than the visible part of
 Settings' scrolling area comes out of an element screenshot clipped at that
 area's bottom edge; the .html is whole. On main the cut is at about 542 CSS
 px at 960×600 (`settings--translation-profiles`, the glossary). Lane UI-1's
@@ -1876,7 +1990,7 @@ PNGs show about 46 px less. The "Not captured" list in
 `scripts/verify-markup.mjs` already records the case for
 `settings--translation-profiles--claude.png`. Left as it is.
 
-## 99. The "no key yet" badges do not notice a key being saved (2026-11-26, by reading)
+## 105. The "no key yet" badges do not notice a key being saved (2026-11-26, by reading)
 
 Found by the review of lane UI-1's tabs. Settings → Translation's provider
 cards (`ui/settings/TranslationSection.tsx`, "no key yet") and Ḥadīth
@@ -1889,7 +2003,7 @@ three sections sat in one column. In lane UI-1's first commit every tab tap
 happened to re-render them, which hid it; the second builds the tabs' contents
 once, as main's column was, and it shows as before. Left unfixed.
 
-## 100. QUL resources and Ḥadīth English write sizes their own way (2026-11-26, by reading)
+## 106. QUL resources and Ḥadīth English write sizes their own way (2026-11-26, by reading)
 
 Found by the review of lane UI-1's fix to 8, which they were not part of.
 Settings → Library → QUL resources (`ui/settings/QulResources.tsx` ~230,
@@ -1911,6 +2025,7 @@ reads "1024 KB" from 1023.5 KB up to 1 MB, and since 8's gigabyte step
 "1024.0 MB" from 1023.95 MB up to 1 GB.
 
 Lane UI-1's entries were numbered 76–79 on its branch, then 83–86 after it
-merged lane C, 85–88 after lane A2, and 97–100 after lane B3. Commit
-messages before those merges keep the old numbers: 76, 83 and 85 are 97;
-77, 84 and 86 are 98; 78, 85 and 87 are 99; 79, 86 and 88 are 100.
+merged lane C, 85–88 after lane A2, 97–100 after lane B3, and 103–106
+after lane B2. Commit messages before those merges keep the old numbers:
+76, 83, 85 and 97 are 103; 77, 84, 86 and 98 are 104; 78, 85, 87 and 99
+are 105; 79, 86, 88 and 100 are 106.

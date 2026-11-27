@@ -87,6 +87,19 @@ export function ExplanationCardView({
           {card.error}
         </p>
       )}
+      {/* Paid output from before the failure: the research notes, say
+          (FOUND_ISSUES 54). Closed, unlike a translation card's, since the
+          notes are background, not the answer. */}
+      {card.status === 'error' && card.rawResponse && card.rawResponse.trim() !== '' && (
+        <details className="text-[12px]">
+          <summary className="cursor-pointer text-xs text-muted">
+            What the model wrote before it stopped — kept so it is not wasted
+          </summary>
+          <p dir="ltr" className="ltr-isolate mt-1 max-h-56 overflow-auto whitespace-pre-wrap">
+            <BidiText>{card.rawResponse}</BidiText>
+          </p>
+        </details>
+      )}
 
       {card.status === 'complete' && (
         <>

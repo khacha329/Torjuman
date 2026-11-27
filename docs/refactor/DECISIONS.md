@@ -102,6 +102,79 @@ lane B found.
   marks a verse `unresolved`; one would get the existing
   unresolved-verse note, not the model.
 
+## Lane B2, cloud translation, 2026-11-26
+
+The owner's work order for lane B2, and the owner's answers to the questions
+it left open, given in the lane's session on 2026-11-26.
+
+- **Gemini models.** Offer `gemini-3.8-flash`, `gemini-3.6-flash`,
+  `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`, checked against the
+  API's model page. Default `gemini-3.5-flash-lite` (it works for the owner).
+  Migrate saved profiles off retired IDs. In Test key, call models.list and
+  mark the configured models the key cannot use.
+- **Busy models.** Retry 503 and 500 with backoff and jitter, then fall back
+  through 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite, then to
+  `claude-haiku-5-5` if a Claude key is set and a new Settings switch
+  (default on) allows crossing providers; the same in reverse for Claude's
+  529. The card's badge shows the model that answered, with a note why.
+  Never fall back to the offline model. Map the "retired for new users"
+  error to a clear message.
+  - *Which Gemini models:* every other one, in that order, from the
+    profile's own (so from 3.5 Flash Lite: 3.8, 3.6, 3.1 Flash Lite, then
+    Haiku 5.5). A model the key cannot use is stepped over.
+  - *Claude's 529:* after the SDK's own retries, each cheaper Claude model
+    (never a pricier one), then the Gemini models in the order above.
+  - *The cache:* a card a fallback model answered is stored under the key of
+    the model asked for, so translating the passage again serves it.
+    Retranslate asks again.
+- **67.** Cap Gemini's 429 wait at 60 s. A longer `retry-after` is not slept
+  through: the card fails at once as a rate limit and says how long Gemini
+  asked to wait.
+- **45.** Leaving the reader stops a batch translation after the block in
+  flight, as Stop does. Cards already written stay.
+- **57.** All three change: (1) a success removes the earlier failed cards
+  for the same passage that hold no paid text (failed cards with raw output
+  stay); (2) if retranslating card A fails as F and Retry on F then
+  succeeds, A is removed as well; (3) a card's Retranslate is disabled while
+  a retranslation of that card is running.
+- **62.** Wire the online signal to request outcomes: a cloud translation
+  that cannot connect marks the app offline; any request that gets a
+  response, or the browser's own online event, clears it.
+- **53.** Recognise old "Translate this entry" cards on use: a card with no
+  standalone flag whose text is not its block's text is treated as an entry
+  card — never served for the block, retranslated on its own. Stored data is
+  left alone.
+- **The issues.** Fix FOUND_ISSUES 45, 53, 54, 55, 57, 58, 59, 60, 62, 63,
+  64, 65, 66 and 67 (the work order). Those not named above needed no
+  decision beyond their entry; each fix is its own commit.
+
+Answers to the lane's review, the owner's, later on 2026-11-26:
+
+- **Translate the rest on a fallback card** asks the model the card asked
+  for, through the same chain, under that model's key — not the model that
+  answered. A Gemini card that Haiku answered goes back to Gemini first.
+- **Web lookup across providers.** When the chain crosses from Gemini to
+  Claude, Haiku 5.5 gets the request without the research pass: a plain
+  translation, as Gemini would have given, and no web search.
+- **62, how far.** Only the reader's cloud translations report outcomes;
+  that is recorded, not widened. FOUND_ISSUES 97 (76 on the lane's branch)
+  is fixed with it: the window listeners are registered once, so the
+  browser's online event always clears an assumption of offline.
+- **Check U.** The entries only the Linux container can record are
+  re-recorded by a cloud session on the lane's branch before the merge.
+  *Superseded 2026-11-27:* no cloud session could be started from the
+  owner's PC, and the owner asked for the merge once T, B, L and the lane's
+  checks pass. The entries left for the container are listed in the PR, as
+  lanes B, C, A2 and B3 left theirs.
+
+The owner's word on 2026-11-27, with lanes C, A2 and B3 merged:
+
+- **Order with UI-1.** Lane B2 merges before UI-1 (#30, Settings in
+  tabs). UI-1 does not change `KeysSection` or `TranslationSection`, only how
+  `SettingsScreen` arranges them, so it takes in the Test key note and the
+  fallback switch when it merges main. Lane B2's findings follow main's
+  highest, as 97–102.
+
 ## Decided for lane A2, 2026-11-26
 
 The owner's answers, relayed from the session that started lane A2, each
@@ -167,7 +240,7 @@ The owner's answers to the two questions lane UI-1 asked.
   `lib/format.ts` ("512 B", "300 KB", "2.5 MB") with a gigabyte step added
   ("1.4 GB"), so a tablet's free space does not read "52345.6 MB". The
   "not enough space" message stops rounding up. Sizes elsewhere were not
-  part of the question (FOUND_ISSUES 100).
+  part of the question (FOUND_ISSUES 106).
 - **Where "What works offline" goes.** The brief's five Settings tabs did
   not place it. It goes in About, above "This build" and "Retrieval".
 

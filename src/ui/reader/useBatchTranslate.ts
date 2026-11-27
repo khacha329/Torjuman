@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Block, TranslationCard } from '../../types';
 import { beginActivity } from '../../services/activity';
 
@@ -63,6 +63,17 @@ type TranslateFn = (request: {
 export function useBatchTranslate(translate: TranslateFn) {
   const [progress, setProgress] = useState<BatchProgress | null>(null);
   const cancelled = useRef(false);
+
+  // Leaving the reader stops the run, as Stop does: after the block in
+  // flight, keeping every card already written. The loop outlived the screen
+  // that started it and went on translating, unseen, holding the update
+  // prompt back until it ended (FOUND_ISSUES 45; DECISIONS, lane B2).
+  useEffect(
+    () => () => {
+      cancelled.current = true;
+    },
+    [],
+  );
 
   const run = useCallback(
     async (range: Block[]) => {

@@ -17,7 +17,11 @@ import { findSharh } from '../../retrieval/sharh';
 export function useSharh(bookId: string, blocks: Block[]) {
   const { storage } = useApp();
   const [cards, setCards] = useState<SharhCard[]>([]);
-  const [busy, setBusy] = useState(false);
+  // How many lookups are in flight, not one flag: with two at once the first
+  // to finish cleared the flag and hid the busy bar while the other still ran
+  // (FOUND_ISSUES 60, the pattern FOUND_ISSUES 29 fixed in useTranslator).
+  const [inFlight, setInFlight] = useState(0);
+  const busy = inFlight > 0;
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,7 +30,7 @@ export function useSharh(bookId: string, blocks: Block[]) {
 
   const lookup = useCallback(
     async (entity: Entity, work: Book, matn: string) => {
-      setBusy(true);
+      setInFlight((count) => count + 1);
       setNotice(null);
       try {
         const found = await findSharh(storage, work, matn);
@@ -66,7 +70,7 @@ export function useSharh(bookId: string, blocks: Block[]) {
         setCards((previous) => [...previous, card]);
         return card;
       } finally {
-        setBusy(false);
+        setInFlight((count) => count - 1);
       }
     },
     [storage, bookId],
