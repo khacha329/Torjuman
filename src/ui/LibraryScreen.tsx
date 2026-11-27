@@ -146,13 +146,21 @@ export function LibraryScreen() {
       storage.putLibraryFolder({ id: newId('folder'), name, collapsed: false, createdAt: Date.now() }),
     );
 
+  /** A folder changed from its stored row, not the rendered one, for the queue's reason. */
+  const updateFolder = (what: string, id: string, change: (folder: LibraryFolder) => LibraryFolder) =>
+    arrange(what, async () => {
+      const stored = (await storage.listLibraryFolders()).find((folder) => folder.id === id);
+      if (stored) await storage.putLibraryFolder(change(stored));
+    });
+
   const renameFolder = (folder: LibraryFolder, name: string) =>
-    arrange('rename the folder', () => storage.putLibraryFolder({ ...folder, name }));
+    updateFolder('rename the folder', folder.id, (stored) => ({ ...stored, name }));
 
   const toggleFolder = (folder: LibraryFolder) =>
-    arrange(folder.collapsed ? 'open the folder' : 'collapse the folder', () =>
-      storage.putLibraryFolder({ ...folder, collapsed: !folder.collapsed }),
-    );
+    updateFolder(folder.collapsed ? 'open the folder' : 'collapse the folder', folder.id, (stored) => ({
+      ...stored,
+      collapsed: !stored.collapsed,
+    }));
 
   const deleteFolder = async (folder: LibraryFolder, count: number) => {
     const confirmed = window.confirm(

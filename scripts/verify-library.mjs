@@ -22,7 +22,9 @@
 //     on the Book;
 //   - Delete folder: its books move to the top of Unfiled, the folder is
 //     gone, no book is deleted;
-//   - Unpin, which sends the book back to the top of Unfiled.
+//   - Unpin, which sends the book back to the top of Unfiled;
+//   - Pin on one book and Move down on another pressed back to back, before
+//     the first write has been read back: both must land.
 // Every step checks the order the screen shows, section by section, and the
 // steps that store something check the rows in `bookPlacements` and
 // `libraryFolders` with raw IndexedDB.
@@ -333,6 +335,26 @@ async function runProfile(browser, base, name, contextOptions) {
   await expectLayout(page, 'Unpin: back at the top of the rest', [
     ['Other books', [880003, 880004, 880002, 880005, 880006, 880001]],
   ]);
+
+  // ---- two presses back to back --------------------------------------
+  // Pin, then Move on another book before the pin has been read back. Each
+  // write is computed from the stores when its turn comes; computed from
+  // what was rendered, the Move renumbered its section with 880004 still
+  // unpinned and wrote the pin away.
+  // Both clicks in one synchronous task, so the second certainly comes before
+  // any write or re-render. (Two Playwright taps run in parallel are one
+  // two-finger touch, and one of them never becomes a click.)
+  await page.evaluate(() => {
+    const button = (id, name) =>
+      document.querySelector(`[data-book-card="${id}"] button[aria-label="${name}"]`);
+    button(880004, 'Pin to top').click();
+    button(880005, 'Move down').click();
+  });
+  await expectLayout(page, 'Pin then Move at once: both land', [
+    ['Pinned', [880004]],
+    ['Other books', [880003, 880002, 880006, 880005, 880001]],
+  ]);
+  check('Pin then Move at once: the pin is stored', (await placements(page)).find(([id]) => id === 880004)?.[1], true);
 
   await context.close();
 }
