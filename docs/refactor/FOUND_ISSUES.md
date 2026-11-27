@@ -1409,7 +1409,8 @@ for a verse inside a ḥadīth.
 owner decided, 2026-11-26: DECISIONS, "Answered for lane B3"; checked by H,
 which reproduced it first). `pushEntity` shows the verified Arabic only when
 the selection holds the whole ḥadīth entity (`selectsWhole`: it starts at or
-before the entity's start and ends at or after its end). For part of it the
+before the entity's first letter and ends at or after its last; a span with
+no letter keeps its own bounds). For part of it the
 segment keeps the book's selected words, carries the whole ḥadīth's English
 and adds `HADITH_QUOTED_IN_PART`, the card path's note («Quoted in part; this
 is the whole ḥadīth.»), imported from `retrieval/enrich.ts`: a new

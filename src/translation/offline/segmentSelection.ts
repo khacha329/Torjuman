@@ -342,16 +342,24 @@ export function segmentSelection(options: {
 
 const LETTER = /\p{L}/u;
 
-/** The first letter's offset in text[from, to), or `to` if there is none. */
+// Where a span holds no letter, these return its own bounds, so a selection
+// of punctuation alone is never the whole ḥadīth (review of bcc4da6: they
+// returned the opposite bounds, which made any overlap count as whole). The
+// scan stays inside the text, so an offset past its end is not tested as a
+// character.
+
+/** The first letter's offset in text[from, to), or `from` if there is none. */
 function firstLetter(text: string, from: number, to: number): number {
-  for (let i = from; i < to; i++) if (LETTER.test(text[i])) return i;
-  return to;
+  const end = Math.min(to, text.length);
+  for (let i = Math.max(from, 0); i < end; i++) if (LETTER.test(text[i])) return i;
+  return from;
 }
 
-/** The offset just past the last letter in text[from, to), or `from` if there is none. */
+/** The offset just past the last letter in text[from, to), or `to` if there is none. */
 function pastLastLetter(text: string, from: number, to: number): number {
-  for (let i = to - 1; i >= from; i--) if (LETTER.test(text[i])) return i + 1;
-  return from;
+  const start = Math.max(from, 0);
+  for (let i = Math.min(to, text.length) - 1; i >= start; i--) if (LETTER.test(text[i])) return i + 1;
+  return to;
 }
 
 /**

@@ -1462,6 +1462,13 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     );
     const lastWordShort = hadithOf(cut(numbered, [numberedEntity], ['h2', printedMatn.indexOf(matn)], ['h2', printedMatn.lastIndexOf(' ')], sunnah));
     expect('73: …but without its last word: part of it', lastWordShort?.note === HADITH_QUOTED_IN_PART, lastWordShort);
+
+    // A span with no letter keeps its own bounds (review of bcc4da6): a
+    // selection of its last mark alone is part of it, never the whole.
+    const letterless = '١٢ - .';
+    const bare = [blocks[0], { ...blocks[1], text: letterless, normalized: letterless }, blocks[2]];
+    const markOnly = hadithOf(cut(bare, [matnEntity(bare[1], 'seg#7')], ['h2', letterless.length - 1], ['h2', letterless.length], sunnah));
+    expect('73: a span with no letter, its last mark selected: part, not the whole verified text', markOnly?.note === HADITH_QUOTED_IN_PART && markOnly?.arabic === '.', markOnly);
   }
 }
 
