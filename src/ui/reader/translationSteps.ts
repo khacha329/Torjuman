@@ -10,6 +10,7 @@ import { newId } from '../../lib/id';
 import { sha256 } from '../../lib/hash';
 import { knownReferencesIn } from '../../quran/entityService';
 import { TranslationError, type TranslationRequest } from '../../translation/TranslationProvider';
+import type { FallbackOutcome } from '../../translation/providers/fallback';
 import { TRANSLITERATION_INSTRUCTION } from '../../translation/prompt';
 import { blocksInRange, contextAround, type SelectionAnchor } from './selection';
 
@@ -60,6 +61,56 @@ export function cacheAnchorFor(
   }
   const id = `${anchor.startBlockId}#entry:${sha256(anchor.sourceText).slice(0, 16)}`;
   return { startBlockId: id, startOffset: 0, endBlockId: id, endOffset: anchor.sourceText.length };
+}
+
+/**
+ * Whether two cards are of one passage: the same anchor and the same text,
+ * whatever provider, model or profile made them. A dictionary entry's card
+ * shares its block's anchor but not its text, so it is never the block's.
+ */
+export function samePassage(
+  a: Pick<TranslationCard, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'>,
+  b: Pick<TranslationCard, 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'>,
+): boolean {
+  return (
+    a.startBlockId === b.startBlockId &&
+    a.startOffset === b.startOffset &&
+    a.endBlockId === b.endBlockId &&
+    a.endOffset === b.endOffset &&
+    a.sourceText === b.sourceText
+  );
+}
+
+/**
+ * Whether a card translates a text of its own (a dictionary entry), not the
+ * passage it is anchored on.
+ *
+ * True for a card marked `standalone`. Also true for an entry card stored
+ * before FOUND_ISSUES 26 was fixed, which has no flag and holds the visible
+ * block's cache key (FOUND_ISSUES 53). Such a card is recognised as the
+ * entry action made it: anchored on one whole block, from offset 0 to the
+ * block's end, with text that is not in that block. A one-block selection's
+ * text is the block's own text as the browser gives it back, and the check is
+ * on the trimmed text being anywhere in the block, so a selection matches only
+ * if the block's stored text changed under it to a different text of the same
+ * length (a re-import that rewrote it; inferred, not seen). Such a card is
+ * then never served and is asked again. The block must be among `blocks`;
+ * when it is not, nothing is claimed. Stored cards are left as they are
+ * (DECISIONS, lane B2).
+ */
+export function isEntryCard(
+  card: Pick<
+    TranslationCard,
+    'standalone' | 'startBlockId' | 'startOffset' | 'endBlockId' | 'endOffset' | 'sourceText'
+  >,
+  blocks: Block[],
+): boolean {
+  if (card.standalone === true) return true;
+  if (card.startBlockId !== card.endBlockId || card.startOffset !== 0) return false;
+  const block = blocks.find((entry) => entry.id === card.startBlockId);
+  if (!block || card.endOffset !== block.text.length) return false;
+  const text = card.sourceText.trim();
+  return text !== '' && !block.text.includes(text);
 }
 
 /**
@@ -176,22 +227,55 @@ export function loadingCard({
   };
 }
 
-export function failedCard(card: TranslationCard, caught: unknown): TranslationCard {
+/**
+ * The card a failed translation leaves. `answered` is the provider's answer
+ * when the failure came after it — enrichment or the card's write threw —
+ * so the paid reply is kept as the card's raw text, with its usage, cost and
+ * the model that gave it (FOUND_ISSUES 55). Such an error is not a
+ * TranslationError and carried none of it.
+ */
+export function failedCard(
+  card: TranslationCard,
+  caught: unknown,
+  answered: FallbackOutcome | null = null,
+): TranslationCard {
   const error =
     caught instanceof TranslationError
       ? caught
       : new TranslationError(
           'api',
           caught instanceof Error ? caught.message : String(caught),
+          answered
+            ? {
+                raw: answered.result.raw || null,
+                usage: answered.result.usage,
+                costUsd: answered.result.costUsd,
+                answeredBy: answered.fallback
+                  ? { providerId: answered.providerId, model: answered.model, fallback: answered.fallback }
+                  : null,
+              }
+            : {},
         );
 
   const failed: TranslationCard = {
     ...card,
+    // A fallback model gave this failure (providers/fallback.ts): the card
+    // names it, as a finished card names the model that answered.
+    ...(error.answeredBy
+      ? {
+          providerId: error.answeredBy.providerId,
+          model: error.answeredBy.model,
+          fallback: error.answeredBy.fallback,
+        }
+      : {}),
     status: 'error',
     error: error.message,
     errorKind: error.kind,
     rawResponse: error.raw ?? undefined,
     ...(error.stopReason !== null ? { stopReason: error.stopReason } : {}),
+    // What was billed before the failure (a Claude research pass, say), so
+    // the card's cost line shows it (FOUND_ISSUES 64).
+    ...(error.usage ? { usage: error.usage, costUsd: error.costUsd } : {}),
   };
   return failed;
 }

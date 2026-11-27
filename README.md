@@ -703,6 +703,41 @@ not a cache hit: selecting the passage again asks for it whole.
 The cache key (`cacheKeyFor`) is unchanged — prompt and schema are not among its
 inputs — so every cached Gemini card is still served.
 
+### When a model is busy, another answers
+
+Gemini turned translations away with "This model is currently experiencing
+high demand" (503), and the card failed at once. Now (lane B2, 2026-11-26):
+
+- **Retried first.** Gemini translate retries a 503 or a 500 twice, after
+  about 1 s and 2 s, each wait cut by up to a quarter at random — the shape of
+  the Anthropic SDK's own two retries of Claude's 529 and 500, which wait about
+  0.5 s and 1 s (or a `retry-after`). A 429 keeps its
+  own retries, and waits at most 60 s for a `retry-after`: a longer one fails
+  the card at once and says how long Gemini asked to wait (FOUND_ISSUES 67).
+- **Then the fallback chain** (`translation/providers/fallback.ts`). A Gemini
+  profile asks its own model, then every other offered Gemini model in the
+  order 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite, then Claude
+  Haiku 5.5. A Claude profile asks its own model, then each cheaper Claude
+  model, then the Gemini models in that order. Crossing to the other provider
+  needs its key and the Settings switch "When a provider's models are busy,
+  ask the other provider" (on by default), and drops the profile's web lookup:
+  Haiku taking over a Gemini translation gives the plain translation, with no
+  paid research pass. The on-device model is never asked.
+- **Only an overload starts it**, and only one with nothing paid on it: an
+  overload in the middle of a Claude reply has billed tokens in its raw text,
+  and the failed card keeps them. A model further down the chain that is busy,
+  not offered to the key, rate-limited or refuses the key is stepped over.
+- **The card says who answered.** Its badge names the model that answered;
+  a line under it says which was asked and why it did not answer ("Flash Lite
+  3.5 was busy, so Flash 3.8 answered"). The card is stored under the cache
+  key of the model asked for, so selecting the passage again serves it, and it
+  is stale only when that model's key would differ. Retranslate asks the
+  profile's model again.
+- **A model closed to the key is said plainly.** The 2.5 models are refused
+  to keys that never used them; that error reads "Google no longer offers …
+  to new API keys", never as a rejected key. Settings → API keys → Test key
+  reads the key's model list and names the configured models it leaves out.
+
 ## Offline dictionary
 
 Single-word lookup against al-Miṣbāḥ al-Munīr (Shamela **12145**), imported

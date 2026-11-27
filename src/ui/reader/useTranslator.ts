@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { beginActivity } from '../../services/activity';
 import { coverageOf } from '../../translation/coverage';
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
 import { newId } from '../../lib/id';
 import type { Block, Entity, ProviderId, TranslationCard } from '../../types';
-import type { TranslationResult } from '../../translation/TranslationProvider';
+import { TranslationError, type TranslationResult } from '../../translation/TranslationProvider';
+import { reportNetworkFailure, reportNetworkSuccess } from '../../app/useOnline';
 import { providerFor } from '../../translation/providers/registry';
+import {
+  translateWithFallback,
+  type FallbackOutcome,
+} from '../../translation/providers/fallback';
 import { cacheKeyFor, glossaryHashOf } from '../../translation/prompt';
 import { enrichSegments } from '../../retrieval/enrich';
 import { findLocalHadith } from '../../retrieval/hadithJson';
@@ -23,9 +28,11 @@ import { hadithScopeFor } from './hadithScope';
 import {
   cacheAnchorFor,
   failedCard,
+  isEntryCard,
   loadingCard,
   passageFor,
   remainderAnchor,
+  samePassage,
   standalonePassage,
   translationRequestFor,
   withoutStream,
@@ -52,7 +59,9 @@ export interface TranslateRequest {
    * card is stored complete, so a refusal or a failure never costs the old
    * card (FOUND_ISSUES 42; a paid response is never discarded). On a failure
    * the old card stays whatever its status: a failed card can hold paid output
-   * in `rawResponse` (a truncated or unparsed reply).
+   * in `rawResponse` (a truncated or unparsed reply). The failed card records
+   * it in `replacesCardIds`, so a later successful Retry of the failure
+   * removes it too (FOUND_ISSUES 57.2).
    */
   replaces?: TranslationCard;
   /**
@@ -95,10 +104,12 @@ function withOfflineRequest(previous: SessionStats): SessionStats {
   };
 }
 
+// `result` is a finished translation's, or a failed one's billed usage and
+// cost (TranslationError.usage, FOUND_ISSUES 64): either was a request paid.
 function withCloudRequest(
   previous: SessionStats,
   useProviderId: ProviderId,
-  result: TranslationResult,
+  result: Pick<TranslationResult, 'usage' | 'costUsd'>,
 ): SessionStats {
   return {
     requests: previous.requests + 1,
@@ -125,6 +136,18 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
   const busy = inFlight > 0;
   const [notice, setNotice] = useState<string | null>(null);
   const [stats, setStats] = useState<SessionStats>(EMPTY_STATS);
+  // The cards being retranslated now, by id: one retranslation of a card at
+  // a time (FOUND_ISSUES 57.3). The ref is what `retranslate` reads, since two
+  // taps can land before a render; the state is what the cards are drawn from.
+  const retranslatingRef = useRef(new Set<string>());
+  const [retranslating, setRetranslating] = useState<ReadonlySet<string>>(() => new Set());
+  // The book's cards as last rendered, for the clean-up after a success
+  // (`dropSuperseded`): `translate` is captured by a running batch, so it
+  // cannot read `cards` from its own closure.
+  const cardsRef = useRef(cards);
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
 
   useEffect(() => {
     void storage.listCards(bookId).then(setCards);
@@ -290,8 +313,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
         // Compared against the card's own provider and model, so simply
         // switching provider in settings does not mark every existing card
         // stale — only a change that would actually alter this card's output.
-        providerId: card.providerId,
-        model: card.model,
+        // A card a fallback model answered is keyed by the model asked for.
+        providerId: card.fallback?.fromProviderId ?? card.providerId,
+        model: card.fallback?.fromModel ?? card.model,
       }),
     [activeProfile, glossaryHash],
   );
@@ -307,19 +331,44 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
   }, []);
 
   /**
-   * Remove the card a retranslation replaced, after its successor is stored.
+   * Remove what a finished translation supersedes, after it is stored:
+   *
+   * - the card a retranslation replaced (FOUND_ISSUES 42), and the cards that
+   *   one was itself meant to replace (`replacesCardIds`): a Retry of a
+   *   failed retranslation of A that succeeds removes A as well
+   *   (FOUND_ISSUES 57.2);
+   * - the earlier failed cards of the same passage (same anchor and text)
+   *   that hold nothing paid for, no raw reply and no billed usage
+   *   (FOUND_ISSUES 57.1). A failed card with raw output stays: a paid
+   *   response is never discarded. Translate all does the same per block.
    *
    * It never throws. It runs inside `translate`'s `try`, after the new card is
    * stored complete, and a rejected delete reaching the `catch` would write a
    * failed card over that complete one (same id). A delete that fails leaves
-   * both cards, which loses nothing, and says so.
+   * the cards, which loses nothing, and says so.
    */
-  const dropReplaced = useCallback(
-    async (replaced: TranslationCard | undefined) => {
-      if (!replaced) return;
+  const dropSuperseded = useCallback(
+    async (finished: TranslationCard, replaced: TranslationCard | undefined) => {
+      const doomed = new Set<string>();
+      if (replaced) {
+        doomed.add(replaced.id);
+        for (const id of replaced.replacesCardIds ?? []) doomed.add(id);
+      }
+      for (const card of cardsRef.current) {
+        if (
+          card.status === 'error' &&
+          samePassage(card, finished) &&
+          !(card.rawResponse && card.rawResponse.trim() !== '') &&
+          !card.usage
+        ) {
+          doomed.add(card.id);
+        }
+      }
+      doomed.delete(finished.id);
+      if (doomed.size === 0) return;
       try {
-        await storage.deleteCard(replaced.id);
-        setCards((previous) => previous.filter((existing) => existing.id !== replaced.id));
+        for (const id of doomed) await storage.deleteCard(id);
+        setCards((previous) => previous.filter((existing) => !doomed.has(existing.id)));
       } catch {
         setNotice('The new translation is saved, but the old card could not be removed.');
       }
@@ -375,7 +424,11 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
       if (!force) {
         const cached = await storage.getCardByCacheKey(cacheKey);
-        if (cached) {
+        // An entry card made before FOUND_ISSUES 26 was fixed holds the
+        // block's key: it is never served as the block's translation
+        // (FOUND_ISSUES 53). The block is then translated afresh.
+        const oldEntry = cached && !standalone && isEntryCard(cached, blocks);
+        if (cached && !oldEntry) {
           upsert(cached);
           return cached;
         }
@@ -407,19 +460,27 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       // Also held app-wide, so the service-worker update prompt waits: a reload
       // mid-request loses the passage and the tokens already spent on it.
       const endActivity = beginActivity();
+      // The provider's answer, once there is one: if enrichment or storing
+      // the card then fails, the failed card keeps that paid reply
+      // (FOUND_ISSUES 55).
+      let answered: FallbackOutcome | null = null;
 
       try {
         if (offline) {
           const finished = await runOffline(card, useModel);
           await storage.putCard(finished);
           upsert(finished);
-          await dropReplaced(replaces);
+          await dropSuperseded(finished, replaces);
           setStats((previous) => withOfflineRequest(previous));
           return finished;
         }
 
-        const result = await providerFor(useProviderId).translate(
-          translationRequestFor({
+        // The profile's model first; if it is busy, the next one in the
+        // fallback chain (providers/fallback.ts), and the card records which
+        // answered. Its cache key stays the one asked for, so selecting the
+        // passage again serves this card (the owner's answer, 2026-11-26).
+        const outcome = await translateWithFallback({
+          request: translationRequestFor({
             anchor,
             before,
             after,
@@ -429,9 +490,14 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
             useModel,
             known,
           }),
-          apiKey,
-          (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
-        );
+          providerId: useProviderId,
+          keyFor: (id) => (id === useProviderId ? apiKey : secrets.getProviderKey(id)),
+          crossProvider: settings.crossProviderFallback,
+          onChunk: (partial) => setStreaming((previous) => ({ ...previous, [card.id]: partial })),
+        });
+        answered = outcome;
+        reportNetworkSuccess();
+        const result = outcome.result;
 
         // Measured before enrichment, against the Arabic that was sent. A
         // well-formed answer that quietly stopped half way through the passage
@@ -440,6 +506,9 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         const finished: TranslationCard = {
           ...card,
+          providerId: outcome.providerId,
+          model: outcome.model,
+          ...(outcome.fallback ? { fallback: outcome.fallback } : {}),
           status: 'complete',
           usedExternalLookup: result.searched === true,
           usage: result.usage,
@@ -481,15 +550,34 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
 
         await storage.putCard(finished);
         upsert(finished);
-        await dropReplaced(replaces);
+        await dropSuperseded(finished, replaces);
 
-        setStats((previous) => withCloudRequest(previous, useProviderId, result));
+        setStats((previous) => withCloudRequest(previous, outcome.providerId, result));
 
         return finished;
       } catch (caught) {
-        const failed = failedCard(card, caught);
+        // The online signal learns from the outcome (FOUND_ISSUES 62): no
+        // response at all marks the app offline; any response, an error
+        // included, says the network is there. A fallback model that could
+        // not be reached comes after others that answered, so it does not.
+        if (!offline && caught instanceof TranslationError) {
+          if (caught.condition === 'unreachable' && !caught.answeredBy) reportNetworkFailure();
+          else reportNetworkSuccess();
+        }
+        const failedOnly = failedCard(card, caught, answered);
+        // A failed retranslation remembers what it was meant to replace, so
+        // its own successful Retry replaces that too (FOUND_ISSUES 57.2).
+        const failed: TranslationCard = replaces
+          ? { ...failedOnly, replacesCardIds: [replaces.id, ...(replaces.replacesCardIds ?? [])] }
+          : failedOnly;
         await storage.putCard(failed);
         upsert(failed);
+        // A failure that was billed (FOUND_ISSUES 64) counts in the session
+        // totals, under the provider that billed it.
+        if (failed.usage && failed.providerId !== 'offline') {
+          const billed = { usage: failed.usage, costUsd: failed.costUsd ?? null };
+          setStats((previous) => withCloudRequest(previous, failed.providerId, billed));
+        }
         return failed;
       } finally {
         endActivity();
@@ -507,9 +595,10 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       http,
       settings.quranTranslationId,
       settings.quranTranslationName,
+      settings.crossProviderFallback,
       storage,
       upsert,
-      dropReplaced,
+      dropSuperseded,
     ],
   );
 
@@ -517,31 +606,59 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
   // every other precondition, and removes the old card only after the new one
   // is stored (`replaces`). Deleting it up front lost a paid Claude card when
   // the chosen provider had no key (FOUND_ISSUES 42).
+  //
+  // One retranslation of a card at a time (FOUND_ISSUES 57.3): two started
+  // while the first was in flight both survived, two new cards for one. The
+  // card's Retranslate and Retry are disabled meanwhile (`isRetranslating`),
+  // and a second call that still arrives is refused here with a notice.
   const retranslate = useCallback(
     async (
       card: TranslationCard,
       options: { providerId?: ProviderId; model?: string } = {},
-    ) =>
-      translate({
-        anchor: card,
-        providerId: options.providerId,
-        model: options.model,
-        force: true,
-        replaces: card,
-        standalone: card.standalone === true,
-      }),
-    [translate],
+    ) => {
+      if (retranslatingRef.current.has(card.id)) {
+        setNotice('This card is already being retranslated.');
+        return null;
+      }
+      retranslatingRef.current.add(card.id);
+      setRetranslating(new Set(retranslatingRef.current));
+      try {
+        return await translate({
+          anchor: card,
+          providerId: options.providerId,
+          model: options.model,
+          force: true,
+          replaces: card,
+          // An entry card from before FOUND_ISSUES 26 has no flag: it is
+          // recognised, so it is retranslated alone and under an entry's key,
+          // not with the block's context and key again (FOUND_ISSUES 53).
+          standalone: isEntryCard(card, blocks),
+        });
+      } finally {
+        retranslatingRef.current.delete(card.id);
+        setRetranslating(new Set(retranslatingRef.current));
+      }
+    },
+    [blocks, translate],
+  );
+
+  const isRetranslating = useCallback(
+    (card: TranslationCard) => retranslating.has(card.id),
+    [retranslating],
   );
 
   /**
    * "Translate the rest" on a partial card: a new translation of the part of
-   * its passage that did not come back, on the card's own provider and model.
+   * its passage that did not come back, on the card's own provider and model
+   * (for a fallback card, the ones it asked for).
    * The partial card is kept — its segments were paid for, and the rest is a
    * card of its own beside it.
    */
   const translateRest = useCallback(
     async (card: TranslationCard) => {
-      const anchor = remainderAnchor(blocks, card);
+      // An old entry card's rest is the rest of its own text (FOUND_ISSUES 53).
+      const entry = isEntryCard(card, blocks);
+      const anchor = remainderAnchor(blocks, entry ? { ...card, standalone: true } : card);
       if (!anchor) {
         setNotice(
           'The rest of this passage could not be found in the book. Select it and translate it.',
@@ -550,9 +667,12 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
       }
       return translate({
         anchor,
-        providerId: card.providerId,
-        model: card.model,
-        standalone: card.standalone === true,
+        // A card a fallback model answered asks the model it asked for, through
+        // the same chain and under that model's key (DECISIONS, lane B2): a
+        // Gemini card Haiku answered goes back to the free model first.
+        providerId: card.fallback?.fromProviderId ?? card.providerId,
+        model: card.fallback?.fromModel ?? card.model,
+        standalone: entry,
       });
     },
     [blocks, translate],
@@ -622,6 +742,7 @@ export function useTranslator(bookId: string, blocks: Block[], entities: Entity[
     stats,
     translate,
     retranslate,
+    isRetranslating,
     translateRest,
     remove,
     setCollapsed,

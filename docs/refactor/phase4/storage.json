@@ -1552,6 +1552,33 @@
           }
         ],
         ["getCardByCacheKey missing",{"value":"(undefined)"}],
+        ["putCard b2-older and b2-newer (one cache key)",{"value":"(undefined)"}],
+        [
+          "getCardByCacheKey cache-b2 (the newer)",
+          {
+            "value": {
+              "id": "card-b2b",
+              "bookId": "shamela-990002",
+              "kind": "translation",
+              "startBlockId": "shamela-990002:p1:0",
+              "startOffset": 0,
+              "endBlockId": "shamela-990002:p1:0",
+              "endOffset": 5,
+              "createdAt": 1772000000009,
+              "collapsed": false,
+              "sourceText": "نص قصير",
+              "segments": [{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],
+              "profileId": "profile-d",
+              "promptVersion": 1,
+              "glossaryHash": "g",
+              "providerId": "gemini",
+              "model": "synthetic-model",
+              "cacheKey": "cache-b2",
+              "status": "complete"
+            }
+          }
+        ],
+        ["deleteCard b2-older and b2-newer",{"value":"(undefined)"}],
         ["deleteCard a1",{"value":"(undefined)"}],
         ["deleteCard missing",{"value":"(undefined)"}],
         [

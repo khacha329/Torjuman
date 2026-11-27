@@ -1,6 +1,12 @@
 import { useApp } from '../../app/AppContext';
 import { secrets } from '../../services/secrets';
-import { allProviders, defaultModelFor, modelsFor } from '../../translation/providers/registry';
+import { ANTHROPIC_CROSS_FALLBACK_MODEL } from '../../translation/models';
+import {
+  allProviders,
+  defaultModelFor,
+  modelLabel,
+  modelsFor,
+} from '../../translation/providers/registry';
 import type { CloudProviderId } from '../../types';
 import { Field, inputClass } from '../kit';
 import { Section } from './Section';
@@ -19,7 +25,7 @@ import { Section } from './Section';
  * including ones made on the other provider — as stale.
  */
 export function TranslationSection() {
-  const { activeProfile, saveProfile } = useApp();
+  const { activeProfile, saveProfile, settings, updateSettings } = useApp();
 
   const chooseProvider = async (providerId: CloudProviderId) => {
     const models = modelsFor(providerId);
@@ -90,6 +96,31 @@ export function TranslationSection() {
           {modelsFor(activeProfile.providerId).find((m) => m.id === activeProfile.model)?.note}
         </p>
       </div>
+
+      {/* Lane B2. Within a provider the fallback always runs; this is only
+          whether it may cross to the other one, which for Gemini means a
+          paid Claude request. */}
+      <label className="mt-4 flex items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={settings.crossProviderFallback}
+          onChange={(event) =>
+            void updateSettings({ crossProviderFallback: event.target.checked })
+          }
+        />
+        <span className="text-sm">
+          When a provider's models are busy, ask the other provider
+          <span className="mt-0.5 block text-xs text-muted">
+            A busy model is retried, then more models of the same provider are asked: every
+            other Gemini model, or each cheaper Claude model. With this on, if none of them
+            answers, a Gemini translation goes to Claude{' '}
+            {modelLabel('anthropic', ANTHROPIC_CROSS_FALLBACK_MODEL)} (paid, without the web
+            lookup) if a Claude key is set, and a Claude one to Gemini if a Gemini key is set.
+            The card says which model answered and why. The on-device model is never asked.
+          </span>
+        </span>
+      </label>
     </Section>
   );
 }

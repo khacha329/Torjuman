@@ -93,10 +93,35 @@ const ANTHROPIC_SUCCESSORS: Record<string, string> = {
   [CLAUDE_OPUS_5]: CLAUDE_OPUS_5_5,
 };
 
-/** The model a profile should run on now, given the one it was saved with. */
+/**
+ * The model a profile should run on now, given the one it was saved with.
+ * Claude's superseded models follow their tier forward; Gemini's retired ones
+ * go where Google routes them (GEMINI_SUCCESSORS).
+ */
 export function successorModel(model: string): string {
-  return ANTHROPIC_SUCCESSORS[model] ?? model;
+  return ANTHROPIC_SUCCESSORS[model] ?? GEMINI_SUCCESSORS[model] ?? model;
 }
+
+/**
+ * Where an overloaded Claude call goes next, in order (the owner's answer,
+ * 2026-11-26: cheaper Claude models first, then Gemini). Most expensive
+ * first, so the models after a profile's own are the cheaper ones: a
+ * fallback never costs more per token than the model that failed. A model
+ * not on this list (a superseded one) has no Claude step and goes straight
+ * to Gemini.
+ */
+export const ANTHROPIC_FALLBACK_ORDER: string[] = [
+  CLAUDE_FABLE_5_1,
+  CLAUDE_OPUS_5_5,
+  CLAUDE_SONNET_5_5,
+  CLAUDE_HAIKU_5_5,
+];
+
+/**
+ * The one Claude model an overloaded Gemini chain crosses to, when a Claude
+ * key is set and Settings allows crossing providers: the cheapest.
+ */
+export const ANTHROPIC_CROSS_FALLBACK_MODEL = CLAUDE_HAIKU_5_5;
 
 /** True for any Claude model ID, current or not. */
 export function isClaudeModel(model: string | undefined): boolean {
@@ -124,30 +149,74 @@ export function outputConfigFor(model: string): { effort: Effort } | undefined {
 
 // ------------------------------------------------------------------- Gemini
 
+// The four Gemini models the API's model page lists as stable for text
+// (aistudio.google.com/docs/models, which ai.google.dev/gemini-api/docs/models
+// now redirects to; read 2026-11-26). Until then the app offered
+// gemini-3.7-flash, which the page no longer lists (its deprecations page says
+// requests to it are routed to gemini-3.8-flash), and the two 2.5 models,
+// which Google has closed to new keys: "Access to the 2.5 models is limited
+// to users who have actively used them in the past."
+export const GEMINI_3_8_FLASH = 'gemini-3.8-flash';
+export const GEMINI_3_6_FLASH = 'gemini-3.6-flash';
+export const GEMINI_3_5_FLASH_LITE = 'gemini-3.5-flash-lite';
+export const GEMINI_3_1_FLASH_LITE = 'gemini-3.1-flash-lite';
+
+// No longer offered, and still named on cards made with them.
+export const GEMINI_3_7_FLASH = 'gemini-3.7-flash';
+export const GEMINI_2_5_FLASH = 'gemini-2.5-flash';
+export const GEMINI_2_5_PRO = 'gemini-2.5-pro';
+
+/**
+ * Offered, and in the order an overloaded Gemini call falls back through
+ * (the owner's order, 2026-11-26): the profile's own model first, then every
+ * other one in this order.
+ */
 export const GEMINI_MODELS: ModelOption[] = [
   {
-    id: 'gemini-3.7-flash',
-    label: 'Flash 3.7 — recommended',
-    note: 'Current Flash model; fast and good at Arabic',
+    id: GEMINI_3_8_FLASH,
+    label: 'Flash 3.8 — newest',
+    note: 'The newest Flash model (September 2026)',
   },
   {
-    id: 'gemini-3.5-flash-lite',
-    label: 'Flash Lite 3.5 — fastest',
+    id: GEMINI_3_6_FLASH,
+    label: 'Flash 3.6',
+    note: 'The previous Flash model (July 2026)',
+  },
+  {
+    id: GEMINI_3_5_FLASH_LITE,
+    label: 'Flash Lite 3.5 — recommended',
     note: 'Lowest latency and cost; weakest on dense commentary',
   },
   {
-    id: 'gemini-2.5-flash',
-    label: 'Flash 2.5 — previous generation',
-    note: 'Older but well-established; use if 3.7 is unavailable on your key',
-  },
-  {
-    id: 'gemini-2.5-pro',
-    label: 'Pro 2.5 — highest quality',
-    note: 'Strongest Gemini for this task; may fall outside the free tier',
+    id: GEMINI_3_1_FLASH_LITE,
+    label: 'Flash Lite 3.1 — oldest',
+    note: 'Google may shut it down from 7 May 2027',
   },
 ];
 
-export const GEMINI_DEFAULT_MODEL = 'gemini-3.7-flash';
+/** The owner's choice: the one that works on the owner's key (2026-11-26). */
+export const GEMINI_DEFAULT_MODEL = GEMINI_3_5_FLASH_LITE;
+
+/** Labels for Gemini models no longer offered, so their cards still name them. */
+export const SUPERSEDED_GEMINI_MODELS: ModelOption[] = [
+  { id: GEMINI_3_7_FLASH, label: 'Flash 3.7', note: 'No longer offered' },
+  { id: GEMINI_2_5_FLASH, label: 'Flash 2.5', note: 'Closed to new keys' },
+  { id: GEMINI_2_5_PRO, label: 'Pro 2.5', note: 'Closed to new keys' },
+];
+
+/**
+ * What a saved profile on a retired Gemini model moves to on load: where
+ * Google itself routes that model's requests, per its deprecations page
+ * (read 2026-11-26). gemini-3.7-flash already goes to 3.8 Flash. From
+ * 1 December 2026 gemini-2.5-pro goes to 3.8 Flash and gemini-2.5-flash to
+ * 3.5 Flash Lite. A key that never used the 2.5 models is refused them today.
+ * As with Claude, only the profile moves; cards keep the model that wrote them.
+ */
+const GEMINI_SUCCESSORS: Record<string, string> = {
+  [GEMINI_3_7_FLASH]: GEMINI_3_8_FLASH,
+  [GEMINI_2_5_PRO]: GEMINI_3_8_FLASH,
+  [GEMINI_2_5_FLASH]: GEMINI_3_5_FLASH_LITE,
+};
 
 export const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 

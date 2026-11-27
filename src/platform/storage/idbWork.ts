@@ -73,15 +73,28 @@ export async function getCardByCacheKey(
   // A partial card (only part of the passage came back, TranslationCard.partial)
   // is not a hit either: selecting the passage again is how it is asked for
   // whole, and serving the part would answer that with the same part.
+  //
+  // Of several finished cards under one key, the newest (by createdAt) is
+  // served. The first the index gave back is the lowest primary key, and a
+  // card id begins with its creation time (lib/id.ts), so the oldest won
+  // (FOUND_ISSUES 65). Two finished cards under one key come from a failed
+  // delete in useTranslator's `dropSuperseded`, from retranslations that
+  // overlapped before lane B2 allowed one at a time (FOUND_ISSUES 57), or from
+  // two Translates of one passage in flight together, neither yet stored when
+  // the other looked in the cache.
+  let newest: TranslationCard | undefined;
   let cursor = await handle()
     .transaction('cards')
     .store.index('byCacheKey')
     .openCursor(cacheKey);
   while (cursor) {
-    if (cursor.value.status === 'complete' && !cursor.value.partial) return cursor.value;
+    const card = cursor.value;
+    if (card.status === 'complete' && !card.partial && (!newest || card.createdAt > newest.createdAt)) {
+      newest = card;
+    }
     cursor = await cursor.continue();
   }
-  return undefined;
+  return newest;
 }
 
 export async function deleteCard(handle: () => IDBPDatabase<Schema>, id: string): Promise<void> {

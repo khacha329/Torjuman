@@ -1,5 +1,6 @@
 import {
   TranslationError,
+  type KeyCheck,
   type ModelOption,
   type TranslationProvider,
   type TranslationRequest,
@@ -12,6 +13,7 @@ import {
   GEMINI_MODELS,
   MAX_TOKENS_CEILING,
   maxTokensFor,
+  SUPERSEDED_GEMINI_MODELS,
 } from '../models';
 import { renderSystem, renderUser } from '../prompt';
 import { coerceSegments, parseSegmentRecords, parseSegments } from '../parseSegments';
@@ -51,6 +53,26 @@ import {
 
 const MAX_RETRIES = 3;
 
+/** The longest `retry-after` a 429 retry waits for (the owner's 60 s, DECISIONS, lane B2). */
+const MAX_RETRY_AFTER_SECONDS = 60;
+
+/**
+ * Retries of a 503 ("This model is currently experiencing high demand") or a
+ * 500, before the fallback (providers/fallback.ts) asks another model. The
+ * shape of the Anthropic SDK's retries of Claude's 529 (two of them, the wait
+ * doubling, each cut by up to a quarter at random so that many clients turned
+ * away together do not all come back together), but from 1 s, where the SDK
+ * (0.120, client.mjs calculateDefaultRetryTimeoutMillis) starts at 0.5 s and
+ * reads a retry-after first: about 1 s and 2 s here, 0.5 s and 1 s there.
+ * Short on purpose: a busy model is usually busy for longer than a few
+ * seconds, and the next model in the chain is the better bet.
+ */
+const SERVER_RETRIES = 2;
+
+function serverRetryWaitMs(retry: number): number {
+  return 1000 * 2 ** retry * (1 - Math.random() * 0.25);
+}
+
 /** Shared with the Anthropic tool definition so both shapes cannot drift. */
 const RESPONSE_SCHEMA = GEMINI_RESPONSE_SCHEMA;
 
@@ -74,31 +96,79 @@ export class GeminiProvider implements TranslationProvider {
   readonly id = 'gemini' as const;
   readonly displayName = 'Gemini';
   readonly availableModels: ModelOption[] = GEMINI_MODELS;
-  readonly knownModels: ModelOption[] = GEMINI_MODELS;
+  readonly knownModels: ModelOption[] = [...GEMINI_MODELS, ...SUPERSEDED_GEMINI_MODELS];
   readonly defaultModel = GEMINI_DEFAULT_MODEL;
   readonly keyHelpUrl = 'https://aistudio.google.com/apikey';
   readonly keyPlaceholder = 'AIza…';
   readonly isFree = true;
   readonly fitFor =
     'Good for reading along and checking passages you would otherwise skip.';
+  /** No search tool is offered here (DECISIONS 43: Gemini gains no search). */
+  readonly canSearch = false;
 
-  async validateKey(key: string): Promise<boolean> {
-    if (!key.trim()) return false;
-    let response: Response;
-    try {
-      response = await fetch(`${GEMINI_BASE}/models`, {
-        headers: { 'x-goog-api-key': key },
-      });
-    } catch {
-      throw new TranslationError(
-        'network',
-        'Could not reach the Gemini API. Check the network connection.',
-      );
+  /**
+   * models.list with the key: a rejection says the key is bad, and the list
+   * says which of `models` the key is offered (lane B2). The docs describe it
+   * as "the Models available through the Gemini API"; whether it leaves out a
+   * model a key is refused (the 2.5 models for a new key) is not stated
+   * there, so a model it lists can still be refused when called, and the
+   * fallback steps over one that is.
+   *
+   * Pages of up to 1,000 (the API's maximum), following nextPageToken; at
+   * most MAX_LIST_PAGES of them, against a token that never ends. A page
+   * after the first that fails leaves the list unknown: the key itself is
+   * good, and no model is marked rather than marking every one.
+   *
+   * A server error (500, 503) is no verdict on the key: thrown, not "rejected"
+   * as every non-OK status used to be.
+   */
+  async validateKey(key: string, models: readonly string[] = []): Promise<KeyCheck> {
+    if (!key.trim()) return { valid: false, unusableModels: [] };
+    const listed = new Set<string>();
+    let pageToken: string | null = null;
+    for (let page = 0; page < MAX_LIST_PAGES; page++) {
+      const query = new URLSearchParams({ pageSize: '1000' });
+      if (pageToken) query.set('pageToken', pageToken);
+      let response: Response;
+      try {
+        response = await fetch(`${GEMINI_BASE}/models?${query}`, {
+          headers: { 'x-goog-api-key': key },
+        });
+      } catch {
+        if (page > 0) return { valid: true, unusableModels: [] };
+        throw new TranslationError(
+          'network',
+          'Could not reach the Gemini API. Check the network connection.',
+          { condition: 'unreachable' },
+        );
+      }
+      if (page > 0 && !response.ok) return { valid: true, unusableModels: [] };
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        return { valid: false, unusableModels: [] };
+      }
+      if (!response.ok) throw await geminiHttpError(response);
+
+      let payload: GeminiModelList;
+      try {
+        payload = (await response.json()) as GeminiModelList;
+      } catch {
+        // The key was accepted; only the list could not be read.
+        return { valid: true, unusableModels: [] };
+      }
+      for (const entry of payload.models ?? []) {
+        const methods = entry.supportedGenerationMethods;
+        if (methods && !methods.includes('generateContent')) continue;
+        if (typeof entry.name === 'string') listed.add(entry.name.replace(/^models\//, ''));
+      }
+      pageToken = payload.nextPageToken || null;
+      if (!pageToken) {
+        return {
+          valid: true,
+          unusableModels: [...new Set(models)].filter((model) => !listed.has(model)),
+        };
+      }
     }
-    if (response.status === 400 || response.status === 401 || response.status === 403) {
-      return false;
-    }
-    return response.ok;
+    return { valid: true, unusableModels: [] };
   }
 
   /**
@@ -256,6 +326,7 @@ export class GeminiProvider implements TranslationProvider {
     let blockReason: string | undefined;
     let budget = maxTokensFor(request.targetText);
     let truncationRetried = false;
+    let serverRetries = 0;
     const usage: TranslationUsage = {
       inputTokens: 0,
       outputTokens: 0,
@@ -293,11 +364,32 @@ export class GeminiProvider implements TranslationProvider {
         throw new TranslationError(
           'network',
           'Could not reach the Gemini API. Check the network connection.',
+          { condition: 'unreachable' },
         );
+      }
+
+      if ((response.status === 503 || response.status === 500) && serverRetries < SERVER_RETRIES) {
+        await delay(serverRetryWaitMs(serverRetries));
+        serverRetries++;
+        attempt--; // The retry is for the server, not for rate limiting.
+        continue;
       }
 
       if (response.status === 429) {
         const retryAfter = readRetryAfter(response);
+        // A wait longer than the cap is not slept through: the card would
+        // spin for as long as the header asked, a date far ahead included
+        // (FOUND_ISSUES 67). It fails at once and says how long Gemini asked
+        // for. Fewer requests than before, never more.
+        if (retryAfter !== null && retryAfter > MAX_RETRY_AFTER_SECONDS) {
+          throw new TranslationError(
+            'rate-limit',
+            `Gemini free-tier rate limit reached, and Gemini asks to wait ${Math.ceil(retryAfter)} s — ` +
+              `longer than this app waits (${MAX_RETRY_AFTER_SECONDS} s). Your key is fine — translate ` +
+              'again later, or check your current limits in Google AI Studio.',
+            { retryAfterSeconds: retryAfter },
+          );
+        }
         if (attempt < MAX_RETRIES) {
           // Exponential backoff: 2s, 4s, 8s — or whatever the API asked for.
           const waitMs = retryAfter !== null ? retryAfter * 1000 : 2000 * 2 ** attempt;
@@ -313,7 +405,7 @@ export class GeminiProvider implements TranslationProvider {
       }
 
       if (!response.ok) {
-        throw await geminiHttpError(response);
+        throw await geminiHttpError(response, request.model);
       }
 
       if (!response.body) {
@@ -401,6 +493,15 @@ export class GeminiProvider implements TranslationProvider {
     return { text, finishReason, blockReason, usage, budget };
   }
 }
+
+/** models.list's response (generativelanguage v1beta, ListModelsResponse). */
+interface GeminiModelList {
+  models?: { name?: string; supportedGenerationMethods?: string[] }[];
+  nextPageToken?: string;
+}
+
+/** The most models.list pages a key check reads (1,000 models each). */
+const MAX_LIST_PAGES = 5;
 
 /** A stretch of the request's targetText, end exclusive. */
 interface PassagePart {
