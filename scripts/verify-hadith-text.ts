@@ -12,6 +12,11 @@
 // The matcher sees letters, not meaning, so made-up words exercise exactly the
 // same code a real matn does; what they cannot show is the thresholds' fit to
 // real data, which is step 5's report on the owner's PC.
+//
+// Since lane B3 it also holds the on-device cut (`segmentSelection`), the one
+// place the ḥadīth invariant is enforced, so that it is checked without
+// fixtures and without downloading a model: the cut is pure, and the model
+// only ever receives what the cut calls prose.
 
 import {
   buildHadithIndex,
@@ -59,7 +64,24 @@ import {
   hadithShortQuoteNote,
 } from '../src/retrieval/enrich';
 import type { QuranLookupOptions } from '../src/retrieval/quran';
-import type { Block, Entity, HadithIndexPart, HadithJsonEntry, HadithRecord, QulEntry, QulResource } from '../src/types';
+import {
+  HADITH_NO_OFFLINE_SOURCE,
+  segmentSelection,
+  type SegmentedSelection,
+} from '../src/translation/offline/segmentSelection';
+import { splitSentences } from '../src/translation/offline/sentences';
+import { QuranEnglish, QuranIndex } from '../src/quran/quranIndex';
+import { stripApparatus } from '../src/retrieval/sharh';
+import type {
+  Block,
+  BlockType,
+  Entity,
+  HadithIndexPart,
+  HadithJsonEntry,
+  HadithRecord,
+  QulEntry,
+  QulResource,
+} from '../src/types';
 
 let passed = 0;
 const failures: string[] = [];
@@ -1102,6 +1124,433 @@ expect('onChunk: not called under BUILD_CHUNK ḥadīth', chunks === 0 && alpha.
     fromEntity?.local.english === farCard.english && fromBlock === null,
     { fromEntity, fromBlock },
   );
+}
+
+// ------------------------------------------- the on-device cut (lane B3)
+//
+// `segmentSelection` decides what the on-device model may see: only the spans
+// it returns as `prose`. Every case below asserts that first. Blocks and
+// entities are built here as the parser and the detector build them; the
+// Qurʾān index and its English are two made-up āyāt, so nothing from the
+// bundled muṣḥaf is needed either.
+{
+  const seg = {
+    quran: new QuranIndex({ edition: 'synthetic', counts: [2], ayat: [text(words(5)), text(words(5))] }),
+    english: new QuranEnglish({ translation: 'synthetic', ayat: ['Synthetic āyah one.', 'Synthetic āyah two.'] }),
+  };
+  const blockOf = (
+    id: string,
+    order: number,
+    type: BlockType,
+    body: string,
+    extra: Partial<Block> = {},
+  ): Block => ({
+    id,
+    bookId: 'seg',
+    pageId: 'seg:p1',
+    order,
+    type,
+    text: body,
+    normalized: body,
+    contentHash: '',
+    hadithNumber: null,
+    tocNodeId: null,
+    spans: [],
+    anchor: null,
+    ...extra,
+  });
+  /** As the detector marks a matn block: the whole block, numbered or not. */
+  const matnEntity = (block: Block, reference: string, extra: Partial<Entity> = {}): Entity => ({
+    id: `ent-${block.id}`,
+    bookId: 'seg',
+    startBlockId: block.id,
+    startOffset: 0,
+    endBlockId: block.id,
+    endOffset: block.text.length,
+    type: 'hadith',
+    reference,
+    matchQuality: reference ? 'exact' : 'unresolved',
+    detectedAt: 0,
+    ...extra,
+  });
+  const cut = (
+    blocks: Block[],
+    entities: Entity[],
+    from: [string, number],
+    to: [string, number],
+    hadithLookup: (reference: string) => { arabic: string; english: string; source?: 'sunnah.com' | 'hadith-json' } | null = () => null,
+  ): SegmentedSelection =>
+    segmentSelection({
+      blocks,
+      entities,
+      startBlockId: from[0],
+      startOffset: from[1],
+      endBlockId: to[0],
+      endOffset: to[1],
+      ...seg,
+      hadithLookup,
+    });
+  /** Whether any whole word of `body` is in the text handed to the model. */
+  const reachesModel = (segmented: SegmentedSelection, body: string): boolean => {
+    const offered = new Set(segmented.prose.flatMap((span) => span.text.split(/\s+/)));
+    return body.split(' ').some((part) => offered.has(part));
+  };
+  const types = (segmented: SegmentedSelection) => segmented.segments.map((segment) => segment.type);
+
+  // FOUND_ISSUES 71. The reader's entities start as [] and load afterwards
+  // (or never: a failed load, a shared chapter without them). The cut must
+  // not depend on them: a matn block is ḥadīth by its type.
+  {
+    const before = text(words(8));
+    const matn = text(words(14));
+    const after = text(words(8));
+    const blocks = [
+      blockOf('s1', 1, 'sharh', before),
+      blockOf('m1', 2, 'hadith_matn', matn, { hadithNumber: '12' }),
+      blockOf('s2', 3, 'sharh', after),
+    ];
+    const looked: string[] = [];
+    const lookup = (reference: string) => {
+      looked.push(reference);
+      return null;
+    };
+
+    const unloaded = cut(blocks, [], ['s1', 0], ['s2', after.length], lookup);
+    expect('71: no entities yet: THE MATN NEVER REACHES THE MODEL', !reachesModel(unloaded, matn), unloaded.prose);
+    expect('71: …prose, ḥadīth, prose', JSON.stringify(types(unloaded)) === '["prose","hadith","prose"]', types(unloaded));
+    expect('71: …the ḥadīth in the book’s Arabic', unloaded.segments[1]?.arabic === matn, unloaded.segments[1]);
+    expect('71: …with the no-offline-source note and no English', unloaded.segments[1]?.note === HADITH_NO_OFFLINE_SOURCE && unloaded.segments[1]?.english === '', unloaded.segments[1]);
+    expect('71: …and nothing is looked up: there is no reference to look up', looked.length === 0, looked);
+    expect('71: …the commentary on both sides is still offered', reachesModel(unloaded, before) && reachesModel(unloaded, after), unloaded.prose);
+
+    const midway = cut(blocks, [], ['m1', matn.indexOf(' ') + 1], ['m1', matn.length]);
+    expect('71: no entities, a selection inside the matn: all ḥadīth, nothing offered', JSON.stringify(types(midway)) === '["hadith"]' && midway.prose.length === 0, midway);
+
+    // Once they load, the detector's entity covers the block and the cut is
+    // the same, now with the reference looked up.
+    const loaded = cut(blocks, [matnEntity(blocks[1], 'seg#12')], ['s1', 0], ['s2', after.length], lookup);
+    expect('71: entities loaded: the same cut', JSON.stringify(types(loaded)) === JSON.stringify(types(unloaded)) && !reachesModel(loaded, matn), loaded);
+    expect('71: …and its reference is looked up', looked.join() === 'seg#12', looked);
+
+    // An entity that covers only part of its matn block (stored before a
+    // re-parse moved the text): the rest of the block is ḥadīth too.
+    const shortEntity = matnEntity(blocks[1], 'seg#12', { endOffset: matn.indexOf(' ') });
+    const partial = cut(blocks, [shortEntity], ['s1', 0], ['s2', after.length]);
+    expect('71: an entity short of its matn block: no word of the matn is offered', !reachesModel(partial, matn), partial.prose);
+    expect(
+      '71: …and the block’s text is all in ḥadīth segments, once',
+      partial.segments.filter((segment) => segment.type === 'hadith').map((segment) => segment.arabic).join('') === matn,
+      partial.segments,
+    );
+
+    // A verse entity inside the matn and no ḥadīth entity (stored entities
+    // from before a re-detection): the verse is not cover, so the ḥadīth piece
+    // encloses it and it is read in the ḥadīth's Arabic, as under the
+    // detector's whole-block entity (FOUND_ISSUES 61).
+    const verseAt = matn.indexOf(' ') + 1;
+    const verseEnd = matn.indexOf(' ', matn.indexOf(' ', verseAt) + 1);
+    const verse: Entity = {
+      ...matnEntity(blocks[1], '1:1'),
+      id: 'ent-verse-in-matn',
+      type: 'quran',
+      startOffset: verseAt,
+      endOffset: verseEnd,
+      textUthmani: matn.slice(verseAt, verseEnd),
+    };
+    const verseOnly = cut(blocks, [verse], ['s1', 0], ['s2', after.length]);
+    expect('71: a verse entity in a matn with no ḥadīth entity: prose, ḥadīth, prose', JSON.stringify(types(verseOnly)) === '["prose","hadith","prose"]', types(verseOnly));
+    expect('71: …the verse inside the ḥadīth’s Arabic, the matn whole, none of it offered', verseOnly.segments[1]?.arabic === matn && !reachesModel(verseOnly, matn), verseOnly);
+
+    // Two matn blocks in one selection, with nothing between them: two
+    // ḥadīth, not one, and nothing offered.
+    const second = text(words(9));
+    const twoMatns = [blocks[0], blocks[1], blockOf('m2', 3, 'hadith_matn', second, { hadithNumber: '13' })];
+    const both = cut(twoMatns, [], ['s1', 0], ['m2', second.length]);
+    expect('71: two matn blocks, no entities: prose, ḥadīth, ḥadīth', JSON.stringify(types(both)) === '["prose","hadith","hadith"]', types(both));
+    expect('71: …neither matn offered', !reachesModel(both, matn) && !reachesModel(both, second), both.prose);
+
+    // Two ḥadīth entities that overlap, with a gap before the first and after
+    // the second: the gaps are ḥadīth too, the overlap shown once.
+    const cuts = [0, 3, 6, 9].map((n) => matn.split(' ').slice(0, n).join(' ').length + (n ? 1 : 0));
+    const overlapping = [
+      matnEntity(blocks[1], 'seg#12', { id: 'ent-a', startOffset: cuts[1], endOffset: cuts[3] - 1 }),
+      matnEntity(blocks[1], 'seg#12', { id: 'ent-b', startOffset: cuts[2], endOffset: matn.length - 4 }),
+    ];
+    const overlapped = cut(blocks, overlapping, ['m1', 0], ['m1', matn.length]);
+    expect('71: overlapping ḥadīth entities with gaps: nothing offered', overlapped.prose.length === 0, overlapped);
+    expect(
+      '71: …and the matn is shown once, end to end',
+      overlapped.segments.map((segment) => segment.arabic).join('') === matn,
+      overlapped.segments.map((segment) => segment.arabic),
+    );
+  }
+
+  // FOUND_ISSUES 69. A verse across a block edge has a share in each block;
+  // it is one segment, not one per share.
+  {
+    const first = text(words(6));
+    const verseA = text(words(3));
+    const verseB = text(words(3));
+    const last = text(words(6));
+    const mushaf = text(words(6));
+    const a = blockOf('v1', 1, 'sharh', `${first} ${verseA}`, { pageId: 'seg:p1' });
+    const b = blockOf('v2', 2, 'sharh', `${verseB} ${last}`, { pageId: 'seg:p2' });
+    const verse = (extra: Partial<Entity> = {}): Entity => ({
+      id: 'ent-verse-across',
+      bookId: 'seg',
+      startBlockId: 'v1',
+      startOffset: first.length + 1,
+      endBlockId: 'v2',
+      endOffset: verseB.length,
+      type: 'quran',
+      reference: '1:1',
+      matchQuality: 'exact',
+      detectedAt: 0,
+      ...extra,
+    });
+    const verses = (segmented: SegmentedSelection) => segmented.segments.filter((segment) => segment.type === 'quran');
+
+    const across = cut([a, b], [verse({ textUthmani: mushaf })], ['v1', 0], ['v2', b.text.length]);
+    expect('69: a verse across a page break: prose, verse, prose', JSON.stringify(types(across)) === '["prose","quran","prose"]', types(across));
+    expect(
+      '69: …its muṣḥaf text and bundled English once',
+      verses(across).length === 1 && verses(across)[0].arabic === mushaf && verses(across)[0].english === 'Synthetic āyah one.',
+      verses(across),
+    );
+    expect('69: …and neither share is offered', !reachesModel(across, verseA) && !reachesModel(across, verseB), across.prose);
+
+    const fromSecond = cut([a, b], [verse({ textUthmani: mushaf })], ['v2', 0], ['v2', b.text.length]);
+    expect('69: a selection holding only the second share: the verse once', verses(fromSecond).length === 1 && verses(fromSecond)[0].arabic === mushaf, fromSecond.segments);
+
+    // With no muṣḥaf text the segment shows the book's words, and the second
+    // share carries them on: by a space across a page break, by a newline
+    // between two paragraphs of one page.
+    const bare = cut([a, b], [verse()], ['v1', 0], ['v2', b.text.length]);
+    expect(
+      '69: a verse with no muṣḥaf text across a page break: one segment, its two shares joined by a space',
+      verses(bare).length === 1 && verses(bare)[0].arabic === `${verseA} ${verseB}`,
+      verses(bare),
+    );
+    const onePage = cut([a, { ...b, pageId: 'seg:p1' }], [verse()], ['v1', 0], ['v2', b.text.length]);
+    expect(
+      '69: …and across two paragraphs of one page, by a newline',
+      verses(onePage).length === 1 && verses(onePage)[0].arabic === `${verseA}\n${verseB}`,
+      verses(onePage),
+    );
+
+    // The guard (review of 8e22e5b): a verse with no muṣḥaf text over three
+    // blocks whose middle one is a matn. The middle share is read inside the
+    // ḥadīth, so the verse's segment is no longer the last when the third
+    // share comes; that share becomes a segment of its own rather than vanish.
+    const middle = text(words(5));
+    const third = text(words(3));
+    const threeBlocks = [
+      a,
+      blockOf('v2m', 2, 'hadith_matn', middle, { pageId: 'seg:p2' }),
+      blockOf('v3', 3, 'sharh', `${third} ${last}`, { pageId: 'seg:p3' }),
+    ];
+    const longVerse = verse({ endBlockId: 'v3', endOffset: third.length });
+    const overThree = cut(threeBlocks, [longVerse, matnEntity(threeBlocks[1], '')], ['v1', 0], ['v3', threeBlocks[2].text.length]);
+    expect('69: a verse over three blocks, a matn between: prose, verse, ḥadīth, verse, prose', JSON.stringify(types(overThree)) === '["prose","quran","hadith","quran","prose"]', types(overThree));
+    expect('69: …the third share’s words are in the card, and not offered', verses(overThree)[1]?.arabic === third && !reachesModel(overThree, third), overThree.segments);
+  }
+
+  // FOUND_ISSUES 70. Prose that runs from one block into the next is one
+  // span, and the two blocks' edge words stay two words.
+  {
+    const partA = text(words(7));
+    const partB = text(words(7));
+    const pageBreak = [
+      blockOf('p1', 1, 'sharh', partA, { pageId: 'seg:p1' }),
+      blockOf('p2', 2, 'sharh', partB, { pageId: 'seg:p2' }),
+    ];
+    const lastOfA = partA.split(' ').at(-1)!;
+    const firstOfB = partB.split(' ')[0];
+    const across = cut(pageBreak, [], ['p1', 0], ['p2', partB.length]);
+    expect('70: two blocks of prose: one span', across.prose.length === 1 && across.segments.length === 1, across);
+    expect(
+      '70: …across a page break, joined by a space: the edge words stay apart',
+      across.prose[0]?.text === `${partA} ${partB}` && reachesModel(across, lastOfA) && reachesModel(across, firstOfB),
+      across.prose,
+    );
+    expect('70: …and a sentence Shamela broke at the page stays one sentence', splitSentences(across.prose[0]?.text ?? '').length === 1, splitSentences(across.prose[0]?.text ?? ''));
+
+    const onePage = cut([pageBreak[0], { ...pageBreak[1], pageId: 'seg:p1' }], [], ['p1', 0], ['p2', partB.length]);
+    expect('70: two paragraphs of one page: joined by a newline', onePage.prose[0]?.text === `${partA}\n${partB}`, onePage.prose);
+    expect('70: …so the model gets them as two sentences', splitSentences(onePage.prose[0]?.text ?? '').length === 2, splitSentences(onePage.prose[0]?.text ?? ''));
+
+    // Prose on both sides of a matn is not joined across it.
+    const withMatn = cut(
+      [pageBreak[0], blockOf('pm', 2, 'hadith_matn', text(words(9))), { ...pageBreak[1], order: 3 }],
+      [],
+      ['p1', 0],
+      ['p2', partB.length],
+    );
+    expect('70: prose before and after a matn: two spans, not one', withMatn.prose.length === 2 && JSON.stringify(types(withMatn)) === '["prose","hadith","prose"]', withMatn);
+  }
+
+  // FOUND_ISSUES 73. A verified translation is of the whole ḥadīth: shown
+  // whole only when the selection holds it; a part keeps the selected words,
+  // with the whole English and the "quoted in part" note (the owner's answer,
+  // 2026-11-26).
+  {
+    const before = text(words(6));
+    const matn = text(words(12));
+    const after = text(words(6));
+    const blocks = [
+      blockOf('h1', 1, 'sharh', before),
+      blockOf('h2', 2, 'hadith_matn', matn, { hadithNumber: '7' }),
+      blockOf('h3', 3, 'sharh', after),
+    ];
+    const entity = matnEntity(blocks[1], 'seg#7');
+    const verifiedArabic = text(words(12));
+    const sunnah = () => ({ arabic: verifiedArabic, english: 'Synthetic verified English 7.' });
+    const dataset = () => ({ arabic: '', english: 'Synthetic dataset English 7.', source: 'hadith-json' as const });
+    const hadithOf = (segmented: SegmentedSelection) => segmented.segments.find((segment) => segment.type === 'hadith');
+    const midway = matn.indexOf(' ', matn.indexOf(' ') + 1) + 1;
+
+    const wholeMatn = hadithOf(cut(blocks, [entity], ['h2', 0], ['h2', matn.length], sunnah));
+    expect(
+      '73: the whole ḥadīth selected: the verified Arabic and English, no note',
+      wholeMatn?.arabic === verifiedArabic && wholeMatn?.english === 'Synthetic verified English 7.' && wholeMatn?.note === undefined,
+      wholeMatn,
+    );
+    const wholeAndMore = hadithOf(cut(blocks, [entity], ['h1', 2], ['h3', 3], sunnah));
+    expect('73: …and with commentary on both sides, still whole', wholeAndMore?.arabic === verifiedArabic && wholeAndMore?.note === undefined, wholeAndMore);
+
+    const fromMidway = cut(blocks, [entity], ['h2', midway], ['h3', after.length], sunnah);
+    const tailPart = hadithOf(fromMidway);
+    expect(
+      '73: part of it selected: the selected words, the whole English, "quoted in part"',
+      tailPart?.arabic === matn.slice(midway) &&
+        tailPart?.english === 'Synthetic verified English 7.' &&
+        tailPart?.note === HADITH_QUOTED_IN_PART &&
+        tailPart?.source === 'sunnah.com' &&
+        tailPart?.reference === 'seg#7',
+      tailPart,
+    );
+    expect('73: …and still not offered', !reachesModel(fromMidway, matn), fromMidway.prose);
+    const headPart = hadithOf(cut(blocks, [entity], ['h1', 0], ['h2', midway - 1], sunnah));
+    expect('73: a selection ending inside it: its opening words, "quoted in part"', headPart?.arabic === matn.slice(0, midway - 1) && headPart?.note === HADITH_QUOTED_IN_PART, headPart);
+
+    // The imported dataset gives English only; the Arabic was the book's
+    // words already, and a part now says so.
+    const datasetPart = hadithOf(cut(blocks, [entity], ['h2', midway], ['h2', matn.length], dataset));
+    expect(
+      '73: hadith-json, part of it: the selected words, its English, "quoted in part"',
+      datasetPart?.arabic === matn.slice(midway) && datasetPart?.source === 'hadith-json' && datasetPart?.note === HADITH_QUOTED_IN_PART,
+      datasetPart,
+    );
+    const datasetWhole = hadithOf(cut(blocks, [entity], ['h2', 0], ['h2', matn.length], dataset));
+    expect('73: hadith-json, all of it: the book’s matn, its English, no note', datasetWhole?.arabic === matn && datasetWhole?.note === undefined, datasetWhole);
+
+    // No verified English: the note is still the no-offline-source one.
+    const unverifiedPart = hadithOf(cut(blocks, [entity], ['h2', midway], ['h2', matn.length]));
+    expect('73: no verified English, part of it: the no-offline-source note', unverifiedPart?.note === HADITH_NO_OFFLINE_SOURCE && unverifiedPart?.english === '', unverifiedPart);
+
+    // What is not the ḥadīth's words does not count (review of d3f99d9): a
+    // matn printed with its entry number and a closing full stop, selected
+    // from its first word to its last, as a touch selection often is.
+    const printedMatn = `١٢ - ${matn}.`;
+    const numbered = [blocks[0], { ...blocks[1], text: printedMatn, normalized: printedMatn }, blocks[2]];
+    const numberedEntity = matnEntity(numbered[1], 'seg#7');
+    const wordsOnly = hadithOf(cut(numbered, [numberedEntity], ['h2', printedMatn.indexOf(matn)], ['h2', printedMatn.length - 1], sunnah));
+    expect(
+      '73: selected from its first word to its last, without the number and the full stop: whole',
+      wordsOnly?.arabic === verifiedArabic && wordsOnly?.note === undefined,
+      wordsOnly,
+    );
+    const lastWordShort = hadithOf(cut(numbered, [numberedEntity], ['h2', printedMatn.indexOf(matn)], ['h2', printedMatn.lastIndexOf(' ')], sunnah));
+    expect('73: …but without its last word: part of it', lastWordShort?.note === HADITH_QUOTED_IN_PART, lastWordShort);
+
+    // A span with no letter keeps its own bounds (review of bcc4da6): a
+    // selection of its last mark alone is part of it, never the whole.
+    const letterless = '١٢ - .';
+    const bare = [blocks[0], { ...blocks[1], text: letterless, normalized: letterless }, blocks[2]];
+    const markOnly = hadithOf(cut(bare, [matnEntity(bare[1], 'seg#7')], ['h2', letterless.length - 1], ['h2', letterless.length], sunnah));
+    expect('73: a span with no letter, its last mark selected: part, not the whole verified text', markOnly?.note === HADITH_QUOTED_IN_PART && markOnly?.arabic === '.', markOnly);
+  }
+}
+
+// ------------------------------------------- the apparatus stripper (lane B3)
+//
+// `stripApparatus` (retrieval/sharh.ts) feeds every matcher above. Its
+// formulae are the only real Arabic here besides the honorifics; the narrators
+// and the matn are made-up words, as everywhere in this check.
+{
+  const matn = text(words(10));
+  const tail = text(words(3));
+  const strip = (input: string) => stripApparatus(input);
+
+  // FOUND_ISSUES 74: the cut falls at a word's edge.
+  expect('74: «رواه» cuts the takhrīj tail', strip(`${matn} رواه ${tail}`) === matn, strip(`${matn} رواه ${tail}`));
+  for (const formula of ['ورواه', 'فرواه', 'وأخرجه', 'فأخرجه', 'ومتفق عليه']) {
+    expect(
+      `74: «${formula}» goes with its conjunction: no «${formula[0]}» is left on the matn`,
+      strip(`${matn} ${formula} ${tail}`) === matn,
+      strip(`${matn} ${formula} ${tail}`),
+    );
+  }
+  const insideWord = `${matn} ك${'رواه'} ${tail}`;
+  expect('74: a formula inside a longer word does not cut', strip(insideWord) === insideWord, strip(insideWord));
+
+  const chain = `عن ${text(words(3))} رضي الله عنه`;
+  expect('74: «أنه قال» still closes the isnād', strip(`${chain} أنه قال ${matn}`) === matn, strip(`${chain} أنه قال ${matn}`));
+  expect(
+    '74: «قالوا» is not «قال»: the isnād ends at the colon after it, leaving no «وا»',
+    strip(`${chain} أن قالوا: ${matn}`) === matn,
+    strip(`${chain} أن قالوا: ${matn}`),
+  );
+
+  // FOUND_ISSUES 75: vowelled text. Each made-up word takes a fatḥa on every
+  // letter; the formulae carry their usual ḥarakāt.
+  const vowel = (bare: string) => [...bare].map((char) => (char === ' ' ? char : `${char}َ`)).join('');
+  const vMatn = vowel(matn);
+  const vTail = vowel(tail);
+  expect('75: an unvowelled matn is left alone', strip(matn) === matn && strip(vMatn) === vMatn, [strip(matn), strip(vMatn)]);
+  for (const formula of ['رَوَاهُ', 'وَرَوَاهُ', 'أَخْرَجَهُ', 'فَأَخْرَجَهُ', 'مُتَّفَقٌ عَلَيْهِ', 'وَفِي رِوَايَةٍ']) {
+    expect(`75: a vowelled «${formula}» cuts the takhrīj tail`, strip(`${vMatn} ${formula} ${vTail}`) === vMatn, strip(`${vMatn} ${formula} ${vTail}`));
+  }
+  const vChain = `عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُمَا قَالَ:`;
+  expect('75: a vowelled isnād closes at «قَالَ:»', strip(`${vChain} ${vMatn}`) === vMatn, strip(`${vChain} ${vMatn}`));
+  expect(
+    '75: …and at «أَنَّهُ قَالَ»',
+    strip(`عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُ أَنَّهُ قَالَ ${vMatn}`) === vMatn,
+    strip(`عَنْ ${vowel(text(words(3)))} رَضِيَ اللَّهُ عَنْهُ أَنَّهُ قَالَ ${vMatn}`),
+  );
+
+  // The isnād's window counts letters, not code points: a chain under 160
+  // letters but, vowelled, over 160 code points still closes.
+  const longChain = vowel(text(words(20)));
+  // «عن » and the chain's letters and spaces, as the window counts them.
+  const longBare = 3 + longChain.replace(/َ/g, '').length;
+  expect(
+    '75: a long vowelled chain (over 160 code points, under 160 letters) is still stripped',
+    longChain.length > 160 && longBare < 160 && strip(`عَنْ ${longChain} رَضِيَ اللَّهُ عَنْهُ قَالَ: ${vMatn}`) === vMatn,
+    { codePoints: longChain.length, letters: longBare },
+  );
+
+  // Only marks are tolerated, no letter variant (review of 6e195fd): a
+  // variant-folded «أن رسول الله» matched the «ان» at the end of «كان» and cut
+  // the matn after the next «قال:». A narrative opening is not an isnād, bare
+  // or vowelled.
+  const name = text(words(2));
+  const narrative = `${name} كان رسول الله ${text(words(4))} قال: ${text(words(3))}`;
+  expect('75: «كان رسول الله … قال:» opens no isnād', strip(narrative) === narrative, strip(narrative));
+  const vNarrative = `${vowel(name)} كَانَ رَسُولُ اللَّهِ ${vowel(text(words(4)))} قَالَ: ${vowel(text(words(3)))}`;
+  expect('75: …nor vowelled', strip(vNarrative) === vNarrative, strip(vNarrative));
+  const bareAlif = `عن ${name} ان رسول الله قال: ${matn}`;
+  expect('75: a bare «ان رسول الله» is left as before 75 (no variant folding)', strip(bareAlif) === bareAlif, strip(bareAlif));
+
+  // A letter is one character and its marks, read one way only. A window
+  // that let `.` take a mark too had more ways to divide a vowelled run the
+  // longer it ran, and on 400 vowelled letters with no closer it ran past a
+  // minute in Node (measured while writing 75); this one is linear.
+  const noCloser = [...text(words(80))].map((char) => (char === ' ' ? char : `${char}َّ`)).join('');
+  const startedAt = performance.now();
+  const untouched = strip(`عَنْ ${noCloser}`);
+  const elapsed = performance.now() - startedAt;
+  expect('75: a long vowelled text with no closer is searched quickly, and left whole', elapsed < 250 && untouched === `عَنْ ${noCloser}`, { elapsed });
 }
 
 // ------------------------------------------------------------------- summary
