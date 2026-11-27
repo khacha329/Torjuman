@@ -931,10 +931,12 @@ async function mainGroup(scenario, { page, nextLoad }) {
     retranslated = newCards(before, after)[0]?.id ?? null;
   });
 
-  await scenario('retranslate-with', 'Retranslate ▾ → Gemini Flash Lite 3.5: the override\'s model in the URL and on the card; the old card deleted once the new one is stored', async (p) => {
+  // Flash Lite 3.5 until lane B2 made it the default: the override is now
+  // Flash 3.8, so it is still another model than the profile's.
+  await scenario('retranslate-with', 'Retranslate ▾ → Gemini Flash 3.8: the override\'s model in the URL and on the card; the old card deleted once the new one is stored', async (p) => {
     const before = await cardsOf(page);
     const menu = await retranslateMenu(page, retranslated);
-    await menu.getByRole('button', { name: /^Flash Lite 3\.5/ }).click();
+    await menu.getByRole('button', { name: /^Flash 3\.8/ }).click();
     const held = await p.request('the retranslation on another model');
     await held.respond(threeBlockAnswer('A third placeholder translation'));
     await untilCards(page, 'the card on the other model', (rows) => !rows.some((row) => row.id === retranslated) && newCards(before, rows).some((row) => row.status === 'complete'));
@@ -993,8 +995,10 @@ async function mainGroup(scenario, { page, nextLoad }) {
 
   // Until FOUND_ISSUES 41 a failed card was a cache hit, so selecting its
   // passage again showed the failure and sent nothing. Only a complete card is
-  // a hit now: the selection is requested again, and the failed card stays.
-  await scenario('error-cached', 'block 4 (the HTTP 400 one) selected again → Translate: a failed card is not a cache hit (FOUND_ISSUES 41), so a request, answered: a complete card beside the failed one', async (p) => {
+  // a hit now: the selection is requested again. Until lane B2 the failed card
+  // stayed beside the new one; since FOUND_ISSUES 57.1 a success removes the
+  // passage's failed cards that hold nothing paid for, as this one does not.
+  await scenario('error-cached', 'block 4 (the HTTP 400 one) selected again → Translate: a failed card is not a cache hit (FOUND_ISSUES 41), so a request, answered: a complete card, and the failed card, which held nothing paid for, removed (FOUND_ISSUES 57.1)', async (p) => {
     const before = await cardsOf(page);
     await select(page, ...wholeBlock(3));
     await railTranslate(page).click();
@@ -1013,7 +1017,11 @@ async function mainGroup(scenario, { page, nextLoad }) {
     await p.noRequest('no Claude key');
   });
 
-  await scenario('batch', 'the matn\'s margin held → Translate all… (the proposal) → Translate all: one held request per block of the range, in order; the third answered HTTP 500', async (p) => {
+  // The third block fails. It was answered HTTP 500 until lane B2, which
+  // retries a 500 and then falls back to the other models (busy-fallback,
+  // below): a failure that does neither, HTTP 400, keeps what this scenario
+  // and batch-again are about, one failed block in a batch.
+  await scenario('batch', 'the matn\'s margin held → Translate all… (the proposal) → Translate all: one held request per block of the range, in order; the third answered HTTP 400', async (p) => {
     await proposeBatch(page);
     await page.evaluate(() => window.scrollTo(0, 0));
     await p.state('the proposal');
@@ -1021,7 +1029,7 @@ async function mainGroup(scenario, { page, nextLoad }) {
     const answers = [
       answer([{ type: 'hadith', arabic: HADITH_QUOTE, english: '', reference: 'Riyad as-Salihin 1' }], { prompt: 610, candidates: 70 }),
       answer([prose(TEXTS[5], 'The first commentary: a test sentence, not from a real book.')], { prompt: 620, candidates: 80, cached: 0 }),
-      geminiError(500, 'Internal error encountered.', 'INTERNAL'),
+      geminiError(400, 'Request contains an invalid argument.', 'INVALID_ARGUMENT'),
     ];
     for (const [i, canned] of answers.entries()) {
       const held = await p.request(`block ${i + 1} of 3`);
@@ -1033,8 +1041,9 @@ async function mainGroup(scenario, { page, nextLoad }) {
 
   // Until FOUND_ISSUES 41 the failed card was served from the cache here too,
   // so the batch sent nothing. Now the two complete blocks come from the cache
-  // and only the HTTP 500 block (block 7) is requested again.
-  await scenario('batch-again', 'Translate all… → Translate all again: the two complete blocks from the cache; the HTTP 500 block requested again (FOUND_ISSUES 41) and answered', async (p) => {
+  // and only the failed block (block 7) is requested again; since lane B2 its
+  // success removes the failed card (FOUND_ISSUES 57.1).
+  await scenario('batch-again', 'Translate all… → Translate all again: the two complete blocks from the cache; the HTTP 400 block requested again (FOUND_ISSUES 41) and answered, its failed card removed (FOUND_ISSUES 57.1)', async (p) => {
     await page.getByRole('button', { name: 'Dismiss' }).last().click().catch(() => {});
     await proposeBatch(page);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -1042,6 +1051,31 @@ async function mainGroup(scenario, { page, nextLoad }) {
     const held = await p.request('block 7, the failed one');
     await held.respond(answer([prose(TEXTS[6], 'The second commentary: translated after the failure.')], { prompt: 630, candidates: 80, cached: 0 }));
     await within(20_000, 'the batch finishing', page.getByText(/^Finished — /).waitFor());
+  });
+
+  // Lane B2: a busy model, through the real reader. The default profile's
+  // model, Flash Lite 3.5, answers 503 "high demand" three times (the first
+  // try and its two retries, after waits of about 1 s and 2 s), and the
+  // fallback asks Flash 3.8, which answers. The card names Flash 3.8 and says
+  // why; it is stored under Flash Lite 3.5's cache key. The 503 body is
+  // Gemini's documented UNAVAILABLE error with the message the owner saw.
+  await scenario('busy-fallback', 'block 12 → Translate, answered HTTP 503 "high demand" three times on Flash Lite 3.5, then the fallback\'s request to Flash 3.8 answered: the card names Flash 3.8, with the note why', async (p) => {
+    const before = await cardsOf(page);
+    await select(page, ...wholeBlock(11));
+    await railTranslate(page).click();
+    const busy = geminiError(
+      503,
+      'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+      'UNAVAILABLE',
+    );
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const held = await p.request(`Flash Lite 3.5, try ${attempt} of 3`);
+      await held.respond(busy);
+    }
+    const held = await p.request('Flash 3.8, the fallback');
+    await held.respond(blockAnswer(11, 'The twelfth: answered by the fallback model.', { prompt: 640, candidates: 40 }));
+    await untilCards(page, 'the fallback card', (rows) => newCards(before, rows).some((row) => row.status === 'complete'));
+    await within(10_000, 'the note', page.getByText('Flash Lite 3.5 was busy, so Flash 3.8 answered.').first().waitFor());
   });
 }
 

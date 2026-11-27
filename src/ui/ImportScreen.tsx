@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/AppContext';
-import { navigate } from '../app/router';
+import { hrefFor, navigate } from '../app/router';
 import { createBookFromPreview, fetchBookPreview, type BookPreview } from '../ingest/importer';
 import { parseBookInput } from '../shamela/urls';
 import { PROXY_AVAILABLE } from '../platform/http/WebHttpClient';
-import { Button, Field, inputClass, LinkButton, Spinner, TopBar } from './kit';
+import { Button, Field, inputClass, LinkButton, ProgressBar, Spinner, TopBar } from './kit';
 import { useCrawlProgress } from './useCrawlProgress';
 import { percentOf } from '../lib/format';
 
@@ -128,7 +128,11 @@ export function ImportScreen() {
                   the <code className="rounded bg-amber-100 px-1">PROXY_URL</code> repository
                   variable, which makes importing work here; or import on a desktop with{' '}
                   <code className="rounded bg-amber-100 px-1">npm run dev</code> and move the
-                  book across with <strong>Library transfer</strong> in Settings. Everything
+                  book across with{' '}
+                  <a className="underline" href={hrefFor({ name: 'settings', tab: 'data' })}>
+                    <strong>Library transfer</strong> in Settings
+                  </a>
+                  . Everything
                   else here works offline.
                 </div>
               )}
@@ -303,9 +307,7 @@ function CrawlPanel({ bookId }: { bookId: string }) {
           : `Fetching page ${progress.currentPage.toLocaleString()} of ${progress.totalPages.toLocaleString()} — about ${minutesLeft} minutes left.`}
       </p>
 
-      <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-rule">
-        <div className="h-full bg-accent transition-all" style={{ width: `${percent}%` }} />
-      </div>
+      <ProgressBar percent={percent} className="mb-2" />
       <p className="mb-4 text-xs text-muted">
         {percent}% — {progress.fetchedPages.toLocaleString()} pages,{' '}
         {blockCount.toLocaleString()} paragraphs parsed

@@ -23,6 +23,7 @@ export function GlossaryTable() {
   const [english, setEnglish] = useState('');
   const [note, setNote] = useState('');
   const [status, setStatus] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const exportJson = () => {
@@ -108,22 +109,40 @@ export function GlossaryTable() {
     await refreshGlossary();
   };
 
+  // The search folds Arabic as the import's matching does (normalize: ة/ه,
+  // ى/ي, hamza seats, ḥarakāt), so "الاخلاص" finds الإخلاص; English and
+  // notes ignore case. It only narrows the table: the prompt, the hash and
+  // the token estimate are always the whole glossary.
+  const needle = query.trim();
+  const arabicNeedle = normalize(needle);
+  const latinNeedle = needle.toLowerCase();
+  const shown =
+    needle === ''
+      ? glossary
+      : glossary.filter(
+          (entry) =>
+            normalize(entry.arabic).includes(arabicNeedle) ||
+            entry.english.toLowerCase().includes(latinNeedle) ||
+            (entry.note ?? '').toLowerCase().includes(latinNeedle),
+        );
+
   return (
     <SettingsSection>
+      {/* The heading comes first and alone, because a folded section shows
+          only its first child (ui/kit/SettingsSection.tsx): folded, the
+          glossary is its name and its term count. */}
+      <h2 className="text-base font-semibold">
+        Glossary{' '}
+        <span className="text-sm font-normal text-muted">
+          ({glossary.length} {glossary.length === 1 ? 'term' : 'terms'})
+        </span>
+      </h2>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">
-            Glossary{' '}
-            <span className="text-sm font-normal text-muted">
-              ({glossary.length} {glossary.length === 1 ? 'term' : 'terms'})
-            </span>
-          </h2>
-          <p className="mt-0.5 mb-4 max-w-xl text-sm text-muted">
-            Fixed renderings the model must follow. These are appended to the system
-            prompt, so a term is rendered the same way in every translation call — which is
-            what keeps terminology consistent across a multi-year study circle.
-          </p>
-        </div>
+        <p className="mt-0.5 mb-4 max-w-xl text-sm text-muted">
+          Fixed renderings the model must follow. These are appended to the system
+          prompt, so a term is rendered the same way in every translation call — which is
+          what keeps terminology consistent across a multi-year study circle.
+        </p>
         <div className="flex shrink-0 gap-2">
           <Button onClick={() => fileRef.current?.click()}>Import JSON</Button>
           <Button onClick={exportJson} disabled={glossary.length === 0}>
@@ -171,6 +190,23 @@ export function GlossaryTable() {
         re-billed every time.
       </p>
 
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          dir="auto"
+          className={`${inputClass} max-w-sm flex-1`}
+          placeholder="Search Arabic, English or notes"
+          aria-label="Search the glossary"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {needle !== '' && (
+          <span className="text-xs text-muted">
+            {shown.length} of {glossary.length}
+          </span>
+        )}
+      </div>
+
       <div className="mb-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -189,7 +225,14 @@ export function GlossaryTable() {
                 </td>
               </tr>
             )}
-            {glossary.map((entry) => (
+            {glossary.length > 0 && shown.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-4 text-center text-muted">
+                  No term matches “{needle}”.
+                </td>
+              </tr>
+            )}
+            {shown.map((entry) => (
               <tr key={entry.id} className="border-b border-rule/50">
                 {/* Every glossary row is Arabic beside English by definition,
                     so both columns need isolating. */}

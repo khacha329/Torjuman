@@ -18,7 +18,7 @@ import { isOnlineNow } from '../../app/useOnline';
 const NO_REFERENCE_WORKS =
   'Nothing in your library matches this phrase, and external sources are unavailable offline. ' +
   'Importing a commentary — Fatḥ al-Bārī, or an-Nawawī’s Sharḥ Ṣaḥīḥ Muslim — as a reference work ' +
-  'would give this something to search. Settings → Reference works.';
+  'would give this something to search. Settings → Library → Reference works.';
 import { costOf } from '../../translation/models';
 import type { SelectionAnchor } from './selection';
 
@@ -157,6 +157,8 @@ export function useExplanations(bookId: string, blocks: Block[]) {
           status: 'error',
           error: error.message,
           errorKind: error.kind,
+          // The research notes written before a failure (FOUND_ISSUES 54).
+          ...(error.raw ? { rawResponse: error.raw } : {}),
         };
         await storage.putExplanationCard(failed);
         upsert(failed);

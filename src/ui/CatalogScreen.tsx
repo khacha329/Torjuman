@@ -102,11 +102,15 @@ export function CatalogScreen({
 
         {!PROXY_AVAILABLE && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            {/* "Settings → Data → Library transfer" below names its tab but is
+                not a link: this screen is also the first-run gate (App.tsx),
+                where a link would change the address and nothing else until
+                the gate was dismissed. */}
             <strong>Importing does not work in this build.</strong> shamela.ws sends no CORS
             headers, so a browser needs a proxy in front of it and this build was made
             without one. The list below is still the useful half: import these on a desktop
             with <code className="rounded bg-amber-100 px-1">npm run dev</code>, export each
-            book from Settings → Library transfer, and load the files here. To import
+            book from Settings → Data → Library transfer, and load the files here. To import
             directly instead, deploy{' '}
             <code className="rounded bg-amber-100 px-1">proxy/worker.js</code> and set the
             repository variable <code className="rounded bg-amber-100 px-1">PROXY_URL</code>.

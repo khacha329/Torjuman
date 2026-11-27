@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { TranslatedSegment, TranslationUsage } from '../../types';
 import {
   TranslationError,
+  type KeyCheck,
   type ModelOption,
   type TranslationProvider,
   type TranslationRequest,
@@ -52,35 +53,43 @@ export class AnthropicProvider implements TranslationProvider {
   readonly keyPlaceholder = 'sk-ant-…';
   readonly isFree = false;
   readonly fitFor = 'For passages you intend to teach from.';
+  /** The research pass offers the web-search tool (`research`). */
+  readonly canSearch = true;
 
   private client(key: string): Anthropic {
     return anthropicClient(key);
   }
 
-  async validateKey(key: string): Promise<boolean> {
-    if (!key.trim()) return false;
+  // No model list is read here (lane B2's model marking is Gemini's), so
+  // `unusableModels` is always empty.
+  async validateKey(key: string): Promise<KeyCheck> {
+    const verdict = (valid: boolean): KeyCheck => ({ valid, unusableModels: [] });
+    if (!key.trim()) return verdict(false);
     try {
       await this.client(key).messages.create({
         model: ANTHROPIC_KEY_CHECK_MODEL,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'hi' }],
       });
-      return true;
+      return verdict(true);
     } catch (error) {
-      if (error instanceof Anthropic.AuthenticationError) return false;
-      if (error instanceof Anthropic.PermissionDeniedError) return false;
+      if (error instanceof Anthropic.AuthenticationError) return verdict(false);
+      if (error instanceof Anthropic.PermissionDeniedError) return verdict(false);
       // A rate limit or a 400 still proves the key authenticated. An error
       // with no status proves nothing: the SDK's APIConnectionError is an
       // APIError without one, so with no network the key used to test as good
-      // (FOUND_ISSUES 12). It is thrown instead, and the key screens show
-      // "Could not reach Claude: …" rather than a verdict on the key.
+      // (FOUND_ISSUES 12). Nor does a server error (500, 529 overloaded): the
+      // request may never have reached the key check, and it passed as good
+      // until FOUND_ISSUES 58. Both are thrown instead, and the key screens
+      // say the key was not checked rather than give a verdict on it.
       if (
         error instanceof Anthropic.APIError &&
         error.status !== undefined &&
+        error.status < 500 &&
         error.status !== 401 &&
         error.status !== 403
       ) {
-        return true;
+        return verdict(true);
       }
       throw toTranslationError(error);
     }
@@ -101,15 +110,23 @@ export class AnthropicProvider implements TranslationProvider {
     // one pass, but merging them is a separate change from the model upgrade.
     let research: string | null = null;
     let searched = false;
-    if (request.allowExternalLookup) {
-      ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
-    }
+    try {
+      if (request.allowExternalLookup) {
+        ({ notes: research, searched } = await this.research(client, request, usage, onChunk));
+      }
 
-    const result = await this.structure(client, request, usage, research, onChunk);
-    // Reported only when a search ran: the research pass may answer without
-    // calling the tool, and the card's "web search" must not claim one
-    // (FOUND_ISSUES 43).
-    return searched ? { ...result, searched: true } : result;
+      const result = await this.structure(client, request, usage, research, onChunk);
+      // Reported only when a search ran: the research pass may answer without
+      // calling the tool, and the card's "web search" must not claim one
+      // (FOUND_ISSUES 43).
+      return searched ? { ...result, searched: true } : result;
+    } catch (error) {
+      // Tokens billed before the failure — a finished research pass, a
+      // truncated first attempt — go with the error, so the failed card and
+      // the session totals still show what was paid (FOUND_ISSUES 64). The
+      // error carried no usage, so a failure after research lost its cost.
+      throw withUsage(toTranslationError(error), request.model, usage);
+    }
   }
 
   /** Pass 1: web search enabled, tool_choice auto, free-form prose. Not parsed. */
@@ -210,6 +227,15 @@ export class AnthropicProvider implements TranslationProvider {
     const ceiling = outputCeilingFor(request.model);
     let budget = maxTokensFor(request.targetText, 4, request.model);
 
+    // Every paid word a failure could otherwise lose (FOUND_ISSUES 63): the
+    // research notes, an earlier attempt cut off at max_tokens (its tool
+    // arguments were reset before the retry), and this attempt's tool
+    // arguments and text — text a model writes instead of calling the tool
+    // was not collected while streaming, so a stream that then failed lost it.
+    let earlier = '';
+    const paidSoFar = (...current: string[]) =>
+      [research ?? '', earlier, ...current].reduce(joinNotes, '');
+
     for (let attempt = 0; attempt < 2; attempt++) {
       const stream = client.messages.stream({
         model: request.model,
@@ -239,14 +265,20 @@ export class AnthropicProvider implements TranslationProvider {
         partial += delta;
         onChunk?.(partial);
       });
+      // Collected only, never shown as progress: the progress line stays the
+      // tool's arguments, as before.
+      let streamedText = '';
+      stream.on('text', (delta) => {
+        streamedText += delta;
+      });
 
       let message: Anthropic.Message;
       try {
         message = await stream.finalMessage();
       } catch (error) {
         // As in the research pass (FOUND_ISSUES 15.2): the research notes and
-        // the tool arguments streamed so far are kept as raw.
-        throw withRaw(toTranslationError(error), joinNotes(research ?? '', partial));
+        // what this pass streamed so far are kept as raw.
+        throw withRaw(toTranslationError(error), paidSoFar(partial, streamedText));
       }
 
       addUsage(usage, message.usage);
@@ -258,6 +290,7 @@ export class AnthropicProvider implements TranslationProvider {
             (message.stop_details && 'explanation' in message.stop_details
               ? ` ${message.stop_details.explanation}`
               : ''),
+          { raw: paidSoFar(partial, textOf(message)) || null },
         );
       }
 
@@ -267,12 +300,13 @@ export class AnthropicProvider implements TranslationProvider {
       if (message.stop_reason === 'max_tokens') {
         if (attempt === 0 && budget < ceiling) {
           budget = Math.min(budget * 2, ceiling);
+          earlier = joinNotes(earlier, partial || textOf(message));
           continue;
         }
         throw new TranslationError(
           'truncated',
           `The answer was cut off at the ${budget.toLocaleString()}-token limit, even after retrying with a larger budget. Try translating a shorter passage.`,
-          { raw: partial },
+          { raw: paidSoFar(partial || textOf(message)) },
         );
       }
 
@@ -298,7 +332,7 @@ export class AnthropicProvider implements TranslationProvider {
       throw new TranslationError(
         'parse',
         `Claude returned no structured output: ${parsed.error}`,
-        { raw: text || partial },
+        { raw: paidSoFar(text || partial) },
       );
     }
 
@@ -319,4 +353,15 @@ function segmentsFromToolUse(message: Anthropic.Message): TranslatedSegment[] | 
 
 function emptyUsage(): TranslationUsage {
   return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+}
+
+/**
+ * The error with what was billed before it, and that usage's cost, unless
+ * nothing was. A copy of the running total: the caller's object is not kept.
+ */
+function withUsage(error: TranslationError, model: string, usage: TranslationUsage): TranslationError {
+  const billed =
+    usage.inputTokens + usage.outputTokens + usage.cacheReadTokens + usage.cacheWriteTokens > 0;
+  if (!billed || error.usage) return error;
+  return error.with({ usage: { ...usage }, costUsd: costOf(model, usage) });
 }

@@ -326,6 +326,7 @@ console.error = (...parts: unknown[]) => {
 // ------------------------------------------------------------ the modules
 
 const registry = await import('../src/translation/providers/registry');
+const { translateWithFallback, fallbackChain } = await import('../src/translation/providers/fallback');
 const { explainPhrase, explainModelFor } = await import('../src/translation/explain');
 const { glossWord } = await import('../src/translation/gloss');
 const { compileAyah, compileCacheKey } = await import('../src/qul/compile');
@@ -380,6 +381,12 @@ function describeError(error: unknown): Record<string, unknown> {
   // recorded only when set, so the errors that carry none read as before.
   const stopReason = (error as unknown as Record<string, unknown>).stopReason;
   if (stopReason !== undefined && stopReason !== null) record.stopReason = plain(stopReason);
+  // Lane B2's fields (TranslationError.condition, usage, costUsd,
+  // answeredBy), recorded only when set, as stopReason is.
+  for (const field of ['condition', 'usage', 'costUsd', 'answeredBy'] as const) {
+    const value = (error as unknown as Record<string, unknown>)[field];
+    if (value !== undefined && value !== null) record[field] = plain(value);
+  }
   // A SyntaxError's message is the JavaScript engine's wording, not the app's,
   // and it differs between Node versions: for the HTML body, `Unexpected token
   // '<', … is not valid JSON` in Node 20+, `Unexpected token < in JSON at
@@ -618,8 +625,12 @@ const ANTHROPIC_ERROR_TYPES: Record<number, string> = {
   400: 'invalid_request_error',
   401: 'authentication_error',
   403: 'permission_error',
+  // A model the key is not offered (lane B2 steps over it in the fallback).
+  404: 'not_found_error',
   429: 'rate_limit_error',
   500: 'api_error',
+  // The overloaded answer's type and status, as the API documents them.
+  529: 'overloaded_error',
 };
 
 /**
@@ -848,6 +859,9 @@ await scenario('anthropic.validateKey.403', [anthropicError(403)], validateAnthr
 await scenario('anthropic.validateKey.429', times(3, () => anthropicError(429, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
 await scenario('anthropic.validateKey.400', [anthropicError(400)], validateAnthropic(ANTHROPIC_KEY));
 await scenario('anthropic.validateKey.connection-failure', times(3, () => CONNECTION_FAILURE), validateAnthropic(ANTHROPIC_KEY));
+// FOUND_ISSUES 58: a server error is no verdict on the key (three answers: the SDK retries twice).
+await scenario('anthropic.validateKey.500', times(3, () => anthropicError(500, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
+await scenario('anthropic.validateKey.529', times(3, () => anthropicError(529, RETRY_MS)), validateAnthropic(ANTHROPIC_KEY));
 
 // --------------------------------------------------- Gemini: translate
 
@@ -903,9 +917,10 @@ await scenario(
   [geminiError(400, 'models/gemini-q is not found for API version v1beta.', 'NOT_FOUND')],
   translateGemini(geminiRequest()),
 );
+// Three answers since lane B2: a 500 is retried twice before it is mapped.
 await scenario(
   'gemini.translate.500-non-json',
-  [{ status: 500, headers: { 'content-type': 'text/html' }, body: '<html>Synthetic 500</html>' }],
+  times(3, () => ({ status: 500, headers: { 'content-type': 'text/html' }, body: '<html>Synthetic 500</html>' })),
   translateGemini(geminiRequest()),
 );
 await scenario('gemini.translate.fetch-throws', [CONNECTION_FAILURE], translateGemini(geminiRequest()));
@@ -1382,6 +1397,11 @@ await scenario(
   [gemini429('Mon, 16 Nov 2026 12:00:30 GMT'), gemini429(), gemini429('3'), geminiOk()],
   translateGemini(geminiRequest()),
 );
+// FOUND_ISSUES 67: a wait up to 60 s is still waited for; a longer one, as a
+// number or as a date far ahead, fails at once with the wait it asked for.
+await scenario('gemini.translate.429-retry-after-30-then-200', [gemini429('30'), geminiOk()], translateGemini(geminiRequest()));
+await scenario('gemini.translate.429-retry-after-120', [gemini429('120')], translateGemini(geminiRequest()));
+await scenario('gemini.translate.429-retry-after-far-date', [gemini429('Mon, 16 Nov 2026 18:00:00 GMT')], translateGemini(geminiRequest()));
 await scenario('gemini.translate.403', [geminiError(403, 'Permission denied.', 'PERMISSION_DENIED')], translateGemini(geminiRequest()));
 await scenario(
   'gemini.translate.prohibited-content',
@@ -1606,6 +1626,209 @@ await scenario(
   [{ status: 200, headers: { 'content-type': 'text/html' }, body: '<html>Synthetic portal page</html>' }],
   compile('gemini', GEMINI_MODEL),
 );
+
+// ------------------------------ lane B2: busy models, retired models, fallback
+//
+// The owner's three cases (DECISIONS, lane B2): Gemini's 503 "high demand",
+// Claude's 529, and a model closed to new keys. The 503 body is Gemini's
+// documented UNAVAILABLE error with the message the owner saw; the 529 is
+// Anthropic's documented overloaded_error; the retired-model body is the
+// wording the API gave for earlier retired models (404 NOT_FOUND, "no longer
+// available to new users"). None was captured from the services for this
+// check, as with every canned answer here (see the header).
+
+const HIGH_DEMAND =
+  'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.';
+const gemini503 = () => geminiError(503, HIGH_DEMAND, 'UNAVAILABLE');
+const geminiRetired = (model: string) =>
+  geminiError(
+    404,
+    `This model models/${model} is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.`,
+    'NOT_FOUND',
+  );
+/** The SDK's two retries of a 529 and the first try, each with a short retry-after-ms. */
+const claude529 = () => times(3, () => anthropicError(529, RETRY_MS));
+const FLASH_LITE_3_5 = models.GEMINI_3_5_FLASH_LITE;
+const FLASH_3_8 = models.GEMINI_3_8_FLASH;
+const FLASH_3_6 = models.GEMINI_3_6_FLASH;
+const HAIKU = models.CLAUDE_HAIKU_5_5;
+
+// The Gemini provider alone: the retries before any fallback.
+await scenario('gemini.translate.503-then-success', [gemini503(), geminiOk()], translateGemini(geminiRequest()));
+await scenario('gemini.translate.500-then-success', [geminiError(500, 'Internal error encountered.', 'INTERNAL'), geminiOk()], translateGemini(geminiRequest()));
+await scenario('gemini.translate.503-three-times', times(3, gemini503), translateGemini(geminiRequest()));
+await scenario('gemini.translate.retired-for-new-users', [geminiRetired('gemini-2.5-flash')], translateGemini(geminiRequest({ model: 'gemini-2.5-flash' })));
+// The same words with a 403: still the model, never "your key was rejected".
+await scenario(
+  'gemini.translate.retired-403',
+  [geminiError(403, 'This model models/gemini-2.5-pro is no longer available to new users.', 'PERMISSION_DENIED')],
+  translateGemini(geminiRequest({ model: 'gemini-2.5-pro' })),
+);
+await scenario('gemini.translate.404-unknown-model', [geminiError(404, 'models/gemini-0-q is not found for API version v1beta, or is not supported for generateContent.', 'NOT_FOUND')], translateGemini(geminiRequest({ model: 'gemini-0-q' })));
+
+// Test key: models.list in pages, the configured models it lacks.
+const modelsPage = (names: [string, string[]?][], nextPageToken?: string): Canned => ({
+  status: 200,
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({
+    models: names.map(([name, methods]) => ({
+      name: `models/${name}`,
+      ...(methods ? { supportedGenerationMethods: methods } : {}),
+    })),
+    ...(nextPageToken ? { nextPageToken } : {}),
+  }),
+});
+const CONFIGURED = [...models.GEMINI_MODELS.map((option) => option.id), 'gemini-2.5-flash', FLASH_LITE_3_5];
+const validateGeminiModels = () => () => gemini.validateKey(GEMINI_KEY, CONFIGURED);
+await scenario(
+  'gemini.validateKey.models-list-two-pages',
+  [
+    modelsPage([[FLASH_3_8, ['generateContent', 'countTokens']], [FLASH_LITE_3_5]], 'q-page-2'),
+    // Listed, but not for generateContent: an embedding model of the same name would not do.
+    modelsPage([[models.GEMINI_3_1_FLASH_LITE, ['generateContent']], [FLASH_3_6, ['embedContent']]]),
+  ],
+  validateGeminiModels(),
+);
+await scenario(
+  'gemini.validateKey.models-list-second-page-fails',
+  [modelsPage([[FLASH_3_8]], 'q-page-2'), gemini503()],
+  validateGeminiModels(),
+);
+await scenario('gemini.validateKey.503', [gemini503()], validateGeminiModels());
+
+// The chain. keyFor answers from the two fake keys; `cross` is the Settings switch.
+const translateChain =
+  (providerId: 'gemini' | 'anthropic', model: string, cross = true, keys: ProviderId[] = ['gemini', 'anthropic']) =>
+  (context: Context) =>
+    translateWithFallback({
+      request: translationRequest({ model }),
+      providerId,
+      keyFor: (id) => (keys.includes(id) ? (id === 'gemini' ? GEMINI_KEY : ANTHROPIC_KEY) : ''),
+      crossProvider: cross,
+      onChunk: context.progress,
+    });
+const allBusyGemini = () => times(4 * 3, gemini503);
+
+await scenario('fallback.gemini.busy-then-flash-3.8', [...times(3, gemini503), geminiOk()], translateChain('gemini', FLASH_LITE_3_5));
+await scenario(
+  'fallback.gemini.retired-model-stepped-over',
+  [...times(3, gemini503), geminiRetired(FLASH_3_8), geminiOk()],
+  translateChain('gemini', FLASH_LITE_3_5),
+);
+await scenario('fallback.gemini.all-busy-then-haiku', [...allBusyGemini(), emitTool(HAIKU)], translateChain('gemini', FLASH_LITE_3_5));
+await scenario('fallback.gemini.all-busy-switch-off', allBusyGemini(), translateChain('gemini', FLASH_LITE_3_5, false));
+await scenario('fallback.gemini.all-busy-no-claude-key', allBusyGemini(), translateChain('gemini', FLASH_LITE_3_5, true, ['gemini']));
+await scenario('fallback.gemini.all-busy-haiku-529', [...allBusyGemini(), ...claude529()], translateChain('gemini', FLASH_LITE_3_5));
+// A Gemini profile with web lookup on: Haiku gets the plain request, one
+// structuring pass and no web-search tool (the owner's answer to the review).
+await scenario('fallback.gemini.all-busy-then-haiku-without-lookup', [...allBusyGemini(), emitTool(HAIKU)], (context) =>
+  translateWithFallback({
+    request: translationRequest({ model: FLASH_LITE_3_5, allowExternalLookup: true }),
+    providerId: 'gemini',
+    keyFor: (id) => (id === 'gemini' ? GEMINI_KEY : ANTHROPIC_KEY),
+    crossProvider: true,
+    onChunk: context.progress,
+  }),
+);
+// A fallback model that answers with an error of its own: the error names it.
+await scenario(
+  'fallback.gemini.fallback-model-fails',
+  [...times(3, gemini503), geminiError(400, 'Request contains an invalid argument.', 'INVALID_ARGUMENT')],
+  translateChain('gemini', FLASH_LITE_3_5),
+);
+// Not an overload: no fallback at all.
+await scenario('fallback.gemini.401-no-fallback', [geminiError(401, 'Request had invalid authentication credentials.', 'UNAUTHENTICATED')], translateChain('gemini', FLASH_LITE_3_5));
+await scenario('fallback.gemini.retired-profile-model-no-fallback', [geminiRetired('gemini-2.5-flash')], translateChain('gemini', 'gemini-2.5-flash'));
+
+await scenario('fallback.anthropic.529-then-haiku', [...claude529(), emitTool(HAIKU)], translateChain('anthropic', SONNET));
+await scenario(
+  'fallback.anthropic.529-everywhere-then-gemini',
+  [...claude529(), ...claude529(), geminiOk()],
+  translateChain('anthropic', SONNET),
+);
+await scenario('fallback.anthropic.haiku-529-switch-off', claude529(), translateChain('anthropic', HAIKU, false));
+// A cheaper Claude model the key is not offered (404, which the SDK does not
+// retry) is stepped over, as a Gemini one is: Opus busy, Sonnet 404, Haiku answers.
+await scenario(
+  'fallback.anthropic.404-stepped-over',
+  [...claude529(), anthropicError(404), emitTool(HAIKU)],
+  translateChain('anthropic', OPUS),
+);
+// An overload part-way through a paid reply: kept on the error, no fallback.
+await scenario(
+  'fallback.anthropic.overload-mid-reply-keeps-paid-text',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [{ type: 'tool_use', id: 'toolu_q_emit', name: 'emit_translation', deltas: pieces(SEGMENTS_JSON, 40) }],
+      stop: 'tool_use',
+      errorAfterEvents: 4,
+    }),
+  ],
+  translateChain('anthropic', SONNET),
+);
+
+// FOUND_ISSUES 64: the research pass finishes and is billed, then the
+// structuring pass is overloaded. The error carries the research pass's usage
+// and cost, and the notes as raw; with paid output on it, no fallback runs.
+const researchThen529 = () => [
+  anthropicStream({ model: SONNET, blocks: [{ type: 'text', deltas: ['Notes on ', 'the example.'] }], stop: 'end_turn' }),
+  ...claude529(),
+];
+await scenario('anthropic.translate.research-then-529', researchThen529(), translateAnthropic(translationRequest({ allowExternalLookup: true })));
+await scenario('fallback.anthropic.research-then-529-no-fallback', researchThen529(), (context) =>
+  translateWithFallback({
+    request: translationRequest({ model: SONNET, allowExternalLookup: true }),
+    providerId: 'anthropic',
+    keyFor: (id) => (id === 'gemini' ? GEMINI_KEY : ANTHROPIC_KEY),
+    crossProvider: true,
+    onChunk: context.progress,
+  }),
+);
+
+// FOUND_ISSUES 63: what the structuring pass keeps as raw. Text written
+// instead of the tool call, then the stream fails: the text is kept. A
+// refusal after a research pass: the notes are kept.
+await scenario(
+  'anthropic.translate.text-then-stream-error',
+  [
+    anthropicStream({
+      model: SONNET,
+      blocks: [{ type: 'text', deltas: ['[{"type":"prose",', '"english":"And this'] }],
+      stop: 'end_turn',
+      // message_start, content_block_start, two text deltas.
+      errorAfterEvents: 4,
+    }),
+  ],
+  translateAnthropic(translationRequest()),
+);
+await scenario(
+  'anthropic.translate.research-then-refusal',
+  [
+    anthropicStream({ model: SONNET, blocks: [{ type: 'text', deltas: ['Notes on ', 'the example.'] }], stop: 'end_turn' }),
+    anthropicStream({ model: SONNET, blocks: [], stop: 'refusal' }),
+  ],
+  translateAnthropic(translationRequest({ allowExternalLookup: true })),
+);
+
+values('values.fallbackChain', () => {
+  const both = { crossProvider: true, hasKey: () => true };
+  const own = { crossProvider: false, hasKey: () => true };
+  const noOther = { crossProvider: true, hasKey: (id: string) => id !== 'anthropic' && id !== 'gemini' };
+  const show = (steps: { providerId: string; model: string }[]) => steps.map((step) => `${step.providerId}:${step.model}`);
+  return {
+    geminiDefault: show(fallbackChain('gemini', FLASH_LITE_3_5, both)),
+    gemini38: show(fallbackChain('gemini', FLASH_3_8, both)),
+    geminiSuperseded: show(fallbackChain('gemini', 'gemini-3.7-flash', both)),
+    geminiSwitchOff: show(fallbackChain('gemini', FLASH_LITE_3_5, own)),
+    geminiNoClaudeKey: show(fallbackChain('gemini', FLASH_LITE_3_5, noOther)),
+    fable: show(fallbackChain('anthropic', models.CLAUDE_FABLE_5_1, both)),
+    sonnet: show(fallbackChain('anthropic', SONNET, both)),
+    haiku: show(fallbackChain('anthropic', HAIKU, both)),
+    supersededClaude: show(fallbackChain('anthropic', 'claude-sonnet-5', both)),
+    haikuSwitchOff: show(fallbackChain('anthropic', HAIKU, own)),
+  };
+});
 
 // --------------------------------------------------------- pure values
 

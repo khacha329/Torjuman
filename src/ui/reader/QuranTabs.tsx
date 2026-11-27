@@ -227,7 +227,7 @@ export function MissingResource({
     <div className="rounded-md border border-dashed border-rule p-3 text-[12px]">
       <p className="mb-2 text-muted">
         No {what} is installed. Download one from QUL in a browser and import it in
-        Settings → Reference works.
+        Settings → Library → Reference works.
       </p>
       <button className="text-accent underline" onClick={onOpenSettings}>
         Open Settings

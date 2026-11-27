@@ -58,10 +58,10 @@ export function textOf(message: Anthropic.Message): string {
  */
 export function withRaw(error: TranslationError, raw: string): TranslationError {
   if (error.raw || raw === '') return error;
-  return new TranslationError(error.kind, error.message, {
-    retryAfterSeconds: error.retryAfterSeconds,
-    raw,
-  });
+  // Every other field carried over, the condition included: an overload
+  // mid-reply stays an overload, and its raw text keeps the fallback from
+  // discarding what was paid for (providers/fallback.ts).
+  return error.with({ raw });
 }
 
 /**
@@ -137,27 +137,47 @@ export function toTranslationError(error: unknown): TranslationError {
     return new TranslationError(
       'network',
       'Could not reach api.anthropic.com. Check the network connection.',
+      { condition: 'unreachable' },
     );
   }
   if (error instanceof Anthropic.BadRequestError) {
     return new TranslationError('api', `Anthropic rejected the request: ${error.message}`);
   }
   if (error instanceof Anthropic.APIError) {
-    // An error event inside a stream arrives as an APIError with no status,
-    // whose message is the event's JSON: it read "Anthropic API error
-    // undefined: {…}" (FOUND_ISSUES 14.3). The event's own type and message
-    // are read instead.
-    if (error.status === undefined) {
-      const inner = (error.error as { error?: { type?: string; message?: string } } | undefined)
-        ?.error;
-      if (inner?.message) {
-        return new TranslationError(
-          'api',
-          `Anthropic reported an error mid-reply: ${inner.message}${inner.type ? ` (${inner.type})` : ''}.`,
-        );
-      }
+    // The body's own error, `{ type, message }`. The SDK's message is the
+    // status and then that body as JSON ("500 {"type":"error",…}"), so
+    // putting it after "Anthropic API error 500:" said the status twice and
+    // showed the JSON (FOUND_ISSUES 59). An error event inside a stream
+    // arrives with no status and the same shape: it read "Anthropic API
+    // error undefined: {…}" (FOUND_ISSUES 14.3).
+    const inner = (error.error as { error?: { type?: string; message?: string } } | undefined)
+      ?.error;
+    const said = inner?.message ? `${inner.message}${inner.type ? ` (${inner.type})` : ''}` : null;
+    if (error.status === undefined && said !== null) {
+      return new TranslationError(
+        'api',
+        `Anthropic reported an error mid-reply: ${said}.`,
+        // An overload can come as a stream event as well as a 529.
+        inner?.type === 'overloaded_error' ? { condition: 'overloaded' } : {},
+      );
     }
-    return new TranslationError('api', `Anthropic API error ${error.status}: ${error.message}`);
+    // 529 (overloaded_error) and 500 (api_error), after the SDK's own two
+    // retries: Claude is failing for everyone, not for this key or request.
+    // The one Claude condition the fallback starts on (lane B2), as Gemini's
+    // 503 and 500 are on that side.
+    const overloaded = error.status === 529 || error.status === 500;
+    // A 404 is a model this key is not offered (not_found_error): a fallback
+    // model in that state is stepped over, as a Gemini one is.
+    const unavailable = error.status === 404;
+    return new TranslationError(
+      'api',
+      `Anthropic API error ${error.status}: ${said ?? error.message}`,
+      overloaded
+        ? { condition: 'overloaded' }
+        : unavailable
+          ? { condition: 'model-unavailable' }
+          : {},
+    );
   }
   // fetch reports a connection that drops while the body is read as a
   // TypeError. messages.create (the key check, gloss, compile) passes it

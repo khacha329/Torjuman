@@ -28,6 +28,7 @@ export function CardPopover({
   onClose,
   onToggleCollapse,
   onRetranslate,
+  isRetranslating,
   onTranslateRest,
   onDelete,
   onAddGlossaryTerm,
@@ -43,6 +44,8 @@ export function CardPopover({
     card: TranslationCard,
     options?: { providerId?: ProviderId; model?: string },
   ) => void;
+  /** Whether a retranslation of the card is in flight (FOUND_ISSUES 57.3). */
+  isRetranslating?: (card: TranslationCard) => boolean;
   /** A partial card's "Translate the rest" (useTranslator `translateRest`). */
   onTranslateRest: (card: TranslationCard) => void;
   onDelete: (card: TranslationCard) => void;
@@ -91,6 +94,7 @@ export function CardPopover({
                 : onToggleCollapse(card)
             }
             onRetranslate={(options) => onRetranslate(card, options)}
+            retranslating={isRetranslating?.(card) ?? false}
             onTranslateRest={() => onTranslateRest(card)}
             onDelete={() => {
               onDelete(card);

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../app/AppContext';
+import { hrefFor } from '../../app/router';
 import type { Block, TocNode } from '../../types';
 import { statsFor, type ShareBundle } from '../../share/bundle';
 import { buildBundle, chapterRange, orderRange, tocSubtree } from '../../share/buildBundle';
@@ -435,8 +436,11 @@ function Published({
       </div>
 
       <p className="text-[11px] text-muted">
-        Saved under Settings → Published chapters, where you can copy this link again or
-        withdraw the share.
+        Saved under{' '}
+        <a className="underline" href={hrefFor({ name: 'settings', tab: 'data' })}>
+          Settings → Data → Published chapters
+        </a>
+        , where you can copy this link again or withdraw the share.
       </p>
     </>
   );

@@ -1,5 +1,6 @@
 import type {
   BlockType,
+  CardFallback,
   CloudProviderId,
   GlossaryEntry,
   TranslatedSegment,
@@ -77,29 +78,97 @@ export interface TranslationResult {
   incomplete?: { stopReason: string | null; message: string; untranslatedFrom: number | null };
 }
 
+/**
+ * What an error says about where it came from, where the kind alone does not
+ * say enough to act on.
+ *
+ * - `unreachable`: no response at all, the host could not be reached. The
+ *   reader marks the app offline on it (app/useOnline.ts, FOUND_ISSUES 62).
+ *   A connection that drops mid-reply is not this: a response began.
+ * - `overloaded`: the model or the service is failing for everyone right now
+ *   (Gemini 500 and 503, Claude 500 and 529), after the retries. The one
+ *   condition a fallback starts on (providers/fallback.ts).
+ * - `model-unavailable`: this key is not offered the model, retired or closed
+ *   to new keys. A fallback model in this state is stepped over.
+ */
+export type ErrorCondition = 'unreachable' | 'overloaded' | 'model-unavailable';
+
+/** Which model actually produced an error, when a fallback model did. */
+export interface AnsweredBy {
+  providerId: CloudProviderId;
+  model: string;
+  fallback: CardFallback;
+}
+
+export interface TranslationErrorOptions {
+  retryAfterSeconds?: number | null;
+  raw?: string | null;
+  stopReason?: string | null;
+  condition?: ErrorCondition | null;
+  /**
+   * Tokens already billed when the error came: a Claude research pass whose
+   * structuring pass then failed (FOUND_ISSUES 64). With its cost, so the
+   * failed card and the session totals still count what was paid.
+   */
+  usage?: TranslationUsage | null;
+  costUsd?: number | null;
+  answeredBy?: AnsweredBy | null;
+}
+
 export class TranslationError extends Error {
   readonly kind: TranslationErrorKind;
   readonly retryAfterSeconds: number | null;
   readonly raw: string | null;
   /** The provider's own reason for stopping, or 'none' (TranslationCard.stopReason). */
   readonly stopReason: string | null;
+  readonly condition: ErrorCondition | null;
+  readonly usage: TranslationUsage | null;
+  readonly costUsd: number | null;
+  readonly answeredBy: AnsweredBy | null;
 
-  constructor(
-    kind: TranslationErrorKind,
-    message: string,
-    options: {
-      retryAfterSeconds?: number | null;
-      raw?: string | null;
-      stopReason?: string | null;
-    } = {},
-  ) {
+  constructor(kind: TranslationErrorKind, message: string, options: TranslationErrorOptions = {}) {
     super(message);
     this.name = 'TranslationError';
     this.kind = kind;
     this.retryAfterSeconds = options.retryAfterSeconds ?? null;
     this.raw = options.raw ?? null;
     this.stopReason = options.stopReason ?? null;
+    this.condition = options.condition ?? null;
+    this.usage = options.usage ?? null;
+    this.costUsd = options.costUsd ?? null;
+    this.answeredBy = options.answeredBy ?? null;
   }
+
+  /**
+   * The same error with some fields replaced. Every field is carried over;
+   * `withRaw` (anthropic.ts) used to copy three of them and drop the rest.
+   */
+  with(changes: TranslationErrorOptions & { message?: string }): TranslationError {
+    const { message, ...options } = changes;
+    return new TranslationError(this.kind, message ?? this.message, {
+      retryAfterSeconds: this.retryAfterSeconds,
+      raw: this.raw,
+      stopReason: this.stopReason,
+      condition: this.condition,
+      usage: this.usage,
+      costUsd: this.costUsd,
+      answeredBy: this.answeredBy,
+      ...options,
+    });
+  }
+}
+
+/** The result of a key check. */
+export interface KeyCheck {
+  /** The provider accepted the key. */
+  valid: boolean;
+  /**
+   * Of the model IDs the check was asked about, the ones the key's own model
+   * list leaves out. Empty when every one is listed, when none were asked
+   * about, or when the provider has no such list (Claude's check does not
+   * read one).
+   */
+  unusableModels: string[];
 }
 
 export interface TranslationProvider {
@@ -121,8 +190,21 @@ export interface TranslationProvider {
   readonly isFree: boolean;
   /** One line describing what this provider is fit for. */
   readonly fitFor: string;
+  /**
+   * Whether a translation on it can search the web. A card says "web search"
+   * only when its provider can and its own result says a search ran
+   * (FOUND_ISSUES 43): a capability, so the card names no provider
+   * (FOUND_ISSUES 66).
+   */
+  readonly canSearch: boolean;
 
-  validateKey(key: string): Promise<boolean>;
+  /**
+   * Test a key. Throws a TranslationError when the key could not be tested
+   * (no network, a server error): that is no verdict on the key. `models`
+   * are the model IDs to look for in the key's own model list, where the
+   * provider reads one.
+   */
+  validateKey(key: string, models?: readonly string[]): Promise<KeyCheck>;
 
   translate(
     request: TranslationRequest,

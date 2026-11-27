@@ -24,6 +24,7 @@ export function TranslationCardView({
   onFocus,
   onToggleCollapse,
   onRetranslate,
+  retranslating = false,
   onTranslateRest,
   onDelete,
   onAddGlossaryTerm,
@@ -37,6 +38,11 @@ export function TranslationCardView({
   onFocus: () => void;
   onToggleCollapse: () => void;
   onRetranslate: (options?: { providerId?: ProviderId; model?: string }) => void;
+  /**
+   * A retranslation of this card is in flight: Retranslate and Retry are off
+   * until it ends, one at a time (FOUND_ISSUES 57.3).
+   */
+  retranslating?: boolean;
   /** A partial card's "Translate the rest". */
   onTranslateRest?: () => void;
   onDelete: () => void;
@@ -148,7 +154,7 @@ export function TranslationCardView({
       )}
 
       {card.status === 'error' && (
-        <ErrorPanel card={card} onRetry={() => onRetranslate()} />
+        <ErrorPanel card={card} onRetry={() => onRetranslate()} retrying={retranslating} />
       )}
 
       {/* An answer that stopped early is well-formed and looks finished. The
@@ -240,9 +246,12 @@ export function TranslationCardView({
           <div className="relative">
             <button
               onClick={() => setShowRetranslateMenu((open) => !open)}
-              className="rounded px-2 py-1 text-muted hover:bg-rule"
+              disabled={retranslating}
+              // The dimming class only while disabled, so the button's markup
+              // is unchanged otherwise (check U).
+              className={`rounded px-2 py-1 text-muted hover:bg-rule${retranslating ? ' opacity-40' : ''}`}
             >
-              Retranslate ▾
+              {retranslating ? 'Retranslating…' : 'Retranslate ▾'}
             </button>
             {showRetranslateMenu && (
               <RetranslateMenu
@@ -339,11 +348,19 @@ function ProviderBadge({ card }: { card: TranslationCard }) {
       )}
       {!offline && badge.isFree && <span className="text-[10px] text-muted">free tier</span>}
       <CostLabel card={card} />
-      {/* Only Claude can search. Cards made before FOUND_ISSUES 43 carry the
-          profile's setting instead of what ran, so a stored Gemini card can
-          still say true; the provider check keeps it from claiming a search. */}
-      {card.usedExternalLookup && card.providerId === 'anthropic' && (
+      {/* Only a provider that can search may say so. Cards made before
+          FOUND_ISSUES 43 carry the profile's setting instead of what ran, so
+          a stored Gemini card can still say true; its provider's canSearch
+          keeps it from claiming a search, without the card naming a provider
+          (FOUND_ISSUES 66). */}
+      {card.usedExternalLookup && badge.canSearch && (
         <span className="text-[10px] text-muted">· web search</span>
+      )}
+      {/* The badge above names the model that answered; when that is not
+          the profile's, this says which was asked and why it did not
+          answer (lane B2, providers/fallback.ts). */}
+      {card.fallback && (
+        <span className="w-full text-[10px] text-amber-800">{card.fallback.note}</span>
       )}
     </div>
   );
@@ -365,7 +382,9 @@ function CostLabel({ card }: { card: TranslationCard }) {
   // they can act on. The provider badge stays: whether a rendering came from a
   // model at all is something a reader genuinely needs to know.
   if (readOnly) return null;
-  if (card.status !== 'complete' || !card.usage) return null;
+  // A failed card shows what was billed before it failed, a Claude research
+  // pass say (FOUND_ISSUES 64); a failure that billed nothing has no usage.
+  if (card.status === 'loading' || !card.usage) return null;
 
   const cached = card.usage.cacheReadTokens > 0;
 
@@ -401,7 +420,16 @@ function CostLabel({ card }: { card: TranslationCard }) {
  * specifically rather than as a generic failure, and the raw text is persisted
  * so it survives navigating away.
  */
-function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => void }) {
+function ErrorPanel({
+  card,
+  onRetry,
+  retrying,
+}: {
+  card: TranslationCard;
+  onRetry: () => void;
+  /** Its Retry is a retranslation already in flight (FOUND_ISSUES 57.3). */
+  retrying: boolean;
+}) {
   const kind = card.errorKind;
   const soft =
     kind === 'rate-limit' ||
@@ -456,9 +484,10 @@ function ErrorPanel({ card, onRetry }: { card: TranslationCard; onRetry: () => v
           event.stopPropagation();
           onRetry();
         }}
-        className="mt-1 rounded-md border border-current/30 bg-white/70 px-3 py-1 text-xs font-medium hover:bg-white"
+        disabled={retrying}
+        className={`mt-1 rounded-md border border-current/30 bg-white/70 px-3 py-1 text-xs font-medium hover:bg-white${retrying ? ' opacity-40' : ''}`}
       >
-        Retry
+        {retrying ? 'Retrying…' : 'Retry'}
       </button>
 
       {card.rawResponse && card.rawResponse.trim() !== '' && (

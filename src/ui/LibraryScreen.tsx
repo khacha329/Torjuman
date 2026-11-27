@@ -185,7 +185,7 @@ export function LibraryScreen() {
     const confirmed = window.confirm(
       `Delete "${book.title}"?\n\nThis removes the imported text, and any translation cards anchored to it, from this device. It cannot be undone.` +
         (published
-          ? '\n\nChapters you published from it keep working for anyone with the link, and stay under Settings → Published chapters.'
+          ? '\n\nChapters you published from it keep working for anyone with the link, and stay under Settings → Data → Published chapters.'
           : ''),
     );
     if (!confirmed) return;
