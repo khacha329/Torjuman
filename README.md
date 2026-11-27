@@ -515,7 +515,9 @@ Backups are split accordingly, because one monolithic file is impractical —
   records (with their decryption keys: besides the link itself, the record is
   the only place a published chapter's key is kept), compiled QUL views (which
   bind again only where the same QUL resource ids exist: the same tablet, a
-  whole-tablet transfer, or a seeded resource), and settings — every store in
+  whole-tablet transfer, or a seeded resource), how the library is arranged
+  (pins, the manual order, folders; see *Arranging the library*), and
+  settings — every store in
   `WORK_STORES` (`platform/storage/idbBackup.ts`) plus the settings row. A
   share record outlives its book on purpose: removing a book leaves the
   chapters published from it working, and listed under `Settings → Published
@@ -1142,6 +1144,61 @@ and online, it is free, it needs no network, and «متفق عليه» renders t
 way in a lesson prepared in March as in one prepared in September — which
 matters, because these lines are read out loud. A line that is only half a
 takhrīj is left to the translator; a partial rendering would be worse than none.
+
+## Arranging the library
+
+The Library shows **Pinned** first, then each **folder** in the order it was
+made, then **Unfiled**. A book can be pinned, moved up or down within its
+section, and filed in at most one folder; a folder can be created, renamed,
+collapsed and deleted, and deleting one moves its books to Unfiled — no book
+is deleted with it. With no pin and no folder there are no headings and the
+order is the one the Library always had, newest import first. The rules are
+`library/arrangement.ts`; the screen is `ui/LibraryScreen.tsx` with its card,
+menu and folder heading beside it.
+
+**Buttons and a long press, not drag.** Each card has Pin, Move up, Move down
+and ⋯; a long press anywhere on the card opens the same menu as ⋯. A drag
+across a grid that scrolls the page fights the page's own scroll on the
+tablet, and a press-and-hold that starts a drag is the gesture that starts a
+text selection. The long press is a timer on pointer events
+(`ui/useLongPress.ts`), not `contextmenu`, which Android Chrome does not fire
+over text it would rather select. After it opens the menu, the click the lift
+produces is dropped at the window: in Chromium it lands on whatever is under
+the finger when it lifts — the menu's backdrop, which would close the menu
+again.
+
+**Stored apart from the book, by Shamela ID.** Pins, places and folder
+membership are rows in `bookPlacements`, keyed by Shamela ID; the folders are
+rows in `libraryFolders` (both version 12). Not fields on `Book`: a book is
+replaced in three ways — a per-book file over the copy on the device, "Add
+book" again with the same ID, or deleting it and importing it afresh — and
+each rewrites or removes the `books` row. A placement row is touched by none
+of them, so the book comes back pinned, in its place and in its folder; for
+that reason `deleteBook` leaves it (it is a few bytes). A row for a book that
+is not on the device is ignored until the book arrives, which is also what a
+work backup restored onto a new tablet relies on: both stores are in
+`WORK_STORES`, and the whole-tablet transfer carries them like every store.
+
+**A place is relative to its section.** `position` orders a book among the
+others in its section and nothing else; a move renumbers the whole section
+0, 1, 2…, so the books in it that had no place take one and nothing can jump
+past them later. A book with no place sits above the placed ones, newest
+first, so a book just imported appears at the top of Unfiled, where it
+always has. A book that changes section — pinned, unpinned, filed — arrives
+at the top of the section it enters. A pinned book is shown only under
+Pinned and goes back to its folder when unpinned.
+
+**Hidden in share mode.** Every arranging control is under `useReadOnly()`
+(`app/readOnly.ts` says why hidden rather than disabled), and
+`ShareStorageAdapter` lists no placements or folders and ignores their writes.
+The shared route never shows the Library today; this is the backstop if it
+ever does.
+
+Checked by `npm run verify:library` (Playwright, both tablet sizes and a
+desktop: every control above, a long press on a title and on a card, a reload,
+a book deleted and imported again, and screenshots into `.verify/library/`)
+and by check D (the two stores through both upgrade branches, every backup and
+transfer path, and the share adapter).
 
 ## The book catalog
 
