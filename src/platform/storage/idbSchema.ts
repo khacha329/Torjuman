@@ -4,6 +4,7 @@ import type {
   BiographyEntry,
   Block,
   Book,
+  BookPlacement,
   CrawlState,
   DictionaryEntry,
   Entity,
@@ -12,6 +13,7 @@ import type {
   GlossaryEntry,
   Mark,
   HadithRecord,
+  LibraryFolder,
   Page,
   QulCompilation,
   QulEntry,
@@ -54,7 +56,11 @@ export const DB_NAME = 'shamela-reader';
 // 11 adds shareRecords: what this device has published as a shared link. A few
 // dozen tiny rows read whole, so no index. It holds each share's decryption
 // key, which exists in no other place — see ShareRecord.
-export const DB_VERSION = 11;
+// 12 adds bookPlacements and libraryFolders: how the owner arranges the
+// library (pins, a manual order, folders). Keyed by Shamela ID and kept off
+// the Book record so a replaced book keeps its place — see BookPlacement. A
+// few hundred tiny rows read whole, so no index.
+export const DB_VERSION = 12;
 
 export interface Schema extends DBSchema {
   books: { key: string; value: Book };
@@ -107,6 +113,8 @@ export interface Schema extends DBSchema {
     indexes: { byNaming: string; byShard: string };
   };
   shareRecords: { key: string; value: ShareRecord };
+  bookPlacements: { key: number; value: BookPlacement };
+  libraryFolders: { key: string; value: LibraryFolder };
   wordGlosses: { key: string; value: WordGloss };
   qulResources: { key: string; value: QulResource };
   qulEntries: {
@@ -249,6 +257,12 @@ const TABLE = {
   // Shared chapters this device published. No index: there are a few
   // dozen at most and Settings reads all of them at once.
   shareRecords: { keyPath: 'id', onUpgrade: 'if-missing' },
+  // The library's arrangement (version 12). Not per book: keyed by Shamela
+  // ID and kept when a book is deleted or replaced, which is the point of it
+  // (see BookPlacement). No index: the Library reads both stores whole, and a
+  // folder's delete walks the placements, a few hundred rows at most.
+  bookPlacements: { keyPath: 'shamelaId', onUpgrade: 'if-missing' },
+  libraryFolders: { keyPath: 'id', onUpgrade: 'if-missing' },
   wordGlosses: { keyPath: 'word', onUpgrade: 'if-missing' },
   // One store for all four QUL resource kinds. They share a shape — key
   // in, record out — so a single compound index serves every lookup and

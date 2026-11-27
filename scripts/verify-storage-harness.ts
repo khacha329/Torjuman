@@ -183,7 +183,7 @@ const SETTINGS: Row = {
 };
 
 /**
- * One or two rows in each of the 24 stores — every store the whole-tablet
+ * One or two rows in each of the 26 stores — every store the whole-tablet
  * transfer moves, the backup reads, or an upgrade must keep. Keys are chosen
  * so key order differs from insertion order in the stores whose order a
  * method sorts.
@@ -252,6 +252,15 @@ export function syntheticRows(): Rows {
       { bookId: B, blockOrder: 0, updatedAt: T0 },
     ],
     settings: [{ ...SETTINGS, key: 'app' }],
+    // Version 12 (lane UI-2). A pinned book, a book filed in a folder, and a
+    // row for a book this tablet does not have (990004): the arrangement is
+    // kept by Shamela ID whether or not the book is here.
+    bookPlacements: [
+      { shamelaId: 990002, pinned: true, position: 0, folderId: null, updatedAt: T0 },
+      { shamelaId: 990001, pinned: false, position: 0, folderId: 'folder-d1', updatedAt: T0 },
+      { shamelaId: 990004, pinned: false, position: 1, folderId: 'folder-d1', updatedAt: T0 },
+    ],
+    libraryFolders: [{ id: 'folder-d1', name: 'مجلد تجريبي', collapsed: false, createdAt: T0 }],
   };
 }
 
@@ -382,7 +391,8 @@ const ALL_STORES = Object.keys(syntheticRows());
 
 /** The stores a work backup carries (exportWork's fields, settings included). */
 const WORK_STORES = ['cards', 'explanationCards', 'sharhCards', 'marks', 'glossary', 'profiles', 'positions',
-  'wordGlosses', 'quranVerses', 'hadiths', 'shareRecords', 'qulCompilations', 'settings'];
+  'wordGlosses', 'quranVerses', 'hadiths', 'shareRecords', 'qulCompilations', 'bookPlacements', 'libraryFolders',
+  'settings'];
 
 const phases: Record<string, Phase> = {
   // -------------------------------------------------- schema and upgrades
@@ -509,6 +519,12 @@ const phases: Record<string, Phase> = {
       ['putWordGloss', 'putWordGloss', () => s.putWordGloss(r('wordGlosses'))],
       ['getWordGloss', 'getWordGloss', () => s.getWordGloss('الطهارة')],
       ['listWordGlosses', 'listWordGlosses', () => s.listWordGlosses()],
+      ['listBookPlacements', 'listBookPlacements', () => s.listBookPlacements()],
+      ['putBookPlacements([])', 'putBookPlacements', () => s.putBookPlacements([])],
+      ['putBookPlacements', 'putBookPlacements', () => s.putBookPlacements(rows.bookPlacements as never)],
+      ['listLibraryFolders', 'listLibraryFolders', () => s.listLibraryFolders()],
+      ['putLibraryFolder', 'putLibraryFolder', () => s.putLibraryFolder(r('libraryFolders'))],
+      ['deleteLibraryFolder', 'deleteLibraryFolder', () => s.deleteLibraryFolder('folder-d1')],
       ['exportWork', 'exportWork', () => s.exportWork()],
       ['importWork', 'importWork', () => s.importWork({ cards: [] } as never)],
       ['schemaVersion', 'schemaVersion', () => s.schemaVersion],
@@ -826,6 +842,46 @@ const phases: Record<string, Phase> = {
     return record.result();
   },
 
+  /**
+   * The library's arrangement (version 12, lane UI-2): placements written in
+   * one call and read back; folders listed in the order they were made
+   * whatever their keys; a folder deleted, its books unfiled — an unpinned
+   * one's place cleared, a pinned one's kept — and a book in another folder
+   * and the books outside it untouched; and the rows left by `deleteBook`.
+   */
+  async 'family-library-arrangement'() {
+    const record = new Recorder();
+    const s = await opened(record);
+    await record.step('listBookPlacements (empty)', () => s.listBookPlacements());
+    await record.step('listLibraryFolders (empty)', () => s.listLibraryFolders());
+    for (const [id, at, name] of [['folder-b', 2, 'ثانٍ'], ['folder-a', 3, 'ثالث'], ['folder-c', 1, 'أول']] as const) {
+      await record.step(`putLibraryFolder ${id}`, () => s.putLibraryFolder({ id, name, collapsed: false, createdAt: T0 + at } as never));
+    }
+    await record.step('listLibraryFolders (by createdAt)', () => s.listLibraryFolders());
+    await record.step('putLibraryFolder folder-a renamed and collapsed', () =>
+      s.putLibraryFolder({ id: 'folder-a', name: 'ثالث (معدّل)', collapsed: true, createdAt: T0 + 3 } as never));
+    const placement = (shamelaId: number, pinned: boolean, position: number | null, folderId: string | null) =>
+      ({ shamelaId, pinned, position, folderId, updatedAt: T0 });
+    await record.step('putBookPlacements', () => s.putBookPlacements([
+      placement(990003, false, 1, 'folder-b'),
+      placement(990001, false, 0, 'folder-b'),
+      placement(990002, true, 4, 'folder-b'),
+      placement(990004, false, 0, 'folder-c'),
+      placement(990005, false, 2, null),
+    ] as never));
+    await record.step('putBookPlacements over an existing row', () => s.putBookPlacements([placement(990005, true, 0, null)] as never));
+    await record.step('listBookPlacements (key order)', () => s.listBookPlacements());
+    await record.step('deleteLibraryFolder folder-b', () => s.deleteLibraryFolder('folder-b'));
+    await record.step('deleteLibraryFolder missing', () => s.deleteLibraryFolder('folder-x'));
+    await record.step('listLibraryFolders', () => s.listLibraryFolders());
+    await record.step('listBookPlacements', () => s.listBookPlacements());
+    // A placement outlives its book: deleting the book leaves the row.
+    await pageHelpers().put({ books: [book(A, 990001, 'كتاب المثال')] });
+    await record.step('deleteBook A', () => s.deleteBook(A));
+    await record.step('listBookPlacements after deleteBook', () => s.listBookPlacements());
+    return record.result();
+  },
+
   /** The six raw calls the whole-tablet transfer makes, on their own. */
   async 'family-raw-store-io'() {
     const record = new Recorder();
@@ -923,6 +979,11 @@ const phases: Record<string, Phase> = {
     if (input.dropShareRecords) delete bundle.shareRecords;
     // A backup written before lane C has no compilations (FOUND_ISSUES 18).
     if (input.dropQulCompilations) delete bundle.qulCompilations;
+    // A backup written before version 12 has no arrangement.
+    if (input.dropLibraryArrangement) {
+      delete bundle.bookPlacements;
+      delete bundle.libraryFolders;
+    }
     if (input.extraReferencedBook) {
       (bundle.referencedBooks as unknown[]).push({ shamelaId: 990999, bookId: 'shamela-990999', title: 'كتاب غائب' });
     }
@@ -989,6 +1050,8 @@ const phases: Record<string, Phase> = {
         explanationCards: [explanation('explain-kept', A)],
         sharhCards: [sharh('sharh-kept', A)],
         positions: [{ bookId: A, blockOrder: 2, updatedAt: T0 }],
+        // Its place in the library (version 12), which a replace must keep.
+        bookPlacements: [{ shamelaId: 990001, pinned: true, position: 0, folderId: null, updatedAt: T0 }],
       });
       await record.snapshot('with the book');
       await run('importBookFile A, onConflict false', fileFrom(files[A].base64, `a.hashiya.gz`), false);
@@ -1137,6 +1200,9 @@ const phases: Record<string, Phase> = {
       ['putShareRecord', () => s.putShareRecord(shareRecord('share-share', A, 1) as never)],
       ['deleteShareRecord', () => s.deleteShareRecord('share-a1')],
       ['putWordGloss', () => s.putWordGloss({ ...r('wordGlosses') as object, word: 'مشاركة' } as never)],
+      ['putBookPlacements', () => s.putBookPlacements([{ shamelaId: 990005, pinned: true, position: 0, folderId: null, updatedAt: 1 }] as never)],
+      ['putLibraryFolder', () => s.putLibraryFolder({ id: 'folder-share', name: 'x', collapsed: false, createdAt: 1 } as never)],
+      ['deleteLibraryFolder', () => s.deleteLibraryFolder('folder-d1')],
       ['putReadingPosition', () => s.putReadingPosition({ bookId: 'shamela-990005', blockOrder: 0, updatedAt: 1 } as never)],
       ['putCrawlState', () => s.putCrawlState({ bookId: 'shamela-990005', status: 'idle', nextPage: 1, failedPages: [], updatedAt: 1 } as never)],
     ];
@@ -1173,6 +1239,8 @@ const phases: Record<string, Phase> = {
       ['bundle: getCardByCacheKey (always a miss)', () => s.getCardByCacheKey('cache-a1')],
       ['bundle: getReadingPosition A (never recorded)', () => s.getReadingPosition(A)],
       ['bundle: getPage (no HTML travels)', () => s.getPage(A, 1)],
+      ['bundle: listBookPlacements (none; the visitor has some)', () => s.listBookPlacements()],
+      ['bundle: listLibraryFolders (none; the visitor has one)', () => s.listLibraryFolders()],
     ];
     for (const [label, call] of reads) await record.step(label, call);
     await record.step('schemaVersion (delegated)', () => s.schemaVersion);

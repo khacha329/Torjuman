@@ -35,6 +35,10 @@ const WORK_STORES = [
   // Last, so a file keeps every earlier field where it was. Absent on a
   // backup written before lane C (FOUND_ISSUES 18), which `write` handles.
   'qulCompilations',
+  // After it for the same reason: the library's arrangement, version 12.
+  // Absent on every earlier backup, which `write` handles.
+  'bookPlacements',
+  'libraryFolders',
 ] as const;
 
 type WorkStore = (typeof WORK_STORES)[number];

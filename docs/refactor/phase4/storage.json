@@ -4,10 +4,11 @@
   "scenarios": {
     "bundle/fresh": {
       "schema": {
-        "version": 11,
+        "version": 12,
         "stores": [
           {"name":"biographyEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
           {"name":"blocks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookOrder","keyPath":["bookId","order"],"unique":false,"multiEntry":false},{"name":"byPage","keyPath":"pageId","unique":false,"multiEntry":false}]},
+          {"name":"bookPlacements","keyPath":"shamelaId","autoIncrement":false,"indexes":[]},
           {"name":"books","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"cards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byCacheKey","keyPath":"cacheKey","unique":false,"multiEntry":false}]},
           {"name":"crawlStates","keyPath":"bookId","autoIncrement":false,"indexes":[]},
@@ -16,6 +17,7 @@
           {"name":"explanationCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
           {"name":"glossary","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"hadiths","keyPath":"reference","autoIncrement":false,"indexes":[]},
+          {"name":"libraryFolders","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"marks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
           {"name":"narratorProfiles","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byNaming","keyPath":"namings","unique":false,"multiEntry":true},{"name":"byShard","keyPath":"shard","unique":false,"multiEntry":false}]},
           {"name":"pages","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookPage","keyPath":["bookId","pageIndex"],"unique":false,"multiEntry":false}]},
@@ -35,18 +37,20 @@
       "pageErrors": [],
       "consoleErrors": []
     },
-    "bundle/upgrade-v1base": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
-    "bundle/upgrade-v7": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
-    "bundle/upgrade-v8": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
-    "bundle/upgrade-v9": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
-    "bundle/upgrade-v10": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
-    "bundle/reopen-v11": {"schema":{"version":11,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v1base": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v7": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v8": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v9": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v10": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/upgrade-v11": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
+    "bundle/reopen-v12": {"schema":{"version":12,"stores":"as today"},"pageErrors":[],"consoleErrors":[]},
     "harness/fresh": {
       "schema": {
-        "version": 11,
+        "version": 12,
         "stores": [
           {"name":"biographyEntries","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
           {"name":"blocks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookOrder","keyPath":["bookId","order"],"unique":false,"multiEntry":false},{"name":"byPage","keyPath":"pageId","unique":false,"multiEntry":false}]},
+          {"name":"bookPlacements","keyPath":"shamelaId","autoIncrement":false,"indexes":[]},
           {"name":"books","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"cards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byCacheKey","keyPath":"cacheKey","unique":false,"multiEntry":false}]},
           {"name":"crawlStates","keyPath":"bookId","autoIncrement":false,"indexes":[]},
@@ -55,6 +59,7 @@
           {"name":"explanationCards","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false}]},
           {"name":"glossary","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"hadiths","keyPath":"reference","autoIncrement":false,"indexes":[]},
+          {"name":"libraryFolders","keyPath":"id","autoIncrement":false,"indexes":[]},
           {"name":"marks","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byStartBlock","keyPath":"startBlockId","unique":false,"multiEntry":false}]},
           {"name":"narratorProfiles","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byNaming","keyPath":"namings","unique":false,"multiEntry":true},{"name":"byShard","keyPath":"shard","unique":false,"multiEntry":false}]},
           {"name":"pages","keyPath":"id","autoIncrement":false,"indexes":[{"name":"byBook","keyPath":"bookId","unique":false,"multiEntry":false},{"name":"byBookPage","keyPath":["bookId","pageIndex"],"unique":false,"multiEntry":false}]},
@@ -71,10 +76,11 @@
           {"name":"wordGlosses","keyPath":"word","autoIncrement":false,"indexes":[]}
         ]
       },
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -83,6 +89,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -101,8 +108,8 @@
       "localStorage": []
     },
     "harness/upgrade-v1base": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [],
         "blocks": [
@@ -111,6 +118,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -132,6 +140,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [
@@ -167,8 +176,8 @@
       "localStorage": []
     },
     "harness/upgrade-v7": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [],
         "blocks": [
@@ -177,6 +186,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -202,6 +212,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -248,8 +259,8 @@
       "localStorage": []
     },
     "harness/upgrade-v8": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -260,6 +271,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -285,6 +297,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -331,8 +344,8 @@
       "localStorage": []
     },
     "harness/upgrade-v9": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -343,6 +356,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -368,6 +382,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -416,8 +431,8 @@
       "localStorage": []
     },
     "harness/upgrade-v10": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -428,6 +443,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -453,6 +469,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -503,9 +520,9 @@
       },
       "localStorage": []
     },
-    "harness/reopen-v11": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+    "harness/upgrade-v11": {
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -515,6 +532,103 @@
           {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+        ],
+        "bookPlacements": [],
+        "books": [
+          {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
+          {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
+        ],
+        "cards": [
+          {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
+          {"id":"card-b1","bookId":"shamela-990002","kind":"translation","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-b1","status":"complete"}
+        ],
+        "crawlStates": [
+          {"bookId":"shamela-990001","status":"complete","nextPage":3,"failedPages":[],"updatedAt":1772000000000}
+        ],
+        "dictionaryEntries": [
+          {"id":"dict-b1","bookId":"shamela-990002","root":"كتب","rootDisplay":"كتب","pageIndex":1,"volume":1,"printPage":11}
+        ],
+        "entities": [],
+        "explanationCards": [
+          {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+        ],
+        "glossary": [
+          {"id":"gloss-1","arabic":"الإخلاص","english":"sincerity","note":"synthetic","addedAt":1772000000001},
+          {"id":"gloss-2","arabic":"النية","english":"intention","note":null,"addedAt":1772000000002}
+        ],
+        "hadiths": [
+          {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
+        ],
+        "libraryFolders": [],
+        "marks": [
+          {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+        ],
+        "narratorProfiles": [
+          {"id":"itqan:1","shard":"itqan:shard-1","fullName":"أحمد بن محمد","namings":["أحمد بن محمد","أحمد"],"grade":"ثقة","source":"synthetic"},
+          {"id":"taqrib:shamela-990001:1","shard":"taqrib:shamela-990001","fullName":"علي بن عبد الله","namings":["علي بن عبد الله","علي"],"grade":"ثقة","source":"synthetic"}
+        ],
+        "pages": [
+          {"id":"shamela-990001:p1","bookId":"shamela-990001","pageIndex":1,"volume":1,"printPage":11,"rawHtml":"<p>صفحة 1</p>","fetchedAt":1772000000000},
+          {"id":"shamela-990001:p2","bookId":"shamela-990001","pageIndex":2,"volume":1,"printPage":12,"rawHtml":"<p>صفحة 2</p>","fetchedAt":1772000000000},
+          {"id":"shamela-990002:p1","bookId":"shamela-990002","pageIndex":1,"volume":1,"printPage":11,"rawHtml":"<p>صفحة 1</p>","fetchedAt":1772000000000}
+        ],
+        "positions": [
+          {"bookId":"shamela-990001","blockOrder":1,"updatedAt":1772000000000},
+          {"bookId":"shamela-990002","blockOrder":0,"updatedAt":1772000000000}
+        ],
+        "profiles": [
+          {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
+        ],
+        "qulCompilations": [
+          {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+        ],
+        "qulEntries": [
+          {"id":"qul-d1|112:1","resourceId":"qul-d1","key":"112:1","value":{"text":"تفسير تجريبي"}},
+          {"id":"qul-d1|112:2","resourceId":"qul-d1","key":"112:2","value":{"text":"تفسير آخر"}}
+        ],
+        "qulResources": [
+          {"id":"qul-d1","kind":"tafsir","name":"Synthetic tafsir","fileName":"synthetic.json","byteSize":100,"entryCount":2,"format":"json","importedAt":1772000000000}
+        ],
+        "quranVerses": [
+          {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
+        ],
+        "settings": [
+          {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
+        ],
+        "shareRecords": [
+          {"id":"share-a1","key":"share-key-share-a1","title":"مشاركة share-a1","bookId":"shamela-990001","bookTitle":"كتاب تجريبي","rangeLabel":"الباب الأول","createdAt":1772000000000,"bytes":512,"blocks":2,"cards":1,"marks":1}
+        ],
+        "sharhCards": [
+          {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+        ],
+        "tocNodes": [
+          {"id":"shamela-990001:toc0","bookId":"shamela-990001","parentId":null,"title":"الباب الأول","pageIndex":1,"order":0,"depth":0},
+          {"id":"shamela-990001:toc1","bookId":"shamela-990001","parentId":null,"title":"الباب الثاني","pageIndex":2,"order":1,"depth":0},
+          {"id":"shamela-990002:toc0","bookId":"shamela-990002","parentId":null,"title":"باب","pageIndex":1,"order":0,"depth":0}
+        ],
+        "wordGlosses": [
+          {"word":"الطهارة","display":"الطَّهَارَة","root":"طهر","meaning":"purity","note":null,"isTechnicalTerm":true,"model":"synthetic-model","createdAt":1772000000000}
+        ]
+      },
+      "localStorage": []
+    },
+    "harness/reopen-v12": {
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
+      "rows": {
+        "biographyEntries": [
+          {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
+        ],
+        "blocks": [
+          {"id":"shamela-990001:p1:0","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":0,"type":"body","text":"قال تعالى: ﴿قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ﴾ وهذا نص تجريبي.","normalized":"قال تعالي: ﴿قل هو الله احد الله الصمد﴾ وهذا نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
+          {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
+          {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
+          {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+        ],
+        "bookPlacements": [
+          {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+          {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+          {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
         ],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -543,6 +657,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -596,8 +711,8 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulResources": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -608,6 +723,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -633,6 +749,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -682,8 +799,8 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulEntries": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -694,6 +811,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -719,6 +837,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -767,8 +886,8 @@
       "localStorage": []
     },
     "harness/odd-v10-without-qulCompilations": {
-      "schema": {"version":11,"stores":"as today"},
-      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":11}]],
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [["init",{"value":"(undefined)"}],["schemaVersion",{"value":12}]],
       "rows": {
         "biographyEntries": [
           {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -779,6 +898,7 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -804,6 +924,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -942,9 +1063,15 @@
         ["putWordGloss",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["getWordGloss",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["listWordGlosses",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["listBookPlacements",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["putBookPlacements([])",{"value":"(undefined)"}],
+        ["putBookPlacements",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["listLibraryFolders",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["putLibraryFolder",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
+        ["deleteLibraryFolder",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["exportWork",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["importWork",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
-        ["schemaVersion",{"value":11}],
+        ["schemaVersion",{"value":12}],
         ["listStoreNames",{"threw":"Error: StorageAdapter.init() has not been awaited"}],
         ["countStoreRows",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["readStoreRows",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
@@ -952,12 +1079,12 @@
         ["putStoreRows",{"rejected":"Error: StorageAdapter.init() has not been awaited"}],
         ["clearAllStores",{"rejected":"Error: StorageAdapter.init() has not been awaited"}]
       ],
-      "methodsCovered": 85,
+      "methodsCovered": 90,
       "rows": {"(no database)":[]},
       "localStorage": []
     },
     "family/books": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putBook A",{"value":"(undefined)"}],
@@ -1009,6 +1136,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"عنوان جديد","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -1020,6 +1148,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1038,7 +1167,7 @@
       "localStorage": []
     },
     "family/toc": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putTocNodes",{"value":"(undefined)"}],
@@ -1056,6 +1185,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1064,6 +1194,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1086,7 +1217,7 @@
       "localStorage": []
     },
     "family/pages": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putPage shamela-990001 p3",{"value":"(undefined)"}],
@@ -1126,6 +1257,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1134,6 +1266,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [
@@ -1157,7 +1290,7 @@
       "localStorage": []
     },
     "family/blocks": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putBlocks([])",{"value":"(undefined)"}],
@@ -1265,6 +1398,7 @@
           {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"وقال: الطَّهارةُ، نصف الإيمان.","normalized":"وقال: الطهاره، نصف الايمان.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"الطهارة في كتاب آخر.","normalized":"الطهاره في كتاب اخر.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1273,6 +1407,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1291,7 +1426,7 @@
       "localStorage": []
     },
     "family/entities-dictionary": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putEntities([])",{"value":"(undefined)"}],
@@ -1383,6 +1518,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1396,6 +1532,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1414,7 +1551,7 @@
       "localStorage": []
     },
     "family/marks": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putMarks([])",{"value":"(undefined)"}],
@@ -1454,6 +1591,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1462,6 +1600,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [
           {"id":"mark-2","bookId":"shamela-990001","startBlockId":"shamela-990001:p2:2","startOffset":0,"endBlockId":"shamela-990001:p2:2","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false},
           {"id":"mark-3","bookId":"shamela-990002","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false},
@@ -1484,7 +1623,7 @@
       "localStorage": []
     },
     "family/cards": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putCard a1",{"value":"(undefined)"}],
@@ -1566,6 +1705,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [
           {"id":"card-a2","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000005,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a2-new","status":"complete"},
@@ -1577,6 +1717,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1595,7 +1736,7 @@
       "localStorage": []
     },
     "family/profiles": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putProfile",{"value":"(undefined)"}],
@@ -1635,6 +1776,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1643,6 +1785,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1663,7 +1806,7 @@
       "localStorage": []
     },
     "family/glossary": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putGlossaryEntry gloss-b",{"value":"(undefined)"}],
@@ -1693,6 +1836,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1704,6 +1848,7 @@
           {"id":"gloss-c","arabic":"كلمة","english":"gloss-c","note":null,"addedAt":200}
         ],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1722,7 +1867,7 @@
       "localStorage": []
     },
     "family/retrieval-cache": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putQuranVerse",{"value":"(undefined)"}],
@@ -1760,6 +1905,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1770,6 +1916,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1790,7 +1937,7 @@
       "localStorage": []
     },
     "family/qul": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putQulResource zeta",{"value":"(undefined)"}],
@@ -1846,6 +1993,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1854,6 +2002,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1876,7 +2025,7 @@
       "localStorage": []
     },
     "family/biography": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putBiographyEntries",{"value":"(undefined)"}],
@@ -1914,6 +2063,7 @@
           {"id":"bio-b1","bookId":"shamela-990002","name":"اسم","nameNormalized":"اسم","aliases":[],"pageIndex":1}
         ],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -1922,6 +2072,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -1940,7 +2091,7 @@
       "localStorage": []
     },
     "family/crawl-position-settings": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putCrawlState",{"value":"(undefined)"}],
@@ -1986,6 +2137,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [
@@ -1996,6 +2148,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -2016,7 +2169,7 @@
       "localStorage": []
     },
     "family/explanation-sharh": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putExplanationCard a1",{"value":"(undefined)"}],
@@ -2047,6 +2200,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -2057,6 +2211,7 @@
         ],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -2077,7 +2232,7 @@
       "localStorage": []
     },
     "family/narrators": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putNarratorProfiles([])",{"value":"(undefined)"}],
@@ -2121,6 +2276,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -2129,6 +2285,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": {
           "count": 501,
@@ -2166,7 +2323,7 @@
       "localStorage": []
     },
     "family/share-records": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putShareRecord share-1",{"value":"(undefined)"}],
@@ -2196,6 +2353,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -2204,6 +2362,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -2225,7 +2384,7 @@
       "localStorage": []
     },
     "family/word-glosses": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["putWordGloss",{"value":"(undefined)"}],
@@ -2259,6 +2418,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -2267,6 +2427,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -2287,8 +2448,118 @@
       },
       "localStorage": []
     },
+    "family/library-arrangement": {
+      "schema": {"version":12,"stores":"as today"},
+      "steps": [
+        ["init",{"value":"(undefined)"}],
+        ["listBookPlacements (empty)",{"value":[]}],
+        ["listLibraryFolders (empty)",{"value":[]}],
+        ["putLibraryFolder folder-b",{"value":"(undefined)"}],
+        ["putLibraryFolder folder-a",{"value":"(undefined)"}],
+        ["putLibraryFolder folder-c",{"value":"(undefined)"}],
+        [
+          "listLibraryFolders (by createdAt)",
+          {
+            "value": [
+              {"id":"folder-c","name":"أول","collapsed":false,"createdAt":1772000000001},
+              {"id":"folder-b","name":"ثانٍ","collapsed":false,"createdAt":1772000000002},
+              {"id":"folder-a","name":"ثالث","collapsed":false,"createdAt":1772000000003}
+            ]
+          }
+        ],
+        ["putLibraryFolder folder-a renamed and collapsed",{"value":"(undefined)"}],
+        ["putBookPlacements",{"value":"(undefined)"}],
+        ["putBookPlacements over an existing row",{"value":"(undefined)"}],
+        [
+          "listBookPlacements (key order)",
+          {
+            "value": [
+              {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-b","updatedAt":1772000000000},
+              {"shamelaId":990002,"pinned":true,"position":4,"folderId":"folder-b","updatedAt":1772000000000},
+              {"shamelaId":990003,"pinned":false,"position":1,"folderId":"folder-b","updatedAt":1772000000000},
+              {"shamelaId":990004,"pinned":false,"position":0,"folderId":"folder-c","updatedAt":1772000000000},
+              {"shamelaId":990005,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}
+            ]
+          }
+        ],
+        ["deleteLibraryFolder folder-b",{"value":"(undefined)"}],
+        ["deleteLibraryFolder missing",{"value":"(undefined)"}],
+        [
+          "listLibraryFolders",
+          {
+            "value": [
+              {"id":"folder-c","name":"أول","collapsed":false,"createdAt":1772000000001},
+              {"id":"folder-a","name":"ثالث (معدّل)","collapsed":true,"createdAt":1772000000003}
+            ]
+          }
+        ],
+        [
+          "listBookPlacements",
+          {
+            "value": [
+              {"shamelaId":990001,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990002,"pinned":true,"position":4,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990003,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990004,"pinned":false,"position":0,"folderId":"folder-c","updatedAt":1772000000000},
+              {"shamelaId":990005,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}
+            ]
+          }
+        ],
+        ["deleteBook A",{"value":"(undefined)"}],
+        [
+          "listBookPlacements after deleteBook",
+          {
+            "value": [
+              {"shamelaId":990001,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990002,"pinned":true,"position":4,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990003,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+              {"shamelaId":990004,"pinned":false,"position":0,"folderId":"folder-c","updatedAt":1772000000000},
+              {"shamelaId":990005,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}
+            ]
+          }
+        ]
+      ],
+      "rows": {
+        "biographyEntries": [],
+        "blocks": [],
+        "bookPlacements": [
+          {"shamelaId":990001,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+          {"shamelaId":990002,"pinned":true,"position":4,"folderId":null,"updatedAt":1772357400000},
+          {"shamelaId":990003,"pinned":false,"position":null,"folderId":null,"updatedAt":1772357400000},
+          {"shamelaId":990004,"pinned":false,"position":0,"folderId":"folder-c","updatedAt":1772000000000},
+          {"shamelaId":990005,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}
+        ],
+        "books": [],
+        "cards": [],
+        "crawlStates": [],
+        "dictionaryEntries": [],
+        "entities": [],
+        "explanationCards": [],
+        "glossary": [],
+        "hadiths": [],
+        "libraryFolders": [
+          {"id":"folder-a","name":"ثالث (معدّل)","collapsed":true,"createdAt":1772000000003},
+          {"id":"folder-c","name":"أول","collapsed":false,"createdAt":1772000000001}
+        ],
+        "marks": [],
+        "narratorProfiles": [],
+        "pages": [],
+        "positions": [],
+        "profiles": [],
+        "qulCompilations": [],
+        "qulEntries": [],
+        "qulResources": [],
+        "quranVerses": [],
+        "settings": [],
+        "shareRecords": [],
+        "sharhCards": [],
+        "tocNodes": [],
+        "wordGlosses": []
+      },
+      "localStorage": []
+    },
     "family/raw-store-io": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         [
@@ -2297,6 +2568,7 @@
             "value": [
               "biographyEntries",
               "blocks",
+              "bookPlacements",
               "books",
               "cards",
               "crawlStates",
@@ -2305,6 +2577,7 @@
               "explanationCards",
               "glossary",
               "hadiths",
+              "libraryFolders",
               "marks",
               "narratorProfiles",
               "pages",
@@ -2397,6 +2670,11 @@
             {"id":"shamela-990001:p2:9","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":9,"type":"body","text":"الطهارة مرة أخرى.","normalized":"الطهاره مره اخري.","contentHash":"hash-9","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
           ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
             {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -2425,6 +2703,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -2479,6 +2758,7 @@
       "rows": {
         "biographyEntries": [],
         "blocks": [],
+        "bookPlacements": [],
         "books": [],
         "cards": [],
         "crawlStates": [],
@@ -2487,6 +2767,7 @@
         "explanationCards": [],
         "glossary": [],
         "hadiths": [],
+        "libraryFolders": [],
         "marks": [],
         "narratorProfiles": [],
         "pages": [],
@@ -2505,7 +2786,7 @@
       "localStorage": []
     },
     "delete-book": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["countBlocks A",{"value":4097}],
@@ -2571,6 +2852,11 @@
             },
             "sha256": "7902303920518b588158c0c6df0bd830b4ee34ceeeb30c7fc4f552dd2176a0f1"
           },
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
             {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -2602,6 +2888,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false},
             {"id":"mark-b1","bookId":"shamela-990002","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
@@ -2663,6 +2950,11 @@
         "blocks": [
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [
+          {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+          {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+          {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+        ],
         "books": [
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
         ],
@@ -2688,6 +2980,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
         "marks": [
           {"id":"mark-b1","bookId":"shamela-990002","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],
@@ -2735,14 +3028,14 @@
     },
     "work-backup": {
       "export": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
             "exportWork",
             {
               "value": {
-                "version": 11,
+                "version": 12,
                 "exportedAt": 1772357400000,
                 "referencedBooks": [
                   {"shamelaId":990001,"bookId":"shamela-990001","title":"كتاب المثال"},
@@ -2787,6 +3080,12 @@
                 "qulCompilations": [
                   {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
                 ],
+                "bookPlacements": [
+                  {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+                  {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+                  {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+                ],
+                "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
                 "settings": {
                   "providerId": "gemini",
                   "activeProfileId": "profile-d",
@@ -2806,7 +3105,7 @@
             }
           ]
         ],
-        "file": {"bytes":3996,"sha256":"ce437e8cdc4485c97d9a3fea408a64b586466b5c2058f1a28a2b3d603117583e"},
+        "file": {"bytes":4414,"sha256":"d724fc414f5e61d0fb66aa452fdcbca4e02e3d7fc1689def29ca6de7b7674d16"},
         "rows": {
           "biographyEntries": [
             {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -2816,6 +3115,11 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
           ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -2844,6 +3148,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -2903,7 +3208,7 @@
         ]
       },
       "import-fresh": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -2940,6 +3245,11 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [],
           "cards": [
             {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
@@ -2958,6 +3268,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -2999,7 +3310,7 @@
         ]
       },
       "import-without-shareRecords": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3036,6 +3347,11 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [],
           "cards": [
             {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
@@ -3054,6 +3370,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3093,7 +3410,7 @@
         ]
       },
       "import-without-qulCompilations": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3130,6 +3447,11 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [],
           "cards": [
             {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
@@ -3148,6 +3470,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3186,8 +3509,106 @@
           ["shamela-reader.catalogOffered","1"]
         ]
       },
+      "import-without-library-arrangement": {
+        "schema": {"version":12,"stores":"as today"},
+        "steps": [
+          ["init",{"value":"(undefined)"}],
+          [
+            "importWork",
+            {
+              "value": {
+                "restoredCards": 4,
+                "restoredMarks": 1,
+                "missingBooks": [{"shamelaId":990001,"title":"كتاب المثال"},{"shamelaId":990002,"title":"كتاب التراجم"}]
+              }
+            }
+          ],
+          [
+            "getSettings",
+            {
+              "value": {
+                "providerId": "gemini",
+                "activeProfileId": "profile-d",
+                "fontFamily": "Amiri",
+                "fontSize": 22,
+                "lineHeight": 1.9,
+                "panelWidth": 380,
+                "panelCollapsed": false,
+                "panelPosition": "right",
+                "panelScope": "visible",
+                "quranTranslationId": 20,
+                "quranTranslationName": "Synthetic",
+                "hadithSourceId": "sunnah",
+                "compileEnabled": false
+              }
+            }
+          ]
+        ],
+        "rows": {
+          "biographyEntries": [],
+          "blocks": [],
+          "bookPlacements": [],
+          "books": [],
+          "cards": [
+            {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
+            {"id":"card-b1","bookId":"shamela-990002","kind":"translation","startBlockId":"shamela-990002:p1:0","startOffset":0,"endBlockId":"shamela-990002:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-b1","status":"complete"}
+          ],
+          "crawlStates": [],
+          "dictionaryEntries": [],
+          "entities": [],
+          "explanationCards": [
+            {"id":"explain-a1","bookId":"shamela-990001","kind":"explanation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"parentCardId":null,"query":"Why?","explanation":"A synthetic explanation.","localSources":[],"webSources":[],"status":"complete","providerId":"anthropic","model":"synthetic-model"}
+          ],
+          "glossary": [
+            {"id":"gloss-1","arabic":"الإخلاص","english":"sincerity","note":"synthetic","addedAt":1772000000001},
+            {"id":"gloss-2","arabic":"النية","english":"intention","note":null,"addedAt":1772000000002}
+          ],
+          "hadiths": [
+            {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
+          ],
+          "libraryFolders": [],
+          "marks": [
+            {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
+          ],
+          "narratorProfiles": [],
+          "pages": [],
+          "positions": [
+            {"bookId":"shamela-990001","blockOrder":1,"updatedAt":1772000000000},
+            {"bookId":"shamela-990002","blockOrder":0,"updatedAt":1772000000000}
+          ],
+          "profiles": [
+            {"id":"profile-d","name":"Synthetic profile","systemPrompt":"Translate.","providerId":"gemini","model":"synthetic-model"}
+          ],
+          "qulCompilations": [
+            {"cacheKey":"compile-d1","ayahKey":"112:1","resourceIds":["qul-d1"],"providerId":"gemini","model":"synthetic-model","text":"A synthetic compiled view.","createdAt":1772000000000}
+          ],
+          "qulEntries": [],
+          "qulResources": [],
+          "quranVerses": [
+            {"reference":"112:1","arabic":"قُلۡ هُوَ ٱللَّهُ أَحَدٌ","english":"Say: He is God, One.","translationName":"Synthetic","fetchedAt":1772000000000}
+          ],
+          "settings": [
+            {"providerId":"gemini","activeProfileId":"profile-d","fontFamily":"Amiri","fontSize":22,"lineHeight":1.9,"panelWidth":380,"panelCollapsed":false,"panelPosition":"right","panelScope":"visible","quranTranslationId":20,"quranTranslationName":"Synthetic","hadithSourceId":"sunnah","compileEnabled":false,"key":"app"}
+          ],
+          "shareRecords": [
+            {"id":"share-a1","key":"share-key-share-a1","title":"مشاركة share-a1","bookId":"shamela-990001","bookTitle":"كتاب تجريبي","rangeLabel":"الباب الأول","createdAt":1772000000000,"bytes":512,"blocks":2,"cards":1,"marks":1}
+          ],
+          "sharhCards": [
+            {"id":"sharh-a1","bookId":"shamela-990001","kind":"sharh","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"createdAt":1772000000000,"collapsed":false,"sharhBookId":"shamela-990003","text":"شرح تجريبي"}
+          ],
+          "tocNodes": [],
+          "wordGlosses": [
+            {"word":"الطهارة","display":"الطَّهَارَة","root":"طهر","meaning":"purity","note":null,"isTechnicalTerm":true,"model":"synthetic-model","createdAt":1772000000000}
+          ]
+        },
+        "localStorage": [
+          ["other-app.note","the receiving tablet"],
+          ["shamela-reader.anthropic-api-key","sk-ant-d-check-target-only-key"],
+          ["shamela-reader.catalogOffered","1"]
+        ]
+      },
       "import-missing-books": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3224,6 +3645,11 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [
             {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
           ],
@@ -3244,6 +3670,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3285,7 +3712,7 @@
         ]
       },
       "import-over-existing": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3322,6 +3749,11 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [],
           "cards": [
             {"id":"card-a1","bookId":"shamela-990001","kind":"translation","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":5,"createdAt":1772000000000,"collapsed":false,"sourceText":"نص قصير","segments":[{"type":"prose","arabic":"","english":"A short synthetic text.","source":"model"}],"profileId":"profile-d","promptVersion":1,"glossaryHash":"g","providerId":"gemini","model":"synthetic-model","cacheKey":"cache-a1","status":"complete"},
@@ -3341,6 +3773,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3384,7 +3817,7 @@
     },
     "book-transfer": {
       "export": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           ["exportBook shamela-990001",{"value":{"type":""}}],
@@ -3431,6 +3864,11 @@
             {"id":"shamela-990003:p1:0","bookId":"shamela-990003","pageId":"shamela-990003:p1","order":0,"type":"body","text":"الكتاب معروف.","normalized":"الكتاب معروف.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990003:p2:1","bookId":"shamela-990003","pageId":"shamela-990003:p2","order":1,"type":"body","text":"العلم نقيض الجهل.","normalized":"العلم نقيض الجهل.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
           ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+          ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
             {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -3459,6 +3897,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3523,7 +3962,7 @@
         ]
       },
       "import-fresh": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3608,6 +4047,7 @@
             {"id":"shamela-990003:p1:0","bookId":"shamela-990003","pageId":"shamela-990003:p1","order":0,"type":"body","text":"الكتاب معروف.","normalized":"الكتاب معروف.","contentHash":"41d13198fa05c75a97f77768afaaacdbc972ba1541260749ab67e621bb3480d7","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990003:p2:1","bookId":"shamela-990003","pageId":"shamela-990003:p2","order":1,"type":"body","text":"العلم نقيض الجهل.","normalized":"العلم نقيض الجهل.","contentHash":"de1c8f77ef6372b933ee7f784088e512c942c2b7d50c08c9fd0de648803cf82e","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
           ],
+          "bookPlacements": [],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0},
             {"id":"shamela-990003","shamelaId":990003,"title":"معجم تجريبي","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"dictionary"}
@@ -3627,6 +4067,7 @@
           "explanationCards": [],
           "glossary": [],
           "hadiths": [],
+          "libraryFolders": [],
           "marks": [],
           "narratorProfiles": [],
           "pages": [
@@ -3656,7 +4097,7 @@
         "localStorage": []
       },
       "import-conflict": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3754,6 +4195,7 @@
               {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"01cedf1cdddf6788d923ddbe37c0a892f12b288ccdfef76be3c898f67db96f30","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
               {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"867317ab6ecdccf58f1c35ccbf4531ba8ada82857ad8f4472b49193b8ffae0bd","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
             ],
+            "bookPlacements": [{"shamelaId":990001,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}],
             "books": [
               {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
             ],
@@ -3772,6 +4214,7 @@
             ],
             "glossary": [],
             "hadiths": [],
+            "libraryFolders": [],
             "marks": [
               {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
             ],
@@ -3804,6 +4247,7 @@
               {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"01cedf1cdddf6788d923ddbe37c0a892f12b288ccdfef76be3c898f67db96f30","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
               {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"867317ab6ecdccf58f1c35ccbf4531ba8ada82857ad8f4472b49193b8ffae0bd","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
             ],
+            "bookPlacements": [{"shamelaId":990001,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}],
             "books": [
               {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
             ],
@@ -3822,6 +4266,7 @@
             ],
             "glossary": [],
             "hadiths": [],
+            "libraryFolders": [],
             "marks": [
               {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
             ],
@@ -3854,6 +4299,7 @@
               {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"01cedf1cdddf6788d923ddbe37c0a892f12b288ccdfef76be3c898f67db96f30","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
               {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"867317ab6ecdccf58f1c35ccbf4531ba8ada82857ad8f4472b49193b8ffae0bd","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
             ],
+            "bookPlacements": [{"shamelaId":990001,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}],
             "books": [
               {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
             ],
@@ -3872,6 +4318,7 @@
             ],
             "glossary": [],
             "hadiths": [],
+            "libraryFolders": [],
             "marks": [
               {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
             ],
@@ -3910,6 +4357,7 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"01cedf1cdddf6788d923ddbe37c0a892f12b288ccdfef76be3c898f67db96f30","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"867317ab6ecdccf58f1c35ccbf4531ba8ada82857ad8f4472b49193b8ffae0bd","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
           ],
+          "bookPlacements": [{"shamelaId":990001,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000}],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading","nameIndexSize":0}
           ],
@@ -3928,6 +4376,7 @@
           ],
           "glossary": [],
           "hadiths": [],
+          "libraryFolders": [],
           "marks": [
             {"id":"mark-kept","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -3956,7 +4405,7 @@
         "localStorage": []
       },
       "import-one-block-short": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -3971,6 +4420,7 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [],
           "books": [],
           "cards": [],
           "crawlStates": [],
@@ -3979,6 +4429,7 @@
           "explanationCards": [],
           "glossary": [],
           "hadiths": [],
+          "libraryFolders": [],
           "marks": [],
           "narratorProfiles": [],
           "pages": [],
@@ -3999,7 +4450,7 @@
     },
     "device-transfer": {
       "export": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -4014,12 +4465,13 @@
         "files": {
           "without-keys": {
             "type": "application/gzip",
-            "bytes": 9525,
-            "sha256": "d9208df6ca569f8861c1ba98bb42d07e917cdfa10dc3b2f899445dcc909be70f",
+            "bytes": 10043,
+            "sha256": "0331fbf380a171d30da0331f95f848938a03e9677023a8ca3379ad32a50865e1",
             "lines": [
-              "{\"kind\":\"header\",\"format\":\"hashiya-device\",\"version\":1,\"schemaVersion\":11,\"exportedAt\":1772357400000,\"counts\":{\"biographyEntries\":1,\"blocks\":4,\"books\":2,\"cards\":2,\"crawlStates\":1,\"dictionaryEntries\":1,\"entities\":1,\"explanationCards\":1,\"glossary\":2,\"hadiths\":1,\"marks\":1,\"narratorProfiles\":2,\"pages\":3,\"positions\":2,\"profiles\":1,\"qulCompilations\":1,\"qulEntries\":2,\"qulResources\":1,\"quranVerses\":1,\"settings\":1,\"shareRecords\":1,\"sharhCards\":1,\"tocNodes\":3,\"wordGlosses\":1},\"includesApiKeys\":false}",
+              "{\"kind\":\"header\",\"format\":\"hashiya-device\",\"version\":1,\"schemaVersion\":12,\"exportedAt\":1772357400000,\"counts\":{\"biographyEntries\":1,\"blocks\":4,\"bookPlacements\":3,\"books\":2,\"cards\":2,\"crawlStates\":1,\"dictionaryEntries\":1,\"entities\":1,\"explanationCards\":1,\"glossary\":2,\"hadiths\":1,\"libraryFolders\":1,\"marks\":1,\"narratorProfiles\":2,\"pages\":3,\"positions\":2,\"profiles\":1,\"qulCompilations\":1,\"qulEntries\":2,\"qulResources\":1,\"quranVerses\":1,\"settings\":1,\"shareRecords\":1,\"sharhCards\":1,\"tocNodes\":3,\"wordGlosses\":1},\"includesApiKeys\":false}",
               "{\"kind\":\"rows\",\"store\":\"biographyEntries\",\"rows\":[{\"id\":\"shamela-990002:bio1\",\"bookId\":\"shamela-990002\",\"name\":\"أحمد بن محمد\",\"nameNormalized\":\"احمد بن محمد\",\"aliases\":[],\"pageIndex\":1}]}",
               "{\"kind\":\"rows\",\"store\":\"blocks\",\"rows\":[{\"id\":\"shamela-990001:p1:0\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p1\",\"order\":0,\"type\":\"body\",\"text\":\"قال تعالى: ﴿قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ﴾ وهذا نص تجريبي.\",\"normalized\":\"قال تعالي: ﴿قل هو الله احد الله الصمد﴾ وهذا نص تجريبي.\",\"contentHash\":\"hash-0\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990001:p1:1\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p1\",\"order\":1,\"type\":\"body\",\"text\":\"الطهارة شرط الصلاة في هذا المثال.\",\"normalized\":\"الطهاره شرط الصلاه في هذا المثال.\",\"contentHash\":\"hash-1\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990001:p2:2\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p2\",\"order\":2,\"type\":\"body\",\"text\":\"باب آخر من النص التجريبي.\",\"normalized\":\"باب اخر من النص التجريبي.\",\"contentHash\":\"hash-2\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990002:p1:0\",\"bookId\":\"shamela-990002\",\"pageId\":\"shamela-990002:p1\",\"order\":0,\"type\":\"body\",\"text\":\"ترجمة رجل من الرواة، نص تجريبي.\",\"normalized\":\"ترجمه رجل من الرواه، نص تجريبي.\",\"contentHash\":\"hash-0\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null}]}",
+              "{\"kind\":\"rows\",\"store\":\"bookPlacements\",\"rows\":[{\"shamelaId\":990001,\"pinned\":false,\"position\":0,\"folderId\":\"folder-d1\",\"updatedAt\":1772000000000},{\"shamelaId\":990002,\"pinned\":true,\"position\":0,\"folderId\":null,\"updatedAt\":1772000000000},{\"shamelaId\":990004,\"pinned\":false,\"position\":1,\"folderId\":\"folder-d1\",\"updatedAt\":1772000000000}]}",
               "{\"kind\":\"rows\",\"store\":\"books\",\"rows\":[{\"id\":\"shamela-990001\",\"shamelaId\":990001,\"title\":\"كتاب المثال\",\"author\":\"مؤلف تجريبي\",\"publisher\":\"\",\"edition\":\"\",\"volumeCount\":1,\"category\":\"\",\"structureProfile\":\"generic\",\"importedAt\":1772000000000,\"importStatus\":\"complete\",\"totalPages\":2,\"fetchedPages\":2,\"volumeStarts\":[1],\"hadithCollection\":null,\"role\":\"reading\"},{\"id\":\"shamela-990002\",\"shamelaId\":990002,\"title\":\"كتاب التراجم\",\"author\":\"مؤلف تجريبي\",\"publisher\":\"\",\"edition\":\"\",\"volumeCount\":1,\"category\":\"\",\"structureProfile\":\"generic\",\"importedAt\":1772000000001,\"importStatus\":\"complete\",\"totalPages\":2,\"fetchedPages\":2,\"volumeStarts\":[1],\"hadithCollection\":null,\"role\":\"reading\"}]}",
               "{\"kind\":\"rows\",\"store\":\"cards\",\"rows\":[{\"id\":\"card-a1\",\"bookId\":\"shamela-990001\",\"kind\":\"translation\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":5,\"createdAt\":1772000000000,\"collapsed\":false,\"sourceText\":\"نص قصير\",\"segments\":[{\"type\":\"prose\",\"arabic\":\"\",\"english\":\"A short synthetic text.\",\"source\":\"model\"}],\"profileId\":\"profile-d\",\"promptVersion\":1,\"glossaryHash\":\"g\",\"providerId\":\"gemini\",\"model\":\"synthetic-model\",\"cacheKey\":\"cache-a1\",\"status\":\"complete\"},{\"id\":\"card-b1\",\"bookId\":\"shamela-990002\",\"kind\":\"translation\",\"startBlockId\":\"shamela-990002:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990002:p1:0\",\"endOffset\":5,\"createdAt\":1772000000000,\"collapsed\":false,\"sourceText\":\"نص قصير\",\"segments\":[{\"type\":\"prose\",\"arabic\":\"\",\"english\":\"A short synthetic text.\",\"source\":\"model\"}],\"profileId\":\"profile-d\",\"promptVersion\":1,\"glossaryHash\":\"g\",\"providerId\":\"gemini\",\"model\":\"synthetic-model\",\"cacheKey\":\"cache-b1\",\"status\":\"complete\"}]}",
               "{\"kind\":\"rows\",\"store\":\"crawlStates\",\"rows\":[{\"bookId\":\"shamela-990001\",\"status\":\"complete\",\"nextPage\":3,\"failedPages\":[],\"updatedAt\":1772000000000}]}",
@@ -4028,6 +4480,7 @@
               "{\"kind\":\"rows\",\"store\":\"explanationCards\",\"rows\":[{\"id\":\"explain-a1\",\"bookId\":\"shamela-990001\",\"kind\":\"explanation\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":4,\"createdAt\":1772000000000,\"collapsed\":false,\"parentCardId\":null,\"query\":\"Why?\",\"explanation\":\"A synthetic explanation.\",\"localSources\":[],\"webSources\":[],\"status\":\"complete\",\"providerId\":\"anthropic\",\"model\":\"synthetic-model\"}]}",
               "{\"kind\":\"rows\",\"store\":\"glossary\",\"rows\":[{\"id\":\"gloss-1\",\"arabic\":\"الإخلاص\",\"english\":\"sincerity\",\"note\":\"synthetic\",\"addedAt\":1772000000001},{\"id\":\"gloss-2\",\"arabic\":\"النية\",\"english\":\"intention\",\"note\":null,\"addedAt\":1772000000002}]}",
               "{\"kind\":\"rows\",\"store\":\"hadiths\",\"rows\":[{\"reference\":\"synthetic:1\",\"collection\":\"synthetic\",\"number\":\"1\",\"arabic\":\"حديث تجريبي\",\"english\":\"A synthetic report.\",\"grade\":null,\"sourceUrl\":null,\"fetchedAt\":1772000000000}]}",
+              "{\"kind\":\"rows\",\"store\":\"libraryFolders\",\"rows\":[{\"id\":\"folder-d1\",\"name\":\"مجلد تجريبي\",\"collapsed\":false,\"createdAt\":1772000000000}]}",
               "{\"kind\":\"rows\",\"store\":\"marks\",\"rows\":[{\"id\":\"mark-a1\",\"bookId\":\"shamela-990001\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":4,\"kind\":\"read\",\"scope\":\"span\",\"note\":null,\"createdAt\":1772000000000,\"collapsed\":false}]}",
               "{\"kind\":\"rows\",\"store\":\"narratorProfiles\",\"rows\":[{\"id\":\"itqan:1\",\"shard\":\"itqan:shard-1\",\"fullName\":\"أحمد بن محمد\",\"namings\":[\"أحمد بن محمد\",\"أحمد\"],\"grade\":\"ثقة\",\"source\":\"synthetic\"},{\"id\":\"taqrib:shamela-990001:1\",\"shard\":\"taqrib:shamela-990001\",\"fullName\":\"علي بن عبد الله\",\"namings\":[\"علي بن عبد الله\",\"علي\"],\"grade\":\"ثقة\",\"source\":\"synthetic\"}]}",
               "{\"kind\":\"rows\",\"store\":\"pages\",\"rows\":[{\"id\":\"shamela-990001:p1\",\"bookId\":\"shamela-990001\",\"pageIndex\":1,\"volume\":1,\"printPage\":11,\"rawHtml\":\"<p>صفحة 1</p>\",\"fetchedAt\":1772000000000},{\"id\":\"shamela-990001:p2\",\"bookId\":\"shamela-990001\",\"pageIndex\":2,\"volume\":1,\"printPage\":12,\"rawHtml\":\"<p>صفحة 2</p>\",\"fetchedAt\":1772000000000},{\"id\":\"shamela-990002:p1\",\"bookId\":\"shamela-990002\",\"pageIndex\":1,\"volume\":1,\"printPage\":11,\"rawHtml\":\"<p>صفحة 1</p>\",\"fetchedAt\":1772000000000}]}",
@@ -4043,18 +4496,19 @@
               "{\"kind\":\"rows\",\"store\":\"tocNodes\",\"rows\":[{\"id\":\"shamela-990001:toc0\",\"bookId\":\"shamela-990001\",\"parentId\":null,\"title\":\"الباب الأول\",\"pageIndex\":1,\"order\":0,\"depth\":0},{\"id\":\"shamela-990001:toc1\",\"bookId\":\"shamela-990001\",\"parentId\":null,\"title\":\"الباب الثاني\",\"pageIndex\":2,\"order\":1,\"depth\":0},{\"id\":\"shamela-990002:toc0\",\"bookId\":\"shamela-990002\",\"parentId\":null,\"title\":\"باب\",\"pageIndex\":1,\"order\":0,\"depth\":0}]}",
               "{\"kind\":\"rows\",\"store\":\"wordGlosses\",\"rows\":[{\"word\":\"الطهارة\",\"display\":\"الطَّهَارَة\",\"root\":\"طهر\",\"meaning\":\"purity\",\"note\":null,\"isTechnicalTerm\":true,\"model\":\"synthetic-model\",\"createdAt\":1772000000000}]}",
               "{\"kind\":\"local\",\"items\":{\"shamela-reader.onboarded\":\"1\"}}",
-              "{\"kind\":\"end\",\"rows\":37}",
+              "{\"kind\":\"end\",\"rows\":41}",
               ""
             ]
           },
           "with-keys": {
             "type": "application/gzip",
-            "bytes": 9717,
-            "sha256": "7aacde264276cee3bedf0141ebb8b5b0afe067414eee20149aba09752d672e34",
+            "bytes": 10235,
+            "sha256": "bf9735e0f373f933de0b5f57b12cc6e83bca94e2ec16abd40a19533800020630",
             "lines": [
-              "{\"kind\":\"header\",\"format\":\"hashiya-device\",\"version\":1,\"schemaVersion\":11,\"exportedAt\":1772357400000,\"counts\":{\"biographyEntries\":1,\"blocks\":4,\"books\":2,\"cards\":2,\"crawlStates\":1,\"dictionaryEntries\":1,\"entities\":1,\"explanationCards\":1,\"glossary\":2,\"hadiths\":1,\"marks\":1,\"narratorProfiles\":2,\"pages\":3,\"positions\":2,\"profiles\":1,\"qulCompilations\":1,\"qulEntries\":2,\"qulResources\":1,\"quranVerses\":1,\"settings\":1,\"shareRecords\":1,\"sharhCards\":1,\"tocNodes\":3,\"wordGlosses\":1},\"includesApiKeys\":true}",
+              "{\"kind\":\"header\",\"format\":\"hashiya-device\",\"version\":1,\"schemaVersion\":12,\"exportedAt\":1772357400000,\"counts\":{\"biographyEntries\":1,\"blocks\":4,\"bookPlacements\":3,\"books\":2,\"cards\":2,\"crawlStates\":1,\"dictionaryEntries\":1,\"entities\":1,\"explanationCards\":1,\"glossary\":2,\"hadiths\":1,\"libraryFolders\":1,\"marks\":1,\"narratorProfiles\":2,\"pages\":3,\"positions\":2,\"profiles\":1,\"qulCompilations\":1,\"qulEntries\":2,\"qulResources\":1,\"quranVerses\":1,\"settings\":1,\"shareRecords\":1,\"sharhCards\":1,\"tocNodes\":3,\"wordGlosses\":1},\"includesApiKeys\":true}",
               "{\"kind\":\"rows\",\"store\":\"biographyEntries\",\"rows\":[{\"id\":\"shamela-990002:bio1\",\"bookId\":\"shamela-990002\",\"name\":\"أحمد بن محمد\",\"nameNormalized\":\"احمد بن محمد\",\"aliases\":[],\"pageIndex\":1}]}",
               "{\"kind\":\"rows\",\"store\":\"blocks\",\"rows\":[{\"id\":\"shamela-990001:p1:0\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p1\",\"order\":0,\"type\":\"body\",\"text\":\"قال تعالى: ﴿قُلۡ هُوَ ٱللَّهُ أَحَدٌ ٱللَّهُ ٱلصَّمَدُ﴾ وهذا نص تجريبي.\",\"normalized\":\"قال تعالي: ﴿قل هو الله احد الله الصمد﴾ وهذا نص تجريبي.\",\"contentHash\":\"hash-0\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990001:p1:1\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p1\",\"order\":1,\"type\":\"body\",\"text\":\"الطهارة شرط الصلاة في هذا المثال.\",\"normalized\":\"الطهاره شرط الصلاه في هذا المثال.\",\"contentHash\":\"hash-1\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990001:p2:2\",\"bookId\":\"shamela-990001\",\"pageId\":\"shamela-990001:p2\",\"order\":2,\"type\":\"body\",\"text\":\"باب آخر من النص التجريبي.\",\"normalized\":\"باب اخر من النص التجريبي.\",\"contentHash\":\"hash-2\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null},{\"id\":\"shamela-990002:p1:0\",\"bookId\":\"shamela-990002\",\"pageId\":\"shamela-990002:p1\",\"order\":0,\"type\":\"body\",\"text\":\"ترجمة رجل من الرواة، نص تجريبي.\",\"normalized\":\"ترجمه رجل من الرواه، نص تجريبي.\",\"contentHash\":\"hash-0\",\"hadithNumber\":null,\"tocNodeId\":null,\"spans\":[],\"anchor\":null}]}",
+              "{\"kind\":\"rows\",\"store\":\"bookPlacements\",\"rows\":[{\"shamelaId\":990001,\"pinned\":false,\"position\":0,\"folderId\":\"folder-d1\",\"updatedAt\":1772000000000},{\"shamelaId\":990002,\"pinned\":true,\"position\":0,\"folderId\":null,\"updatedAt\":1772000000000},{\"shamelaId\":990004,\"pinned\":false,\"position\":1,\"folderId\":\"folder-d1\",\"updatedAt\":1772000000000}]}",
               "{\"kind\":\"rows\",\"store\":\"books\",\"rows\":[{\"id\":\"shamela-990001\",\"shamelaId\":990001,\"title\":\"كتاب المثال\",\"author\":\"مؤلف تجريبي\",\"publisher\":\"\",\"edition\":\"\",\"volumeCount\":1,\"category\":\"\",\"structureProfile\":\"generic\",\"importedAt\":1772000000000,\"importStatus\":\"complete\",\"totalPages\":2,\"fetchedPages\":2,\"volumeStarts\":[1],\"hadithCollection\":null,\"role\":\"reading\"},{\"id\":\"shamela-990002\",\"shamelaId\":990002,\"title\":\"كتاب التراجم\",\"author\":\"مؤلف تجريبي\",\"publisher\":\"\",\"edition\":\"\",\"volumeCount\":1,\"category\":\"\",\"structureProfile\":\"generic\",\"importedAt\":1772000000001,\"importStatus\":\"complete\",\"totalPages\":2,\"fetchedPages\":2,\"volumeStarts\":[1],\"hadithCollection\":null,\"role\":\"reading\"}]}",
               "{\"kind\":\"rows\",\"store\":\"cards\",\"rows\":[{\"id\":\"card-a1\",\"bookId\":\"shamela-990001\",\"kind\":\"translation\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":5,\"createdAt\":1772000000000,\"collapsed\":false,\"sourceText\":\"نص قصير\",\"segments\":[{\"type\":\"prose\",\"arabic\":\"\",\"english\":\"A short synthetic text.\",\"source\":\"model\"}],\"profileId\":\"profile-d\",\"promptVersion\":1,\"glossaryHash\":\"g\",\"providerId\":\"gemini\",\"model\":\"synthetic-model\",\"cacheKey\":\"cache-a1\",\"status\":\"complete\"},{\"id\":\"card-b1\",\"bookId\":\"shamela-990002\",\"kind\":\"translation\",\"startBlockId\":\"shamela-990002:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990002:p1:0\",\"endOffset\":5,\"createdAt\":1772000000000,\"collapsed\":false,\"sourceText\":\"نص قصير\",\"segments\":[{\"type\":\"prose\",\"arabic\":\"\",\"english\":\"A short synthetic text.\",\"source\":\"model\"}],\"profileId\":\"profile-d\",\"promptVersion\":1,\"glossaryHash\":\"g\",\"providerId\":\"gemini\",\"model\":\"synthetic-model\",\"cacheKey\":\"cache-b1\",\"status\":\"complete\"}]}",
               "{\"kind\":\"rows\",\"store\":\"crawlStates\",\"rows\":[{\"bookId\":\"shamela-990001\",\"status\":\"complete\",\"nextPage\":3,\"failedPages\":[],\"updatedAt\":1772000000000}]}",
@@ -4063,6 +4517,7 @@
               "{\"kind\":\"rows\",\"store\":\"explanationCards\",\"rows\":[{\"id\":\"explain-a1\",\"bookId\":\"shamela-990001\",\"kind\":\"explanation\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":4,\"createdAt\":1772000000000,\"collapsed\":false,\"parentCardId\":null,\"query\":\"Why?\",\"explanation\":\"A synthetic explanation.\",\"localSources\":[],\"webSources\":[],\"status\":\"complete\",\"providerId\":\"anthropic\",\"model\":\"synthetic-model\"}]}",
               "{\"kind\":\"rows\",\"store\":\"glossary\",\"rows\":[{\"id\":\"gloss-1\",\"arabic\":\"الإخلاص\",\"english\":\"sincerity\",\"note\":\"synthetic\",\"addedAt\":1772000000001},{\"id\":\"gloss-2\",\"arabic\":\"النية\",\"english\":\"intention\",\"note\":null,\"addedAt\":1772000000002}]}",
               "{\"kind\":\"rows\",\"store\":\"hadiths\",\"rows\":[{\"reference\":\"synthetic:1\",\"collection\":\"synthetic\",\"number\":\"1\",\"arabic\":\"حديث تجريبي\",\"english\":\"A synthetic report.\",\"grade\":null,\"sourceUrl\":null,\"fetchedAt\":1772000000000}]}",
+              "{\"kind\":\"rows\",\"store\":\"libraryFolders\",\"rows\":[{\"id\":\"folder-d1\",\"name\":\"مجلد تجريبي\",\"collapsed\":false,\"createdAt\":1772000000000}]}",
               "{\"kind\":\"rows\",\"store\":\"marks\",\"rows\":[{\"id\":\"mark-a1\",\"bookId\":\"shamela-990001\",\"startBlockId\":\"shamela-990001:p1:0\",\"startOffset\":0,\"endBlockId\":\"shamela-990001:p1:0\",\"endOffset\":4,\"kind\":\"read\",\"scope\":\"span\",\"note\":null,\"createdAt\":1772000000000,\"collapsed\":false}]}",
               "{\"kind\":\"rows\",\"store\":\"narratorProfiles\",\"rows\":[{\"id\":\"itqan:1\",\"shard\":\"itqan:shard-1\",\"fullName\":\"أحمد بن محمد\",\"namings\":[\"أحمد بن محمد\",\"أحمد\"],\"grade\":\"ثقة\",\"source\":\"synthetic\"},{\"id\":\"taqrib:shamela-990001:1\",\"shard\":\"taqrib:shamela-990001\",\"fullName\":\"علي بن عبد الله\",\"namings\":[\"علي بن عبد الله\",\"علي\"],\"grade\":\"ثقة\",\"source\":\"synthetic\"}]}",
               "{\"kind\":\"rows\",\"store\":\"pages\",\"rows\":[{\"id\":\"shamela-990001:p1\",\"bookId\":\"shamela-990001\",\"pageIndex\":1,\"volume\":1,\"printPage\":11,\"rawHtml\":\"<p>صفحة 1</p>\",\"fetchedAt\":1772000000000},{\"id\":\"shamela-990001:p2\",\"bookId\":\"shamela-990001\",\"pageIndex\":2,\"volume\":1,\"printPage\":12,\"rawHtml\":\"<p>صفحة 2</p>\",\"fetchedAt\":1772000000000},{\"id\":\"shamela-990002:p1\",\"bookId\":\"shamela-990002\",\"pageIndex\":1,\"volume\":1,\"printPage\":11,\"rawHtml\":\"<p>صفحة 1</p>\",\"fetchedAt\":1772000000000}]}",
@@ -4078,16 +4533,16 @@
               "{\"kind\":\"rows\",\"store\":\"tocNodes\",\"rows\":[{\"id\":\"shamela-990001:toc0\",\"bookId\":\"shamela-990001\",\"parentId\":null,\"title\":\"الباب الأول\",\"pageIndex\":1,\"order\":0,\"depth\":0},{\"id\":\"shamela-990001:toc1\",\"bookId\":\"shamela-990001\",\"parentId\":null,\"title\":\"الباب الثاني\",\"pageIndex\":2,\"order\":1,\"depth\":0},{\"id\":\"shamela-990002:toc0\",\"bookId\":\"shamela-990002\",\"parentId\":null,\"title\":\"باب\",\"pageIndex\":1,\"order\":0,\"depth\":0}]}",
               "{\"kind\":\"rows\",\"store\":\"wordGlosses\",\"rows\":[{\"word\":\"الطهارة\",\"display\":\"الطَّهَارَة\",\"root\":\"طهر\",\"meaning\":\"purity\",\"note\":null,\"isTechnicalTerm\":true,\"model\":\"synthetic-model\",\"createdAt\":1772000000000}]}",
               "{\"kind\":\"local\",\"items\":{\"shamela-reader.onboarded\":\"1\",\"shamela-reader.gemini-api-key\":\"AIza-d-check-not-a-real-key\",\"shamela-reader.anthropic-api-key\":\"sk-ant-d-check-not-a-real-key\",\"shamela-reader.sunnah-api-key\":\"sunnah-d-check-not-a-real-key\"}}",
-              "{\"kind\":\"end\",\"rows\":37}",
+              "{\"kind\":\"end\",\"rows\":41}",
               ""
             ]
           }
         },
         "progress": {
-          "count": 52,
+          "count": 56,
           "first": "without-keys counting 0/1 Counting what to send…",
-          "last": "with-keys done 37/37 Ready to send.",
-          "sha256": "14c193d4ccc9016689f9cf1368b65c479370c5362d1af2de21f57202c60acec4"
+          "last": "with-keys done 41/41 Ready to send.",
+          "sha256": "64810842935cee35bde04e9a5509fc983b89d0da8731fee6a304cbe35e228ff1"
         },
         "rows": {
           "biographyEntries": [
@@ -4098,6 +4553,11 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
           ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -4126,6 +4586,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -4185,7 +4646,7 @@
         ]
       },
       "restore-without-keys": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -4196,6 +4657,7 @@
                 "counts": {
                   "biographyEntries": 1,
                   "blocks": 4,
+                  "bookPlacements": 3,
                   "books": 2,
                   "cards": 2,
                   "crawlStates": 1,
@@ -4204,6 +4666,7 @@
                   "explanationCards": 1,
                   "glossary": 2,
                   "hadiths": 1,
+                  "libraryFolders": 1,
                   "marks": 1,
                   "narratorProfiles": 2,
                   "pages": 3,
@@ -4219,9 +4682,9 @@
                   "tocNodes": 3,
                   "wordGlosses": 1
                 },
-                "totalRows": 37,
+                "totalRows": 41,
                 "includesApiKeys": false,
-                "uncompressedBytes": 9525
+                "uncompressedBytes": 10043
               }
             }
           ],
@@ -4235,57 +4698,12 @@
             }
           ]
         ],
-        "progress": [
-          "checking 1/37 Checking the file — 1 records read…",
-          "checking 5/37 Checking the file — 5 records read…",
-          "checking 7/37 Checking the file — 7 records read…",
-          "checking 9/37 Checking the file — 9 records read…",
-          "checking 10/37 Checking the file — 10 records read…",
-          "checking 11/37 Checking the file — 11 records read…",
-          "checking 12/37 Checking the file — 12 records read…",
-          "checking 13/37 Checking the file — 13 records read…",
-          "checking 15/37 Checking the file — 15 records read…",
-          "checking 16/37 Checking the file — 16 records read…",
-          "checking 17/37 Checking the file — 17 records read…",
-          "checking 19/37 Checking the file — 19 records read…",
-          "checking 22/37 Checking the file — 22 records read…",
-          "checking 24/37 Checking the file — 24 records read…",
-          "checking 25/37 Checking the file — 25 records read…",
-          "checking 26/37 Checking the file — 26 records read…",
-          "checking 28/37 Checking the file — 28 records read…",
-          "checking 29/37 Checking the file — 29 records read…",
-          "checking 30/37 Checking the file — 30 records read…",
-          "checking 31/37 Checking the file — 31 records read…",
-          "checking 32/37 Checking the file — 32 records read…",
-          "checking 33/37 Checking the file — 33 records read…",
-          "checking 36/37 Checking the file — 36 records read…",
-          "checking 37/37 Checking the file — 37 records read…",
-          "restoring 1/37 Restoring biographyEntries — 1 of 37 records…",
-          "restoring 5/37 Restoring blocks — 5 of 37 records…",
-          "restoring 7/37 Restoring books — 7 of 37 records…",
-          "restoring 9/37 Restoring cards — 9 of 37 records…",
-          "restoring 10/37 Restoring crawlStates — 10 of 37 records…",
-          "restoring 11/37 Restoring dictionaryEntries — 11 of 37 records…",
-          "restoring 12/37 Restoring entities — 12 of 37 records…",
-          "restoring 13/37 Restoring explanationCards — 13 of 37 records…",
-          "restoring 15/37 Restoring glossary — 15 of 37 records…",
-          "restoring 16/37 Restoring hadiths — 16 of 37 records…",
-          "restoring 17/37 Restoring marks — 17 of 37 records…",
-          "restoring 19/37 Restoring narratorProfiles — 19 of 37 records…",
-          "restoring 22/37 Restoring pages — 22 of 37 records…",
-          "restoring 24/37 Restoring positions — 24 of 37 records…",
-          "restoring 25/37 Restoring profiles — 25 of 37 records…",
-          "restoring 26/37 Restoring qulCompilations — 26 of 37 records…",
-          "restoring 28/37 Restoring qulEntries — 28 of 37 records…",
-          "restoring 29/37 Restoring qulResources — 29 of 37 records…",
-          "restoring 30/37 Restoring quranVerses — 30 of 37 records…",
-          "restoring 31/37 Restoring settings — 31 of 37 records…",
-          "restoring 32/37 Restoring shareRecords — 32 of 37 records…",
-          "restoring 33/37 Restoring sharhCards — 33 of 37 records…",
-          "restoring 36/37 Restoring tocNodes — 36 of 37 records…",
-          "restoring 37/37 Restoring wordGlosses — 37 of 37 records…",
-          "done 37/37 Done."
-        ],
+        "progress": {
+          "count": 53,
+          "first": "checking 1/41 Checking the file — 1 records read…",
+          "last": "done 41/41 Done.",
+          "sha256": "f37e0173cb5949aa07e79eb77ed72b5be7e7b8dc820c49c034c4775296b47525"
+        },
         "rows": {
           "biographyEntries": [
             {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -4295,6 +4713,11 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
           ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -4323,6 +4746,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -4381,7 +4805,7 @@
         ]
       },
       "restore-with-keys": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
@@ -4392,6 +4816,7 @@
                 "counts": {
                   "biographyEntries": 1,
                   "blocks": 4,
+                  "bookPlacements": 3,
                   "books": 2,
                   "cards": 2,
                   "crawlStates": 1,
@@ -4400,6 +4825,7 @@
                   "explanationCards": 1,
                   "glossary": 2,
                   "hadiths": 1,
+                  "libraryFolders": 1,
                   "marks": 1,
                   "narratorProfiles": 2,
                   "pages": 3,
@@ -4415,9 +4841,9 @@
                   "tocNodes": 3,
                   "wordGlosses": 1
                 },
-                "totalRows": 37,
+                "totalRows": 41,
                 "includesApiKeys": true,
-                "uncompressedBytes": 9717
+                "uncompressedBytes": 10235
               }
             }
           ],
@@ -4431,57 +4857,12 @@
             }
           ]
         ],
-        "progress": [
-          "checking 1/37 Checking the file — 1 records read…",
-          "checking 5/37 Checking the file — 5 records read…",
-          "checking 7/37 Checking the file — 7 records read…",
-          "checking 9/37 Checking the file — 9 records read…",
-          "checking 10/37 Checking the file — 10 records read…",
-          "checking 11/37 Checking the file — 11 records read…",
-          "checking 12/37 Checking the file — 12 records read…",
-          "checking 13/37 Checking the file — 13 records read…",
-          "checking 15/37 Checking the file — 15 records read…",
-          "checking 16/37 Checking the file — 16 records read…",
-          "checking 17/37 Checking the file — 17 records read…",
-          "checking 19/37 Checking the file — 19 records read…",
-          "checking 22/37 Checking the file — 22 records read…",
-          "checking 24/37 Checking the file — 24 records read…",
-          "checking 25/37 Checking the file — 25 records read…",
-          "checking 26/37 Checking the file — 26 records read…",
-          "checking 28/37 Checking the file — 28 records read…",
-          "checking 29/37 Checking the file — 29 records read…",
-          "checking 30/37 Checking the file — 30 records read…",
-          "checking 31/37 Checking the file — 31 records read…",
-          "checking 32/37 Checking the file — 32 records read…",
-          "checking 33/37 Checking the file — 33 records read…",
-          "checking 36/37 Checking the file — 36 records read…",
-          "checking 37/37 Checking the file — 37 records read…",
-          "restoring 1/37 Restoring biographyEntries — 1 of 37 records…",
-          "restoring 5/37 Restoring blocks — 5 of 37 records…",
-          "restoring 7/37 Restoring books — 7 of 37 records…",
-          "restoring 9/37 Restoring cards — 9 of 37 records…",
-          "restoring 10/37 Restoring crawlStates — 10 of 37 records…",
-          "restoring 11/37 Restoring dictionaryEntries — 11 of 37 records…",
-          "restoring 12/37 Restoring entities — 12 of 37 records…",
-          "restoring 13/37 Restoring explanationCards — 13 of 37 records…",
-          "restoring 15/37 Restoring glossary — 15 of 37 records…",
-          "restoring 16/37 Restoring hadiths — 16 of 37 records…",
-          "restoring 17/37 Restoring marks — 17 of 37 records…",
-          "restoring 19/37 Restoring narratorProfiles — 19 of 37 records…",
-          "restoring 22/37 Restoring pages — 22 of 37 records…",
-          "restoring 24/37 Restoring positions — 24 of 37 records…",
-          "restoring 25/37 Restoring profiles — 25 of 37 records…",
-          "restoring 26/37 Restoring qulCompilations — 26 of 37 records…",
-          "restoring 28/37 Restoring qulEntries — 28 of 37 records…",
-          "restoring 29/37 Restoring qulResources — 29 of 37 records…",
-          "restoring 30/37 Restoring quranVerses — 30 of 37 records…",
-          "restoring 31/37 Restoring settings — 31 of 37 records…",
-          "restoring 32/37 Restoring shareRecords — 32 of 37 records…",
-          "restoring 33/37 Restoring sharhCards — 33 of 37 records…",
-          "restoring 36/37 Restoring tocNodes — 36 of 37 records…",
-          "restoring 37/37 Restoring wordGlosses — 37 of 37 records…",
-          "done 37/37 Done."
-        ],
+        "progress": {
+          "count": 53,
+          "first": "checking 1/41 Checking the file — 1 records read…",
+          "last": "done 41/41 Done.",
+          "sha256": "f37e0173cb5949aa07e79eb77ed72b5be7e7b8dc820c49c034c4775296b47525"
+        },
         "rows": {
           "biographyEntries": [
             {"id":"shamela-990002:bio1","bookId":"shamela-990002","name":"أحمد بن محمد","nameNormalized":"احمد بن محمد","aliases":[],"pageIndex":1}
@@ -4491,6 +4872,11 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
           ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -4519,6 +4905,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -4579,13 +4966,13 @@
         ]
       },
       "refusals": {
-        "schema": {"version":11,"stores":"as today"},
+        "schema": {"version":12,"stores":"as today"},
         "steps": [
           ["init",{"value":"(undefined)"}],
           [
             "inspectDeviceFile, schemaVersion 10",
             {
-              "rejected": "Error: The two tablets are on different versions of the app (database 10 there, 11 here). Update both to the latest version, then send the file again."
+              "rejected": "Error: The two tablets are on different versions of the app (database 10 there, 12 here). Update both to the latest version, then send the file again."
             }
           ],
           [
@@ -4597,7 +4984,7 @@
           [
             "inspectDeviceFile, cut short",
             {
-              "rejected": "Error: The file is incomplete: 36 of 37 records arrived. It was probably cut short while being sent. Send it again from the other tablet."
+              "rejected": "Error: The file is incomplete: 40 of 41 records arrived. It was probably cut short while being sent. Send it again from the other tablet."
             }
           ],
           [
@@ -4611,7 +4998,7 @@
           [
             "restoreDevice, schemaVersion 10",
             {
-              "rejected": "Error: The two tablets are on different versions of the app (database 10 there, 11 here). Update both to the latest version, then send the file again."
+              "rejected": "Error: The two tablets are on different versions of the app (database 10 there, 12 here). Update both to the latest version, then send the file again."
             }
           ]
         ],
@@ -4626,6 +5013,7 @@
         "rows": {
           "biographyEntries": [],
           "blocks": [],
+          "bookPlacements": [],
           "books": [
             {"id":"shamela-990009","shamelaId":990009,"title":"كتاب على الجهاز الآخر","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
           ],
@@ -4636,6 +5024,7 @@
           "explanationCards": [],
           "glossary": [{"id":"gloss-target","arabic":"كلمة","english":"word","note":null,"addedAt":1772000000000}],
           "hadiths": [],
+          "libraryFolders": [],
           "marks": [],
           "narratorProfiles": [],
           "pages": [],
@@ -4659,7 +5048,7 @@
       }
     },
     "share-adapter": {
-      "schema": {"version":11,"stores":"as today"},
+      "schema": {"version":12,"stores":"as today"},
       "steps": [
         ["init",{"value":"(undefined)"}],
         ["ignored: putBook",{"value":"(undefined)"}],
@@ -4696,6 +5085,9 @@
         ["ignored: putShareRecord",{"value":"(undefined)"}],
         ["ignored: deleteShareRecord",{"value":"(undefined)"}],
         ["ignored: putWordGloss",{"value":"(undefined)"}],
+        ["ignored: putBookPlacements",{"value":"(undefined)"}],
+        ["ignored: putLibraryFolder",{"value":"(undefined)"}],
+        ["ignored: deleteLibraryFolder",{"value":"(undefined)"}],
         ["ignored: putReadingPosition",{"value":"(undefined)"}],
         ["ignored: putCrawlState",{"value":"(undefined)"}],
         ["through: putSettings",{"value":"(undefined)"}],
@@ -4891,7 +5283,9 @@
         ["bundle: getCardByCacheKey (always a miss)",{"value":"(undefined)"}],
         ["bundle: getReadingPosition A (never recorded)",{"value":"(undefined)"}],
         ["bundle: getPage (no HTML travels)",{"value":"(undefined)"}],
-        ["schemaVersion (delegated)",{"value":11}],
+        ["bundle: listBookPlacements (none; the visitor has some)",{"value":[]}],
+        ["bundle: listLibraryFolders (none; the visitor has one)",{"value":[]}],
+        ["schemaVersion (delegated)",{"value":12}],
         ["exportWork",{"rejected":"Error: A shared chapter cannot be exported."}],
         ["importWork",{"rejected":"Error: Work cannot be restored into a shared chapter."}],
         ["listStoreNames",{"threw":"Error: A shared chapter cannot be transferred."}],
@@ -4910,6 +5304,11 @@
             {"id":"shamela-990001:p1:1","bookId":"shamela-990001","pageId":"shamela-990001:p1","order":1,"type":"body","text":"الطهارة شرط الصلاة في هذا المثال.","normalized":"الطهاره شرط الصلاه في هذا المثال.","contentHash":"hash-1","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
             {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
+          ],
+          "bookPlacements": [
+            {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+            {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+            {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
           ],
           "books": [
             {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
@@ -4938,6 +5337,7 @@
           "hadiths": [
             {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
           ],
+          "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
           "marks": [
             {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
           ],
@@ -5000,6 +5400,11 @@
           {"id":"shamela-990001:p2:2","bookId":"shamela-990001","pageId":"shamela-990001:p2","order":2,"type":"body","text":"باب آخر من النص التجريبي.","normalized":"باب اخر من النص التجريبي.","contentHash":"hash-2","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null},
           {"id":"shamela-990002:p1:0","bookId":"shamela-990002","pageId":"shamela-990002:p1","order":0,"type":"body","text":"ترجمة رجل من الرواة، نص تجريبي.","normalized":"ترجمه رجل من الرواه، نص تجريبي.","contentHash":"hash-0","hadithNumber":null,"tocNodeId":null,"spans":[],"anchor":null}
         ],
+        "bookPlacements": [
+          {"shamelaId":990001,"pinned":false,"position":0,"folderId":"folder-d1","updatedAt":1772000000000},
+          {"shamelaId":990002,"pinned":true,"position":0,"folderId":null,"updatedAt":1772000000000},
+          {"shamelaId":990004,"pinned":false,"position":1,"folderId":"folder-d1","updatedAt":1772000000000}
+        ],
         "books": [
           {"id":"shamela-990001","shamelaId":990001,"title":"كتاب المثال","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000000,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"},
           {"id":"shamela-990002","shamelaId":990002,"title":"كتاب التراجم","author":"مؤلف تجريبي","publisher":"","edition":"","volumeCount":1,"category":"","structureProfile":"generic","importedAt":1772000000001,"importStatus":"complete","totalPages":2,"fetchedPages":2,"volumeStarts":[1],"hadithCollection":null,"role":"reading"}
@@ -5027,6 +5432,7 @@
         "hadiths": [
           {"reference":"synthetic:1","collection":"synthetic","number":"1","arabic":"حديث تجريبي","english":"A synthetic report.","grade":null,"sourceUrl":null,"fetchedAt":1772000000000}
         ],
+        "libraryFolders": [{"id":"folder-d1","name":"مجلد تجريبي","collapsed":false,"createdAt":1772000000000}],
         "marks": [
           {"id":"mark-a1","bookId":"shamela-990001","startBlockId":"shamela-990001:p1:0","startOffset":0,"endBlockId":"shamela-990001:p1:0","endOffset":4,"kind":"read","scope":"span","note":null,"createdAt":1772000000000,"collapsed":false}
         ],

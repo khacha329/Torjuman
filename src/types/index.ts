@@ -12,6 +12,7 @@ export * from './translation';
 export * from './retrieval';
 export * from './entities';
 export * from './book';
+export * from './library';
 export * from './catalog';
 export * from './cards';
 export * from './qul';
