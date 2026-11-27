@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { navigate } from '../app/router';
 import { useReadOnly } from '../app/readOnly';
@@ -83,33 +83,62 @@ export function LibraryScreen() {
     [books, placements, folders],
   );
 
-  /** Writes, then reads back, so the screen shows what was stored. */
-  const arrange = async (what: string, write: () => Promise<void>) => {
-    setError(null);
-    try {
-      await write();
-    } catch (cause) {
-      setError(`Could not ${what}: ${(cause as Error).message}`);
-    }
-    await refreshArrangement();
+  // The books as last rendered, for writes queued before the next render.
+  const booksNow = useRef<Book[]>([]);
+  booksNow.current = books ?? [];
+  const queue = useRef<Promise<void>>(Promise.resolve());
+
+  /**
+   * Writes, then reads back, so the screen shows what was stored. One at a
+   * time: a second tap lands before the first write has been read back, and
+   * computed from what was rendered it would renumber a section from rows
+   * that are already out of date — a Move made just after a Pin could write
+   * the pin away.
+   */
+  const arrange = (what: string, write: () => Promise<void>) => {
+    const run = async () => {
+      setError(null);
+      try {
+        await write();
+      } catch (cause) {
+        setError(`Could not ${what}: ${(cause as Error).message}`);
+      }
+      await refreshArrangement();
+    };
+    queue.current = queue.current.then(run, run);
+    return queue.current;
   };
 
-  const writePlacements = (what: string, rows: BookPlacement[]) =>
-    arrange(what, () => storage.putBookPlacements(rows));
+  /** Placement rows computed from the stores as they are now, not as rendered. */
+  const writePlacements = (
+    what: string,
+    compute: (
+      sections: LibrarySection[],
+      placements: ReadonlyMap<number, BookPlacement>,
+      folders: LibraryFolder[],
+    ) => BookPlacement[],
+  ) =>
+    arrange(what, async () => {
+      const [rows, list] = await Promise.all([
+        storage.listBookPlacements(),
+        storage.listLibraryFolders(),
+      ]);
+      const current = new Map(rows.map((row) => [row.shamelaId, row]));
+      const now = arrangeLibrary(booksNow.current, current, list);
+      await storage.putBookPlacements(compute(now, current, list));
+    });
 
   const pin = (book: Book, pinned: boolean) =>
-    writePlacements(
-      pinned ? 'pin the book' : 'unpin the book',
-      relocateBook(sections, placements, folders, book, { pinned }, Date.now()),
+    writePlacements(pinned ? 'pin the book' : 'unpin the book', (s, p, f) =>
+      relocateBook(s, p, f, book, { pinned }, Date.now()),
     );
 
   const move = (book: Book, delta: -1 | 1) =>
-    writePlacements('move the book', moveBook(sections, placements, book, delta, Date.now()));
+    writePlacements('move the book', (s, p) => moveBook(s, p, book, delta, Date.now()));
 
   const file = (book: Book, folderId: string | null) =>
-    writePlacements(
-      'move the book to that folder',
-      relocateBook(sections, placements, folders, book, { folderId }, Date.now()),
+    writePlacements('move the book to that folder', (s, p, f) =>
+      relocateBook(s, p, f, book, { folderId }, Date.now()),
     );
 
   const createFolder = (name: string) =>

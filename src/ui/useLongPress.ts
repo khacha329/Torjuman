@@ -29,6 +29,8 @@ const HOLD_MS = 500;
 const SLOP_PX = 10;
 /** How long after the lift a click still counts as the lift's own. */
 const CLICK_WINDOW_MS = 400;
+/** How long a long press may stay held before its lift is no longer watched. */
+const LIFT_WINDOW_MS = 10_000;
 
 export interface LongPressHandlers {
   onPointerDown: (event: PointerEvent) => void;
@@ -61,11 +63,15 @@ function swallowClickAfterLift(): void {
     swallowNextClick();
   };
   const done = () => {
+    window.clearTimeout(expiry);
     window.removeEventListener('pointerup', lift, true);
     window.removeEventListener('pointercancel', done, true);
   };
   window.addEventListener('pointerup', lift, true);
   window.addEventListener('pointercancel', done, true);
+  // A lift the page never sees (a mouse released outside the window) must not
+  // leave this armed for whatever click comes next, minutes later.
+  const expiry = window.setTimeout(done, LIFT_WINDOW_MS);
 }
 
 export function useLongPress(

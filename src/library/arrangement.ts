@@ -61,8 +61,11 @@ function compareInSection(placements: ReadonlyMap<number, BookPlacement>) {
     if (pa === null && pb !== null) return -1;
     if (pa !== null && pb === null) return 1;
     if (pa !== null && pb !== null && pa !== pb) return pa - pb;
-    // Unplaced, or (never written by this code) the same place: newest
-    // import first, then by id so the order is the same on every render.
+    // Unplaced, or the same place — which happens: a deleted book's row keeps
+    // its number while its section is renumbered without it, and a restored
+    // backup brings another tablet's numbers. Newest import first, then by
+    // id, so the order is the same on every render; the next move in the
+    // section renumbers it and the tie is gone.
     return b.importedAt - a.importedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   };
 }

@@ -1161,11 +1161,13 @@ and ⋯; a long press anywhere on the card opens the same menu as ⋯. A drag
 across a grid that scrolls the page fights the page's own scroll on the
 tablet, and a press-and-hold that starts a drag is the gesture that starts a
 text selection. The long press is a timer on pointer events
-(`ui/useLongPress.ts`), not `contextmenu`, which Android Chrome does not fire
-over text it would rather select. After it opens the menu, the click the lift
-produces is dropped at the window: in Chromium it lands on whatever is under
-the finger when it lifts — the menu's backdrop, which would close the menu
-again.
+(`ui/useLongPress.ts`), not `contextmenu` alone, which Android Chrome does not
+fire over text it would rather select (`contextmenu` still opens it, for a
+right-click). After it opens the menu, the click the lift produces is dropped
+at the window, within 400 ms: in Chromium it lands on whatever is under the
+finger when it lifts — the menu's backdrop, which would close the menu again.
+Arranging writes go one at a time, each computed from the stores as they are
+then, so a quick second tap cannot undo the first.
 
 **Stored apart from the book, by Shamela ID.** Pins, places and folder
 membership are rows in `bookPlacements`, keyed by Shamela ID; the folders are
@@ -1196,7 +1198,8 @@ ever does.
 
 Checked by `npm run verify:library` (Playwright, both tablet sizes and a
 desktop: every control above, a long press on a title and on a card, a reload,
-a book deleted and imported again, and screenshots into `.verify/library/`)
+a book deleted and its `books` row written again as an import would, and
+screenshots into `.verify/library/`)
 and by check D (the two stores through both upgrade branches, every backup and
 transfer path, and the share adapter).
 

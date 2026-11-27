@@ -137,10 +137,13 @@ src/
                        client, error mappings), gemini (the one POST)
     providers/         AnthropicProvider, GeminiProvider, the registry
     offline/           on-device model (transformers.js)
-  library/             per-book transfer, whole-tablet transfer, relay, share target
+  library/             per-book transfer, whole-tablet transfer, relay, share target,
+                       the Library's arrangement rules (arrangement)
   share/               encrypted shared chapters
   catalog/             recommended books + batch import
-  ui/                  screens; reader/ and settings/ hold most of the UI
+  ui/                  screens; reader/ and settings/ hold most of the UI;
+                       LibraryScreen with its card, menu, folder heading and
+                       useLongPress
     reader/            ReaderScreen (the shared state and the columns) with
                        its hooks (useWordLookup, useReadingPosition,
                        useReaderNavigation, usePanelControls,

@@ -134,7 +134,7 @@ export function LibraryBookCard({
   );
 }
 
-/** A 36 px square: big enough for a finger on the tablet, four to a row. */
+/** A 44 px square: a finger's width on the tablet, and four still fit a row. */
 function IconButton({
   label,
   onClick,
@@ -156,7 +156,7 @@ function IconButton({
       aria-pressed={pressed}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-30 ${
+      className={`inline-flex h-11 w-11 items-center justify-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-30 ${
         pressed
           ? 'border-accent/50 bg-accent/10 text-accent'
           : 'border-transparent text-muted hover:bg-rule/40 hover:text-ink'
